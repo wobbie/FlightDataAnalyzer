@@ -1,7 +1,7 @@
 import logging
 import numpy as np
 
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict, namedtuple, deque
 from datetime import datetime, timedelta
 from hashlib import sha256
 from itertools import izip, izip_longest
@@ -6225,44 +6225,61 @@ def second_window(array, frequency, seconds):
     
     frequency = int(frequency)  # only integer frequencies supported
     samples = (seconds * frequency) + 1
-    # TODO: Fix for frequency..
-    arrays = [array]
-    for roll_value in range(int((samples / 2) + 1)):  # 0 roll?
-        positive_roll = np.roll(array, roll_value)
-        positive_roll[:roll_value] = np.ma.masked
-        negative_roll = np.roll(array, -roll_value)
-        negative_roll[-roll_value:] = np.ma.masked  # [-0:] will mask everything!
-        arrays.append(positive_roll)
-        arrays.append(negative_roll)
-    combined_array = np.ma.array(arrays)
-    min_array = np.ma.min(combined_array, axis=0)
-    max_array = np.ma.max(combined_array, axis=0)
+
     window_array = np_ma_masked_zeros_like(array)
     unmasked_slices = np.ma.clump_unmasked(array)
     for unmasked_slice in unmasked_slices:
-        last_value = array[unmasked_slice.start]
-        algo_slice = slice(unmasked_slice.start + (samples / 2),
-                           unmasked_slice.stop)
-        zipped_arrays = zip(array[algo_slice],
-                            min_array[algo_slice],
-                            max_array[algo_slice])
-        for index, (array_value,
-                    min_window,
-                    max_window) in enumerate(zipped_arrays,
-                                             start=unmasked_slice.start):
-            if array_value is np.ma.masked:
-                continue
-            if min_window < last_value < max_window:
-                # Mixed
-                window_array[index] = last_value
-            elif max_window > last_value:
-                # All greater than.
-                window_array[index] = last_value = min_window
-            elif min_window < last_value:
-                # All less than
-                window_array[index] = last_value = max_window
-            else:
-                window_array[index] = last_value
+        start, stop = unmasked_slice.start, unmasked_slice.stop
+        last_value = array.item(start)
+        # Sliding window is a deque of length 'samples'.
+        sliding_window = deque(array[start : start+samples], samples)
+        for i in xrange(stop - start - samples ):
+            min_value, max_value = min(sliding_window), max(sliding_window)
+            # Clip the last value between sliding window min and max
+            last_value = min( max(last_value, min_value), max_value)
+            window_array.put(start + i, last_value)
+            # Get the next value in sliding window. The first value in
+            # gets discarded automatically.
+            sliding_window.append(array.item(start + i + samples))
+    
+    ## TODO: Fix for frequency..
+    #arrays = [array]
+    #for roll_value in range((samples / 2) + 1):
+        #positive_roll = np.roll(array, roll_value)
+        #positive_roll[:roll_value] = np.ma.masked
+        #negative_roll = np.roll(array, -roll_value)
+        #negative_roll[-roll_value:] = np.ma.masked
+        #arrays.append(positive_roll)
+        #arrays.append(negative_roll)
+    #combined_array = np.ma.array(arrays)
+    #min_array = np.ma.min(combined_array, axis=0)
+    #max_array = np.ma.max(combined_array, axis=0)
+    #window_array = np_ma_masked_zeros_like(array)
+    #unmasked_slices = np.ma.clump_unmasked(array)
+    #for unmasked_slice in unmasked_slices:
+        #last_value = array[unmasked_slice.start]
+        #algo_slice = slice(unmasked_slice.start + (samples / 2),
+                           #unmasked_slice.stop)
+        #zipped_arrays = zip(array[algo_slice],
+                            #min_array[algo_slice],
+                            #max_array[algo_slice])
+        #for index, (array_value,
+                    #min_window,
+                    #max_window) in enumerate(zipped_arrays,
+                                             #start=unmasked_slice.start):
+            #if array_value is np.ma.masked:
+                #continue
+            #if min_window < last_value < max_window:
+                ## Mixed
+                #window_array[index] = last_value
+            #elif max_window > last_value:
+                ## All greater than.
+                #window_array[index] = last_value = min_window
+            #elif min_window < last_value:
+                ## All less than
+                #window_array[index] = last_value = max_window
+            #else:
+                #window_array[index] = last_value
         #try:
             #first_index = np.ma.clump_unmasked(array)[0].start
         #except IndexError:
