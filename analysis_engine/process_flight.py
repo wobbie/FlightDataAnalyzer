@@ -277,6 +277,29 @@ def get_derived_nodes(module_names):
     return nodes
 
 
+def parse_analyser_profiles(analyser_profiles):
+    '''
+    Parse analyser profiles into additional_modules and required nodes as
+    expected by process_flight.
+    
+    :param analyser_profiles: A list of analyser profile tuples containing semicolon separated module paths and whether or not the nodes are required e.g. [('package.module_one;package.module_two', True), ]
+    :type analyser_profiles: [[str, bool], ]
+    :returns: A list of additional module paths and a list of required node names.
+    :rtype: [str], [str]
+    '''
+    additional_modules = []
+    required_nodes = []
+    for import_paths, is_required in analyser_profiles:
+        for import_path in import_paths.split(';'):
+            import_path = import_path.strip()
+            if not import_path:
+                continue
+            additional_modules.append(import_path)
+            if is_required:
+                required_nodes.extend(get_derived_nodes(import_path))
+    return additional_modules, required_nodes
+
+
 def process_flight(hdf_path, tail_number, aircraft_info={},
                    start_datetime=datetime.now(), achieved_flight_record={},
                    requested=[], required=[], include_flight_attributes=True,
@@ -291,7 +314,7 @@ def process_flight(hdf_path, tail_number, aircraft_info={},
     :param hdf_path: Path to HDF File
     :type hdf_path: String
     :param aircraft: Aircraft specific attributes
-    :type aircraft: dict   
+    :type aircraft: dict
     :param start_datetime: Datetime of the origin of the data (at index 0)
     :type start_datetime: Datetime
     :param achieved_flight_record: See API Below
