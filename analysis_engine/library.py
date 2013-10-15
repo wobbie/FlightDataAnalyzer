@@ -2125,6 +2125,20 @@ def runway_snap(runway, lat, lon):
         # Can't do the sums without endpoints.
         return None, None
 
+    # =========================================================================
+    # We have a problem that some runway coordinates were imported into the
+    # database with the latitude and longitude reversed. This only applies to
+    # localizer and glideslope coordinates. The traps that follow identify
+    # the error and correct it locally, allowing for manual confirmation of
+    # the error and correction of the database at a later stage.
+    if (start_lat-lat)**2 > (start_lat-lon)**2 and \
+       (end_lat-lat)**2 > (end_lat-lon)**2:
+        x = lat
+        lat = lon
+        lon = x
+        logger.warning('Reversing lat and long in runway_snap')
+    # =========================================================================
+
     a = _dist(lat, lon, end_lat, end_lon)
     b = _dist(lat, lon, start_lat, start_lon)
     d = _dist(start_lat, start_lon, end_lat, end_lon)
