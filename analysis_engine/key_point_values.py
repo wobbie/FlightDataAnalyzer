@@ -59,6 +59,8 @@ from analysis_engine.library import (ambiguous_runway,
                                      runway_heading,
                                      shift_slice,
                                      shift_slices,
+                                     slice_duration,
+                                     slice_midpoint,
                                      slice_samples,
                                      slices_and_not,
                                      slices_from_to,
@@ -919,6 +921,32 @@ class Airspeed3000To1000FtMax(KeyPointValueNode):
             alt_descent_sections,
             max_value,
         )
+
+
+class Airspeed3000FtToTopOfClimbMax(KeyPointValueNode):
+    '''
+    '''
+
+    units = 'kt'
+
+    def derive(self,
+               air_spd=P('Airspeed'),
+               alt_aal=P('Altitude AAL For Flight Phases'),
+               tocs=KTI('Top Of Climb')):
+        toc = tocs.get_first()
+        
+        if not toc:
+            return
+        
+        index_at_3000ft = index_at_value(alt_aal.array, 3000,
+                                         _slice=slice(toc.index, None, -1))
+        
+        if not index_at_3000ft:
+            # Top Of Climb below 3000ft?
+            return
+        
+        self.create_kpv(*max_value(air_spd.array,
+                                  _slice=slice(index_at_3000ft, toc.index)))
 
 
 class Airspeed1000To500FtMax(KeyPointValueNode):
@@ -1979,6 +2007,68 @@ class AirspeedTopOfDescentTo10000FtMax(KeyPointValueNode):
         self.create_kpvs_within_slices(air_spd.array, descent_bands, max_value)
 
 
+class AirspeedTopOfDescentTo4000FtMax(KeyPointValueNode):
+    '''
+    Outside the USA 4,000 ft relates to flight levels, whereas FAA regulations
+    (and possibly others we don't currently know about) relate to height above
+    sea level (QNH) hence the options based on landing airport location.
+
+    In either case, we apply some hysteresis to prevent nuisance retriggering
+    which can arise if the aircraft is sitting on the 4,000ft boundary.
+    '''
+
+    units = 'kt'
+
+    def derive(self,
+               air_spd=P('Airspeed'),
+               alt_std=P('Altitude STD Smoothed'),
+               alt_qnh=P('Altitude QNH'),
+               ldg_apt=A('FDR Landing Airport'),
+               descent=S('Descent')):
+
+        country = None
+        if ldg_apt.value:
+            country = ldg_apt.value.get('location', {}).get('country')
+
+        alt = alt_qnh.array if country == 'United States' else alt_std.array
+        alt = hysteresis(alt, HYSTERESIS_FPALT)
+
+        height_bands = np.ma.clump_unmasked(np.ma.masked_less(repair_mask(alt), 4000))
+        descent_bands = slices_and(height_bands, descent.get_slices())
+        self.create_kpvs_within_slices(air_spd.array, descent_bands, max_value)
+
+
+class AirspeedTopOfDescentTo4000FtMin(KeyPointValueNode):
+    '''
+    Outside the USA 4,000 ft relates to flight levels, whereas FAA regulations
+    (and possibly others we don't currently know about) relate to height above
+    sea level (QNH) hence the options based on landing airport location.
+
+    In either case, we apply some hysteresis to prevent nuisance retriggering
+    which can arise if the aircraft is sitting on the 4,000ft boundary.
+    '''
+
+    units = 'kt'
+
+    def derive(self,
+               air_spd=P('Airspeed'),
+               alt_std=P('Altitude STD Smoothed'),
+               alt_qnh=P('Altitude QNH'),
+               ldg_apt=A('FDR Landing Airport'),
+               descent=S('Descent')):
+
+        country = None
+        if ldg_apt.value:
+            country = ldg_apt.value.get('location', {}).get('country')
+
+        alt = alt_qnh.array if country == 'United States' else alt_std.array
+        alt = hysteresis(alt, HYSTERESIS_FPALT)
+
+        height_bands = np.ma.clump_unmasked(np.ma.masked_less(repair_mask(alt), 4000))
+        descent_bands = slices_and(height_bands, descent.get_slices())
+        self.create_kpvs_within_slices(air_spd.array, descent_bands, min_value)
+
+
 class AirspeedDuringLevelFlightMax(KeyPointValueNode):
     '''
     '''
@@ -2009,6 +2099,26 @@ class ModeControlPanelAirspeedSelectedAt8000FtDescending(KeyPointValueNode):
         # TODO: Confirm MCP parameter name.
         self.create_kpvs_at_ktis(mcp.array,
                                  alt_std_desc.get(name='8000 Ft Descending'))
+
+
+##############################################################################
+# Alpha Floor
+
+
+class AlphaFloorDuration(KeyPointValueNode):
+    
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(('Alpha Floor', 'FMA AT Information'), available)
+    
+    def derive(self,
+               alpha_floor=M('Alpha Floor'),
+               autothrottle_info=M('FMA AT Information')):
+        combined_alpha_floor = vstack_params_where_state(
+            (alpha_floor, 'Engaged'),
+            (autothrottle_info, 'Alpha Floor')).any(axis=0)
+        self.create_kpvs_from_slice_durations(
+            runs_of_ones(combined_alpha_floor), self.frequency)
 
 
 ##############################################################################
@@ -2913,6 +3023,21 @@ class AltitudeAtFirstFlapRetraction(KeyPointValueNode):
             self.create_kpv(flap_ret.index, alt_aal.array[flap_ret.index])
 
 
+class AltitudeAtLastFlapRetraction(KeyPointValueNode):
+    '''
+    '''
+
+    units = 'ft'
+
+    def derive(self,
+               alt_aal=P('Altitude AAL'),
+               flap_rets=KTI('Flap Retraction While Airborne')):
+        
+        flap_ret = flap_rets.get_last()
+        if flap_ret:
+            self.create_kpv(flap_ret.index, alt_aal.array[flap_ret.index])
+
+
 class AltitudeAtClimbThrustDerateDeselectedDuringClimbBelow33000Ft(KeyPointValueNode):
     '''
     Specific to 787 operations.
@@ -3363,6 +3488,18 @@ class APDisengagedDuringCruiseDuration(KeyPointValueNode):
 
     def derive(self, ap=M('AP Engaged'), cruise=S('Cruise')):
         self.create_kpvs_where(ap.array != 'Engaged', ap.hz, phase=cruise)
+
+
+##############################################################################
+# Configuration
+
+
+class ConfigurationAtTouchdown(KeyPointValueNode):
+
+    def derive(self,
+               configuration=P('Configuration'),
+               touchdowns=S('Touchdown')):
+        self.create_kpvs_at_ktis(configuration.array, touchdowns)
 
 
 ##############################################################################
@@ -4894,7 +5031,6 @@ class MagneticVariationAtLandingTurnOffRunway(KeyPointValueNode):
 # Engine Bleed
 
 
-# FIXME: Alignment should be resolved by align method, not use of integers.
 class EngBleedValvesAtLiftoff(KeyPointValueNode):
     '''
     '''
@@ -4916,16 +5052,11 @@ class EngBleedValvesAtLiftoff(KeyPointValueNode):
                b3=M('Eng (3) Bleed'),
                b4=M('Eng (4) Bleed')):
 
-        # Note: The bleed arrays for each engine are integer arrays, but to
-        # index them correctly we need to align the liftoff KTI to match these
-        # arrays. The alignment will cause the integer arrays to blur at
-        # transitions, so int(b1 + b2 + b3 + b4) is used to remove this effect
-        # as the bleeds are changing state.
-        bleeds = vstack_params(b1, b2, b3, b4).sum(axis=0).astype(int)
-        for liftoff in liftoffs:
-            valves = bleeds[liftoff.index]
-            if valves:
-                self.create_kpv(liftoff.index, valves)
+        bleeds = vstack_params_where_state((b1, 'Open'),
+                                           (b2, 'Open'),
+                                           (b3, 'Open'),
+                                           (b4, 'Open')).any(axis=0)
+        self.create_kpvs_at_ktis(bleeds, liftoffs)
 
 
 ##############################################################################
@@ -5879,6 +6010,20 @@ class EngN3DuringMaximumContinuousPowerMax(KeyPointValueNode):
 
 ##############################################################################
 # Engine Np
+
+
+class EngNpDuringClimbMin(KeyPointValueNode):
+    '''
+    '''
+
+    name = 'Eng Np During Climb Min'
+    units = '%'
+
+    def derive(self,
+               eng_Np_min=P('Eng (*) Np Min'),
+               climbs=S('Climbing')):
+
+        self.create_kpv_from_slices(eng_Np_min.array, climbs, min_value)
 
 
 class EngNpDuringTaxiMax(KeyPointValueNode):
@@ -7168,6 +7313,52 @@ class GroundspeedFlapChangeDuringTakeoffMax(KeyPointValueNode):
         # when the condition (stabilizer out of trim) is not met.
         gspd_masked = np.ma.array(gnd_spd.array, mask=masked_in_range.mask)
         self.create_kpvs_within_slices(gspd_masked, takeoff_roll, max_value)
+
+
+##############################################################################
+# Law
+
+class AlternateLawDuration(KeyPointValueNode):
+    
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(('Alternate Law', 'Pitch Alternate Law',
+                       'Pitch Alternate Law (1)', 'Pitch Alternate Law (2)',
+                       'Roll Alternate Law'), available)
+    
+    def derive(self,
+               alternate_law=M('Alternate Law'),
+               pitch_alternate_law=M('Pitch Alternate Law'),
+               pitch_alternate_law_1=M('Pitch Alternate Law (1)'),
+               pitch_alternate_law_2=M('Pitch Alternate Law (2)'),
+               roll_alternate_law=M('Roll Alternate Law')):
+        combined_law = vstack_params_where_state(
+            (alternate_law, 'Engaged'),
+            (pitch_alternate_law, 'Engaged'),
+            (pitch_alternate_law_1, 'Engaged'),
+            (pitch_alternate_law_2, 'Engaged'),
+            (roll_alternate_law, 'Engaged')).any(axis=0)
+        self.create_kpvs_from_slice_durations(runs_of_ones(combined_law),
+                                              self.frequency)
+
+
+class DirectLawDuration(KeyPointValueNode):
+    
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(('Direct Law', 'Pitch Direct Law',
+                       'Roll Direct Law'), available)
+    
+    def derive(self,
+               direct_law=M('Direct Law'),
+               pitch_direct_law=M('Pitch Direct Law'),
+               roll_direct_law=M('Roll Direct Law')):
+        combined_law = vstack_params_where_state(
+            (direct_law, 'Engaged'),
+            (pitch_direct_law, 'Engaged'),
+            (roll_direct_law, 'Engaged')).any(axis=0)
+        self.create_kpvs_from_slice_durations(runs_of_ones(combined_law),
+                                              self.frequency)
 
 
 ##############################################################################
@@ -8647,6 +8838,40 @@ class PitchDirectLawDuration(KeyPointValueNode):
 
 
 ##############################################################################
+# Taxi In
+
+
+class TaxiInDuration(KeyPointValueNode):
+    '''
+    '''
+    
+    units = '%'
+
+    def derive(self,
+               taxi_ins=S('Taxi In')):
+        for taxi_in in taxi_ins:
+            self.create_kpv(slice_midpoint(taxi_in.slice),
+                            slice_duration(taxi_in.slice, self.frequency))
+
+
+##############################################################################
+# Taxi Out
+
+
+class TaxiOutDuration(KeyPointValueNode):
+    '''
+    '''
+    
+    units = '%'
+
+    def derive(self,
+               taxi_outs=S('Taxi Out')):
+        for taxi_out in taxi_outs:
+            self.create_kpv(slice_midpoint(taxi_out.slice),
+                            slice_duration(taxi_out.slice, self.frequency))
+
+
+##############################################################################
 # Warnings: Terrain Awareness & Warning System (TAWS)
 
 
@@ -9268,67 +9493,6 @@ class LandingConfigurationSpeedbrakeCautionDuration(KeyPointValueNode):
                airs=S('Airborne')):
         self.create_kpvs_where(landing_cfg_caution.array == 'Caution',
                                landing_cfg_caution.hz, phase=airs)
-
-
-##############################################################################
-# Warnings: Alpha Floor, Alternate Law, Direct Law
-
-
-##### TODO: Implement!
-####class AlphaFloorWarningDuration(KeyPointValueNode):
-####    '''
-####    '''
-####
-####    units = 's'
-####
-####    def derive(self,
-####               alpha_floor=M('Alpha Floor Warning'),
-####               airborne=S('Airborne')):
-####
-####        self.create_kpvs_where(
-####            'Warning',
-####            alpha_floor.array,
-####            alpha_floor.hz,
-####            phase=airborne,
-####        )
-
-
-##### TODO: Implement!
-####class AlternateLawActivatedDuration(KeyPointValueNode):
-####    '''
-####    '''
-####
-####    units = 's'
-####
-####    def derive(self,
-####               alternate_law=M('Alternate Law Warning')):
-####               airborne=S('Airborne')):
-####
-####        self.create_kpvs_where(
-####            'Warning',
-####            alternate_law.array,
-####            alternate_law.hz,
-####            phase=airborne,
-####        )
-
-
-##### TODO: Implement!
-####class DirectLawActivatedDuration(KeyPointValueNode):
-####    '''
-####    '''
-####
-####    units = 's'
-####
-####    def derive(self,
-####               direct_law=M('Direct Law Warning')):
-####               airborne=S('Airborne')):
-####
-####        self.create_kpvs_where(
-####            'Warning',
-####            direct_law.array,
-####            direct_law.hz,
-####            phase=airborne,
-####        )
 
 
 ##############################################################################

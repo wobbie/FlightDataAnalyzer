@@ -49,6 +49,7 @@ from analysis_engine.key_point_values import (
     Airspeed1000To500FtMax,
     Airspeed1000To500FtMin,
     Airspeed1000To8000FtMax,
+    Airspeed3000FtToTopOfClimbMax,
     Airspeed3000To1000FtMax,
     Airspeed35To1000FtMax,
     Airspeed35To1000FtMin,
@@ -96,6 +97,8 @@ from analysis_engine.key_point_values import (
     AirspeedRelativeWithConfigurationDuringDescentMin,
     AirspeedRelativeWithFlapDuringDescentMin,
     AirspeedTopOfDescentTo10000FtMax,
+    AirspeedTopOfDescentTo4000FtMax,
+    AirspeedTopOfDescentTo4000FtMin,
     AirspeedTrueAtTouchdown,
     AirspeedV2Plus20DifferenceAtVNAVModeAndEngThrustModeRequired,
     AirspeedVacatingRunway,
@@ -111,6 +114,8 @@ from analysis_engine.key_point_values import (
     AirspeedWithGearDownMax,
     AirspeedWithSpeedbrakeDeployedMax,
     AirspeedWithThrustReversersDeployedMin,
+    AlphaFloorDuration,
+    AlternateLawDuration,
     AltitudeAtAPDisengagedSelection,
     AltitudeAtAPEngagedSelection,
     AltitudeAtATDisengagedSelection,
@@ -131,6 +136,7 @@ from analysis_engine.key_point_values import (
     AltitudeAtGearUpSelectionDuringGoAround,
     AltitudeAtLastAPDisengagedDuringApproach,
     AltitudeAtLastFlapChangeBeforeTouchdown,
+    AltitudeAtLastFlapRetraction,
     AltitudeAtMachMax,
     AltitudeAtVNAVModeAndEngThrustModeRequired,
     AltitudeDuringGoAroundMin,
@@ -148,11 +154,13 @@ from analysis_engine.key_point_values import (
     AltitudeWithGearDownMax,
     AutobrakeRejectedTakeoffNotSetDuringTakeoff,
     BrakePressureInTakeoffRollMax,
+    ConfigurationAtTouchdown,
     ControlColumnForceMax,
     ControlColumnStiffness,
     ControlWheelForceMax,
     DecelerationFromTouchdownToStopOnRunway,
     DelayedBrakingAfterTouchdown,
+    DirectLawDuration,
     ElevatorDuringLandingMin,
     EngBleedValvesAtLiftoff,
     EngEPR500To50FtMax,
@@ -197,6 +205,7 @@ from analysis_engine.key_point_values import (
     EngN3DuringMaximumContinuousPowerMax,
     EngN3DuringTakeoff5MinRatingMax,
     EngN3DuringTaxiMax,
+    EngNpDuringClimbMin,
     EngNpDuringGoAround5MinRatingMax,
     EngNpDuringMaximumContinuousPowerMax,
     EngNpDuringTakeoff5MinRatingMax,
@@ -423,6 +432,8 @@ from analysis_engine.key_point_values import (
     TakeoffConfigurationSpoilerWarningDuration,
     TakeoffConfigurationStabilizerWarningDuration,
     TakeoffConfigurationWarningDuration,
+    TaxiInDuration,
+    TaxiOutDuration,
     TerrainClearanceAbove3000FtMin,
     ThrottleCyclesDuringFinalApproach,
     ThrottleReductionToTouchdownDuration,
@@ -2239,6 +2250,50 @@ class TestAirspeedTopOfDescentTo10000FtMax(unittest.TestCase, NodeTest):
         self.assertTrue(False, msg='Test not implemented.')
 
 
+class TestAirspeedTopOfDescentTo4000FtMax(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = AirspeedTopOfDescentTo4000FtMax
+        self.operational_combinations = [('Airspeed', 'Altitude STD Smoothed', 'Altitude QNH', 'FDR Landing Airport', 'Descent')]
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestAirspeedTopOfDescentTo4000FtMin(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = AirspeedTopOfDescentTo4000FtMin
+        self.operational_combinations = [('Airspeed', 'Altitude STD Smoothed', 'Altitude QNH', 'FDR Landing Airport', 'Descent')]
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestAirspeed3000FtToTopOfClimbMax(unittest.TestCase, NodeTest):
+    
+    def setUp(self):
+        self.node_class = Airspeed3000FtToTopOfClimbMax
+        self.operational_combinations = [('Airspeed', 'Altitude AAL For Flight Phases', 'Top Of Climb')]
+    
+    def test_derive_basic(self):
+        alt_aal_array = np.ma.arange(0, 20000, 100)
+        alt_aal = P('Altitude AAL For Flight Phases', alt_aal_array)
+        air_spd_array = np.ma.arange(100, 300)
+        air_spd = P('Airspeed', air_spd_array)
+        tocs = KTI('Top Of Climb', items=[KeyTimeInstance(150, 'Top Of Climb')])
+        node = Airspeed3000FtToTopOfClimbMax()
+        node.derive(air_spd, alt_aal, tocs)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0], KeyPointValue(149, 249, 'Airspeed 3000 Ft To Top Of Climb Max'))
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+
+
 class TestAirspeedDuringLevelFlightMax(unittest.TestCase, NodeTest):
 
     def setUp(self):
@@ -2527,6 +2582,52 @@ class TestAutobrakeRejectedTakeoffNotSetDuringTakeoff_masked(
             name='Autobrake Rejected Takeoff Not Set During Takeoff')]
 
         self.basic_setup()
+
+
+##############################################################################
+# Alpha Floor
+
+
+class TestAlphaFloorDruation(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = AlphaFloorDuration
+        self.operational_combinations = [
+            ('Alpha Floor',),
+            ('FMA AT Information',),
+            ('Alpha Floor', 'FMA AT Information')]
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test Not Implemented')
+    
+    def test_derive_basic(self):
+        fma_at_information_array = np.ma.masked_array(
+            [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 3, 3, 2, 2, 1, 1, 0, 0,])
+        fma_at_information_values_mapping = {
+            0: '-',
+            1: '-',
+            2: '-',
+            3: 'Alpha Floor',
+            4: '-',
+        }
+        fma_at_information = M('FMA AT Information',
+                               array=fma_at_information_array,
+                               values_mapping=fma_at_information_values_mapping)
+        alpha_floor_array = np.ma.masked_array(
+            [0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        alpha_floor_values_mapping = {0: '-', 1: 'Engaged'}
+        alpha_floor = M('Alpha Floor', array=alpha_floor_array,
+                        values_mapping=alpha_floor_values_mapping)
+        node = self.node_class()
+        node.derive(alpha_floor, fma_at_information)
+        self.assertEqual(len(node), 3)
+        self.assertEqual(node[0].index, 4.5)
+        self.assertEqual(node[0].value, 3)
+        self.assertEqual(node[1].index, 9)
+        self.assertEqual(node[1].value, 2)
+        self.assertEqual(node[2].index, 13)
+        self.assertEqual(node[2].value, 2)
 
 
 ##############################################################################
@@ -3040,6 +3141,34 @@ class TestAltitudeAtFirstFlapRetraction(unittest.TestCase, NodeTest):
         self.assertEqual(node, [])
 
 
+class TestAltitudeAtLastFlapRetraction(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = AltitudeAtLastFlapRetraction
+        self.operational_combinations = [('Altitude AAL', 'Flap Retraction While Airborne')]
+        self.alt_aal = P(
+            name='Altitude AAL',
+            array=np.ma.concatenate([
+                np.ma.array([0] * 10),
+                np.ma.arange(40) * 1000,
+            ]),
+        )
+
+    def test_derive_basic(self):
+        '''
+        Create a single KPV within the Go Around And Climbout section.
+        '''
+        flap_rets = KTI('Flap Retraction While Airborne', items=[
+            KeyTimeInstance(30, 'Flap Retraction While Airborne'),
+            KeyTimeInstance(40, 'Flap Retraction While Airborne'),
+        ])
+        node = AltitudeAtLastFlapRetraction()
+        node.derive(self.alt_aal, flap_rets)
+        self.assertEqual(node, [
+            KeyPointValue(40, 30000, 'Altitude At Last Flap Retraction'),
+        ])
+
+
 class TestAltitudeAtClimbThrustDerateDeselectedDuringClimbBelow33000Ft(unittest.TestCase, NodeTest):
     
     def setUp(self):
@@ -3250,6 +3379,12 @@ class TestAltitudeAtMachMax(unittest.TestCase, CreateKPVsAtKPVsTest):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test Not Implemented')
+
+
+class TestConfigurationAtTouchdown(unittest.TestCase, CreateKPVsAtKTIsTest):
+    def setUp(self):
+        self.node_class = ConfigurationAtTouchdown
+        self.operational_combinations = [('Configuration', 'Touchdown')]
 
 
 ##############################################################################
@@ -4033,26 +4168,14 @@ class TestEngBleedValvesAtLiftoff(unittest.TestCase, NodeTest):
 
     def test_derive(self):
         liftoff = KTI('Liftoff', items=[KeyTimeInstance(name='Liftoff', index=3)])
-        b1 = P('Eng (1) Bleed', array=[0, 0, 1, 0, 0])
-        b2 = P('Eng (2) Bleed', array=[0, 0, 0, 1, 0])
-        b3 = P('Eng (3) Bleed', array=[0, 1, 0, 0, 0])
-        b4 = P('Eng (4) Bleed', array=[0, 1, 0, 1, 0])
+        values_mapping = {0: 'Closed', 1: 'Open'}
+        b1 = M('Eng (1) Bleed', array=np.ma.masked_array([0, 0, 1, 0, 0]), values_mapping=values_mapping)
+        b2 = M('Eng (2) Bleed', array=np.ma.masked_array([0, 0, 0, 1, 0]), values_mapping=values_mapping)
+        b3 = M('Eng (3) Bleed', array=np.ma.masked_array([0, 1, 0, 0, 0]), values_mapping=values_mapping)
+        b4 = M('Eng (4) Bleed', array=np.ma.masked_array([0, 1, 0, 1, 0]), values_mapping=values_mapping)
         # Test with four engines, integer values:
         node = EngBleedValvesAtLiftoff()
         node.derive(liftoff, b1, b2, b3, b4)
-        self.assertEqual(node, KPV('Eng Bleed Valves At Liftoff', items=[
-            KeyPointValue(name='Eng Bleed Valves At Liftoff', index=3, value=2),
-        ]))
-        # Test with four engines, float values:
-        b4f = P('Eng (4) Bleed', array=[0, 1.5, 0, 1.5, 0])
-        node = EngBleedValvesAtLiftoff()
-        node.derive(liftoff, b1, b2, b3, b4f)
-        self.assertEqual(node, KPV('Eng Bleed Valves At Liftoff', items=[
-            KeyPointValue(name='Eng Bleed Valves At Liftoff', index=3, value=2),
-        ]))
-        # Test with two engines, integer values:
-        node = EngBleedValvesAtLiftoff()
-        node.derive(liftoff, b1, b2, None, None)
         self.assertEqual(node, KPV('Eng Bleed Valves At Liftoff', items=[
             KeyPointValue(name='Eng Bleed Valves At Liftoff', index=3, value=1),
         ]))
@@ -4834,6 +4957,18 @@ class TestEngNpDuringTakeoff5MinRatingMax(unittest.TestCase, CreateKPVsWithinSli
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test Not Implemented')
+
+
+class TestEngNpDuringClimbMin(unittest.TestCase, CreateKPVFromSlicesTest):
+
+    def setUp(self):
+        self.node_class = EngNpDuringClimbMin
+        self.operational_combinations = [('Eng (*) Np Min', 'Climbing')]
+        self.function = max_value
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
 
 
 class TestEngNpDuringGoAround5MinRatingMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
@@ -6325,7 +6460,7 @@ class TestGroundspeedStabilizerOutOfTrimDuringTakeoffMax(unittest.TestCase,
     def setUp(self):
         self.node_class = GroundspeedStabilizerOutOfTrimDuringTakeoffMax
         self.operational_combinations = [
-            ('Groundspeed', 'Stabilizer', 'Takeoff Roll', 'Family')]
+            ('Groundspeed', 'Stabilizer', 'Takeoff Roll', 'Family', 'Series')]
 
     def test_derive(self):
         array = np.arange(10) + 100
@@ -6432,6 +6567,87 @@ class TestGroundspeedFlapChangeDuringTakeoffMax(unittest.TestCase, NodeTest):
                 items=[KeyPointValue(name=self.node_class.get_name(),
                                      index=15.0, value=105.0)])
         )
+
+
+##############################################################################
+# Law
+
+
+class TestAlternateLawDuration(unittest.TestCase, NodeTest):
+    
+    def setUp(self):
+        self.node_class = AlternateLawDuration
+        self.operational_combinations = [
+            ('Alternate Law',),
+            ('Pitch Alternate Law',),
+            ('Pitch Alternate Law (1)',),
+            ('Pitch Alternate Law (2)',),
+            ('Roll Alternate Law',),
+            ('Alternate Law', 'Pitch Alternate Law', 'Pitch Alternate Law (1)',
+             'Pitch Alternate Law (2)', 'Roll Alternate Law')]
+    
+    
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+    
+    def test_derive_basic(self):
+        law_array = np.ma.array([0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0])
+        alternate_law = M(
+            'Alternate Law', law_array, values_mapping={1: 'Engaged', 0: '-'})
+        pitch_alternate_law = M(
+            'Pitch Alternate Law', np.roll(law_array, 2),
+            values_mapping={1: 'Engaged', 0: '-'})
+        pitch_alternate_law_1 = M(
+            'Pitch Alternate Law (1)', np.roll(law_array, 4),
+            values_mapping={1: 'Engaged', 0: '-'})
+        pitch_alternate_law_2 = M(
+            'Pitch Alternate Law (2)', np.roll(law_array, 6),
+            values_mapping={1: 'Engaged', 0: '-'})
+        roll_alternate_law = M(
+            'Roll Alternate Law', np.roll(law_array, 8),
+            values_mapping={1: 'Engaged', 0: '-'})
+        
+        node = self.node_class()
+        node.derive(alternate_law, pitch_alternate_law, pitch_alternate_law_1,
+                    pitch_alternate_law_2, roll_alternate_law)
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].index, 1)
+        self.assertEqual(node[0].value, 2)
+        self.assertEqual(node[1].index, 11.5)
+        self.assertEqual(node[1].value, 9)
+
+
+class TestDirectLawDuration(unittest.TestCase, NodeTest):
+    
+    def setUp(self):
+        self.node_class = DirectLawDuration
+        self.operational_combinations = [
+            ('Direct Law',),
+            ('Pitch Direct Law',),
+            ('Roll Direct Law',)
+        ]
+    
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+    
+    def test_derive_basic(self):
+        law_array = np.ma.array([0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0])
+        direct_law = M(
+            'Direct Law', law_array, values_mapping={1: 'Engaged', 0: '-'})
+        pitch_direct_law = M(
+            'Pitch Direct Law', np.roll(law_array, 2),
+            values_mapping={1: 'Engaged', 0: '-'})
+        roll_direct_law = M(
+            'Roll Alternate Law', np.roll(law_array, 4),
+            values_mapping={1: 'Engaged', 0: '-'})
+        
+        node = self.node_class()
+        node.derive(direct_law, pitch_direct_law, roll_direct_law)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 10.5)
+        self.assertEqual(node[0].value, 7)
 
 
 ##############################################################################
@@ -7674,6 +7890,41 @@ class TestLandingConfigurationSpeedbrakeCautionDuration(unittest.TestCase,
         self.values_mapping = {0: '-', 1: 'Caution'}
 
         self.basic_setup()
+
+
+##############################################################################
+# Taxi In
+
+
+class TestTaxiInDuration(unittest.TestCase):
+    def test_can_operate(self):
+        opts = TaxiInDuration.get_operational_combinations()
+        self.assertEqual(opts, [('Taxi In',)])
+        
+    def test_derive(self):
+        taxi_ins = buildsections('Taxi In', [5, 10], [20, 30])
+        node = TaxiInDuration()
+        node.derive(taxi_ins)
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0], KeyPointValue(8, 5, 'Taxi In Duration'))
+        self.assertEqual(node[1], KeyPointValue(25, 10, 'Taxi In Duration'))
+
+
+##############################################################################
+# Taxi Out
+
+
+class TestTaxiOutDuration(unittest.TestCase):
+    def test_can_operate(self):
+        opts = TaxiOutDuration.get_operational_combinations()
+        self.assertEqual(opts, [('Taxi Out',)])
+        
+    def test_derive(self):
+        taxi_outs = buildsections('Taxi Out', [35, 67])
+        node = TaxiOutDuration()
+        node.derive(taxi_outs)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0], KeyPointValue(51, 32, 'Taxi Out Duration'))
 
 
 ##############################################################################
