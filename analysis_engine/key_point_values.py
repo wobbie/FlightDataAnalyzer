@@ -2831,6 +2831,17 @@ class AirspeedAtFlapExtensionWithGearDown(KeyPointValueNode):
                 self.create_kpv(index, value, flap=int(selected_flap))
 
 
+class AltitudeRadioCleanConfigurationMin(KeyPointValueNode):
+    def derive(self,
+               alt_rad=P('Altitude Radio'),
+               flap=M('Flap'),
+               gear_retr=S('Gear Retracted')):
+
+        alt_rad_noflap = np.ma.masked_where(flap.array != 0.0, alt_rad.array)
+        self.create_kpvs_within_slices(alt_rad_noflap, gear_retr, min_value)
+
+
+
 ##########################################################################
 # Speeds relative to Vref Flap 30 + 80 kts (Boeing procedures for 757/767).
 ##########################################################################
@@ -3141,6 +3152,7 @@ class AltitudeAtGearUpSelectionDuringGoAround(KeyPointValueNode):
 
 class AltitudeWithGearDownMax(KeyPointValueNode):
     '''
+    Maximum height above the airfield with the gear down.
     '''
 
     units = 'ft'
@@ -3154,6 +3166,28 @@ class AltitudeWithGearDownMax(KeyPointValueNode):
         gear_downs = np.ma.clump_unmasked(gear.array)
         self.create_kpvs_within_slices(
             alt_aal.array, slices_and(airs.get_slices(), gear_downs),
+            max_value)
+
+
+class AltitudeSTDWithGearDownMax(KeyPointValueNode):
+    '''
+    In extreme cases, it's the pressure altitude we are interested in, not
+    just the altitude above the airfield (already covered by
+    "Altitude With Gear Down Max")
+    '''
+
+    name = 'Altitude STD With Gear Down Max'
+    units = 'ft'
+
+    def derive(self,
+               alt_std=P('Altitude STD'),
+               gear=M('Gear Down'),
+               airs=S('Airborne')):
+
+        gear.array[gear.array != 'Down'] = np.ma.masked
+        gear_downs = np.ma.clump_unmasked(gear.array)
+        self.create_kpvs_within_slices(
+            alt_std.array, slices_and(airs.get_slices(), gear_downs),
             max_value)
 
 
