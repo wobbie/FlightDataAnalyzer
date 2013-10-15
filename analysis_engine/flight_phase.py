@@ -23,6 +23,7 @@ from analysis_engine.library import (
     nearest_neighbour_mask_repair,
     peak_curvature,
     rate_of_change,
+    rate_of_change_array,
     repair_mask,
     runs_of_ones,
     shift_slice,
@@ -437,6 +438,22 @@ class Cruise(FlightPhaseNode):
 
             self.create_phase(slice(begin,end))
 
+
+class InitialCruise(FlightPhaseNode):
+    '''
+    This is a period from five minutes into the cruise lasting for 30
+    seconds, and is used to establish average conditions for fuel monitoring
+    programmes.
+    '''
+    
+    align_frequency = 1.0
+    align_offset = 0.0
+    
+    def derive(self, cruises=S('Cruise')):
+        cruise = cruises[0].slice
+        if cruise.stop - cruise.start > 330:
+            self.create_phase(slice(cruise.start+300, cruise.start+330))
+            
 
 class CombinedDescent(FlightPhaseNode):
     def derive(self,
@@ -940,6 +957,30 @@ class LevelFlight(FlightPhaseNode):
                                                       time_limit=settings.LEVEL_FLIGHT_MIN_DURATION,
                                                       hz=vrt_spd.frequency)
             self.create_phases(shift_slices(level_slices, air.slice.start))
+
+
+
+class StraightAndLevel(FlightPhaseNode):
+    '''
+    Building on Level Flight, this checks for straight flight. We use heading
+    rate as more sensitive than roll attitude and sticking to the core three
+    parameters.
+    '''
+    def derive(self,
+               levels=S('Level Flight'),
+               hdg=P('Heading')):
+
+        for level in levels:
+            limit = settings.HEADING_RATE_FOR_STRAIGHT_FLIGHT
+            rot = rate_of_change_array(hdg.array[level.slice], hdg.frequency, width=30)
+            straight_flight = np.ma.masked_outside(rot, -limit, limit)
+            straight_slices = np.ma.clump_unmasked(straight_flight)
+            straight_and_level_slices = slices_remove_small_slices(straight_slices, 
+                                                                   time_limit=settings.LEVEL_FLIGHT_MIN_DURATION,
+                                                                   hz=hdg.frequency)
+            self.create_phases(shift_slices(straight_and_level_slices, level.slice.start))
+
+
 
 
 class Grounded(FlightPhaseNode):

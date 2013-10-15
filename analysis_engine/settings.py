@@ -182,6 +182,9 @@ GROUNDSPEED_FOR_MOBILE = 5.0  # kts
 # Threshold for start and end of Mobile phase
 HEADING_RATE_FOR_MOBILE = 2.0  # deg/sec
 
+# Threshold for straight cruising flight
+HEADING_RATE_FOR_STRAIGHT_FLIGHT = 1.0 # deg/sec
+
 # Threshold for turn onto runway at start of takeoff.
 # This will usually be overwritten by the peak curvature test.
 HEADING_TURN_ONTO_RUNWAY = 15.0  # deg

@@ -49,6 +49,7 @@ from analysis_engine.key_time_instances import (
     SecsToTouchdown,
     SlatAlternateArmedSet,
     SlatSet,
+    SpeedbrakeOpen,
     TakeoffAccelerationStart,
     TakeoffPeakAcceleration,
     TakeoffTurnOntoRunway,
@@ -1017,6 +1018,27 @@ class TestSlatSet(unittest.TestCase):
         self.assertEqual(node, [
             KeyTimeInstance(index=9.5, name='Slat 15 Set'),
             KeyTimeInstance(index=19.5, name='Slat 20 Set'),
+        ])
+
+
+class TestSpeedbrakeOpen(unittest.TestCase):
+    
+    def setUp(self):
+        self.assertEqual(SpeedbrakeOpen.get_operational_combinations(),
+                         [('Speedbrake',)])
+
+    def test_basic(self):
+        spdbrk = P('Speedbrake', array=np.ma.array([0]*5 +
+                                                   [3]*3 +
+                                                   [-1]*2 +
+                                                   [45]*4 + 
+                                                   [0]*3
+                                                   ))
+        node = SpeedbrakeOpen()
+        node.derive(spdbrk)
+        self.assertEqual(node, [
+            KeyTimeInstance(index=5, name='Speedbrake Open'),
+            KeyTimeInstance(index=10, name='Speedbrake Open'),
         ])
 
 

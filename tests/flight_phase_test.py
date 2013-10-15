@@ -29,10 +29,12 @@ from analysis_engine.flight_phase import (Airborne,
                                           ILSGlideslopeEstablished,
                                           ILSLocalizerEstablished,
                                           InitialApproach,
+                                          InitialCruise,
                                           Landing,
                                           LevelFlight,
                                           Mobile,
                                           RejectedTakeoff,
+                                          StraightAndLevel,
                                           Takeoff,
                                           Takeoff5MinRating,
                                           TakeoffRoll,
@@ -738,6 +740,28 @@ class TestCruise(unittest.TestCase):
         self.assertEqual(len(tod), 0)
 
 
+class TestInitialCruise(unittest.TestCase):
+    
+    def test_basic(self):
+        cruise=buildsection('Cruise', 1000,1500)
+        ini_cru = InitialCruise()
+        ini_cru.derive(cruise)
+        self.assertEqual(ini_cru[0].slice, slice(1300,1330))
+
+    def test_short_cruise(self):
+        short_cruise=buildsection('Cruise', 1000,1329)
+        ini_cru = InitialCruise()
+        ini_cru.derive(short_cruise)
+        self.assertEqual(len(ini_cru), 0)
+
+    def test_multiple_cruises(self):
+        short_cruise=buildsections('Cruise', [1000,1339], [2000,3000])
+        ini_cru = InitialCruise()
+        ini_cru.derive(short_cruise)
+        self.assertEqual(len(ini_cru), 1)
+        self.assertEqual(ini_cru[0].slice, slice(1300,1330))
+
+
 class TestDescentLowClimb(unittest.TestCase):
     def test_can_operate(self):
         self.assertEqual(DescentLowClimb.get_operational_combinations(),
@@ -1301,6 +1325,22 @@ class TestLevelFlight(unittest.TestCase, NodeTest):
             Section('Level Flight', slice(120, 200, None), 120, 200)
         ])
 
+
+class TestStraightAndLevel(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = StraightAndLevel
+        self.operational_combinations = [('Level Flight', 'Heading')]
+
+    def test_straight_and_level_basic(self):
+        data = [0]*60+range(0, 360, 1) + range(360,0,-2) + [0]*120
+        hdg = Parameter('Heading',array=np.ma.array(data))
+        level = buildsection('Level Flight', 0, 900)
+        s_and_l = StraightAndLevel()
+        s_and_l.derive(level, hdg)
+        self.assertEqual(s_and_l[1].slice, slice(600, 720, None))
+        self.assertEqual(s_and_l[0].slice, slice(0, 426, None))
+                         
 
 class TestRejectedTakeoff(unittest.TestCase):
     def test_can_operate(self):

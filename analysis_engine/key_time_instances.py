@@ -593,7 +593,6 @@ class SlatSet(KeyTimeInstanceNode):
     '''
     '''
 
-    # Note: We must use %s not %d as we've encountered a flap of 17.5 degrees.
     NAME_FORMAT = 'Slat %(slat)s Set'
     NAME_VALUES = NAME_VALUES_SLAT
     
@@ -604,6 +603,17 @@ class SlatSet(KeyTimeInstanceNode):
         # changes.
         self.create_ktis_at_edges(np.rint(slat.array).astype(np.int),
                                   direction='all_edges', name='slat')
+
+
+class SpeedbrakeOpen(KeyTimeInstanceNode):
+    '''
+    A convenient indication of speedbrake use.
+    '''
+    
+    def derive(self,
+               slat=P('Speedbrake')):
+        for opening in np.ma.clump_unmasked(np.ma.masked_less_equal(slat.array, 0.0)):
+            self.create_kti(opening.start)
 
 
 class FlapRetractionWhileAirborne(KeyTimeInstanceNode):
