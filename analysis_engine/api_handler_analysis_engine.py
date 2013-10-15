@@ -68,6 +68,19 @@ class AnalysisEngineAPI(object):
         :rtype: dict
         '''
         raise NotImplementedError
+    
+    @abstractmethod
+    def get_analyser_profiles(self, tail_number):
+        '''
+        Will return analyser profiles enabled for an aircraft.
+        
+        :param tail_number: Aircraft tail number.
+        :type tail_number: str
+        :raises NotFoundError: If the aircraft cannot be found.
+        :returns: Analyser profiles in (module_path, required) tuples.
+        :rtype: dict
+        '''
+        raise NotImplementedError
 
     @abstractmethod
     def get_nearest_airport(self, latitude, longitude):
@@ -163,6 +176,23 @@ class AnalysisEngineAPIHandlerHTTP(AnalysisEngineAPI, APIHandlerHTTP):
             'tail_number': tail_number,
         }
         return self._attempt_request(url)['aircraft']
+    
+    def get_analyser_profiles(self, tail_number):
+        '''
+        Will return analyser profiles enabled for an aircraft.
+        
+        :param tail_number: Aircraft tail number.
+        :type tail_number: str
+        :raises NotFoundError: If the aircraft cannot be found.
+        :returns: Analyser profiles in (module_path, required) tuples.
+        :rtype: dict
+        '''
+        from analysis_engine.settings import BASE_URL
+        url = '%(base_url)s/api/aircraft/%(tail_number)s/analyser_profiles/' % {
+            'base_url': BASE_URL.rstrip('/'),
+            'tail_number': tail_number,
+        }
+        return self._attempt_request(url)['analyser_profiles']
     
     def get_airport(self, code):
         '''
@@ -338,7 +368,19 @@ class AnalysisEngineAPIHandlerLocal(AnalysisEngineAPI):
             raise NotFoundError("Local API Handler: Airport with code '%s' "
                                 "could not be found." % code)
         return airport
+    
+    def get_analyser_profiles(self, tail_number):
+        '''
+        Returns analyser profiles enabled for an aircraft. Currently
+        not implemented.
         
+        :param tail_number: Aircraft tail number.
+        :type tail_number: str
+        :raises NotFoundError: If the aircraft cannot be found.
+        :returns: Analyser profiles.
+        :rtype: []
+        '''
+        return []
     
     def get_nearest_airport(self, latitude, longitude):
         '''
