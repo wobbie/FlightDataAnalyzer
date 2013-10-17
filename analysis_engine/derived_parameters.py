@@ -1576,7 +1576,36 @@ class ControlWheel(DerivedParameterNode):
             pot_samples = np.ma.count(pot.array)
             if pot_samples>synchro_samples:
                 self.array = pot.array
-        
+
+
+class SidestickAngleCapt(DerivedParameterNode):
+    '''
+    Angle of the captain's side stick.
+    '''
+    name = 'Sidestick Angle (Capt)'
+    units = 'deg'
+
+    def derive(self,
+               pitch_capt=M('Pitch Command (Capt)'),
+               roll_capt=M('Roll Command (Capt)')):
+
+        self.array = (pitch_capt.array ** 2 + roll_capt.array ** 2).sqrt()
+
+
+class SidestickAngleFO(DerivedParameterNode):
+    '''
+    Angle of the first officer's side stick.
+    '''
+    name = 'Sidestick Angle (FO)'
+    units = 'deg'
+
+    def derive(self,
+               pitch_fo=M('Pitch Command (FO)'),
+               roll_fo=M('Roll Command (FO)')):
+
+        self.array = (pitch_fo.array ** 2 + roll_fo.array ** 2).sqrt()
+
+
 class DistanceToLanding(DerivedParameterNode):
     """
     Ground distance to cover before touchdown.

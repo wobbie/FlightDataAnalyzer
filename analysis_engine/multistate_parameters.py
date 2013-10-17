@@ -75,6 +75,7 @@ from analysis_engine.library import (#actuator_mismatch,
                                      repair_mask,
                                      #rms_noise,
                                      round_to_nearest,
+                                     runs_of_ones,
                                      #runway_deviation,
                                      #runway_distances,
                                      #runway_heading,
@@ -85,6 +86,8 @@ from analysis_engine.library import (#actuator_mismatch,
                                      slices_from_to,
                                      #slices_not,
                                      #slices_or,
+                                     slices_remove_small_gaps,
+                                     slices_remove_small_slices,
                                      #smooth_track,
                                      step_values,
                                      #straighten_altitudes,
@@ -93,7 +96,7 @@ from analysis_engine.library import (#actuator_mismatch,
                                      #track_linking,
                                      #value_at_index,
                                      vstack_params,
-                                     vstack_params_where_state
+                                     vstack_params_where_state,
                                      )
 
 #from settings import (AZ_WASHOUT_TC,
@@ -322,6 +325,31 @@ class Daylight(MultistateDerivedParameterNode):
             else:
                 # either is masked or recording 0.0 which is invalid too
                 self.array[step] = np.ma.masked
+
+
+class DualInputWarning(MultistateDerivedParameterNode):
+    '''
+    '''
+    values_mapping = {0: '-', 1: 'Dual'}
+
+    def derive(self,
+               pilot=M('Pilot Flying'),
+               stick_capt=P('Sidestick Angle (Capt)'),
+               stick_fo=P('Sidestick Angle (FO)')):
+
+        array = np_ma_zeros_like(pilot.array)
+        array[pilot.array == 'Capt'] = stick_fo.array
+        array[pilot.array == 'FO'] = stick_capt.array
+        array = np.ma.array(array > 0.5, mask=array.mask, dtype=int)
+
+        slices = runs_of_ones(array)
+        slices = slices_remove_small_slices(slices, 3, self.hz)
+        slices = slices_remove_small_gaps(slices, 15, self.hz)
+
+        dual = np_ma_zeros_like(array)
+        for sl in slices:
+            dual[sl] = 1
+        self.array = dual
 
 
 class Eng_1_Fire(MultistateDerivedParameterNode):
@@ -1110,6 +1138,29 @@ class PackValvesOpen(MultistateDerivedParameterNode):
                  + p2.array.raw * (1 + p2h.array.raw)
         self.array = flow
         self.offset = offset_select('mean', [p1, p1h, p2, p2h])
+
+
+class PilotFlying(MultistateDerivedParameterNode):
+    '''
+    Determines the pilot flying for Airbus aircraft.
+    '''
+    values_mapping = {0: '-', 1: 'Capt', 2: 'FO'}
+
+    def derive(self,
+               stick_capt=P('Sidestick Angle (Capt)'),
+               stick_fo=P('Sidestick Angle (FO)')):
+
+        # Calculate average instead of sum as it we already have a function
+        # defined to work over a window and it doesn't affect the result as
+        # the arrays are altered in the same way and are still comparable.
+        window = 61 * self.hz  # Use 61 seconds for 30 seconds either side.
+        angle_capt = moving_average(stick_capt.array, window)
+        angle_fo = moving_average(stick_fo.array, window)
+
+        pilot_flying = np.ma.zeros(stick_capt.array.size)
+        pilot_flying[angle_capt > angle_fo] = 'Capt'
+        pilot_flying[angle_capt < angle_fo] = 'FO'
+        self.array = pilot_flying
 
 
 class PitchAlternateLaw(MultistateDerivedParameterNode):

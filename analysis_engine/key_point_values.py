@@ -9941,6 +9941,50 @@ class GrossWeightDelta60SecondsInFlightMax(KeyPointValueNode):
 
 
 ##############################################################################
+# Dual Input
+
+
+class DualInputDuration(KeyPointValueNode):
+    '''
+    Duration of dual input.
+    '''
+    unit = 's'
+
+    def derive(self, dual=M('Dual Input Warning')):
+
+        self.create_kpvs_where(dual.array == 'Dual', dual.hz)
+
+
+class DualInputByCaptDuration(KeyPointValueNode):
+    '''
+    Duration of dual input by the captain with first officer flying.
+    '''
+    unit = 's'
+
+    def derive(self,
+               dual=M('Dual Input Warning'),
+               pilot=M('Pilot Flying')):
+
+        condition = (dual.array == 'Dual') & (pilot.array == 'FO')
+        self.create_kpvs_where(condition, dual.hz)
+
+
+class DualInputByFODuration(KeyPointValueNode):
+    '''
+    Duration of dual input by the first officer with captain flying.
+    '''
+    name = 'Dual Input By FO Duration'
+    unit = 's'
+
+    def derive(self,
+               dual=M('Dual Input Warning'),
+               pilot=M('Pilot Flying')):
+
+        condition = (dual.array == 'Dual') & (pilot.array == 'Capt')
+        self.create_kpvs_where(condition, dual.hz)
+
+
+##############################################################################
 
 
 class HoldingDuration(KeyPointValueNode):
@@ -9951,12 +9995,6 @@ class HoldingDuration(KeyPointValueNode):
         self.create_kpvs_from_slice_durations(holds, self.frequency, mark='end')
 
 
-##### TODO: Implement!
-####class DualStickInput(KeyPointValueNode):
-####    def derive(self, x=P('Not Yet')):
-####        return NotImplemented
-####
-####
 ##### TODO: Implement!
 ####class ControlForcesTimesThree(KeyPointValueNode):
 ####    def derive(self, x=P('Not Yet')):
