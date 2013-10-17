@@ -1417,7 +1417,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         elif family_name in ['B757', 'B767']:
             self.array = self.b757_767_speedbrake(handle)
 
-        elif family_name in ['B787']:
+        elif family_name == 'B787':
             self.array = self.b787_speedbrake(handle)
 
         elif family_name == 'A320':
@@ -1426,7 +1426,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         elif family_name == 'Learjet':
             self.array = self.learjet_speedbrake(spdsw)
 
-        elif family_name in ['G-V', 'CL-600']:
+        elif family_name == 'G-V':
             # On the test aircraft SE-RDY the Speedbrake stored 0 at all
             # times and Speedbrake Handle was unresponsive with small numeric
             # variation. The Speedbrake (L) & (R) responded normally so we
@@ -1435,7 +1435,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
                                      'Stowed',
                                      'Deployed/Cmd Up')
 
-        elif family_name in['Global', 'CRJ 100/200', 'ERJ-135/145']:
+        elif family_name in['Global', 'CL-600', 'CRJ 100/200', 'ERJ-135/145']:
             # No valid data seen for this type to date....
             logger.warning(
                 'SpeedbrakeSelected: algorithm for family `%s` is undecided, '
