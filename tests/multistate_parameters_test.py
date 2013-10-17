@@ -54,6 +54,7 @@ from analysis_engine.multistate_parameters import (
     KeyVHFFO,
     MasterWarning,
     PackValvesOpen,
+    PilotFlying,
     PitchAlternateLaw,
     Slat,
     SpeedbrakeSelected,
@@ -989,6 +990,30 @@ class TestPackValvesOpen(unittest.TestCase):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestPilotFlying(unittest.TestCase, NodeTest):
+    def setUp(self):
+        self.node_class = PilotFlying
+        self.operational_combinations = [
+            ('Sidestick Angle (Capt)', 'Sidestick Angle (FO)'),
+        ]
+
+    def test_derive(self):
+        stick_capt_array = np.ma.concatenate((np.ma.zeros(100),
+                                              np.ma.zeros(100) + 20))
+        stick_fo_array = np.ma.concatenate((np.ma.zeros(100) + 20,
+                                            np.ma.zeros(100)))
+        stick_capt = P('Sidestick Angle (Capt)', array=stick_capt_array)
+        stick_fo = P('Sidestick Angle (FO)', array=stick_fo_array)
+        node = self.node_class()
+        node.derive(stick_capt, stick_fo)
+        expected_array = MappedArray([2.] * 100 + [1.] * 100)
+        expected = M('Pilot Flying', expected_array,
+                     values_mapping=PilotFlying.values_mapping)
+        print node.array
+        print expected.array, expected.values_mapping
+        np.testing.assert_array_equal(node.array, expected.array)
 
 
 class TestPitchAlternateLaw(unittest.TestCase, NodeTest):
