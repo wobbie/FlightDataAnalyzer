@@ -17,6 +17,7 @@ from analysis_engine.settings import (ACCEL_LAT_OFFSET_LIMIT,
                                       NAME_VALUES_CONF,
                                       NAME_VALUES_ENGINE,
                                       NAME_VALUES_FLAP,
+                                      REVERSE_THRUST_EFFECTIVE,
                                       SPOILER_DEPLOYED)
 
 from analysis_engine.flight_phase import scan_ils
@@ -158,9 +159,9 @@ class FlapOrConfigurationMaxOrMin(object):
 
 def thrust_reversers_working(landing, pwr, tr):
     '''
-    Thrust reversers are deployed and average N1 over 65%.
+    Thrust reversers are deployed and average N1 over REVERSE_THRUST_EFFECTIVE (nominally 65% N1).
     '''
-    high_power = np.ma.masked_less(pwr.array[landing.slice], 65.0)
+    high_power = np.ma.masked_less(pwr.array[landing.slice], REVERSE_THRUST_EFFECTIVE)
     high_power_slices = np.ma.clump_unmasked(high_power)
     return clump_multistate(tr.array, 'Deployed', high_power_slices)
 
@@ -1792,7 +1793,7 @@ class MainGearOnGroundToNoseGearOnGroundDuration(KeyPointValueNode):
     The time duration between the main gear touching the ground and the nose
     gear touching the ground.
     '''
-    units = 's'
+    units = 'sec'
 
     def derive(self, gog=P('Gear On Ground'), gogn=P('Gear (N) On Ground'),
                landings=S('Landing')):
@@ -2183,7 +2184,7 @@ class ThrustReversersDeployedDuration(KeyPointValueNode):
     Measure the duration (secs) which the thrust reverses were deployed for.
     0 seconds represents no deployment at landing.
     '''
-    units = 's'
+    units = 'sec'
 
     def derive(self, tr=M('Thrust Reversers'), landings=S('Landing')):
         for landing in landings:
@@ -2206,7 +2207,7 @@ class ThrustReversersCancelToEngStopDuration(KeyPointValueNode):
     indications of thrust reverser operation while the engine is not running,
     as can happen on some aircraft types.
     '''
-    units = 's'
+    units = 'sec'
 
     def derive(self, tr=M('Thrust Reversers'), 
                eng_starts=KTI('Eng Start'),
@@ -2240,7 +2241,7 @@ class TouchdownToThrustReversersDeployedDuration(KeyPointValueNode):
     Note: 3 second threshold may be applied to derive an event from this KPV.
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self,
                tr=M('Thrust Reversers'),
@@ -2349,7 +2350,7 @@ class TOGASelectedDuringFlightDuration(KeyPointValueNode):
     '''
 
     name = 'TOGA Selected During Flight Not Go Around Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self,
                toga=M('Takeoff And Go Around'),
@@ -2376,7 +2377,7 @@ class TOGASelectedDuringGoAroundDuration(KeyPointValueNode):
     '''
 
     name = 'TOGA Selected During Go Around Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, toga=M('Takeoff And Go Around'),
                go_arounds=S('Go Around And Climbout')):
@@ -2462,7 +2463,7 @@ class DelayedBrakingAfterTouchdown(KeyPointValueNode):
 class AutobrakeRejectedTakeoffNotSetDuringTakeoff(KeyPointValueNode):
     '''
     '''
-    units = 's'
+    units = 'sec'
 
     def derive(self,
                ab_rto=M('Autobrake Selected RTO'),
@@ -2639,7 +2640,7 @@ class CabinAltitudeWarningDuration(KeyPointValueNode):
     '''
     The duration of the Cabin Altitude Warning signal.
     '''
-    units = 's'
+    units = 'sec'
 
     def derive(self,
                cab_warn=M('Cabin Altitude Warning'),
@@ -3518,7 +3519,7 @@ class APDisengagedDuringCruiseDuration(KeyPointValueNode):
     in the cruise.
     '''
     name = 'AP Disengaged During Cruise Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, ap=M('AP Engaged'), cruise=S('Cruise')):
         self.create_kpvs_where(ap.array != 'Engaged', ap.hz, phase=cruise)
@@ -5354,7 +5355,7 @@ class EngFireWarningDuration(KeyPointValueNode):
     Duration that the any of the Engine Fire Warnings are active.
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self, eng_fire=M('Eng (*) Fire'), airborne=S('Airborne')):
         self.create_kpvs_where(eng_fire.array == 'Fire',
@@ -5371,7 +5372,7 @@ class APUFireWarningDuration(KeyPointValueNode):
     '''
 
     name = 'APU Fire Warning Duration'
-    units = 's'
+    units = 'sec'
 
     @classmethod
     def can_operate(cls, available):
@@ -5778,6 +5779,23 @@ class EngN1WithThrustReversersInTransitMax(KeyPointValueNode):
         self.create_kpv_from_slices(eng_n1_avg.array, slices, max_value)
 
 
+class EngN1WithThrustReversersDeployedMax(KeyPointValueNode):
+    '''
+    '''
+
+    name = 'Eng N1 With Thrust Reversers Deployed Max'
+    units = '%'
+
+    def derive(self,
+               eng_n1_avg=P('Eng (*) N1 Avg'),
+               tr=M('Thrust Reversers'),
+               landings=S('Landing')):
+
+        slices = [s.slice for s in landings]
+        slices = clump_multistate(tr.array, 'Deployed', slices)
+        self.create_kpv_from_slices(eng_n1_avg.array, slices, max_value)
+
+
 # NOTE: Was named 'Eng N1 Cooldown Duration'.
 # TODO: Similar KPV for duration between engine under 60 percent and engine shutdown
 class EngN1Below60PercentAfterTouchdownDuration(KeyPointValueNode):
@@ -5792,7 +5810,7 @@ class EngN1Below60PercentAfterTouchdownDuration(KeyPointValueNode):
 
     NAME_FORMAT = 'Eng (%(number)d) N1 Below 60 Percent After Touchdown Duration'
     NAME_VALUES = NAME_VALUES_ENGINE
-    units = 's'
+    units = 'sec'
 
     @classmethod
     def can_operate(cls, available):
@@ -5870,7 +5888,7 @@ class EngN154to72PercentWithThrustReversersDeployedDurationMax(KeyPointValueNode
     NAME_FORMAT = 'Eng (%(number)d) N1 54 To 72 Percent With Thrust Reversers Deployed Duration Max'
     NAME_VALUES = NAME_VALUES_ENGINE
 
-    units = 's'
+    units = 'sec'
 
     @classmethod
     def can_operate(cls, available):
@@ -6141,7 +6159,7 @@ class ThrottleReductionToTouchdownDuration(KeyPointValueNode):
     application of reverse thrust.
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self,
                tla=P('Throttle Levers'),
@@ -6579,7 +6597,7 @@ class EngShutdownDuringFlightDuration(KeyPointValueNode):
     and Fuel Flow to determine whether the engines are all running.
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self,
                eng_running=P('Eng (*) All Running'),
@@ -7084,7 +7102,7 @@ class FuelQtyLowWarningDuration(KeyPointValueNode):
     '''
     Measures the duration of the Fuel Quantity Low warning discretes.
     '''
-    units = 's'
+    units = 'sec'
 
     def derive(self, warning=M('Fuel Qty (*) Low')):
         self.create_kpvs_where(warning.array == 'Warning', warning.hz)
@@ -7093,7 +7111,7 @@ class FuelQtyLowWarningDuration(KeyPointValueNode):
 class FuelJettisonDuration(KeyPointValueNode):
     '''
     '''
-    units = 's'
+    units = 'sec'
 
     def derive(self,
                jet=P('Jettison Nozzle'),
@@ -8525,7 +8543,7 @@ class SpeedbrakeDeployed1000To20FtDuration(KeyPointValueNode):
     '''
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self,
                spd_brk=M('Speedbrake Selected'),
@@ -8545,7 +8563,7 @@ class SpeedbrakeDeployedWithConfDuration(KeyPointValueNode):
     not be used with speedbrakes.
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self,
                spd_brk=M('Speedbrake Selected'),
@@ -8565,7 +8583,7 @@ class SpeedbrakeDeployedWithFlapDuration(KeyPointValueNode):
     '''
     '''
 
-    units = 's'
+    units = 'sec'
     
     @classmethod
     def can_operate(cls, available):
@@ -8594,7 +8612,7 @@ class SpeedbrakeDeployedWithPowerOnDuration(KeyPointValueNode):
 
     The threshold for high power is 60% N1. This aligns with the Airbus AFPS.
     '''
-    units = 's'
+    units = 'sec'
 
     def derive(self, spd_brk=M('Speedbrake Selected'),
                power=P('Eng (*) N1 Avg'), airborne=S('Airborne')):
@@ -8614,7 +8632,7 @@ class SpeedbrakeDeployedDuringGoAroundDuration(KeyPointValueNode):
     "Loss of Control Mis-handled G/A - ...Speedbrake retraction."
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self,
                spd_brk=M('Speedbrake Selected'),
@@ -8638,7 +8656,7 @@ class StickPusherActivatedDuration(KeyPointValueNode):
     We annotate the stick pusher event with the duration of the event.
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self, stick_pusher=M('Stick Pusher'), airs=S('Airborne')):
         # TODO: Check that this triggers correctly as stick push events are probably
@@ -8652,7 +8670,7 @@ class StickShakerActivatedDuration(KeyPointValueNode):
     We annotate the stick shaker event with the duration of the event.
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self, stick_shaker=M('Stick Shaker'), airs=S('Airborne')):
         self.create_kpvs_where(stick_shaker.array == 'Shake',
@@ -8662,7 +8680,7 @@ class StickShakerActivatedDuration(KeyPointValueNode):
 class OverspeedDuration(KeyPointValueNode):
     '''
     '''
-    units = 's'
+    units = 'sec'
 
     def derive(self, overspeed=M('Overspeed Warning')):
         self.create_kpvs_where(overspeed.array == 'Overspeed', self.frequency)
@@ -8811,7 +8829,7 @@ class MasterWarningDuration(KeyPointValueNode):
     any possible distractions to the pilot"
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self, warning=M('Master Warning')):
         self.create_kpvs_where(warning.array == 'Warning', warning.hz)
@@ -8825,7 +8843,7 @@ class MasterWarningDuringTakeoffDuration(KeyPointValueNode):
     any possible distractions to the pilot"
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self, warning=M('Master Warning'),
                takeoff_rolls=S('Takeoff Roll')):
@@ -8839,7 +8857,7 @@ class MasterCautionDuringTakeoffDuration(KeyPointValueNode):
     "Master Warning In Takeoff Duration".
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self, caution=M('Master Caution'),
                takeoff_rolls=S('Takeoff Roll')):
@@ -8852,7 +8870,7 @@ class PitchAlternateLawDuration(KeyPointValueNode):
     TODO: Review
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self, alt_law=M('Pitch Alternate Law')):
         self.create_kpvs_where(alt_law.array == 'Alternate',
@@ -8864,7 +8882,7 @@ class PitchDirectLawDuration(KeyPointValueNode):
     TODO: Review
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self, dir_law=M('Pitch Direct Law')):
         self.create_kpvs_where(dir_law.array == 'Direct',
@@ -8915,7 +8933,7 @@ class TAWSAlertDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Alert Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_alert=M('TAWS Alert'),
                airborne=S('Airborne')):
@@ -8929,7 +8947,7 @@ class TAWSWarningDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Warning Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_warning=M('TAWS Warning'),
                airborne=S('Airborne')):
@@ -8942,7 +8960,7 @@ class TAWSGeneralWarningDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS General Warning Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_general=M('TAWS General'),
                airborne=S('Airborne')):
@@ -8955,7 +8973,7 @@ class TAWSSinkRateWarningDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Sink Rate Warning Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_sink_rate=M('TAWS Sink Rate'),
                airborne=S('Airborne')):
@@ -8968,7 +8986,7 @@ class TAWSTooLowFlapWarningDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Too Low Flap Warning Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_too_low_flap=M('TAWS Too Low Flap'),
                airborne=S('Airborne')):
@@ -8981,7 +8999,7 @@ class TAWSTerrainWarningDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Terrain Warning Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_terrain=M('TAWS Terrain'),
                airborne=S('Airborne')):
@@ -8994,7 +9012,7 @@ class TAWSTerrainPullUpWarningDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Terrain Pull Up Warning Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_terrain_pull_up=M('TAWS Terrain Pull Up'),
                airborne=S('Airborne')):
@@ -9007,7 +9025,7 @@ class TAWSGlideslopeWarning1500To1000FtDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Glideslope Warning 1500 To 1000 Ft Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_glideslope=M('TAWS Glideslope'),
                alt_aal=P('Altitude AAL For Flight Phases')):
@@ -9021,7 +9039,7 @@ class TAWSGlideslopeWarning1000To500FtDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Glideslope Warning 1000 To 500 Ft Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_glideslope=M('TAWS Glideslope'),
                alt_aal=P('Altitude AAL For Flight Phases')):
@@ -9035,7 +9053,7 @@ class TAWSGlideslopeWarning500To200FtDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Glideslope Warning 500 To 200 Ft Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self,
                taws_glideslope=M('TAWS Glideslope'),
@@ -9050,7 +9068,7 @@ class TAWSTooLowTerrainWarningDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Too Low Terrain Warning Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_too_low_terrain=M('TAWS Too Low Terrain'),
                airborne=S('Airborne')):
@@ -9063,7 +9081,7 @@ class TAWSTooLowGearWarningDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Too Low Gear Warning Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_too_low_gear=M('TAWS Too Low Gear'),
                airborne=S('Airborne')):
@@ -9076,7 +9094,7 @@ class TAWSPullUpWarningDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Pull Up Warning Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_pull_up=M('TAWS Pull Up'), airborne=S('Airborne')):
         self.create_kpvs_where(taws_pull_up.array == 'Warning',
@@ -9088,7 +9106,7 @@ class TAWSDontSinkWarningDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Dont Sink Warning Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_dont_sink=M('TAWS Dont Sink'),
                airborne=S('Airborne')):
@@ -9101,7 +9119,7 @@ class TAWSCautionObstacleDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Caution Obstacle Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_caution_obstacle=M('TAWS Caution Obstacle'),
                airborne=S('Airborne')):
@@ -9115,7 +9133,7 @@ class TAWSCautionTerrainDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Caution Terrain Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_caution_terrain=M('TAWS Caution Terrain'),
                airborne=S('Airborne')):
@@ -9129,7 +9147,7 @@ class TAWSTerrainCautionDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Terrain Caution Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_terrain_caution=M('TAWS Terrain Caution'),
                airborne=S('Airborne')):
@@ -9142,7 +9160,7 @@ class TAWSFailureDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Failure Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_failure=M('TAWS Failure'),
                airborne=S('Airborne')):
@@ -9155,7 +9173,7 @@ class TAWSObstacleWarningDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Obstacle Warning Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_obstacle_warning=M('TAWS Obstacle Warning'),
                airborne=S('Airborne')):
@@ -9168,7 +9186,7 @@ class TAWSPredictiveWindshearDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Predictive Windshear Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_pw=M('TAWS Predictive Windshear'),
                airborne=S('Airborne')):
@@ -9181,7 +9199,7 @@ class TAWSTerrainAheadDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Terrain Ahead Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_terrain_ahead=M('TAWS Terrain Ahead'),
                airborne=S('Airborne')):
@@ -9194,7 +9212,7 @@ class TAWSTerrainAheadPullUpDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Terrain Ahead Pull Up Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_terrain_ahead_pu=M('TAWS Terrain Ahead Pull Up'),
                airborne=S('Airborne')):
@@ -9207,7 +9225,7 @@ class TAWSWindshearWarningBelow1500FtDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Windshear Warning Below 1500 Ft Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_windshear=M('TAWS Windshear Warning'),
                alt_aal=P('Altitude AAL For Flight Phases')):
@@ -9221,7 +9239,7 @@ class TAWSWindshearCautionBelow1500FtDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Windshear Caution Below 1500 Ft Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_windshear=M('TAWS Windshear Caution'),
                alt_aal=P('Altitude AAL For Flight Phases')):
@@ -9235,7 +9253,7 @@ class TAWSWindshearSirenBelow1500FtDuration(KeyPointValueNode):
     '''
 
     name = 'TAWS Windshear Siren Below 1500 Ft Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, taws_windshear=M('TAWS Windshear Siren'),
                alt_aal=P('Altitude AAL For Flight Phases')):
@@ -9254,7 +9272,7 @@ class TCASTAWarningDuration(KeyPointValueNode):
     '''
 
     name = 'TCAS TA Warning Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, tcas=M('TCAS Combined Control'), airs=S('Airborne')):
         
@@ -9271,7 +9289,7 @@ class TCASRAWarningDuration(KeyPointValueNode):
     '''
 
     name = 'TCAS RA Warning Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, tcas=M('TCAS Combined Control'), airs=S('Airborne')):
         
@@ -9294,7 +9312,7 @@ class TCASRAReactionDelay(KeyPointValueNode):
     '''
 
     name = 'TCAS RA Reaction Delay'
-    units = 's'
+    units = 'sec'
 
     def derive(self, acc=P('Acceleration Normal Offset Removed'),
                tcas=M('TCAS Combined Control'), airs=S('Airborne')):
@@ -9391,7 +9409,7 @@ class TCASRAToAPDisengagedDuration(KeyPointValueNode):
     '''
 
     name = 'TCAS RA To AP Disengaged Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self,
                ap_offs=KTI('AP Disengaged Selection'),
@@ -9420,7 +9438,7 @@ class TCASFailureDuration(KeyPointValueNode):
     '''
 
     name = 'TCAS Failure Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, tcas_failure=M('TCAS Failure'),
                airborne=S('Airborne')):
@@ -9439,7 +9457,7 @@ class TakeoffConfigurationWarningDuration(KeyPointValueNode):
     takeoff roll."
     '''
 
-    units = 's'
+    units = 'sec'
     
     def derive(self, takeoff_warn=M('Takeoff Configuration Warning'),
                takeoff=S('Takeoff Roll')):
@@ -9451,7 +9469,7 @@ class TakeoffConfigurationFlapWarningDuration(KeyPointValueNode):
     '''
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self, takeoff_warn=M('Takeoff Configuration Flap Warning'),
                takeoff=S('Takeoff Roll')):
@@ -9463,7 +9481,7 @@ class TakeoffConfigurationParkingBrakeWarningDuration(KeyPointValueNode):
     '''
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self,
                takeoff_warn=M('Takeoff Configuration Parking Brake Warning'),
@@ -9476,7 +9494,7 @@ class TakeoffConfigurationSpoilerWarningDuration(KeyPointValueNode):
     '''
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self,
                takeoff_cfg_warn=M('Takeoff Configuration Spoiler Warning'),
@@ -9489,7 +9507,7 @@ class TakeoffConfigurationStabilizerWarningDuration(KeyPointValueNode):
     '''
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self,
                takeoff_cfg_warn=M('Takeoff Configuration Stabilizer Warning'),
@@ -9506,7 +9524,7 @@ class LandingConfigurationGearWarningDuration(KeyPointValueNode):
     '''
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self,
                landing_cfg_warn=M('Landing Configuration Gear Warning'),
@@ -9519,7 +9537,7 @@ class LandingConfigurationSpeedbrakeCautionDuration(KeyPointValueNode):
     '''
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self,
                landing_cfg_caution=M(
@@ -9644,7 +9662,7 @@ class ThrustAsymmetryDuringApproachDuration(KeyPointValueNode):
     existing events using this approach.
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self, ta=P('Thrust Asymmetry'), approaches=S('Approach')):
         for approach in approaches:
@@ -9660,7 +9678,7 @@ class ThrustAsymmetryWithThrustReversersDeployedDuration(KeyPointValueNode):
     Included for customers with existing events using this approach.
     '''
 
-    units = 's'
+    units = 'sec'
 
     def derive(self,
                ta=P('Thrust Asymmetry'),
@@ -9972,7 +9990,7 @@ class TwoDegPitchTo35FtDuration(KeyPointValueNode):
     '''
 
     name = '2 Deg Pitch To 35 Ft Duration'
-    units = 's'
+    units = 'sec'
 
     def derive(self, two_deg_pitch_to_35ft=S('2 Deg Pitch To 35 Ft')):
 
@@ -9994,7 +10012,7 @@ class LastFlapChangeToTakeoffRollEndDuration(KeyPointValueNode):
     We detect the last change of flap selection during the takeoff roll phase
     and calculate the time between this instant and the end of takeoff roll.
     '''
-    units = 's'
+    units = 'sec'
     
     @classmethod
     def can_operate(cls, available):
