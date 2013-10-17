@@ -1150,16 +1150,19 @@ class PilotFlying(MultistateDerivedParameterNode):
                stick_capt=P('Sidestick Angle (Capt)'),
                stick_fo=P('Sidestick Angle (FO)')):
 
-        # Calculate average instead of sum as it we already have a function
-        # defined to work over a window and it doesn't affect the result as
-        # the arrays are altered in the same way and are still comparable.
-        window = 61 * self.hz  # Use 61 seconds for 30 seconds either side.
-        angle_capt = moving_average(stick_capt.array, window)
-        angle_fo = moving_average(stick_fo.array, window)
-
         pilot_flying = np.ma.zeros(stick_capt.array.size)
-        pilot_flying[angle_capt > angle_fo] = 'Capt'
-        pilot_flying[angle_capt < angle_fo] = 'FO'
+
+        if stick_capt.array.size > 61:
+            # Calculate average instead of sum as it we already have a function
+            # defined to work over a window and it doesn't affect the result as
+            # the arrays are altered in the same way and are still comparable.
+            window = 61 * self.hz  # Use 61 seconds for 30 seconds either side.
+            angle_capt = moving_average(stick_capt.array, window)
+            angle_fo = moving_average(stick_fo.array, window)
+
+            pilot_flying[angle_capt > angle_fo] = self.state['Capt']
+            pilot_flying[angle_capt < angle_fo] = self.state['FO']
+
         self.array = pilot_flying
 
 
