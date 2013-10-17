@@ -1502,6 +1502,10 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
                 'temporarily using speedbrake handle.', family_name)
             self.array = np_ma_masked_zeros_like(handle.array)
 
+        elif family_name in['A340']:
+            # We don't have the "Armed" state
+            self.array = handle.array * 2
+
         else:
             raise NotImplementedError
 
