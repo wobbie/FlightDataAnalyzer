@@ -679,7 +679,8 @@ class TestFlap(unittest.TestCase):
         self.assertEqual(flap.values_mapping,
                          {0: '0', 50: '50', 100: '100'})
         ma_test.assert_array_equal(
-            flap.array, ['50', '50', '50', '0', '0', '0', '0', '0', '50', '50', '100', '100'])
+            flap.array, ['50', '50', '50', '0', '0', '0', '0', '0', 
+                         '50', '50', '100', '100'])
         self.assertEqual(flap.units, '%')
 
 
