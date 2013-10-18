@@ -200,6 +200,7 @@ from analysis_engine.key_point_values import (
     EngN1DuringTaxiMax,
     EngN1For5Sec1000To500FtMin,
     EngN1For5Sec500To50FtMin,
+    EngN1WithThrustReversersDeployedMax,
     EngN1WithThrustReversersInTransitMax,
     EngN2CyclesDuringFinalApproach,
     EngN2DuringGoAround5MinRatingMax,
@@ -4790,9 +4791,36 @@ class TestEngN1WithThrustReversersInTransitMax(unittest.TestCase, NodeTest):
         self.node_class = EngN1WithThrustReversersInTransitMax
         self.operational_combinations = [('Eng (*) N1 Avg', 'Thrust Reversers', 'Landing')]
 
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+    def test_basic(self):
+        tr = M(name='Thrust Reversers',
+               array=np.ma.array([0,0,0,1,1,2,2,2,2,1,0,0]),
+               values_mapping = {0:'Stowed', 1:'In Transit', 2:'Deployed'}
+               )
+        n1 = P('Eng (*) N1 Avg', array=np.ma.array([50]*6 + [66.0]*1 + [50]*5))
+        lands = buildsection('Landing', 2, 11)
+        trd = EngN1WithThrustReversersInTransitMax()
+        trd.get_derived((n1, tr, lands))
+        self.assertAlmostEqual(trd[0].value, 50.0)
+
+
+class TestEngN1WithThrustReversersDeployedMax(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = EngN1WithThrustReversersDeployedMax
+        self.operational_combinations = [('Eng (*) N1 Avg', 'Thrust Reversers', 'Landing')]
+
+    def test_basic(self):
+        tr = M(name='Thrust Reversers',
+               array=np.ma.array([0,0,0,1,1,2,2,2,2,1,0,0]),
+               values_mapping = {0:'Stowed', 1:'In Transit', 2:'Deployed'}
+               )
+        n1 = P('Eng (*) N1 Avg', array=np.ma.array([50]*6 + [66.0]*1 + [50]*5))
+        lands = buildsection('Landing', 2, 11)
+        trd = EngN1WithThrustReversersDeployedMax()
+        trd.get_derived((n1, tr, lands))
+        self.assertAlmostEqual(trd[0].value, 66.0)
+
+
 
 
 class TestEngN1Below60PercentAfterTouchdownDuration(unittest.TestCase):
