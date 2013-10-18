@@ -3910,11 +3910,23 @@ class TestSlopeToLanding(unittest.TestCase):
 
 class TestSpeedbrake(unittest.TestCase):
     def test_can_operate(self):
-        opts = Speedbrake.get_operational_combinations()
-        self.assertTrue(('Spoiler (2)', 'Spoiler (7)', 'Frame') in opts)
-        self.assertTrue(('Spoiler (1)', 'Spoiler (14)', 'Frame') in opts)
-        self.assertTrue(('Spoiler (4)', 'Spoiler (9)', 'Frame') in opts)
-        
+        family = A(name='Family', value='B737-Classic')
+        self.assertTrue(Speedbrake.can_operate(('Spoiler (4)', 'Spoiler (9)'),
+                                               family=family))
+        family = A(name='Family', value='A320')
+        self.assertTrue(Speedbrake.can_operate(('Spoiler (2)', 'Spoiler (7)'),
+                                               family=family))
+        family = A(name='Family', value='B787')
+        self.assertTrue(Speedbrake.can_operate(('Spoiler (1)', 'Spoiler (14)'),
+                                               family=family))
+        family = A(name='Family', value='Learjet')
+        self.assertTrue(Speedbrake.can_operate(('Spoiler (L)', 'Spoiler (R)'),
+                                               family=family))
+        family = A(name='Family', value='CRJ 900')
+        self.assertTrue(Speedbrake.can_operate(
+            ('Spoiler (L) Inboard', 'Spoiler (L) Outboard',
+             'Spoiler (R) Inboard', 'Spoiler (R) Outboard'), family=family))
+
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
