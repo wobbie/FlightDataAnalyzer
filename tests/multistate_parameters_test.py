@@ -32,6 +32,7 @@ from analysis_engine.multistate_parameters import (
     APURunning,
     Configuration,
     Daylight,
+    DualInputWarning,
     EngThrustModeRequired,
     Eng_1_Fire,
     Eng_2_Fire,
@@ -320,6 +321,34 @@ class TestDaylight(unittest.TestCase):
         don.get_derived((lat, lon, start_dt, dur))
         expected = ['Day', 'Night', 'Night', 'Night']
         np.testing.assert_array_equal(don.array, expected)  # FIX required to test as no longer superframe samples
+
+
+class TestDualInputWarning(unittest.TestCase, NodeTest):
+    def setUp(self):
+        self.node_class = DualInputWarning
+        self.operational_combinations = [
+            ('Pilot Flying', 'Sidestick Angle (Capt)', 'Sidestick Angle (FO)')
+        ]
+
+    def test_derive(self):
+        pilot_map = {0: '-', 1: 'Capt', 2: 'FO'}
+        pilot_array = MappedArray([1] * 20 + [0] * 10 + [2] * 20,
+                                  values_mapping=pilot_map)
+        capt_array = np.ma.concatenate((15 + np.arange(20), np.zeros(30)))
+        fo_array = np.ma.concatenate((np.zeros(30), 15 + np.arange(20)))
+        # Dual input
+        fo_array[5:10] = 15
+        pilot = M('Pilot Flying', pilot_array, values_mapping=pilot_map)
+        capt = P('Sidestick Angle (Capt)', capt_array)
+        fo = P('Sidestick Angle (FO)', fo_array)
+        node = self.node_class()
+        node.derive(pilot, capt, fo)
+
+        expected_array = MappedArray(
+            np.ma.zeros(capt_array.size),
+            values_mapping=self.node_class.values_mapping)
+        expected_array[5:10] = 'Dual'
+        np.testing.assert_array_equal(node.array, expected_array)
 
 
 class TestEng_1_Fire(unittest.TestCase, NodeTest):
