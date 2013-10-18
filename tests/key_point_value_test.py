@@ -163,6 +163,9 @@ from analysis_engine.key_point_values import (
     DecelerationFromTouchdownToStopOnRunway,
     DelayedBrakingAfterTouchdown,
     DirectLawDuration,
+    DualInputDuration,
+    DualInputByCaptDuration,
+    DualInputByFODuration,
     ElevatorDuringLandingMin,
     EngBleedValvesAtLiftoff,
     EngEPR500To50FtMax,
@@ -8722,6 +8725,75 @@ class TestGrossWeightDelta60SecondsInFlightMax(unittest.TestCase):
         self.assertEqual(gwd[0].index, 176)
         self.assertEqual(gwd[0].value, 6)
 
+##############################################################################
+# Dual Input
+
+
+class TestDualInputDuration(unittest.TestCase, NodeTest):
+    def setUp(self):
+        self.node_class = DualInputDuration
+        self.operational_combinations = [('Dual Input Warning',)]
+
+    def test_derive(self):
+        mapping = {0: '-', 1: 'Dual'}
+        dual = M('Dual Input Warning', np.ma.zeros(50), values_mapping=mapping)
+        dual.array[3:10] = 'Dual'
+
+        node = self.node_class()
+        node.derive(dual)
+
+        expected = [KeyPointValue(
+            name='Dual Input Duration', index=3, value=7.0)]
+        self.assertEqual(node, expected)
+
+
+class TestDualInputByCaptDuration(unittest.TestCase, NodeTest):
+    def setUp(self):
+        self.node_class = DualInputByCaptDuration
+        self.operational_combinations = [
+            ('Dual Input Warning', 'Pilot Flying')]
+
+    def test_derive(self):
+        mapping = {0: '-', 1: 'Dual'}
+        dual = M('Dual Input Warning', np.ma.zeros(50), values_mapping=mapping)
+        dual.array[3:10] = 'Dual'
+
+        mapping = {0: '-', 1: 'Capt', 2: 'FO'}
+        pilot = M('Pilot Flying', np.ma.zeros(50), values_mapping=mapping)
+        pilot.array[0:20] = 'FO'
+
+        node = self.node_class()
+        node.derive(dual, pilot)
+
+        expected = [KeyPointValue(
+            name='Dual Input By Capt Duration', index=3, value=7.0)]
+        self.assertEqual(node, expected)
+
+
+class TestDualInputByFODuration(unittest.TestCase, NodeTest):
+    def setUp(self):
+        self.node_class = DualInputByFODuration
+        self.operational_combinations = [
+            ('Dual Input Warning', 'Pilot Flying')]
+
+    def test_derive(self):
+        mapping = {0: '-', 1: 'Dual'}
+        dual = M('Dual Input Warning', np.ma.zeros(50), values_mapping=mapping)
+        dual.array[3:10] = 'Dual'
+
+        mapping = {0: '-', 1: 'Capt', 2: 'FO'}
+        pilot = M('Pilot Flying', np.ma.zeros(50), values_mapping=mapping)
+        pilot.array[0:20] = 'Capt'
+
+        node = self.node_class()
+        node.derive(dual, pilot)
+
+        expected = [KeyPointValue(
+            name='Dual Input By FO Duration', index=3, value=7.0)]
+        self.assertEqual(node, expected)
+
+
+##############################################################################
 
 class TestZeroFuelWeight(unittest.TestCase, NodeTest):
 
