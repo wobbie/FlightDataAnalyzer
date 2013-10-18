@@ -1150,7 +1150,8 @@ class PilotFlying(MultistateDerivedParameterNode):
                stick_capt=P('Sidestick Angle (Capt)'),
                stick_fo=P('Sidestick Angle (FO)')):
 
-        pilot_flying = np.ma.zeros(stick_capt.array.size)
+        pilot_flying = MappedArray(np.ma.zeros(stick_capt.array.size),
+                                   values_mapping=self.values_mapping)
 
         if stick_capt.array.size > 61:
             # Calculate average instead of sum as it we already have a function
@@ -1166,8 +1167,8 @@ class PilotFlying(MultistateDerivedParameterNode):
             angle_fo = repair_mask(angle_fo, repair_duration=31,
                                    extrapolate=True)
 
-            pilot_flying[angle_capt > angle_fo] = self.state['Capt']
-            pilot_flying[angle_capt < angle_fo] = self.state['FO']
+            pilot_flying[angle_capt > angle_fo] = 'Capt'
+            pilot_flying[angle_capt < angle_fo] = 'FO'
 
         self.array = pilot_flying
 
