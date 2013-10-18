@@ -3842,29 +3842,6 @@ class TestSpeedbrake(unittest.TestCase):
         self.assertTrue(False, msg='Test not implemented.')
 
 
-class TestSpoiler(unittest.TestCase):
-    def test_can_operate(self):
-        family = Attribute('Family', 'B787')
-        self.assertTrue(Spoiler.can_operate(('Spoiler (1)',), family=family))
-        self.assertTrue(Spoiler.can_operate(('Spoiler (14)',), family=family))
-        self.assertTrue(Spoiler.can_operate(('Spoiler (1)', 'Spoiler (14)'),
-                                            family=family))
-        family = Attribute('Family', 'A320')
-        self.assertFalse(Spoiler.can_operate(('Spoiler (1)', 'Spoiler (14)'),
-                                             family=family))
-        family = Attribute('Family', 'G-V')
-        self.assertTrue(Spoiler.can_operate(('Spoiler (L)', 'Spoiler (R)'),
-                                             family=family))
-    
-    def test_derive_Gulfstream(self):
-        spoiler = P('Spoiler (L)', array=np.ma.array([1,2,1,2,3,2,1,2,35,40,2,1.0]))
-        family = A('Family', value='G-V')
-        spoil = Spoiler()
-        spoil.derive(None, None, spoiler, None, None, None, None, None, family)
-        expected = np.array([1,2,1,2,3,2,1,2,35,40,2,1.0])
-        np.testing.assert_array_equal(spoil.array.data, expected)
-        
-
 class TestSAT(unittest.TestCase):
     # Note: the core function machtat2sat is tested by the library test.
     @unittest.skip('Test Not Implemented')
