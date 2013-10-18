@@ -2188,10 +2188,38 @@ class TestAirspeedWithThrustReversersDeployedMin(unittest.TestCase, NodeTest):
         self.node_class = AirspeedWithThrustReversersDeployedMin
         self.operational_combinations = [('Airspeed True', 'Thrust Reversers', 'Eng (*) N1 Avg', 'Landing')]
 
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+    def test_derive_basic(self):
+        air_spd=P('Airspeed True',array = np.ma.arange(100,0,-10))
+        tr=M('Thrust Reversers', array=np.ma.array([0]*3+[1]+[2]*4+[1,0]), 
+             values_mapping = {0: 'Stowed', 1: 'In Transit', 2: 'Deployed'})
+        power=P('Eng (*) N1 Avg', array=np.ma.array([40]*5+[70]*5))
+        landings=buildsection('Landing', 2, 9)
+        node = AirspeedWithThrustReversersDeployedMin()
+        node.derive(air_spd, tr, power, landings)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0], KeyPointValue(index=6.5, 
+                                                value=35.0, 
+                                                name='Airspeed With Thrust Reversers Deployed Min'))
 
+    def test_derive_inadequate_power(self):
+        air_spd=P('Airspeed True',array = np.ma.arange(100,0,-10))
+        tr=M('Thrust Reversers', array=np.ma.array([0]*3+[1]+[2]*4+[1,0]), 
+             values_mapping = {0: 'Stowed', 1: 'In Transit', 2: 'Deployed'})
+        power=P('Eng (*) N1 Avg', array=np.ma.array([40]*10))
+        landings=buildsection('Landing', 2, 9)
+        node = AirspeedWithThrustReversersDeployedMin()
+        node.derive(air_spd, tr, power, landings)
+        self.assertEqual(len(node), 0)
+
+    def test_derive_not_deployed(self):
+        air_spd=P('Airspeed True',array = np.ma.arange(100,0,-10))
+        tr=M('Thrust Reversers', array=np.ma.array([0]*3+[1]*6+[0]), 
+             values_mapping = {0: 'Stowed', 1: 'In Transit', 2: 'Deployed'})
+        power=P('Eng (*) N1 Avg', array=np.ma.array([40]*5+[70]*5))
+        landings=buildsection('Landing', 2, 9)
+        node = AirspeedWithThrustReversersDeployedMin()
+        node.derive(air_spd, tr, power, landings)
+        self.assertEqual(len(node), 0)
 
 class TestAirspeedAtThrustReversersSelection(unittest.TestCase, NodeTest):
 
@@ -2291,11 +2319,6 @@ class TestAirspeed3000FtToTopOfClimbMax(unittest.TestCase, NodeTest):
         node.derive(air_spd, alt_aal, tocs)
         self.assertEqual(len(node), 1)
         self.assertEqual(node[0], KeyPointValue(149, 249, 'Airspeed 3000 Ft To Top Of Climb Max'))
-
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
-
 
 class TestAirspeedDuringLevelFlightMax(unittest.TestCase, NodeTest):
 
