@@ -132,6 +132,8 @@ from analysis_engine.derived_parameters import (
     Pitch,
     RollRate,
     RudderPedal,
+    SidestickAngleCapt,
+    SidestickAngleFO,
     SlatSurface,
     Speedbrake,
     Spoiler,
@@ -1519,7 +1521,45 @@ class TestDescendForFlightPhases(unittest.TestCase):
         expected = np.ma.array([0,0,0,-7,-9,0,0,-5,-8,0])
         ma_test.assert_masked_array_approx_equal(descend.array, expected)
 
-        
+
+class TestSidestickAngleCapt(NodeTest, unittest.TestCase):
+    def setUp(self):
+        self.node_class = SidestickAngleCapt
+        self.operational_combinations = [
+            ('Pitch Command (Capt)', 'Roll Command (Capt)'),
+        ]
+
+    def test_derive(self):
+        pitch_array = np.ma.arange(20)
+        roll_array = pitch_array[::-1]
+        pitch = P('Pitch Command (Capt)', pitch_array)
+        roll = P('Pitch Command (Capt)', roll_array)
+        node = self.node_class()
+        node.derive(pitch, roll)
+
+        expected_array = np.ma.sqrt(pitch_array ** 2 + roll_array ** 2)
+        np.testing.assert_array_equal(node.array, expected_array)
+
+
+class TestSidestickAngleFO(NodeTest, unittest.TestCase):
+    def setUp(self):
+        self.node_class = SidestickAngleFO
+        self.operational_combinations = [
+            ('Pitch Command (FO)', 'Roll Command (FO)'),
+        ]
+
+    def test_derive(self):
+        pitch_array = np.ma.arange(20)
+        roll_array = pitch_array[::-1]
+        pitch = P('Pitch Command (FO)', pitch_array)
+        roll = P('Pitch Command (FO)', roll_array)
+        node = self.node_class()
+        node.derive(pitch, roll)
+
+        expected_array = np.ma.sqrt(pitch_array ** 2 + roll_array ** 2)
+        np.testing.assert_array_equal(node.array, expected_array)
+
+
 class TestDistanceToLanding(unittest.TestCase):
     
     def test_can_operate(self):
