@@ -338,8 +338,8 @@ class DualInputWarning(MultistateDerivedParameterNode):
                stick_fo=P('Sidestick Angle (FO)')):
 
         array = np_ma_zeros_like(pilot.array)
-        array[pilot.array == 'Capt'] = stick_fo.array
-        array[pilot.array == 'FO'] = stick_capt.array
+        array[pilot.array == 'Capt'] = stick_fo.array[pilot.array == 'Capt']
+        array[pilot.array == 'FO'] = stick_capt.array[pilot.array == 'FO']
         array = np.ma.array(array > 0.5, mask=array.mask, dtype=int)
 
         slices = runs_of_ones(array)
