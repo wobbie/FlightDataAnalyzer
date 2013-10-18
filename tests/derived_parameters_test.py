@@ -218,7 +218,6 @@ class NodeTest(object):
                             phase_name='Phase'):
         import shutil
         import tempfile
-        from hdfaccess.file import hdf_file
 
         params = []
         phase = None
@@ -1562,7 +1561,7 @@ class TestSidestickAngleCapt(NodeTest, unittest.TestCase):
 
     def test_derive_from_hdf(self):
         [pitch, roll, sidestick], phase = self.get_params_from_hdf(
-            'test_data/dual_input.hdf5',
+            os.path.join(test_data_path, 'dual_input.hdf5'),
             ['Pitch Command (Capt)', 'Roll Command (Capt)',
              self.node_class.get_name()])
 
@@ -1596,7 +1595,7 @@ class TestSidestickAngleFO(NodeTest, unittest.TestCase):
 
     def test_derive_from_hdf(self):
         [pitch, roll, sidestick], phase = self.get_params_from_hdf(
-            'test_data/dual_input.hdf5',
+            os.path.join(test_data_path, 'dual_input.hdf5'),
             ['Pitch Command (FO)', 'Roll Command (FO)',
              self.node_class.get_name()])
 

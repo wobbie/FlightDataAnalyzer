@@ -5232,8 +5232,8 @@ class TestEngOilQtyDuringTaxiInMax(unittest.TestCase, NodeTest):
 
     def test_derive_from_hdf(self):
         [oil], phase = self.get_params_from_hdf(
-            'test_data/757-3A-001.hdf5', ['Eng (1) Oil Qty'],
-            slice(21722, 21936), 'Taxi In')
+            os.path.join(test_data_path, '757-3A-001.hdf5'),
+            ['Eng (1) Oil Qty'], slice(21722, 21936), 'Taxi In')
         node = self.node_class()
         node.derive(oil, None, None, None, phase)
         self.assertEqual(
@@ -7664,8 +7664,8 @@ class TestRudderPedalForceMax(unittest.TestCase, NodeTest):
 
     def test_derive_from_hdf(self):
         [rudder], phase = self.get_params_from_hdf(
-            'test_data/757-3A-001.hdf5', ['Rudder Pedal Force'],
-            slice(836, 21663), 'Fast')
+            os.path.join(test_data_path, '757-3A-001.hdf5'),
+            ['Rudder Pedal Force'], slice(836, 21663), 'Fast')
         node = self.node_class()
         node.derive(rudder, phase)
         self.assertEqual(
@@ -8795,7 +8795,7 @@ class TestDualInputDuration(unittest.TestCase, NodeTest):
 
     def test_derive_from_hdf(self):
         [dual], phase = self.get_params_from_hdf(
-            'test_data/dual_input.hdf5',
+            os.path.join(test_data_path, 'dual_input.hdf5'),
             ['Dual Input Warning'])
 
         takeoff_roll = S(items=[
@@ -8872,7 +8872,7 @@ class TestDualInputByFODuration(unittest.TestCase, NodeTest):
 
     def test_derive_from_hdf(self):
         [dual, pilot], phase = self.get_params_from_hdf(
-            'test_data/dual_input.hdf5',
+            os.path.join(test_data_path, 'dual_input.hdf5'),
             ['Dual Input Warning', 'Pilot Flying'])
 
         takeoff_roll = S(items=[

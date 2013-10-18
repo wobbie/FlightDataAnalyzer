@@ -375,7 +375,7 @@ class TestDualInputWarning(unittest.TestCase, NodeTest):
 
     def test_derive_from_hdf(self):
         (pilot, capt, fo), phase = self.get_params_from_hdf(
-            'test_data/dual_input.hdf5',
+            os.path.join(test_data_path, 'dual_input.hdf5'),
             ['Pilot Flying', 'Sidestick Angle (Capt)', 'Sidestick Angle (FO)'])
 
         node = self.node_class()
