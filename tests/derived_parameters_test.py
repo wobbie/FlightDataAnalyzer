@@ -134,10 +134,10 @@ from analysis_engine.derived_parameters import (
     RudderPedal,
     SlatSurface,
     Speedbrake,
-    Spoiler,
     VerticalSpeed,
     VerticalSpeedForFlightPhases,
     RateOfTurn,
+    Roll,
     TrackDeviationFromRunway,
     Track,
     TrackContinuous,
@@ -3750,14 +3750,25 @@ class TestRelief(unittest.TestCase):
 
 
 class TestRoll(unittest.TestCase):
-    @unittest.skip('Test Not Implemented')
     def test_can_operate(self):
-        self.assertTrue(False, msg='Test not implemented.')
-        
-    @unittest.skip('Test Not Implemented')
+        opts = Roll.get_operational_combinations()
+        self.assertTrue(('Heading Continuous', 'Altitude AAL',) in opts)
+  
     def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
-
+        time = np.arange(100)
+        two_time = np.arange(200)
+        zero = np.array([0]*100)
+        ht_values = np.concatenate([zero, 2000.0*(1.0-np.cos(two_time*np.pi*0.01)), zero])
+        ht=P('Altitude AAL', array=np.ma.array(ht_values), frequency=2.0)
+        hdg_values = np.concatenate([20.0*(np.sin(time*np.pi*0.03)), zero])
+        hdg_values += 120 # Datum heading offset
+        hdg=P('Heading', array=np.ma.array(hdg_values), frequency=1.0)
+        herc = A('Frame', 'L382-Hercules')
+        derroll=Roll()
+        derroll.derive(None, None, hdg, ht, herc)
+        self.assertLess(derroll.array[40], 0.25)
+        self.assertLess(np.ma.max(derroll.array),13.0)
+        self.assertGreater(np.ma.max(derroll.array),11.0)
 
 class TestRollRate(unittest.TestCase):
     def test_can_operate(self):

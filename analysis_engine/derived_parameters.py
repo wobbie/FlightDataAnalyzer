@@ -59,6 +59,7 @@ from analysis_engine.library import (actuator_mismatch,
                                      peak_curvature,
                                      press2alt,
                                      rate_of_change,
+                                     rate_of_change_array,
                                      repair_mask,
                                      rms_noise,
                                      runway_deviation,
@@ -4610,13 +4611,14 @@ class Roll(DerivedParameterNode):
     """
     @classmethod
     def can_operate(cls, available):
-        return 'Heading Continuous' in available
+        return 'Heading Continuous' in available and \
+               'Altitude AAL' in available
     
     units = 'deg'
     align = False
     
     def derive(self, r1=P('Roll (1)'), r2=P('Roll (2)'), 
-               hdg=P('Heading Continuous'), frame=A('Frame')):
+               hdg=P('Heading Continuous'), alt_aal=P('Altitude AAL'), frame=A('Frame')):
         frame_name = frame.value if frame else ''
         
         if r1 and r2:
@@ -4625,13 +4627,27 @@ class Roll(DerivedParameterNode):
                 blend_two_parameters(r1, r2)
         
         elif frame_name in ['L382-Hercules', '1900D-SS542A']:
-            # Added Beechcraft as had inoperable Roll
+            # Added Beechcraft as had inoperable Roll.
             # Many Hercules aircraft do not have roll recorded. This is a
             # simple substitute, derived from examination of the roll vs
             # heading rate of aircraft with a roll sensor.
-            self.array = 6.0 * rate_of_change(hdg, 12.0, method='regression')
+            hdg_in_air = repair_mask(
+                np.ma.where(align(alt_aal, hdg)==0.0, np.ma.masked, hdg.array),
+                repair_duration=None, extrapolate=True)
+            self.array = 8.0 * rate_of_change_array(hdg_in_air, 
+                                                    hdg.hz, 
+                                                    width=30.0, 
+                                                    method='regression')
+            #roll = np.ma.fix_invalid(roll, mask=False, copy=False, fill_value=0.0)
+            #self.array = repair_mask(roll, repair_duration=None)
             self.frequency = hdg.frequency
             self.offset = hdg.offset
+            '''
+            import matplotlib.pyplot as plt
+            plt.plot(align(alt_aal, hdg),'r')
+            plt.plot(self.array,'b')
+            plt.show()
+            '''
 
         else:
             raise DataFrameError(self.name, frame_name)
