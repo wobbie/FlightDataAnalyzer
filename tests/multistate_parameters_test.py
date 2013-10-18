@@ -668,14 +668,19 @@ class TestFlap(unittest.TestCase):
         
     def test_flap_settings_for_hercules(self):
         # No flap recorded; ensure it converts exactly the same
-        flap_param = Parameter('Altitude AAL', array=np.ma.array(
-            [0, 0, 0, 50, 50, 50, 100]))
+        alt_aal = Parameter('Altitude AAL', array=np.ma.array(
+            [0, 0, 50, 1500, 1500, 1500, 2500, 2500, 1500, 1500, 50, 50]))
         flap = Flap()
-        flap.derive(flap_param, A('Series', ''), A('Family', 'C-130'))
+        flap.derive(None, 
+                    A('Series', ''), 
+                    A('Family', 'C-130'), 
+                    A('Frame', 'L382-Hercules'),
+                    alt_aal)
         self.assertEqual(flap.values_mapping,
                          {0: '0', 50: '50', 100: '100'})
         ma_test.assert_array_equal(
-            flap.array, ['0', '0', '0', '50', '50', '50', '100'])
+            flap.array, ['50', '50', '50', '0', '0', '0', '0', '0', '50', '50', '100', '100'])
+        self.assertEqual(flap.units, '%')
 
 
 class TestFlapLever(unittest.TestCase, NodeTest):
