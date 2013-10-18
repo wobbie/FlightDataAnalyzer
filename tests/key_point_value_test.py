@@ -163,6 +163,9 @@ from analysis_engine.key_point_values import (
     DecelerationFromTouchdownToStopOnRunway,
     DelayedBrakingAfterTouchdown,
     DirectLawDuration,
+    DualInputDuration,
+    DualInputByCaptDuration,
+    DualInputByFODuration,
     ElevatorDuringLandingMin,
     EngBleedValvesAtLiftoff,
     EngEPR500To50FtMax,
@@ -495,6 +498,29 @@ class NodeTest(object):
             combinations = map(set, self.node_class.get_operational_combinations())
             for combination in map(set, self.operational_combinations):
                 self.assertIn(combination, combinations)
+
+    def get_params_from_hdf(self, hdf_path, param_names, _slice=None,
+                            phase_name='Phase'):
+        import shutil
+        import tempfile
+        from hdfaccess.file import hdf_file
+
+        params = []
+        phase = None
+
+        with tempfile.NamedTemporaryFile() as temp_file:
+            shutil.copy(hdf_path, temp_file.name)
+
+            with hdf_file(hdf_path) as hdf:
+                for param_name in param_names:
+                    params.append(hdf.get(param_name))
+
+        if _slice:
+            phase = S(name=phase_name, frequency=1)
+            phase.create_section(_slice)
+            phase = phase.get_aligned(params[0])
+
+        return params, phase
 
 
 class CreateKPVsWhereTest(NodeTest):
@@ -5205,25 +5231,9 @@ class TestEngOilQtyDuringTaxiInMax(unittest.TestCase, NodeTest):
                     name='Eng (1) Oil Qty During Taxi In Max')]))
 
     def test_derive_from_hdf(self):
-        def get_params(hdf_path, _slice, phase_name):
-            import shutil
-            import tempfile
-            from hdfaccess.file import hdf_file
-
-            with tempfile.NamedTemporaryFile() as temp_file:
-                shutil.copy(hdf_path, temp_file.name)
-
-                with hdf_file(hdf_path) as hdf:
-                    oil = hdf.get('Eng (1) Oil Qty')
-
-            phase = S(name=phase_name, frequency=1)
-            phase.create_section(_slice)
-            phase = phase.get_aligned(oil)
-
-            return oil, phase
-
-        oil, phase = get_params('test_data/757-3A-001.hdf5',
-                                slice(21722, 21936), 'Taxi In')
+        [oil], phase = self.get_params_from_hdf(
+            'test_data/757-3A-001.hdf5', ['Eng (1) Oil Qty'],
+            slice(21722, 21936), 'Taxi In')
         node = self.node_class()
         node.derive(oil, None, None, None, phase)
         self.assertEqual(
@@ -7653,25 +7663,9 @@ class TestRudderPedalForceMax(unittest.TestCase, NodeTest):
                     name='Rudder Pedal Force Max')]))
 
     def test_derive_from_hdf(self):
-        def get_params(hdf_path, _slice, phase_name):
-            import shutil
-            import tempfile
-            from hdfaccess.file import hdf_file
-
-            with tempfile.NamedTemporaryFile() as temp_file:
-                shutil.copy(hdf_path, temp_file.name)
-
-                with hdf_file(hdf_path) as hdf:
-                    rudder = hdf.get('Rudder Pedal Force')
-
-            phase = S(name=phase_name, frequency=1)
-            phase.create_section(_slice)
-            phase = phase.get_aligned(rudder)
-
-            return rudder, phase
-
-        rudder, phase = get_params('test_data/757-3A-001.hdf5',
-                                   slice(836, 21663), 'Fast')
+        [rudder], phase = self.get_params_from_hdf(
+            'test_data/757-3A-001.hdf5', ['Rudder Pedal Force'],
+            slice(836, 21663), 'Fast')
         node = self.node_class()
         node.derive(rudder, phase)
         self.assertEqual(
@@ -8773,6 +8767,132 @@ class TestGrossWeightDelta60SecondsInFlightMax(unittest.TestCase):
         self.assertEqual(gwd[0].index, 176)
         self.assertEqual(gwd[0].value, 6)
 
+##############################################################################
+# Dual Input
+
+
+class TestDualInputDuration(unittest.TestCase, NodeTest):
+    def setUp(self):
+        self.node_class = DualInputDuration
+        self.operational_combinations = [
+            ('Dual Input Warning', 'Takeoff Roll', 'Landing Roll')]
+
+    def test_derive(self):
+        mapping = {0: '-', 1: 'Dual'}
+        dual = M('Dual Input Warning', np.ma.zeros(50), values_mapping=mapping)
+        dual.array[3:10] = 'Dual'
+
+        takeoff_roll = S(items=[Section('Takeoff Roll', slice(0, 5), 0, 5)])
+        landing_roll = S(items=[
+            Section('Landing Roll', slice(44, 50), 44, 50)])
+
+        node = self.node_class()
+        node.derive(dual, takeoff_roll, landing_roll)
+
+        expected = [KeyPointValue(
+            name='Dual Input Duration', index=3, value=7.0)]
+        self.assertEqual(node, expected)
+
+    def test_derive_from_hdf(self):
+        [dual], phase = self.get_params_from_hdf(
+            'test_data/dual_input.hdf5',
+            ['Dual Input Warning'])
+
+        takeoff_roll = S(items=[
+            Section('Takeoff Roll', slice(0, 100), 0, 100)])
+        landing_roll = S(items=[
+            Section('Landing Roll', slice(320, 420), 320, 420)])
+
+        node = self.node_class()
+        node.derive(dual, takeoff_roll, landing_roll)
+
+        expected = [
+            KeyPointValue(name='Dual Input Duration', index=91,
+                          value=31.0),
+            KeyPointValue(name='Dual Input Duration', index=213,
+                          value=59.0),
+        ]
+        self.assertEqual(node, expected)
+
+
+class TestDualInputByCaptDuration(unittest.TestCase, NodeTest):
+    def setUp(self):
+        self.node_class = DualInputByCaptDuration
+        self.operational_combinations = [
+            ('Dual Input Warning', 'Pilot Flying', 'Takeoff Roll',
+             'Landing Roll')]
+
+    def test_derive(self):
+        mapping = {0: '-', 1: 'Dual'}
+        dual = M('Dual Input Warning', np.ma.zeros(50), values_mapping=mapping)
+        dual.array[3:10] = 'Dual'
+
+        mapping = {0: '-', 1: 'Capt', 2: 'FO'}
+        pilot = M('Pilot Flying', np.ma.zeros(50), values_mapping=mapping)
+        pilot.array[0:20] = 'FO'
+
+        takeoff_roll = S(items=[Section('Takeoff Roll', slice(0, 5), 0, 5)])
+        landing_roll = S(items=[
+            Section('Landing Roll', slice(44, 50), 44, 50)])
+
+        node = self.node_class()
+        node.derive(dual, pilot, takeoff_roll, landing_roll)
+
+        expected = [KeyPointValue(
+            name='Dual Input By Capt Duration', index=3, value=7.0)]
+        self.assertEqual(node, expected)
+
+
+class TestDualInputByFODuration(unittest.TestCase, NodeTest):
+    def setUp(self):
+        self.node_class = DualInputByFODuration
+        self.operational_combinations = [
+            ('Dual Input Warning', 'Pilot Flying', 'Takeoff Roll',
+             'Landing Roll')]
+
+    def test_derive(self):
+        mapping = {0: '-', 1: 'Dual'}
+        dual = M('Dual Input Warning', np.ma.zeros(50), values_mapping=mapping)
+        dual.array[3:10] = 'Dual'
+
+        mapping = {0: '-', 1: 'Capt', 2: 'FO'}
+        pilot = M('Pilot Flying', np.ma.zeros(50), values_mapping=mapping)
+        pilot.array[0:20] = 'Capt'
+
+        takeoff_roll = S(items=[Section('Takeoff Roll', slice(0, 5), 0, 5)])
+        landing_roll = S(items=[
+            Section('Landing Roll', slice(44, 50), 44, 50)])
+
+        node = self.node_class()
+        node.derive(dual, pilot, takeoff_roll, landing_roll)
+
+        expected = [KeyPointValue(
+            name='Dual Input By FO Duration', index=3, value=7.0)]
+        self.assertEqual(node, expected)
+
+    def test_derive_from_hdf(self):
+        [dual, pilot], phase = self.get_params_from_hdf(
+            'test_data/dual_input.hdf5',
+            ['Dual Input Warning', 'Pilot Flying'])
+
+        takeoff_roll = S(items=[
+            Section('Takeoff Roll', slice(0, 100), 0, 100)])
+        landing_roll = S(items=[
+            Section('Landing Roll', slice(320, 420), 320, 420)])
+
+        node = self.node_class()
+        node.derive(dual, pilot, takeoff_roll, landing_roll)
+
+        expected = [
+            KeyPointValue(name='Dual Input By FO Duration', index=91,
+                          value=31.0),
+            KeyPointValue(name='Dual Input By FO Duration', index=213,
+                          value=59.0),
+        ]
+        self.assertEqual(node, expected)
+
+
+##############################################################################
 
 class TestZeroFuelWeight(unittest.TestCase, NodeTest):
 

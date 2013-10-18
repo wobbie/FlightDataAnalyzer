@@ -132,6 +132,8 @@ from analysis_engine.derived_parameters import (
     Pitch,
     RollRate,
     RudderPedal,
+    SidestickAngleCapt,
+    SidestickAngleFO,
     SlatSurface,
     Speedbrake,
     VerticalSpeed,
@@ -212,7 +214,28 @@ class NodeTest(object):
             for combination in map(set, self.operational_combinations):
                 self.assertIn(combination, combinations)
 
+    def get_params_from_hdf(self, hdf_path, param_names, _slice=None,
+                            phase_name='Phase'):
+        import shutil
+        import tempfile
+        from hdfaccess.file import hdf_file
 
+        params = []
+        phase = None
+
+        with tempfile.NamedTemporaryFile() as temp_file:
+            shutil.copy(hdf_path, temp_file.name)
+
+            with hdf_file(hdf_path) as hdf:
+                for param_name in param_names:
+                    params.append(hdf.get(param_name))
+
+        if _slice:
+            phase = S(name=phase_name, frequency=1)
+            phase.create_section(_slice)
+            phase = phase.get_aligned(params[0])
+
+        return params, phase
 
 
 ##### FIXME: Re-enable when 'AT Engaged' has been implemented.
@@ -1518,7 +1541,75 @@ class TestDescendForFlightPhases(unittest.TestCase):
         expected = np.ma.array([0,0,0,-7,-9,0,0,-5,-8,0])
         ma_test.assert_masked_array_approx_equal(descend.array, expected)
 
-        
+
+class TestSidestickAngleCapt(NodeTest, unittest.TestCase):
+    def setUp(self):
+        self.node_class = SidestickAngleCapt
+        self.operational_combinations = [
+            ('Pitch Command (Capt)', 'Roll Command (Capt)'),
+        ]
+
+    def test_derive(self):
+        pitch_array = np.ma.arange(20)
+        roll_array = pitch_array[::-1]
+        pitch = P('Pitch Command (Capt)', pitch_array)
+        roll = P('Pitch Command (Capt)', roll_array)
+        node = self.node_class()
+        node.derive(pitch, roll)
+
+        expected_array = np.ma.sqrt(pitch_array ** 2 + roll_array ** 2)
+        np.testing.assert_array_equal(node.array, expected_array)
+
+    def test_derive_from_hdf(self):
+        [pitch, roll, sidestick], phase = self.get_params_from_hdf(
+            'test_data/dual_input.hdf5',
+            ['Pitch Command (Capt)', 'Roll Command (Capt)',
+             self.node_class.get_name()])
+
+        roll.array = align(roll, pitch)
+
+        node = self.node_class()
+        node.derive(pitch, roll)
+        expected_array = np.ma.sqrt(pitch.array ** 2 + roll.array ** 2)
+        np.testing.assert_array_equal(node.array, expected_array)
+
+        np.testing.assert_array_equal(node.array, sidestick.array)
+
+
+class TestSidestickAngleFO(NodeTest, unittest.TestCase):
+    def setUp(self):
+        self.node_class = SidestickAngleFO
+        self.operational_combinations = [
+            ('Pitch Command (FO)', 'Roll Command (FO)'),
+        ]
+
+    def test_derive(self):
+        pitch_array = np.ma.arange(20)
+        roll_array = pitch_array[::-1]
+        pitch = P('Pitch Command (FO)', pitch_array)
+        roll = P('Pitch Command (FO)', roll_array)
+        node = self.node_class()
+        node.derive(pitch, roll)
+
+        expected_array = np.ma.sqrt(pitch_array ** 2 + roll_array ** 2)
+        np.testing.assert_array_equal(node.array, expected_array)
+
+    def test_derive_from_hdf(self):
+        [pitch, roll, sidestick], phase = self.get_params_from_hdf(
+            'test_data/dual_input.hdf5',
+            ['Pitch Command (FO)', 'Roll Command (FO)',
+             self.node_class.get_name()])
+
+        roll.array = align(roll, pitch)
+
+        node = self.node_class()
+        node.derive(pitch, roll)
+        expected_array = np.ma.sqrt(pitch.array ** 2 + roll.array ** 2)
+        np.testing.assert_array_equal(node.array, expected_array)
+
+        np.testing.assert_array_equal(node.array, sidestick.array)
+
+
 class TestDistanceToLanding(unittest.TestCase):
     
     def test_can_operate(self):
