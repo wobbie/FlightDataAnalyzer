@@ -22,7 +22,7 @@ from analysis_engine.settings import (ACCEL_LAT_OFFSET_LIMIT,
 
 from analysis_engine.flight_phase import scan_ils
 
-from analysis_engine.node import KeyPointValueNode, KPV, KTI, P, S, A, M, App
+from analysis_engine.node import KeyPointValueNode, KPV, KTI, P, S, A, M, App, Section
 
 from analysis_engine.library import (ambiguous_runway,
                                      all_of,
@@ -9968,9 +9968,15 @@ class DualInputDuration(KeyPointValueNode):
     '''
     unit = 's'
 
-    def derive(self, dual=M('Dual Input Warning')):
+    def derive(self, dual=M('Dual Input Warning'),
+               takeoff_rolls=S('Takeoff Roll'),
+               landing_rolls=S('Landing Roll')):
 
-        self.create_kpvs_where(dual.array == 'Dual', dual.hz)
+        start = takeoff_rolls[0].slice.start
+        stop = landing_rolls[-1].slice.stop
+        phase = S(items=[Section('Phase', slice(start, stop), start, stop)])
+        condition = dual.array == 'Dual'
+        self.create_kpvs_where(condition, dual.hz, phase)
 
 
 class DualInputByCaptDuration(KeyPointValueNode):
@@ -9981,10 +9987,15 @@ class DualInputByCaptDuration(KeyPointValueNode):
 
     def derive(self,
                dual=M('Dual Input Warning'),
-               pilot=M('Pilot Flying')):
+               pilot=M('Pilot Flying'),
+               takeoff_rolls=S('Takeoff Roll'),
+               landing_rolls=S('Landing Roll')):
 
+        start = takeoff_rolls[0].slice.start
+        stop = landing_rolls[-1].slice.stop
+        phase = S(items=[Section('Phase', slice(start, stop), start, stop)])
         condition = (dual.array == 'Dual') & (pilot.array == 'FO')
-        self.create_kpvs_where(condition, dual.hz)
+        self.create_kpvs_where(condition, dual.hz, phase)
 
 
 class DualInputByFODuration(KeyPointValueNode):
@@ -9996,10 +10007,15 @@ class DualInputByFODuration(KeyPointValueNode):
 
     def derive(self,
                dual=M('Dual Input Warning'),
-               pilot=M('Pilot Flying')):
+               pilot=M('Pilot Flying'),
+               takeoff_rolls=S('Takeoff Roll'),
+               landing_rolls=S('Landing Roll')):
 
+        start = takeoff_rolls[0].slice.start
+        stop = landing_rolls[-1].slice.stop
+        phase = S(items=[Section('Phase', slice(start, stop), start, stop)])
         condition = (dual.array == 'Dual') & (pilot.array == 'Capt')
-        self.create_kpvs_where(condition, dual.hz)
+        self.create_kpvs_where(condition, dual.hz, phase)
 
 
 ##############################################################################

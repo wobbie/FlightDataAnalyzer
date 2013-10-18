@@ -8751,15 +8751,20 @@ class TestGrossWeightDelta60SecondsInFlightMax(unittest.TestCase):
 class TestDualInputDuration(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = DualInputDuration
-        self.operational_combinations = [('Dual Input Warning',)]
+        self.operational_combinations = [
+            ('Dual Input Warning', 'Takeoff Roll', 'Landing Roll')]
 
     def test_derive(self):
         mapping = {0: '-', 1: 'Dual'}
         dual = M('Dual Input Warning', np.ma.zeros(50), values_mapping=mapping)
         dual.array[3:10] = 'Dual'
 
+        takeoff_roll = S(items=[Section('Takeoff Roll', slice(0, 5), 0, 5)])
+        landing_roll = S(items=[
+            Section('Landing Roll', slice(44, 50), 44, 50)])
+
         node = self.node_class()
-        node.derive(dual)
+        node.derive(dual, takeoff_roll, landing_roll)
 
         expected = [KeyPointValue(
             name='Dual Input Duration', index=3, value=7.0)]
@@ -8770,8 +8775,13 @@ class TestDualInputDuration(unittest.TestCase, NodeTest):
             'test_data/dual_input.hdf5',
             ['Dual Input Warning'])
 
+        takeoff_roll = S(items=[
+            Section('Takeoff Roll', slice(0, 100), 0, 100)])
+        landing_roll = S(items=[
+            Section('Landing Roll', slice(320, 420), 320, 420)])
+
         node = self.node_class()
-        node.derive(dual)
+        node.derive(dual, takeoff_roll, landing_roll)
 
         expected = [
             KeyPointValue(name='Dual Input Duration', index=91,
@@ -8786,7 +8796,8 @@ class TestDualInputByCaptDuration(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = DualInputByCaptDuration
         self.operational_combinations = [
-            ('Dual Input Warning', 'Pilot Flying')]
+            ('Dual Input Warning', 'Pilot Flying', 'Takeoff Roll',
+             'Landing Roll')]
 
     def test_derive(self):
         mapping = {0: '-', 1: 'Dual'}
@@ -8797,8 +8808,12 @@ class TestDualInputByCaptDuration(unittest.TestCase, NodeTest):
         pilot = M('Pilot Flying', np.ma.zeros(50), values_mapping=mapping)
         pilot.array[0:20] = 'FO'
 
+        takeoff_roll = S(items=[Section('Takeoff Roll', slice(0, 5), 0, 5)])
+        landing_roll = S(items=[
+            Section('Landing Roll', slice(44, 50), 44, 50)])
+
         node = self.node_class()
-        node.derive(dual, pilot)
+        node.derive(dual, pilot, takeoff_roll, landing_roll)
 
         expected = [KeyPointValue(
             name='Dual Input By Capt Duration', index=3, value=7.0)]
@@ -8809,7 +8824,8 @@ class TestDualInputByFODuration(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = DualInputByFODuration
         self.operational_combinations = [
-            ('Dual Input Warning', 'Pilot Flying')]
+            ('Dual Input Warning', 'Pilot Flying', 'Takeoff Roll',
+             'Landing Roll')]
 
     def test_derive(self):
         mapping = {0: '-', 1: 'Dual'}
@@ -8820,8 +8836,12 @@ class TestDualInputByFODuration(unittest.TestCase, NodeTest):
         pilot = M('Pilot Flying', np.ma.zeros(50), values_mapping=mapping)
         pilot.array[0:20] = 'Capt'
 
+        takeoff_roll = S(items=[Section('Takeoff Roll', slice(0, 5), 0, 5)])
+        landing_roll = S(items=[
+            Section('Landing Roll', slice(44, 50), 44, 50)])
+
         node = self.node_class()
-        node.derive(dual, pilot)
+        node.derive(dual, pilot, takeoff_roll, landing_roll)
 
         expected = [KeyPointValue(
             name='Dual Input By FO Duration', index=3, value=7.0)]
@@ -8832,8 +8852,13 @@ class TestDualInputByFODuration(unittest.TestCase, NodeTest):
             'test_data/dual_input.hdf5',
             ['Dual Input Warning', 'Pilot Flying'])
 
+        takeoff_roll = S(items=[
+            Section('Takeoff Roll', slice(0, 100), 0, 100)])
+        landing_roll = S(items=[
+            Section('Landing Roll', slice(320, 420), 320, 420)])
+
         node = self.node_class()
-        node.derive(dual, pilot)
+        node.derive(dual, pilot, takeoff_roll, landing_roll)
 
         expected = [
             KeyPointValue(name='Dual Input By FO Duration', index=91,
