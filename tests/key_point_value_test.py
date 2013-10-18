@@ -499,6 +499,29 @@ class NodeTest(object):
             for combination in map(set, self.operational_combinations):
                 self.assertIn(combination, combinations)
 
+    def get_params_from_hdf(self, hdf_path, param_names, _slice=None,
+                            phase_name='Phase'):
+        import shutil
+        import tempfile
+        from hdfaccess.file import hdf_file
+
+        params = []
+        phase = None
+
+        with tempfile.NamedTemporaryFile() as temp_file:
+            shutil.copy(hdf_path, temp_file.name)
+
+            with hdf_file(hdf_path) as hdf:
+                for param_name in param_names:
+                    params.append(hdf.get(param_name))
+
+        if _slice:
+            phase = S(name=phase_name, frequency=1)
+            phase.create_section(_slice)
+            phase = phase.get_aligned(params[0])
+
+        return params, phase
+
 
 class CreateKPVsWhereTest(NodeTest):
     '''
@@ -5185,25 +5208,9 @@ class TestEngOilQtyDuringTaxiInMax(unittest.TestCase, NodeTest):
                     name='Eng (1) Oil Qty During Taxi In Max')]))
 
     def test_derive_from_hdf(self):
-        def get_params(hdf_path, _slice, phase_name):
-            import shutil
-            import tempfile
-            from hdfaccess.file import hdf_file
-
-            with tempfile.NamedTemporaryFile() as temp_file:
-                shutil.copy(hdf_path, temp_file.name)
-
-                with hdf_file(hdf_path) as hdf:
-                    oil = hdf.get('Eng (1) Oil Qty')
-
-            phase = S(name=phase_name, frequency=1)
-            phase.create_section(_slice)
-            phase = phase.get_aligned(oil)
-
-            return oil, phase
-
-        oil, phase = get_params('test_data/757-3A-001.hdf5',
-                                slice(21722, 21936), 'Taxi In')
+        [oil], phase = self.get_params_from_hdf(
+            'test_data/757-3A-001.hdf5', ['Eng (1) Oil Qty'],
+            slice(21722, 21936), 'Taxi In')
         node = self.node_class()
         node.derive(oil, None, None, None, phase)
         self.assertEqual(
@@ -7633,25 +7640,9 @@ class TestRudderPedalForceMax(unittest.TestCase, NodeTest):
                     name='Rudder Pedal Force Max')]))
 
     def test_derive_from_hdf(self):
-        def get_params(hdf_path, _slice, phase_name):
-            import shutil
-            import tempfile
-            from hdfaccess.file import hdf_file
-
-            with tempfile.NamedTemporaryFile() as temp_file:
-                shutil.copy(hdf_path, temp_file.name)
-
-                with hdf_file(hdf_path) as hdf:
-                    rudder = hdf.get('Rudder Pedal Force')
-
-            phase = S(name=phase_name, frequency=1)
-            phase.create_section(_slice)
-            phase = phase.get_aligned(rudder)
-
-            return rudder, phase
-
-        rudder, phase = get_params('test_data/757-3A-001.hdf5',
-                                   slice(836, 21663), 'Fast')
+        [rudder], phase = self.get_params_from_hdf(
+            'test_data/757-3A-001.hdf5', ['Rudder Pedal Force'],
+            slice(836, 21663), 'Fast')
         node = self.node_class()
         node.derive(rudder, phase)
         self.assertEqual(
