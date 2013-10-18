@@ -22,7 +22,7 @@ from analysis_engine.settings import (ACCEL_LAT_OFFSET_LIMIT,
 
 from analysis_engine.flight_phase import scan_ils
 
-from analysis_engine.node import KeyPointValueNode, KPV, KTI, P, S, A, M, App
+from analysis_engine.node import KeyPointValueNode, KPV, KTI, P, S, A, M, App, Section
 
 from analysis_engine.library import (ambiguous_runway,
                                      all_of,
@@ -9959,6 +9959,66 @@ class GrossWeightDelta60SecondsInFlightMax(KeyPointValueNode):
 
 
 ##############################################################################
+# Dual Input
+
+
+class DualInputDuration(KeyPointValueNode):
+    '''
+    Duration of dual input.
+    '''
+    unit = 's'
+
+    def derive(self, dual=M('Dual Input Warning'),
+               takeoff_rolls=S('Takeoff Roll'),
+               landing_rolls=S('Landing Roll')):
+
+        start = takeoff_rolls[0].slice.start
+        stop = landing_rolls[-1].slice.stop
+        phase = S(items=[Section('Phase', slice(start, stop), start, stop)])
+        condition = dual.array == 'Dual'
+        self.create_kpvs_where(condition, dual.hz, phase)
+
+
+class DualInputByCaptDuration(KeyPointValueNode):
+    '''
+    Duration of dual input by the captain with first officer flying.
+    '''
+    unit = 's'
+
+    def derive(self,
+               dual=M('Dual Input Warning'),
+               pilot=M('Pilot Flying'),
+               takeoff_rolls=S('Takeoff Roll'),
+               landing_rolls=S('Landing Roll')):
+
+        start = takeoff_rolls[0].slice.start
+        stop = landing_rolls[-1].slice.stop
+        phase = S(items=[Section('Phase', slice(start, stop), start, stop)])
+        condition = (dual.array == 'Dual') & (pilot.array == 'FO')
+        self.create_kpvs_where(condition, dual.hz, phase)
+
+
+class DualInputByFODuration(KeyPointValueNode):
+    '''
+    Duration of dual input by the first officer with captain flying.
+    '''
+    name = 'Dual Input By FO Duration'
+    unit = 's'
+
+    def derive(self,
+               dual=M('Dual Input Warning'),
+               pilot=M('Pilot Flying'),
+               takeoff_rolls=S('Takeoff Roll'),
+               landing_rolls=S('Landing Roll')):
+
+        start = takeoff_rolls[0].slice.start
+        stop = landing_rolls[-1].slice.stop
+        phase = S(items=[Section('Phase', slice(start, stop), start, stop)])
+        condition = (dual.array == 'Dual') & (pilot.array == 'Capt')
+        self.create_kpvs_where(condition, dual.hz, phase)
+
+
+##############################################################################
 
 
 class HoldingDuration(KeyPointValueNode):
@@ -9969,12 +10029,6 @@ class HoldingDuration(KeyPointValueNode):
         self.create_kpvs_from_slice_durations(holds, self.frequency, mark='end')
 
 
-##### TODO: Implement!
-####class DualStickInput(KeyPointValueNode):
-####    def derive(self, x=P('Not Yet')):
-####        return NotImplemented
-####
-####
 ##### TODO: Implement!
 ####class ControlForcesTimesThree(KeyPointValueNode):
 ####    def derive(self, x=P('Not Yet')):
