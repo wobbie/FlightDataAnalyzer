@@ -634,6 +634,8 @@ class Flap(MultistateDerivedParameterNode):
         if frame_name == 'L382-Hercules':
             self.values_mapping = {0: '0', 50: '50', 100: '100'}
             
+            self.units = '%' # Hercules flaps are unique in this regard !
+            
             # Flap is not recorded, so invent one of the correct length.
             flap_herc = np_ma_zeros_like(alt_aal.array)
 
