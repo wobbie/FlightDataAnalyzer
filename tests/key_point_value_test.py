@@ -8765,6 +8765,22 @@ class TestDualInputDuration(unittest.TestCase, NodeTest):
             name='Dual Input Duration', index=3, value=7.0)]
         self.assertEqual(node, expected)
 
+    def test_derive_from_hdf(self):
+        [dual], phase = self.get_params_from_hdf(
+            'test_data/dual_input.hdf5',
+            ['Dual Input Warning'])
+
+        node = self.node_class()
+        node.derive(dual)
+
+        expected = [
+            KeyPointValue(name='Dual Input Duration', index=91,
+                          value=31.0),
+            KeyPointValue(name='Dual Input Duration', index=213,
+                          value=59.0),
+        ]
+        self.assertEqual(node, expected)
+
 
 class TestDualInputByCaptDuration(unittest.TestCase, NodeTest):
     def setUp(self):
@@ -8809,6 +8825,22 @@ class TestDualInputByFODuration(unittest.TestCase, NodeTest):
 
         expected = [KeyPointValue(
             name='Dual Input By FO Duration', index=3, value=7.0)]
+        self.assertEqual(node, expected)
+
+    def test_derive_from_hdf(self):
+        [dual, pilot], phase = self.get_params_from_hdf(
+            'test_data/dual_input.hdf5',
+            ['Dual Input Warning', 'Pilot Flying'])
+
+        node = self.node_class()
+        node.derive(dual, pilot)
+
+        expected = [
+            KeyPointValue(name='Dual Input By FO Duration', index=91,
+                          value=31.0),
+            KeyPointValue(name='Dual Input By FO Duration', index=213,
+                          value=59.0),
+        ]
         self.assertEqual(node, expected)
 
 

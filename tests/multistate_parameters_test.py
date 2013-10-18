@@ -87,6 +87,29 @@ class NodeTest(object):
             for combination in map(set, self.operational_combinations):
                 self.assertIn(combination, combinations)
 
+    def get_params_from_hdf(self, hdf_path, param_names, _slice=None,
+                            phase_name='Phase'):
+        import shutil
+        import tempfile
+        from hdfaccess.file import hdf_file
+
+        params = []
+        phase = None
+
+        with tempfile.NamedTemporaryFile() as temp_file:
+            shutil.copy(hdf_path, temp_file.name)
+
+            with hdf_file(hdf_path) as hdf:
+                for param_name in param_names:
+                    params.append(hdf.get(param_name))
+
+        if _slice:
+            phase = S(name=phase_name, frequency=1)
+            phase.create_section(_slice)
+            phase = phase.get_aligned(params[0])
+
+        return params, phase
+
 
 class TestAPEngaged(unittest.TestCase, NodeTest):
 
@@ -348,6 +371,20 @@ class TestDualInputWarning(unittest.TestCase, NodeTest):
             np.ma.zeros(capt_array.size),
             values_mapping=self.node_class.values_mapping)
         expected_array[5:10] = 'Dual'
+        np.testing.assert_array_equal(node.array, expected_array)
+
+    def test_derive_from_hdf(self):
+        (pilot, capt, fo), phase = self.get_params_from_hdf(
+            'test_data/dual_input.hdf5',
+            ['Pilot Flying', 'Sidestick Angle (Capt)', 'Sidestick Angle (FO)'])
+
+        node = self.node_class()
+        node.derive(pilot, capt, fo)
+
+        expected_array = MappedArray(
+            np.ma.zeros(pilot.array.size),
+            values_mapping=self.node_class.values_mapping)
+        expected_array[177:212] = 'Dual'
         np.testing.assert_array_equal(node.array, expected_array)
 
 
