@@ -1338,6 +1338,17 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
                or ('Family' in x and 'Spoiler Switch' in x)\
                or ('Family' in x and 'Speedbrake Handle' in x)\
                or ('Family' in x and 'Speedbrake' in x)
+    
+    def greater_than_one(self, handle_array):
+        '''
+        Basic Speedbrake algorithm for Stowed and Deployed states from
+        Spoiler Handle.
+        '''
+        array = MappedArray(np_ma_masked_zeros_like(handle_array),
+                            values_mapping=self.values_mapping)
+        array[handle_array < 1] = 'Stowed'
+        array[handle_array >= 1] = 'Deployed/Cmd Up'
+        return array
 
     def a320_speedbrake(self, armed, spdbrk):
         '''
@@ -1505,9 +1516,12 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
                 'temporarily using speedbrake handle.', family_name)
             self.array = np_ma_masked_zeros_like(handle.array)
 
-        elif family_name in['A340']:
+        elif family_name == 'A340':
             # We don't have the "Armed" state
             self.array = handle.array * 2
+        
+        elif family_name == 'BD-100':
+            self.array = self.greater_than_one(handle.array)
 
         else:
             raise NotImplementedError
