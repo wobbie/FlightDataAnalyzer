@@ -32,6 +32,7 @@ from analysis_engine.multistate_parameters import (
     APURunning,
     Configuration,
     Daylight,
+    DualInputWarning,
     EngThrustModeRequired,
     Eng_1_Fire,
     Eng_2_Fire,
@@ -54,6 +55,7 @@ from analysis_engine.multistate_parameters import (
     KeyVHFFO,
     MasterWarning,
     PackValvesOpen,
+    PilotFlying,
     PitchAlternateLaw,
     Slat,
     SpeedbrakeSelected,
@@ -84,6 +86,29 @@ class NodeTest(object):
             combinations = map(set, self.node_class.get_operational_combinations())
             for combination in map(set, self.operational_combinations):
                 self.assertIn(combination, combinations)
+
+    def get_params_from_hdf(self, hdf_path, param_names, _slice=None,
+                            phase_name='Phase'):
+        import shutil
+        import tempfile
+        from hdfaccess.file import hdf_file
+
+        params = []
+        phase = None
+
+        with tempfile.NamedTemporaryFile() as temp_file:
+            shutil.copy(hdf_path, temp_file.name)
+
+            with hdf_file(hdf_path) as hdf:
+                for param_name in param_names:
+                    params.append(hdf.get(param_name))
+
+        if _slice:
+            phase = S(name=phase_name, frequency=1)
+            phase.create_section(_slice)
+            phase = phase.get_aligned(params[0])
+
+        return params, phase
 
 
 class TestAPEngaged(unittest.TestCase, NodeTest):
@@ -319,6 +344,48 @@ class TestDaylight(unittest.TestCase):
         don.get_derived((lat, lon, start_dt, dur))
         expected = ['Day', 'Night', 'Night', 'Night']
         np.testing.assert_array_equal(don.array, expected)  # FIX required to test as no longer superframe samples
+
+
+class TestDualInputWarning(unittest.TestCase, NodeTest):
+    def setUp(self):
+        self.node_class = DualInputWarning
+        self.operational_combinations = [
+            ('Pilot Flying', 'Sidestick Angle (Capt)', 'Sidestick Angle (FO)')
+        ]
+
+    def test_derive(self):
+        pilot_map = {0: '-', 1: 'Capt', 2: 'FO'}
+        pilot_array = MappedArray([1] * 20 + [0] * 10 + [2] * 20,
+                                  values_mapping=pilot_map)
+        capt_array = np.ma.concatenate((15 + np.arange(20), np.zeros(30)))
+        fo_array = np.ma.concatenate((np.zeros(30), 15 + np.arange(20)))
+        # Dual input
+        fo_array[5:10] = 15
+        pilot = M('Pilot Flying', pilot_array, values_mapping=pilot_map)
+        capt = P('Sidestick Angle (Capt)', capt_array)
+        fo = P('Sidestick Angle (FO)', fo_array)
+        node = self.node_class()
+        node.derive(pilot, capt, fo)
+
+        expected_array = MappedArray(
+            np.ma.zeros(capt_array.size),
+            values_mapping=self.node_class.values_mapping)
+        expected_array[5:10] = 'Dual'
+        np.testing.assert_array_equal(node.array, expected_array)
+
+    def test_derive_from_hdf(self):
+        (pilot, capt, fo), phase = self.get_params_from_hdf(
+            os.path.join(test_data_path, 'dual_input.hdf5'),
+            ['Pilot Flying', 'Sidestick Angle (Capt)', 'Sidestick Angle (FO)'])
+
+        node = self.node_class()
+        node.derive(pilot, capt, fo)
+
+        expected_array = MappedArray(
+            np.ma.zeros(pilot.array.size),
+            values_mapping=self.node_class.values_mapping)
+        expected_array[177:212] = 'Dual'
+        np.testing.assert_array_equal(node.array, expected_array)
 
 
 class TestEng_1_Fire(unittest.TestCase, NodeTest):
@@ -668,14 +735,20 @@ class TestFlap(unittest.TestCase):
         
     def test_flap_settings_for_hercules(self):
         # No flap recorded; ensure it converts exactly the same
-        flap_param = Parameter('Altitude AAL', array=np.ma.array(
-            [0, 0, 0, 50, 50, 50, 100]))
+        alt_aal = Parameter('Altitude AAL', array=np.ma.array(
+            [0, 0, 50, 1500, 1500, 1500, 2500, 2500, 1500, 1500, 50, 50]))
         flap = Flap()
-        flap.derive(flap_param, A('Series', ''), A('Family', 'C-130'))
+        flap.derive(None, 
+                    A('Series', ''), 
+                    A('Family', 'C-130'), 
+                    A('Frame', 'L382-Hercules'),
+                    alt_aal)
         self.assertEqual(flap.values_mapping,
                          {0: '0', 50: '50', 100: '100'})
         ma_test.assert_array_equal(
-            flap.array, ['0', '0', '0', '50', '50', '50', '100'])
+            flap.array, ['50', '50', '50', '0', '0', '0', '0', '0', 
+                         '50', '50', '100', '100'])
+        self.assertEqual(flap.units, '%')
 
 
 class TestFlapLever(unittest.TestCase, NodeTest):
@@ -989,6 +1062,30 @@ class TestPackValvesOpen(unittest.TestCase):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestPilotFlying(unittest.TestCase, NodeTest):
+    def setUp(self):
+        self.node_class = PilotFlying
+        self.operational_combinations = [
+            ('Sidestick Angle (Capt)', 'Sidestick Angle (FO)'),
+        ]
+
+    def test_derive(self):
+        stick_capt_array = np.ma.concatenate((np.ma.zeros(100),
+                                              np.ma.zeros(100) + 20))
+        stick_fo_array = np.ma.concatenate((np.ma.zeros(100) + 20,
+                                            np.ma.zeros(100)))
+        stick_capt = P('Sidestick Angle (Capt)', array=stick_capt_array)
+        stick_fo = P('Sidestick Angle (FO)', array=stick_fo_array)
+        node = self.node_class()
+        node.derive(stick_capt, stick_fo)
+        expected_array = MappedArray([2.] * 100 + [1.] * 100)
+        expected = M('Pilot Flying', expected_array,
+                     values_mapping=PilotFlying.values_mapping)
+        print node.array
+        print expected.array, expected.values_mapping
+        np.testing.assert_array_equal(node.array, expected.array)
 
 
 class TestPitchAlternateLaw(unittest.TestCase, NodeTest):
@@ -1439,6 +1536,10 @@ class TestTakeoffConfigurationWarning(unittest.TestCase):
             ('Takeoff Configuration Flap Warning',)))
         self.assertTrue(TakeoffConfigurationWarning.can_operate(
             ('Takeoff Configuration Gear Warning',)))
+        self.assertTrue(TakeoffConfigurationWarning.can_operate(
+            ('Takeoff Configuration AP Warning',)))
+        self.assertTrue(TakeoffConfigurationWarning.can_operate(
+            ('Takeoff Configuration Aileron Warning',)))
         self.assertTrue(TakeoffConfigurationWarning.can_operate(
             ('Takeoff Configuration Rudder Warning',)))
         self.assertTrue(TakeoffConfigurationWarning.can_operate(

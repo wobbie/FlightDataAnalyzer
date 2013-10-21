@@ -25,66 +25,66 @@ class DeterminePilot(object):
     '''
 
     def _autopilot_engaged(self, ap1, ap2):
-        if ap1 and not ap2:
+        if ap1 and (not ap2):
             return 'Captain'
-        if not ap1 and ap2:
+        if (not ap1) and ap2:
             return 'First Officer'
         return None
 
-    def _controls_changed(self, slice_, pitch, roll):
-        # Check if either pitch or roll changed during provided slice:
-        return pitch[slice_].ptp() > settings.CONTROLS_IN_USE_TOLERANCE or \
-                roll[slice_].ptp() > settings.CONTROLS_IN_USE_TOLERANCE
+    ##def _controls_changed(self, slice_, pitch, roll):
+        ### Check if either pitch or roll changed during provided slice:
+        ##return pitch[slice_].ptp() > settings.CONTROLS_IN_USE_TOLERANCE or \
+                ##roll[slice_].ptp() > settings.CONTROLS_IN_USE_TOLERANCE
 
-    def _control_column_in_use(self, cc_capt, cc_fo, phase):
-        '''
-        Check if control column is used by Captain or FO.
-        '''
-        capt_force = cc_capt[phase.slice].ptp() > \
-            settings.CONTROL_COLUMN_IN_USE_TOLERANCE
-        fo_force = cc_fo[phase.slice].ptp() > \
-            settings.CONTROL_COLUMN_IN_USE_TOLERANCE
+    ##def _control_column_in_use(self, cc_capt, cc_fo, phase):
+        ##'''
+        ##Check if control column is used by Captain or FO.
+        ##'''
+        ##capt_force = cc_capt[phase.slice].ptp() > \
+            ##settings.CONTROL_COLUMN_IN_USE_TOLERANCE
+        ##fo_force = cc_fo[phase.slice].ptp() > \
+            ##settings.CONTROL_COLUMN_IN_USE_TOLERANCE
 
-        if capt_force and fo_force:
-            self.warning(
-                "Cannot determine whether captain or first officer was at the "
-                "controls because both control columns are in use during '%s' "
-                "slice.", phase.name)
-            return None
+        ##if capt_force and fo_force:
+            ##self.warning(
+                ##"Cannot determine whether captain or first officer was at the "
+                ##"controls because both control columns are in use during '%s' "
+                ##"slice.", phase.name)
+            ##return None
 
-        if capt_force:
-            return 'Captain'
-        elif fo_force:
-            return 'First Officer'
+        ##if capt_force:
+            ##return 'Captain'
+        ##elif fo_force:
+            ##return 'First Officer'
 
-        # 4. No change in captain or first officer control columns:
-        self.warning("Both captain and first officer control columns "
-                     "do not change during '%s' slice.", phase.name)
-        return None
+        ### 4. No change in captain or first officer control columns:
+        ##self.warning("Both captain and first officer control columns "
+                     ##"do not change during '%s' slice.", phase.name)
+        ##return None
 
-    def _controls_in_use(self, pitch_capt, pitch_fo, roll_capt, roll_fo, phase):
-        capt_flying = self._controls_changed(phase.slice, pitch_capt, roll_capt)
-        fo_flying = self._controls_changed(phase.slice, pitch_fo, roll_fo)
+    ##def _controls_in_use(self, pitch_capt, pitch_fo, roll_capt, roll_fo, phase):
+        ##capt_flying = self._controls_changed(phase.slice, pitch_capt, roll_capt)
+        ##fo_flying = self._controls_changed(phase.slice, pitch_fo, roll_fo)
 
-        # 1. Cannot determine who is flying - both sets of controls have input:
-        if capt_flying and fo_flying:
-            self.warning("Cannot determine whether captain or first officer "
-                "was at the controls because both controls change during '%s' "
-                "slice.", phase.name)
-            return None
+        ### 1. Cannot determine who is flying - both sets of controls have input:
+        ##if capt_flying and fo_flying:
+            ##self.warning("Cannot determine whether captain or first officer "
+                ##"was at the controls because both controls change during '%s' "
+                ##"slice.", phase.name)
+            ##return None
 
-        # 2. The captain was flying the aircraft:
-        if capt_flying:
-            return 'Captain'
+        ### 2. The captain was flying the aircraft:
+        ##if capt_flying:
+            ##return 'Captain'
 
-        # 3. The first officer was flying the aircraft:
-        if fo_flying:
-            return 'First Officer'
+        ### 3. The first officer was flying the aircraft:
+        ##if fo_flying:
+            ##return 'First Officer'
 
-        # 4. No change in captain or first officer controls:
-        self.warning("Both captain and first officer controls do not change "
-            "during '%s' slice.", phase.name)
-        return None
+        ### 4. No change in captain or first officer controls:
+        ##self.warning("Both captain and first officer controls do not change "
+            ##"during '%s' slice.", phase.name)
+        ##return None
     
     def _key_vhf_in_use(self, key_vhf_capt, key_vhf_fo, phase):
         key_vhf_capt_changed = key_vhf_capt[phase.slice].ptp()
@@ -102,19 +102,19 @@ class DeterminePilot(object):
                          key_vhf_fo):
 
         # 1. Check for change in pitch and roll controls during the phase:
-        if all((pitch_capt, pitch_fo, roll_capt, roll_fo, phase)):
-            pilot = self._controls_in_use(
-                pitch_capt.array, pitch_fo.array, roll_capt.array,
-                roll_fo.array, phase)
-            if pilot:
-                return pilot
+        ##if all((pitch_capt, pitch_fo, roll_capt, roll_fo, phase)):
+            ##pilot = self._controls_in_use(
+                ##pitch_capt.array, pitch_fo.array, roll_capt.array,
+                ##roll_fo.array, phase)
+            ##if pilot:
+                ##return pilot
 
         # 1. Check for changes in control column during the phase:
-        if all((cc_capt, cc_fo, phase)):
-            pilot = self._control_column_in_use(cc_capt.array, cc_fo.array,
-                                                phase)
-            if pilot:
-                return pilot
+        ##if all((cc_capt, cc_fo, phase)):
+            ##pilot = self._control_column_in_use(cc_capt.array, cc_fo.array,
+                                                ##phase)
+            ##if pilot:
+                ##return pilot
 
         # Check for change in VHF controls during the phase:
         if all((key_vhf_capt, key_vhf_fo, phase)):

@@ -75,6 +75,7 @@ from analysis_engine.library import (#actuator_mismatch,
                                      repair_mask,
                                      #rms_noise,
                                      round_to_nearest,
+                                     runs_of_ones,
                                      #runway_deviation,
                                      #runway_distances,
                                      #runway_heading,
@@ -85,6 +86,8 @@ from analysis_engine.library import (#actuator_mismatch,
                                      slices_from_to,
                                      #slices_not,
                                      #slices_or,
+                                     slices_remove_small_gaps,
+                                     slices_remove_small_slices,
                                      #smooth_track,
                                      step_values,
                                      #straighten_altitudes,
@@ -93,7 +96,7 @@ from analysis_engine.library import (#actuator_mismatch,
                                      #track_linking,
                                      #value_at_index,
                                      vstack_params,
-                                     vstack_params_where_state
+                                     vstack_params_where_state,
                                      )
 
 #from settings import (AZ_WASHOUT_TC,
@@ -322,6 +325,31 @@ class Daylight(MultistateDerivedParameterNode):
             else:
                 # either is masked or recording 0.0 which is invalid too
                 self.array[step] = np.ma.masked
+
+
+class DualInputWarning(MultistateDerivedParameterNode):
+    '''
+    '''
+    values_mapping = {0: '-', 1: 'Dual'}
+
+    def derive(self,
+               pilot=M('Pilot Flying'),
+               stick_capt=P('Sidestick Angle (Capt)'),
+               stick_fo=P('Sidestick Angle (FO)')):
+
+        array = np_ma_zeros_like(pilot.array)
+        array[pilot.array == 'Capt'] = stick_fo.array[pilot.array == 'Capt']
+        array[pilot.array == 'FO'] = stick_capt.array[pilot.array == 'FO']
+        array = np.ma.array(array > 0.5, mask=array.mask, dtype=int)
+
+        slices = runs_of_ones(array)
+        slices = slices_remove_small_slices(slices, 3, self.hz)
+        slices = slices_remove_small_gaps(slices, 15, self.hz)
+
+        dual = np_ma_zeros_like(array)
+        for sl in slices:
+            dual[sl] = 1
+        self.array = dual
 
 
 class Eng_1_Fire(MultistateDerivedParameterNode):
@@ -605,6 +633,8 @@ class Flap(MultistateDerivedParameterNode):
 
         if frame_name == 'L382-Hercules':
             self.values_mapping = {0: '0', 50: '50', 100: '100'}
+            
+            self.units = '%' # Hercules flaps are unique in this regard !
             
             # Flap is not recorded, so invent one of the correct length.
             flap_herc = np_ma_zeros_like(alt_aal.array)
@@ -1112,6 +1142,39 @@ class PackValvesOpen(MultistateDerivedParameterNode):
         self.offset = offset_select('mean', [p1, p1h, p2, p2h])
 
 
+class PilotFlying(MultistateDerivedParameterNode):
+    '''
+    Determines the pilot flying for Airbus aircraft.
+    '''
+    values_mapping = {0: '-', 1: 'Capt', 2: 'FO'}
+
+    def derive(self,
+               stick_capt=P('Sidestick Angle (Capt)'),
+               stick_fo=P('Sidestick Angle (FO)')):
+
+        pilot_flying = MappedArray(np.ma.zeros(stick_capt.array.size),
+                                   values_mapping=self.values_mapping)
+
+        if stick_capt.array.size > 61:
+            # Calculate average instead of sum as it we already have a function
+            # defined to work over a window and it doesn't affect the result as
+            # the arrays are altered in the same way and are still comparable.
+            window = 61 * self.hz  # Use 61 seconds for 30 seconds either side.
+            angle_capt = moving_average(stick_capt.array, window)
+            angle_fo = moving_average(stick_fo.array, window)
+            # Repair the array as the moving average is padded with masked
+            # zeros
+            angle_capt = repair_mask(angle_capt, repair_duration=31,
+                                     extrapolate=True)
+            angle_fo = repair_mask(angle_fo, repair_duration=31,
+                                   extrapolate=True)
+
+            pilot_flying[angle_capt > angle_fo] = 'Capt'
+            pilot_flying[angle_capt < angle_fo] = 'FO'
+
+        self.array = pilot_flying
+
+
 class PitchAlternateLaw(MultistateDerivedParameterNode):
     '''
     Combine Pitch Alternate Law from sources (1) and/or (2).
@@ -1441,6 +1504,10 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
                 'SpeedbrakeSelected: algorithm for family `%s` is undecided, '
                 'temporarily using speedbrake handle.', family_name)
             self.array = np_ma_masked_zeros_like(handle.array)
+
+        elif family_name in['A340']:
+            # We don't have the "Armed" state
+            self.array = handle.array * 2
 
         else:
             raise NotImplementedError
@@ -1971,6 +2038,8 @@ class TakeoffConfigurationWarning(MultistateDerivedParameterNode):
                        'Takeoff Configuration Parking Brake Warning',
                        'Takeoff Configuration Flap Warning',
                        'Takeoff Configuration Gear Warning',
+                       'Takeoff Configuration AP Warning',
+                       'Takeoff Configuration Aileron Warning',
                        'Takeoff Configuration Rudder Warning',
                        'Takeoff Configuration Spoiler Warning'],
                       available)
@@ -1979,6 +2048,8 @@ class TakeoffConfigurationWarning(MultistateDerivedParameterNode):
                parking_brake=M('Takeoff Configuration Parking Brake Warning'),
                flap=M('Takeoff Configuration Flap Warning'),
                gear=M('Takeoff Configuration Gear Warning'),
+               ap=M('Takeoff Configuration AP Warning'),
+               ail=M('Takeoff Configuration Aileron Warning'),
                rudder=M('Takeoff Configuration Rudder Warning'),
                spoiler=M('Takeoff Configuration Rudder Warning')):
         params_state = vstack_params_where_state(
@@ -1986,6 +2057,8 @@ class TakeoffConfigurationWarning(MultistateDerivedParameterNode):
             (parking_brake, 'Warning'),
             (flap, 'Warning'),
             (gear, 'Warning'),
+            (ap,'Warning'),
+            (ail,'Warning'),
             (rudder, 'Warning'),
             (spoiler, 'Warning'))
         self.array = params_state.any(axis=0)

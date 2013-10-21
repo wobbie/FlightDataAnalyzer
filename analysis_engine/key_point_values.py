@@ -22,7 +22,7 @@ from analysis_engine.settings import (ACCEL_LAT_OFFSET_LIMIT,
 
 from analysis_engine.flight_phase import scan_ils
 
-from analysis_engine.node import KeyPointValueNode, KPV, KTI, P, S, A, M, App
+from analysis_engine.node import KeyPointValueNode, KPV, KTI, P, S, A, M, App, Section
 
 from analysis_engine.library import (ambiguous_runway,
                                      all_of,
@@ -1739,7 +1739,7 @@ class AirspeedWithGearDownMax(KeyPointValueNode):
 
         gear.array[gear.array != 'Down'] = np.ma.masked
         gear_downs = np.ma.clump_unmasked(gear.array)
-        self.create_kpvs_within_slices(
+        self.create_kpv_from_slices(
             air_spd.array, slices_and(airs.get_slices(), gear_downs),
             max_value)
 
@@ -3165,7 +3165,7 @@ class AltitudeWithGearDownMax(KeyPointValueNode):
 
         gear.array[gear.array != 'Down'] = np.ma.masked
         gear_downs = np.ma.clump_unmasked(gear.array)
-        self.create_kpvs_within_slices(
+        self.create_kpv_from_slices(
             alt_aal.array, slices_and(airs.get_slices(), gear_downs),
             max_value)
 
@@ -3187,7 +3187,7 @@ class AltitudeSTDWithGearDownMax(KeyPointValueNode):
 
         gear.array[gear.array != 'Down'] = np.ma.masked
         gear_downs = np.ma.clump_unmasked(gear.array)
-        self.create_kpvs_within_slices(
+        self.create_kpv_from_slices(
             alt_std.array, slices_and(airs.get_slices(), gear_downs),
             max_value)
 
@@ -5001,7 +5001,7 @@ class MachWithGearDownMax(KeyPointValueNode):
 
         gear.array[gear.array != 'Down'] = np.ma.masked
         gear_downs = np.ma.clump_unmasked(gear.array)
-        self.create_kpvs_within_slices(
+        self.create_kpv_from_slices(
             mach.array, slices_and(airs.get_slices(), gear_downs),
             max_value)
 
@@ -5376,18 +5376,23 @@ class APUFireWarningDuration(KeyPointValueNode):
 
     @classmethod
     def can_operate(cls, available):
-        params = ('Fire APU Single Bottle System', 'Fire APU Dual Bottle System')
-        return any_of(params, available)
+        return ('APU Fire',) in [available] or \
+               ('Fire APU Single Bottle System',
+                'Fire APU Dual Bottle System') in [available]
 
-    def derive(self, single_bottle=M('Fire APU Single Bottle System'),
+    def derive(self, fire=P('APU Fire'), 
+               single_bottle=M('Fire APU Single Bottle System'),
                dual_bottle=M('Fire APU Dual Bottle System')):
 
-        hz = single_bottle.hz or dual_bottle.hz
-        apu_fires = vstack_params_where_state((single_bottle, 'Fire'),
-                                              (dual_bottle, 'Fire'))
-
-        self.create_kpvs_where(apu_fires.any(axis=0) == True,
-                               hz)
+        if fire:
+            self.create_kpvs_where(fire.array==True, fire.hz)
+        else:
+            hz = single_bottle.hz or dual_bottle.hz
+            apu_fires = vstack_params_where_state((single_bottle, 'Fire'),
+                                                  (dual_bottle, 'Fire'))
+    
+            self.create_kpvs_where(apu_fires.any(axis=0) == True,
+                                   hz)
 
 
 ##############################################################################
@@ -7773,9 +7778,13 @@ class Pitch7FtToTouchdownMax(KeyPointValueNode):
 
 class AirspeedV2Plus20DifferenceAtVNAVModeAndEngThrustModeRequired(KeyPointValueNode):
     '''
+    This was requested by one customer who wanted to know the speed margin
+    from the ideal of V2+20 when the crew put the automatics in after
+    take-off.
     '''
     
     units = 'kt'
+    name = 'V2+20 Minus Airspeed At VNAV Mode And Eng Thrust Mode Required'
     
     def derive(self,
                airspeed=P('Airspeed'),
@@ -9959,6 +9968,66 @@ class GrossWeightDelta60SecondsInFlightMax(KeyPointValueNode):
 
 
 ##############################################################################
+# Dual Input
+
+
+class DualInputDuration(KeyPointValueNode):
+    '''
+    Duration of dual input.
+    '''
+    unit = 's'
+
+    def derive(self, dual=M('Dual Input Warning'),
+               takeoff_rolls=S('Takeoff Roll'),
+               landing_rolls=S('Landing Roll')):
+
+        start = takeoff_rolls.get_first().slice.start
+        stop = landing_rolls.get_last().slice.stop
+        phase = S(items=[Section('Phase', slice(start, stop), start, stop)])
+        condition = dual.array == 'Dual'
+        self.create_kpvs_where(condition, dual.hz, phase)
+
+
+class DualInputByCaptDuration(KeyPointValueNode):
+    '''
+    Duration of dual input by the captain with first officer flying.
+    '''
+    unit = 's'
+
+    def derive(self,
+               dual=M('Dual Input Warning'),
+               pilot=M('Pilot Flying'),
+               takeoff_rolls=S('Takeoff Roll'),
+               landing_rolls=S('Landing Roll')):
+
+        start = takeoff_rolls.get_first().slice.start
+        stop = landing_rolls.get_last().slice.stop
+        phase = S(items=[Section('Phase', slice(start, stop), start, stop)])
+        condition = (dual.array == 'Dual') & (pilot.array == 'FO')
+        self.create_kpvs_where(condition, dual.hz, phase)
+
+
+class DualInputByFODuration(KeyPointValueNode):
+    '''
+    Duration of dual input by the first officer with captain flying.
+    '''
+    name = 'Dual Input By FO Duration'
+    unit = 's'
+
+    def derive(self,
+               dual=M('Dual Input Warning'),
+               pilot=M('Pilot Flying'),
+               takeoff_rolls=S('Takeoff Roll'),
+               landing_rolls=S('Landing Roll')):
+
+        start = takeoff_rolls.get_first().slice.start
+        stop = landing_rolls.get_last().slice.stop
+        phase = S(items=[Section('Phase', slice(start, stop), start, stop)])
+        condition = (dual.array == 'Dual') & (pilot.array == 'Capt')
+        self.create_kpvs_where(condition, dual.hz, phase)
+
+
+##############################################################################
 
 
 class HoldingDuration(KeyPointValueNode):
@@ -9969,12 +10038,6 @@ class HoldingDuration(KeyPointValueNode):
         self.create_kpvs_from_slice_durations(holds, self.frequency, mark='end')
 
 
-##### TODO: Implement!
-####class DualStickInput(KeyPointValueNode):
-####    def derive(self, x=P('Not Yet')):
-####        return NotImplemented
-####
-####
 ##### TODO: Implement!
 ####class ControlForcesTimesThree(KeyPointValueNode):
 ####    def derive(self, x=P('Not Yet')):

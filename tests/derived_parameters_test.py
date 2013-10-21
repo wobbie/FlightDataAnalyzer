@@ -67,11 +67,13 @@ from analysis_engine.derived_parameters import (
     #AltitudeSTD,
     AltitudeTail,
     ApproachRange,
+    BrakePressure,
     CabinAltitude,
     ClimbForFlightPhases,
     ControlColumn,
     ControlColumnForce,
     ControlWheel,
+    ControlWheelForce,
     CoordinatesSmoothed,
     DescendForFlightPhases,
     DistanceTravelled,
@@ -132,12 +134,14 @@ from analysis_engine.derived_parameters import (
     Pitch,
     RollRate,
     RudderPedal,
+    SidestickAngleCapt,
+    SidestickAngleFO,
     SlatSurface,
     Speedbrake,
-    Spoiler,
     VerticalSpeed,
     VerticalSpeedForFlightPhases,
     RateOfTurn,
+    Roll,
     TrackDeviationFromRunway,
     Track,
     TrackContinuous,
@@ -213,7 +217,27 @@ class NodeTest(object):
             for combination in map(set, self.operational_combinations):
                 self.assertIn(combination, combinations)
 
+    def get_params_from_hdf(self, hdf_path, param_names, _slice=None,
+                            phase_name='Phase'):
+        import shutil
+        import tempfile
 
+        params = []
+        phase = None
+
+        with tempfile.NamedTemporaryFile() as temp_file:
+            shutil.copy(hdf_path, temp_file.name)
+
+            with hdf_file(hdf_path) as hdf:
+                for param_name in param_names:
+                    params.append(hdf.get(param_name))
+
+        if _slice:
+            phase = S(name=phase_name, frequency=1)
+            phase.create_section(_slice)
+            phase = phase.get_aligned(params[0])
+
+        return params, phase
 
 
 ##### FIXME: Re-enable when 'AT Engaged' has been implemented.
@@ -1404,6 +1428,37 @@ class TestAltitudeTail(unittest.TestCase):
                              dtype=np.float, mask=False)
         np.testing.assert_array_almost_equal(result.data, answer.data)
 
+class TestBrakePressure(unittest.TestCase):
+    def test_can_operate(self):
+        two_sources = ('Brake (L) Press', 'Brake (R) Press')
+        four_sources = ('Brake (L) Inboard Press',
+                        'Brake (L) Outboard Press',
+                        'Brake (R) Inboard Press',
+                        'Brake (R) Outboard Press')
+        opts = BrakePressure.get_operational_combinations()
+        self.assertTrue(two_sources in opts)
+        self.assertTrue(four_sources in opts)
+        
+    def test_basic_two_params(self):
+        brake_left = P('Brake (L) Press', np.ma.array([0,1,0,0,0]))
+        brake_right = P('Brake (R) Press', np.ma.array([0,0,0,1,0]))
+        brakes = BrakePressure()
+        brakes.derive(brake_left, brake_right)
+        expected = np.ma.array([0.0, 0.5, 0.5, 0.0, 0.0, 0.0, 0.5, 0.5, 0.0, 0.0],
+                               mask = [0,0,0,0,0,0,0,0,0,1])        
+        np.testing.assert_array_equal(brakes.array, expected)
+        
+    def test_basic_four_params(self):
+        brake_li = P('Brake (L) Inboard Press', np.ma.array([0,0.75,1,0.75,0]))
+        brake_lo = P('Brake (L) Outboard Press', np.ma.array([0,0.75,1,0.75,0]))
+        brake_ri = P('Brake (R) Inboard Press', np.ma.array([0,0.75,1,0.75,0]))
+        brake_ro = P('Brake (R) Outboard Press', np.ma.array([0,0.75,1,0.75,0]))
+        brakes = BrakePressure()
+        brakes.derive(None, None, brake_li, brake_lo, brake_ri, brake_ro)
+        expected = np.ma.array([0.0, 0.5, 0.5, 0.0, 0.0, 0.0, 0.5, 0.5, 0.0, 0.0],
+                               mask = [0,0,0,0,0,0,0,0,0,1])        
+        self.assertAlmostEqual(brakes.array[4], 0.75)
+        self.assertAlmostEqual(brakes.array[8], 1.0)
 
 class TestCabinAltitude(unittest.TestCase):
     def test_can_operate(self):
@@ -1504,6 +1559,23 @@ class TestControlWheel(unittest.TestCase):
         blend_two_parameters.assert_called_once_with(self.cwc, self.cwf)
 
 
+class TestControlWheelForce(unittest.TestCase):
+
+    def test_can_operate(self):
+        expected = [('Control Wheel Force (Capt)',
+                     'Control Wheel Force (FO)')]
+        opts = ControlWheelForce.get_operational_combinations()
+        self.assertEqual(opts, expected)
+
+    def test_control_wheel_force(self):
+        ccf = ControlWheelForce()
+        ccf.derive(
+            ControlWheelForce('Control Wheel Force (Capt)', np.ma.arange(10)),
+            ControlWheelForce('Control Wheel Force (FO)', np.ma.arange(10)))
+        np.testing.assert_array_almost_equal(ccf.array, np.ma.arange(0, 20, 2))
+
+
+
 class TestDescendForFlightPhases(unittest.TestCase):
     def test_can_operate(self):
         expected = [('Altitude STD Smoothed', 'Fast')]
@@ -1519,7 +1591,75 @@ class TestDescendForFlightPhases(unittest.TestCase):
         expected = np.ma.array([0,0,0,-7,-9,0,0,-5,-8,0])
         ma_test.assert_masked_array_approx_equal(descend.array, expected)
 
-        
+
+class TestSidestickAngleCapt(NodeTest, unittest.TestCase):
+    def setUp(self):
+        self.node_class = SidestickAngleCapt
+        self.operational_combinations = [
+            ('Pitch Command (Capt)', 'Roll Command (Capt)'),
+        ]
+
+    def test_derive(self):
+        pitch_array = np.ma.arange(20)
+        roll_array = pitch_array[::-1]
+        pitch = P('Pitch Command (Capt)', pitch_array)
+        roll = P('Pitch Command (Capt)', roll_array)
+        node = self.node_class()
+        node.derive(pitch, roll)
+
+        expected_array = np.ma.sqrt(pitch_array ** 2 + roll_array ** 2)
+        np.testing.assert_array_equal(node.array, expected_array)
+
+    def test_derive_from_hdf(self):
+        [pitch, roll, sidestick], phase = self.get_params_from_hdf(
+            os.path.join(test_data_path, 'dual_input.hdf5'),
+            ['Pitch Command (Capt)', 'Roll Command (Capt)',
+             self.node_class.get_name()])
+
+        roll.array = align(roll, pitch)
+
+        node = self.node_class()
+        node.derive(pitch, roll)
+        expected_array = np.ma.sqrt(pitch.array ** 2 + roll.array ** 2)
+        np.testing.assert_array_equal(node.array, expected_array)
+
+        np.testing.assert_array_equal(node.array, sidestick.array)
+
+
+class TestSidestickAngleFO(NodeTest, unittest.TestCase):
+    def setUp(self):
+        self.node_class = SidestickAngleFO
+        self.operational_combinations = [
+            ('Pitch Command (FO)', 'Roll Command (FO)'),
+        ]
+
+    def test_derive(self):
+        pitch_array = np.ma.arange(20)
+        roll_array = pitch_array[::-1]
+        pitch = P('Pitch Command (FO)', pitch_array)
+        roll = P('Pitch Command (FO)', roll_array)
+        node = self.node_class()
+        node.derive(pitch, roll)
+
+        expected_array = np.ma.sqrt(pitch_array ** 2 + roll_array ** 2)
+        np.testing.assert_array_equal(node.array, expected_array)
+
+    def test_derive_from_hdf(self):
+        [pitch, roll, sidestick], phase = self.get_params_from_hdf(
+            os.path.join(test_data_path, 'dual_input.hdf5'),
+            ['Pitch Command (FO)', 'Roll Command (FO)',
+             self.node_class.get_name()])
+
+        roll.array = align(roll, pitch)
+
+        node = self.node_class()
+        node.derive(pitch, roll)
+        expected_array = np.ma.sqrt(pitch.array ** 2 + roll.array ** 2)
+        np.testing.assert_array_equal(node.array, expected_array)
+
+        np.testing.assert_array_equal(node.array, sidestick.array)
+
+
 class TestDistanceToLanding(unittest.TestCase):
     
     def test_can_operate(self):
@@ -3750,14 +3890,25 @@ class TestRelief(unittest.TestCase):
 
 
 class TestRoll(unittest.TestCase):
-    @unittest.skip('Test Not Implemented')
     def test_can_operate(self):
-        self.assertTrue(False, msg='Test not implemented.')
-        
-    @unittest.skip('Test Not Implemented')
+        opts = Roll.get_operational_combinations()
+        self.assertTrue(('Heading Continuous', 'Altitude AAL',) in opts)
+  
     def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
-
+        time = np.arange(100)
+        two_time = np.arange(200)
+        zero = np.array([0]*100)
+        ht_values = np.concatenate([zero, 2000.0*(1.0-np.cos(two_time*np.pi*0.01)), zero])
+        ht=P('Altitude AAL', array=np.ma.array(ht_values), frequency=2.0)
+        hdg_values = np.concatenate([20.0*(np.sin(time*np.pi*0.03)), zero])
+        hdg_values += 120 # Datum heading offset
+        hdg=P('Heading', array=np.ma.array(hdg_values), frequency=1.0)
+        herc = A('Frame', 'L382-Hercules')
+        derroll=Roll()
+        derroll.derive(None, None, hdg, ht, herc)
+        self.assertLess(derroll.array[40], 0.25)
+        self.assertLess(np.ma.max(derroll.array),13.0)
+        self.assertGreater(np.ma.max(derroll.array),11.0)
 
 class TestRollRate(unittest.TestCase):
     def test_can_operate(self):
@@ -3821,38 +3972,30 @@ class TestSlopeToLanding(unittest.TestCase):
 
 class TestSpeedbrake(unittest.TestCase):
     def test_can_operate(self):
-        opts = Speedbrake.get_operational_combinations()
-        self.assertTrue(('Spoiler (2)', 'Spoiler (7)', 'Frame') in opts)
-        self.assertTrue(('Spoiler (1)', 'Spoiler (14)', 'Frame') in opts)
-        self.assertTrue(('Spoiler (4)', 'Spoiler (9)', 'Frame') in opts)
-        
+        family = A(name='Family', value='B737-Classic')
+        self.assertTrue(Speedbrake.can_operate(('Spoiler (2)', 'Spoiler (7)'),
+                                               family=family))
+        family = A(name='Family', value='B737-NG')
+        self.assertTrue(Speedbrake.can_operate(('Spoiler (4)', 'Spoiler (9)'),
+                                               family=family))
+        family = A(name='Family', value='A320')
+        self.assertTrue(Speedbrake.can_operate(('Spoiler (2)', 'Spoiler (7)'),
+                                               family=family))
+        family = A(name='Family', value='B787')
+        self.assertTrue(Speedbrake.can_operate(('Spoiler (1)', 'Spoiler (14)'),
+                                               family=family))
+        family = A(name='Family', value='Learjet')
+        self.assertTrue(Speedbrake.can_operate(('Spoiler (L)', 'Spoiler (R)'),
+                                               family=family))
+        family = A(name='Family', value='CRJ 900')
+        self.assertTrue(Speedbrake.can_operate(
+            ('Spoiler (L) Inboard', 'Spoiler (L) Outboard',
+             'Spoiler (R) Inboard', 'Spoiler (R) Outboard'), family=family))
+
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
 
-
-class TestSpoiler(unittest.TestCase):
-    def test_can_operate(self):
-        family = Attribute('Family', 'B787')
-        self.assertTrue(Spoiler.can_operate(('Spoiler (1)',), family=family))
-        self.assertTrue(Spoiler.can_operate(('Spoiler (14)',), family=family))
-        self.assertTrue(Spoiler.can_operate(('Spoiler (1)', 'Spoiler (14)'),
-                                            family=family))
-        family = Attribute('Family', 'A320')
-        self.assertFalse(Spoiler.can_operate(('Spoiler (1)', 'Spoiler (14)'),
-                                             family=family))
-        family = Attribute('Family', 'G-V')
-        self.assertTrue(Spoiler.can_operate(('Spoiler (L)', 'Spoiler (R)'),
-                                             family=family))
-    
-    def test_derive_Gulfstream(self):
-        spoiler = P('Spoiler (L)', array=np.ma.array([1,2,1,2,3,2,1,2,35,40,2,1.0]))
-        family = A('Family', value='G-V')
-        spoil = Spoiler()
-        spoil.derive(None, None, spoiler, None, None, None, None, None, family)
-        expected = np.array([1,2,1,2,3,2,1,2,35,40,2,1.0])
-        np.testing.assert_array_equal(spoil.array.data, expected)
-        
 
 class TestSAT(unittest.TestCase):
     # Note: the core function machtat2sat is tested by the library test.

@@ -150,8 +150,9 @@ class GoAroundAndClimbout(FlightPhaseNode):
             # as the slice.stop from going too far forward.
             ga_stop = index_at_value_or_level_off(smoothed_alt,
                                                   value+2000, stop_slice)
-            # round to nearest positions
-            self.create_phase(slice(int(ga_start), math.ceil(ga_stop)))
+            # round to nearest positions, with a simple reasonableness check.
+            if math.ceil(ga_stop) > int(ga_start):
+                self.create_phase(slice(int(ga_start), math.ceil(ga_stop)))
         #endfor each goaround
         return
 
