@@ -394,8 +394,6 @@ class Climb(FlightPhaseNode):
             # Build the slice from what we have found.
             self.create_phase(slice(eot, closest_toc))
 
-        return
-
 
 class Climbing(FlightPhaseNode):
     def derive(self, vert_spd=P('Vertical Speed For Flight Phases'),

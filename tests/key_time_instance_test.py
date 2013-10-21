@@ -107,8 +107,7 @@ class TestAltitudePeak(unittest.TestCase):
 
 class TestBottomOfDescent(unittest.TestCase):
     def test_can_operate(self):
-        expected = [('Altitude AAL For Flight Phases', 
-                     'Descent Low Climb', 'Airborne')]
+        expected = [('Climb Cruise Descent', 'Airborne')]
         opts = BottomOfDescent.get_operational_combinations()
         self.assertEqual(opts, expected) 
         
@@ -126,31 +125,37 @@ class TestBottomOfDescent(unittest.TestCase):
 
 class TestClimbStart(unittest.TestCase):
     def test_can_operate(self):
-        expected = [('Altitude AAL', 'Climbing')]
+        expected = [('Altitude AAL', 'Liftoff', 'Top Of Climb')]
         opts = ClimbStart.get_operational_combinations()
         self.assertEqual(opts, expected)
 
     def test_climb_start_basic(self):
-        vert_spd = Parameter('Vertical Speed', np.ma.array([1200]*8))
-        climb = Climbing()
-        climb.derive(vert_spd, [Section('Fast',slice(0,8,None),0,8)])
-        alt = Parameter('Altitude AAL', np.ma.array(range(0,1600,220)))
-        kpi = ClimbStart()
-        kpi.derive(alt, climb)
+        #vert_spd = Parameter('Vertical Speed', np.ma.array([1200]*8))
+        #climb = Climbing()
+        #climb.derive(vert_spd, [Section('Fast',slice(0,8,None),0,8)])
+        alt_aal = Parameter('Altitude AAL', np.ma.array(range(0,1600,220)))
+        liftoffs = KTI('Liftoff', items=[KeyTimeInstance(0, 'Liftoff')])
+        tocs = KTI('Top Of Climb',
+                   items=[KeyTimeInstance(len(alt_aal.array) - 1, 'Top Of Climb')])
+        kti = ClimbStart()
+        kti.derive(alt_aal, liftoffs, tocs)
         # These values give an result with an index of 4.5454 recurring.
         expected = [KeyTimeInstance(index=5/1.1, name='Climb Start')]
-        self.assertEqual(kpi, expected)
-
-
-    def test_climb_start_cant_climb_when_slow(self):
-        vert_spd = Parameter('Vertical Speed', np.ma.array([1200]*8))
-        climb = Climbing()
-        climb.derive(vert_spd, []) #  No Fast phase found in this data
-        alt = Parameter('Altitude AAL', np.ma.array(range(0,1600,220)))
-        kpi = ClimbStart()
-        kpi.derive(alt, climb)
-        expected = [] #  Even though the altitude climbed, the a/c can't have
-        self.assertEqual(kpi, expected)
+        self.assertEqual(len(kti), 1)
+        self.assertAlmostEqual(kti[0].index, 4.5, 1)
+    
+    def test_climb_start_slow_climb(self):
+        # Failed when ClimbStart was based on Climbing.
+        alt_aal = load(os.path.join(test_data_path,
+                                    'ClimbStart_AltitudeAAL_1.nod'))
+        liftoffs = load(os.path.join(test_data_path,
+                                    'ClimbStart_Liftoff_1.nod'))
+        tocs = load(os.path.join(test_data_path,
+                                 'ClimbStart_TopOfClimb_1.nod'))
+        kti = ClimbStart()
+        kti.derive(alt_aal, liftoffs, tocs)
+        self.assertEqual(len(kti), 1)
+        self.assertAlmostEqual(kti[0].index, 1384, 0)
 
 
 class TestClimbThrustDerateDeselected(unittest.TestCase):

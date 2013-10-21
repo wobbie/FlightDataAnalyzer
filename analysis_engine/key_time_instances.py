@@ -205,14 +205,19 @@ class Transmit(KeyTimeInstanceNode):
 
 
 class ClimbStart(KeyTimeInstanceNode):
-    def derive(self, alt_aal=P('Altitude AAL'), climbing=S('Climbing')):
-        for climb in climbing:
-            initial_climb_index = index_at_value(alt_aal.array,
-                                                 CLIMB_THRESHOLD, climb.slice)
-            # The aircraft may be climbing, but starting from an altitude
-            # above CLIMB_THRESHOLD. In this case no kti is created.
-            if initial_climb_index:
-                self.create_kti(initial_climb_index)
+    '''
+    Creates KTIs where the aircraft tras
+    '''
+    
+    def derive(self, alt_aal=P('Altitude AAL'), liftoffs=KTI('Liftoff'),
+               tocs=KTI('Top Of Climb')):
+        for liftoff in liftoffs:
+            # Assumes a Top Of Climb KTI exists after each Liftoff.
+            toc = tocs.get_next(liftoff.index)
+            climb_slice = slice(liftoff.index, toc.index)
+            index = index_at_value(alt_aal.array, CLIMB_THRESHOLD, climb_slice)
+            if index:
+                self.create_kti(index)
 
 
 class ClimbThrustDerateDeselected(KeyTimeInstanceNode):
