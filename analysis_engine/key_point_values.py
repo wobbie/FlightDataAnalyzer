@@ -1739,7 +1739,7 @@ class AirspeedWithGearDownMax(KeyPointValueNode):
 
         gear.array[gear.array != 'Down'] = np.ma.masked
         gear_downs = np.ma.clump_unmasked(gear.array)
-        self.create_kpvs_within_slices(
+        self.create_kpv_from_slices(
             air_spd.array, slices_and(airs.get_slices(), gear_downs),
             max_value)
 
@@ -3165,7 +3165,7 @@ class AltitudeWithGearDownMax(KeyPointValueNode):
 
         gear.array[gear.array != 'Down'] = np.ma.masked
         gear_downs = np.ma.clump_unmasked(gear.array)
-        self.create_kpvs_within_slices(
+        self.create_kpv_from_slices(
             alt_aal.array, slices_and(airs.get_slices(), gear_downs),
             max_value)
 
@@ -3187,7 +3187,7 @@ class AltitudeSTDWithGearDownMax(KeyPointValueNode):
 
         gear.array[gear.array != 'Down'] = np.ma.masked
         gear_downs = np.ma.clump_unmasked(gear.array)
-        self.create_kpvs_within_slices(
+        self.create_kpv_from_slices(
             alt_std.array, slices_and(airs.get_slices(), gear_downs),
             max_value)
 
@@ -5001,7 +5001,7 @@ class MachWithGearDownMax(KeyPointValueNode):
 
         gear.array[gear.array != 'Down'] = np.ma.masked
         gear_downs = np.ma.clump_unmasked(gear.array)
-        self.create_kpvs_within_slices(
+        self.create_kpv_from_slices(
             mach.array, slices_and(airs.get_slices(), gear_downs),
             max_value)
 
