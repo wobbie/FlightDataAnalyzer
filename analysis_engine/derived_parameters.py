@@ -5404,7 +5404,7 @@ class Speedbrake(DerivedParameterNode):
         elif family_name in ['B737-NG', 'A320']:
             self.array, self.offset = self.merge_spoiler(spoiler_2, spoiler_7)
 
-        elif family_name == '787':
+        elif family_name == 'B787':
             self.array, self.offset = self.merge_spoiler(spoiler_1, spoiler_14)
 
         elif family_name in ['G-V', 'Learjet']:
