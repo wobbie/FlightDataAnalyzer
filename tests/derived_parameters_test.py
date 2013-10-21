@@ -142,6 +142,7 @@ from analysis_engine.derived_parameters import (
     VerticalSpeedForFlightPhases,
     RateOfTurn,
     Roll,
+    ThrottleLevers,
     TrackDeviationFromRunway,
     Track,
     TrackContinuous,
@@ -4029,9 +4030,11 @@ class TestTailwind(unittest.TestCase):
 
 
 class TestThrottleLevers(unittest.TestCase):
-    @unittest.skip('Test Not Implemented')
     def test_can_operate(self):
-        self.assertTrue(False, msg='Test not implemented.')
+        self.assertEqual(ThrottleLevers.get_operational_combinations(),
+                         [('Eng (1) Throttle Lever',),
+                          ('Eng (2) Throttle Lever',),
+                          ('Eng (1) Throttle Lever', 'Eng (2) Throttle Lever')])
         
     @unittest.skip('Test Not Implemented')
     def test_derive(self):

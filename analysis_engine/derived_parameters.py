@@ -4785,8 +4785,8 @@ class RudderPedalForce(DerivedParameterNode):
         right = fcr.array + ffr.array
         left = fcl.array + ffl.array
         self.array = right - left
-        
-        
+
+
 class ThrottleLevers(DerivedParameterNode):
     """
     A synthetic throttle lever angle, based on the average of the two. Allows
@@ -4795,6 +4795,11 @@ class ThrottleLevers(DerivedParameterNode):
 
     align = False
     units = 'deg'
+    
+    @classmethod
+    def can_operate(self, available):
+        return ('Eng (1) Throttle Lever' in available or
+                'Eng (2) Throttle Lever' in available)
 
     def derive(self,
                tla1=P('Eng (1) Throttle Lever'),
