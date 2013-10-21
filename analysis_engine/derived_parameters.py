@@ -4747,7 +4747,25 @@ class RudderPedal(DerivedParameterNode):
                 self.offset = pot.offset
                 self.array = pot.array
         
-
+class RudderPedalForce(DerivedParameterNode):
+    '''
+    Introduced for the CRJ fleet, where left and right pedal forces for each
+    pilot are measured. We allow for both pilots pushing on the pedals at the
+    same time, and make the positive = heading right sign convention to merge
+    both. If you just rest your feet on the footrests, the resultant should
+    be zero.
+    '''
+    def derive(self,
+               fcl=P('Rudder Pedal Force (Capt) (L)'),
+               fcr=P('Rudder Pedal Force (Capt) (R)'),
+               ffl=P('Rudder Pedal Force (FO) (L)'),
+               ffr=P('Rudder Pedal Force (FO) (R)')):
+        
+        right = fcr.array + ffr.array
+        left = fcl.array + ffl.array
+        self.array = right - left
+        
+        
 class ThrottleLevers(DerivedParameterNode):
     """
     A synthetic throttle lever angle, based on the average of the two. Allows
