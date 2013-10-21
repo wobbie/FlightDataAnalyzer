@@ -1578,6 +1578,21 @@ class ControlWheel(DerivedParameterNode):
                 self.array = pot.array
 
 
+class ControlWheelForce(DerivedParameterNode):
+    '''
+    The combined force from the captain and the first officer.
+    '''
+
+    units = 'lbf'
+
+    def derive(self,
+               force_capt=P('Control Wheel Force (Capt)'),
+               force_fo=P('Control Wheel Force (FO)')):
+        self.array = force_capt.array + force_fo.array
+        # TODO: Check this summation is correct in amplitude and phase.
+        # Compare with Boeing charts for the 737NG.
+
+
 class SidestickAngleCapt(DerivedParameterNode):
     '''
     Angle of the captain's side stick.

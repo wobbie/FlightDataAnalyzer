@@ -67,11 +67,13 @@ from analysis_engine.derived_parameters import (
     #AltitudeSTD,
     AltitudeTail,
     ApproachRange,
+    BrakePressure,
     CabinAltitude,
     ClimbForFlightPhases,
     ControlColumn,
     ControlColumnForce,
     ControlWheel,
+    ControlWheelForce,
     CoordinatesSmoothed,
     DescendForFlightPhases,
     DistanceTravelled,
@@ -1524,6 +1526,23 @@ class TestControlWheel(unittest.TestCase):
         cw = ControlWheel()
         cw.derive(self.cwc, self.cwf)
         blend_two_parameters.assert_called_once_with(self.cwc, self.cwf)
+
+
+class TestControlWheelForce(unittest.TestCase):
+
+    def test_can_operate(self):
+        expected = [('Control Wheel Force (Capt)',
+                     'Control Wheel Force (FO)')]
+        opts = ControlWheelForce.get_operational_combinations()
+        self.assertEqual(opts, expected)
+
+    def test_control_wheel_force(self):
+        ccf = ControlWheelForce()
+        ccf.derive(
+            ControlWheelForce('Control Wheel Force (Capt)', np.ma.arange(10)),
+            ControlWheelForce('Control Wheel Force (FO)', np.ma.arange(10)))
+        np.testing.assert_array_almost_equal(ccf.array, np.ma.arange(0, 20, 2))
+
 
 
 class TestDescendForFlightPhases(unittest.TestCase):
