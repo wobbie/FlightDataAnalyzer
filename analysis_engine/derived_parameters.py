@@ -5331,15 +5331,19 @@ class Speedbrake(DerivedParameterNode):
         '''
         Note: The frame name cannot be accessed within this method to determine
               which parameters are required.
+
+        Re 737NG: The ARINC 429 recorded spoiler positions 4 & 9 are used as
+        these have a consistent scaling wheras the synchro sourced 3 & 10
+        positions have a scaling that changes with short field option.
         '''
         family_name = family.value if family else None
         return family_name and (
-            family_name == 'B737-Classic' and (
+            family_name == 'B737-NG' and (
                 'Spoiler (4)' in available or
                 'Spoiler (9)' in available
             ) or
             # FIXME: this is currently used with frame A320_SFIM_ED45_CFM
-            family_name in ['B737-NG', 'A320'] and (
+            family_name in ['B737-Classic', 'A320'] and (
                 'Spoiler (2)' in available or
                 'Spoiler (7)' in available
             ) or
@@ -5352,7 +5356,7 @@ class Speedbrake(DerivedParameterNode):
                 'Spoiler (R)'),
                 available
             ) or
-            family_name in ['CRJ 900'] and any_of((
+            family_name in ['CRJ 900', 'CL-600'] and any_of((
                 'Spoiler (L) Inboard',
                 'Spoiler (L) Outboard',
                 'Spoiler (R) Inboard',

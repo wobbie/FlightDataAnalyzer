@@ -3973,6 +3973,9 @@ class TestSlopeToLanding(unittest.TestCase):
 class TestSpeedbrake(unittest.TestCase):
     def test_can_operate(self):
         family = A(name='Family', value='B737-Classic')
+        self.assertTrue(Speedbrake.can_operate(('Spoiler (2)', 'Spoiler (7)'),
+                                               family=family))
+        family = A(name='Family', value='B737-NG')
         self.assertTrue(Speedbrake.can_operate(('Spoiler (4)', 'Spoiler (9)'),
                                                family=family))
         family = A(name='Family', value='A320')
