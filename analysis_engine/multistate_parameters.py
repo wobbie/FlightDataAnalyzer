@@ -2038,6 +2038,8 @@ class TakeoffConfigurationWarning(MultistateDerivedParameterNode):
                        'Takeoff Configuration Parking Brake Warning',
                        'Takeoff Configuration Flap Warning',
                        'Takeoff Configuration Gear Warning',
+                       'Takeoff Configuration AP Warning',
+                       'Takeoff Configuration Aileron Warning',
                        'Takeoff Configuration Rudder Warning',
                        'Takeoff Configuration Spoiler Warning'],
                       available)
@@ -2046,6 +2048,8 @@ class TakeoffConfigurationWarning(MultistateDerivedParameterNode):
                parking_brake=M('Takeoff Configuration Parking Brake Warning'),
                flap=M('Takeoff Configuration Flap Warning'),
                gear=M('Takeoff Configuration Gear Warning'),
+               ap=M('Takeoff Configuration AP Warning'),
+               ail=M('Takeoff Configuration Aileron Warning'),
                rudder=M('Takeoff Configuration Rudder Warning'),
                spoiler=M('Takeoff Configuration Rudder Warning')):
         params_state = vstack_params_where_state(
@@ -2053,6 +2057,8 @@ class TakeoffConfigurationWarning(MultistateDerivedParameterNode):
             (parking_brake, 'Warning'),
             (flap, 'Warning'),
             (gear, 'Warning'),
+            (ap,'Warning'),
+            (ail,'Warning'),
             (rudder, 'Warning'),
             (spoiler, 'Warning'))
         self.array = params_state.any(axis=0)

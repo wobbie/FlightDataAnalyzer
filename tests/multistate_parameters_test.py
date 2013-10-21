@@ -1537,6 +1537,10 @@ class TestTakeoffConfigurationWarning(unittest.TestCase):
         self.assertTrue(TakeoffConfigurationWarning.can_operate(
             ('Takeoff Configuration Gear Warning',)))
         self.assertTrue(TakeoffConfigurationWarning.can_operate(
+            ('Takeoff Configuration AP Warning',)))
+        self.assertTrue(TakeoffConfigurationWarning.can_operate(
+            ('Takeoff Configuration Aileron Warning',)))
+        self.assertTrue(TakeoffConfigurationWarning.can_operate(
             ('Takeoff Configuration Rudder Warning',)))
         self.assertTrue(TakeoffConfigurationWarning.can_operate(
             ('Takeoff Configuration Spoiler Warning',)))
