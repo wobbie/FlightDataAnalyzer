@@ -1692,11 +1692,32 @@ class BrakePressure(DerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
         return ('Brake (L) Press' in available and \
-                'Brake (R) Press' in available)
+                'Brake (R) Press' in available) \
+               or \
+               ('Brake (L) Inboard Press' in available and \
+                'Brake (L) Outboard Press' in available and \
+                'Brake (R) Inboard Press' in available and \
+                'Brake (R) Outboard Press' in available)
+                
 
-    def derive(self, brake_L=P('Brake (L) Press'), brake_R=P('Brake (R) Press')):
-        self.array, self.frequency, self.offset = blend_two_parameters(brake_L, brake_R)
-
+    def derive(self, 
+               brake_L=P('Brake (L) Press'), 
+               brake_R=P('Brake (R) Press'),
+               brake_L_in = P('Brake (L) Inboard Press'),
+               brake_L_out = P('Brake (L) Outboard Press'),
+               brake_R_In = P('Brake (R) Inboard Press'),
+               brake_R_Out = P('Brake (R) Outboard Press'),
+               ):
+        
+        if brake_L and brake_R:
+            self.array, self.frequency, self.offset = blend_two_parameters(brake_L, brake_R)
+        else:
+            sources = [brake_L_in, brake_L_out, brake_R_In, brake_R_Out]
+            self.offset = 0.0
+            self.frequency = brake_L_in.frequency * 4.0
+            self.array = blend_parameters(sources, 
+                                          offset=self.offset, 
+                                          frequency=self.frequency)
 
 ################################################################################
 # Engine EPR

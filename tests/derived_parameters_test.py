@@ -1428,6 +1428,37 @@ class TestAltitudeTail(unittest.TestCase):
                              dtype=np.float, mask=False)
         np.testing.assert_array_almost_equal(result.data, answer.data)
 
+class TestBrakePressure(unittest.TestCase):
+    def test_can_operate(self):
+        two_sources = ('Brake (L) Press', 'Brake (R) Press')
+        four_sources = ('Brake (L) Inboard Press',
+                        'Brake (L) Outboard Press',
+                        'Brake (R) Inboard Press',
+                        'Brake (R) Outboard Press')
+        opts = BrakePressure.get_operational_combinations()
+        self.assertTrue(two_sources in opts)
+        self.assertTrue(four_sources in opts)
+        
+    def test_basic_two_params(self):
+        brake_left = P('Brake (L) Press', np.ma.array([0,1,0,0,0]))
+        brake_right = P('Brake (R) Press', np.ma.array([0,0,0,1,0]))
+        brakes = BrakePressure()
+        brakes.derive(brake_left, brake_right)
+        expected = np.ma.array([0.0, 0.5, 0.5, 0.0, 0.0, 0.0, 0.5, 0.5, 0.0, 0.0],
+                               mask = [0,0,0,0,0,0,0,0,0,1])        
+        np.testing.assert_array_equal(brakes.array, expected)
+        
+    def test_basic_four_params(self):
+        brake_li = P('Brake (L) Inboard Press', np.ma.array([0,0.75,1,0.75,0]))
+        brake_lo = P('Brake (L) Outboard Press', np.ma.array([0,0.75,1,0.75,0]))
+        brake_ri = P('Brake (R) Inboard Press', np.ma.array([0,0.75,1,0.75,0]))
+        brake_ro = P('Brake (R) Outboard Press', np.ma.array([0,0.75,1,0.75,0]))
+        brakes = BrakePressure()
+        brakes.derive(None, None, brake_li, brake_lo, brake_ri, brake_ro)
+        expected = np.ma.array([0.0, 0.5, 0.5, 0.0, 0.0, 0.0, 0.5, 0.5, 0.0, 0.0],
+                               mask = [0,0,0,0,0,0,0,0,0,1])        
+        self.assertAlmostEqual(brakes.array[4], 0.75)
+        self.assertAlmostEqual(brakes.array[8], 1.0)
 
 class TestCabinAltitude(unittest.TestCase):
     def test_can_operate(self):
