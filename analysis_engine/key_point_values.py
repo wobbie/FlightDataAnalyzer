@@ -7778,9 +7778,13 @@ class Pitch7FtToTouchdownMax(KeyPointValueNode):
 
 class AirspeedV2Plus20DifferenceAtVNAVModeAndEngThrustModeRequired(KeyPointValueNode):
     '''
+    This was requested by one customer who wanted to know the speed margin
+    from the ideal of V2+20 when the crew put the automatics in after
+    take-off.
     '''
     
     units = 'kt'
+    name = 'V2+20 Minus Airspeed At VNAV Mode And Eng Thrust Mode Required'
     
     def derive(self,
                airspeed=P('Airspeed'),
