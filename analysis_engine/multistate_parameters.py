@@ -1617,6 +1617,10 @@ class StableApproach(MultistateDerivedParameterNode):
         repair = lambda ar, ap: repair_mask(ar[ap], zero_if_masked=True)
 
         for approach in apps:
+            # FIXME: approaches shorter than 10 samples will not work due to
+            # the use of moving_average with a width of 10 samples.
+            if approach.slice.stop - approach.slice.start < 10:
+                continue
             # Restrict slice to 10 seconds after landing if we hit the ground
             gnd = index_at_value(alt.array, 0, approach.slice)
             if gnd and gnd + 10 < approach.slice.stop:
