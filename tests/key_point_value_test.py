@@ -4527,13 +4527,14 @@ class TestAPUFireWarningDuration(unittest.TestCase):
 
     def test_can_operate(self):
         opts = self.node_class.get_operational_combinations()
-        expected = [('Fire APU Single Bottle System',),
-                    ('Fire APU Dual Bottle System',),
-                    ('Fire APU Single Bottle System', 'Fire APU Dual Bottle System')]
-        self.assertEqual(expected, opts)
+        simple = ('APU Fire',)
+        bottles = ('Fire APU Single Bottle System', 'Fire APU Dual Bottle System')
+        self.assertTrue(simple in opts)
+        self.assertTrue(bottles in opts)
 
     def test_derive_basic(self):
         values_mapping = {
+            0: '-',
             1: 'Fire',
         }
         single_fire = M(name='Fire APU Single Bottle System',
@@ -4542,7 +4543,16 @@ class TestAPUFireWarningDuration(unittest.TestCase):
         single_fire.array[5:7] = 'Fire'
         
         node = self.node_class()
-        node.derive(single_fire, None)
+        node.derive(None, single_fire, None)
+
+        self.assertEqual(node[0].name, 'APU Fire Warning Duration')
+        self.assertEqual(node[0].index, 5)
+        self.assertEqual(node[0].value, 2)
+        self.assertEqual(len(node), 1)
+
+        # Test simple case
+        node = self.node_class()
+        node.derive(single_fire, None, None)
 
         self.assertEqual(node[0].name, 'APU Fire Warning Duration')
         self.assertEqual(node[0].index, 5)
