@@ -5,13 +5,7 @@ import logging
 
 import numpy as np
 
-from flightdatautilities.model_information import (
-    get_aileron_map,
-    get_conf_map,
-    get_flap_map,
-    get_flap_values_mapping,
-    get_slat_map,
-)
+from flightdatautilities import model_information as mi
 
 from hdfaccess.parameter import MappedArray
 
@@ -114,6 +108,31 @@ from analysis_engine.library import (#actuator_mismatch,
 logger = logging.getLogger(name=__name__)
 
 
+class FlapMapFallback(object):
+
+    def get_flap_map_fallback(self, flap):
+        '''
+        Generates a fallback flap mapping where none was available.
+
+        This fallback is created by rounding the available flap array to the
+        nearest 5 degrees.
+
+        Returns a dictionary in the following form::
+
+            {value: state, ...}
+
+        :param flap: Recorded flap parameter.
+        :type flap: Parameter
+        :returns: A fallback generated flap values mapping.
+        :rtype: dict
+        '''
+        angle = 5.0
+        self.warning('No flap settings - rounding to nearest %.1f deg' % angle)
+        array = round_to_nearest(flap.array, angle)
+        detents = [int(f) for f in np.ma.unique(array) if f is not np.ma.masked]
+        return {f: str(f) for f in detents}
+
+
 class APEngaged(MultistateDerivedParameterNode):
     '''
     Determines if *any* of the "AP (*) Engaged" parameters are recording the
@@ -202,16 +221,16 @@ class Configuration(MultistateDerivedParameterNode):
     Multi-state with the following mapping::
 
         {
-            0 : '0',
-            1 : '1',
-            2 : '1+F',
-            3 : '1*',
-            4 : '2',
-            5 : '2*',
-            6 : '3',
-            7 : '4',
-            8 : '5',
-            9 : 'Full',
+            0: '0',
+            1: '1',
+            2: '1+F',
+            3: '1*',
+            4: '2',
+            5: '2*',
+            6: '3',
+            7: '4',
+            8: '5',
+            9: 'Full',
         }
 
     Some values are based on footnotes in various pieces of documentation:
@@ -228,16 +247,16 @@ class Configuration(MultistateDerivedParameterNode):
     '''
 
     values_mapping = {
-        0 : '0',
-        1 : '1',
-        2 : '1+F',
-        3 : '1*',
-        4 : '2',
-        5 : '2*',
-        6 : '3',
-        7 : '4',
-        8 : '5',
-        9 : 'Full',
+        0: '0',
+        1: '1',
+        2: '1+F',
+        3: '1*',
+        4: '2',
+        5: '2*',
+        6: '3',
+        7: '4',
+        8: '5',
+        9: 'Full',
     }
 
     @classmethod
@@ -252,7 +271,7 @@ class Configuration(MultistateDerivedParameterNode):
     def derive(self, slat=P('Slat'), flap=M('Flap'), flaperon=P('Flaperon'),
                model=A('Model'), series=A('Series'), family=A('Family')):
 
-        mapping = get_conf_map(model.value, series.value, family.value)
+        mapping = mi.get_conf_angles(model.value, series.value, family.value)
         qty_param = len(mapping.itervalues().next())
         if qty_param == 3 and not flaperon:
             # potential problem here!
@@ -606,7 +625,7 @@ class EventMarker(MultistateDerivedParameterNode):
         ).any(axis=0)
 
 
-class Flap(MultistateDerivedParameterNode):
+class Flap(MultistateDerivedParameterNode, FlapMapFallback):
     '''
     Steps raw Flap angle from surface into detents.
     '''
@@ -650,19 +669,16 @@ class Flap(MultistateDerivedParameterNode):
             return
 
         try:
-            flap_steps = get_flap_map(model.value, series.value, family.value)
+            self.values_mapping = mi.get_flap_map(model.value, series.value, family.value)
         except KeyError:
-            # no flaps mapping, round to nearest 5 degrees
-            self.warning("No flap settings - rounding to nearest 5")
-            # round to nearest 5 degrees
-            array = round_to_nearest(flap.array, 5.0)
-            flap_steps = [int(f) for f in np.ma.unique(array) if f is not np.ma.masked]
-        self.values_mapping = {f: str(f) for f in flap_steps}
-        self.array = step_values(repair_mask(flap.array), flap_steps, 
+            self.values_mapping = self.get_flap_map_fallback(flap)
+
+        self.array = step_values(repair_mask(flap.array),
+                                 self.values_mapping.keys(),
                                  flap.hz, step_at='move_start')
 
 
-class FlapExcludingTransition(MultistateDerivedParameterNode):
+class FlapExcludingTransition(MultistateDerivedParameterNode, FlapMapFallback):
     '''
     Specifically designed to cater for maintenance monitoring, this assumes
     that when moving the lower of the start and endpoints of the movement
@@ -673,13 +689,18 @@ class FlapExcludingTransition(MultistateDerivedParameterNode):
 
     def derive(self, flap=P('Flap Angle'), 
                model=A('Model'), series=A('Series'), family=A('Family')):
-        self.values_mapping = get_flap_values_mapping(model, series, family, flap)
+
+        try:
+            self.values_mapping = mi.get_flap_map(model.value, series.value, family.value)
+        except KeyError:
+            self.values_mapping = self.get_flap_map_fallback(flap)
+
         self.array = step_values(repair_mask(flap.array),
                                  self.values_mapping.keys(),
                                  flap.hz, step_at='excluding_transition')
 
 
-class FlapIncludingTransition(MultistateDerivedParameterNode):
+class FlapIncludingTransition(MultistateDerivedParameterNode, FlapMapFallback):
     '''
     Specifically designed to cater for maintenance monitoring, this assumes
     that when moving the higher of the start and endpoints of the movement
@@ -692,13 +713,18 @@ class FlapIncludingTransition(MultistateDerivedParameterNode):
 
     def derive(self, flap=P('Flap Angle'), 
                model=A('Model'), series=A('Series'), family=A('Family')):
-        self.values_mapping = get_flap_values_mapping(model, series, family, flap)
+
+        try:
+            self.values_mapping = mi.get_flap_map(model.value, series.value, family.value)
+        except KeyError:
+            self.values_mapping = self.get_flap_map_fallback(flap)
+
         self.array = step_values(repair_mask(flap.array),
                                  self.values_mapping.keys(),
                                  flap.hz, step_at='including_transition')
             
             
-class FlapLever(MultistateDerivedParameterNode):
+class FlapLever(MultistateDerivedParameterNode, FlapMapFallback):
     '''
     Rounds the Flap Lever Angle to the selected detent at the start of the
     angle movement.
@@ -712,7 +738,12 @@ class FlapLever(MultistateDerivedParameterNode):
 
     def derive(self, flap_lever=P('Flap Lever Angle'),
                model=A('Model'), series=A('Series'), family=A('Family')):
-        self.values_mapping = get_flap_values_mapping(model, series, family, flap_lever)
+
+        try:
+            self.values_mapping = mi.get_flap_map(model.value, series.value, family.value)
+        except KeyError:
+            self.values_mapping = self.get_flap_map_fallback(flap_lever)
+
         self.array = step_values(repair_mask(flap_lever.array),
                                  self.values_mapping.keys(),
                                  flap_lever.hz, step_at='move_start')
@@ -738,7 +769,7 @@ class Flaperon(MultistateDerivedParameterNode):
     def can_operate(cls, available, model=A('Model'), series=A('Series'), family=A('Family')):
 
         try:
-            get_aileron_map(model.value, series.value, family.value)
+            mi.get_aileron_map(model.value, series.value, family.value)
         except KeyError:
             return False
 
@@ -751,9 +782,10 @@ class Flaperon(MultistateDerivedParameterNode):
         # other out when rolling) and divide the range by two (to account for
         # the left going negative and right going positive when flaperons set)
         flaperon_angle = (al.array - ar.array) / 2
-        ail_steps = get_aileron_map(model.value, series.value, family.value)
-        self.values_mapping = {int(f): str(f) for f in ail_steps}
-        self.array = step_values(flaperon_angle, ail_steps,
+
+        self.values_mapping = mi.get_aileron_map(model.value, series.value, family.value)
+        self.array = step_values(flaperon_angle,
+                                 self.values_mapping.keys(),
                                  al.hz, step_at='move_start')
 
 
@@ -1207,7 +1239,7 @@ class Slat(MultistateDerivedParameterNode):
     def can_operate(cls, available, model=A('Model'), series=A('Series'), family=A('Family')):
 
         try:
-            get_slat_map(model.value, series.value, family.value)
+            mi.get_slat_map(model.value, series.value, family.value)
         except KeyError:
             return False
 
@@ -1216,15 +1248,9 @@ class Slat(MultistateDerivedParameterNode):
     def derive(self, slat=P('Slat Angle'),
                model=A('Model'), series=A('Series'), family=A('Family')):
 
-        slat_steps = get_slat_map(model.value, series.value, family.value)
-        # No longer support rounding to nearest
-        ##except KeyError:
-            ### no slats mapping, round to nearest 5 degrees
-            ##self.warning("No slat settings - rounding to nearest 5")
-            ### round to nearest 5 degrees
-            ##self.array = round_to_nearest(slat.array, 5.0)
-        self.values_mapping = {int(f): str(f) for f in slat_steps}
-        self.array = step_values(slat.array, slat_steps,
+        self.values_mapping = mi.get_slat_map(model.value, series.value, family.value)
+        self.array = step_values(slat.array,
+                                 self.values_mapping.keys(),
                                  slat.hz, step_at='move_start')
 
 
