@@ -136,7 +136,7 @@ from analysis_engine.derived_parameters import (
     RudderPedal,
     SidestickAngleCapt,
     SidestickAngleFO,
-    SlatSurface,
+    SlatAngle,
     Speedbrake,
     VerticalSpeed,
     VerticalSpeedForFlightPhases,
@@ -3665,7 +3665,7 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
             ('Flap Angle (L)', 'Flap Angle (R)'),
             ('Flap Angle (L) Inboard', 'Flap Angle (R) Inboard'),
             ('Flap Angle (L)', 'Flap Angle (R)', 'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard', 'Frame'),
-            ('Flap Angle (L)', 'Flap Angle (R)', 'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard', 'Slat Surface', 'Frame'),
+            ('Flap Angle (L)', 'Flap Angle (R)', 'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard', 'Slat Angle', 'Frame'),
         ]
     
     def test_derive_787(self):
@@ -3675,7 +3675,7 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
                                          '787_flap_angle_r.nod'))
         slat_l = load(os.path.join(test_data_path, '787_slat_l.nod'))
         slat_r = load(os.path.join(test_data_path, '787_slat_r.nod'))
-        slat = SlatSurface()
+        slat = SlatAngle()
         slat.derive(slat_l, slat_r)
         family = A('Family', 'B787')
         f = FlapAngle()
@@ -3961,21 +3961,11 @@ class TestRudderPedal(unittest.TestCase):
         self.assertTrue(False, msg='Test not implemented.')
 
 
-class TestSlat(unittest.TestCase):
-    @unittest.skip('Test Not Implemented')
-    def test_can_operate(self):
-        self.assertTrue(False, msg='Test not implemented.')
-        
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
-
-
-class TestSlatSurface(unittest.TestCase):
+class TestSlatAngle(unittest.TestCase):
     def test_can_operate(self):
         self.assertEqual(
-            SlatSurface.get_operational_combinations(),
-            [('Slat (L)',), ('Slat (R)',), ('Slat (L)', 'Slat (R)')])
+            SlatAngle.get_operational_combinations(),
+            [('Slat Angle (L)',), ('Slat Angle (R)',), ('Slat Angle (L)', 'Slat Angle (R)')])
     
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
