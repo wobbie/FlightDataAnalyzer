@@ -460,6 +460,7 @@ class AirspeedReferenceLookup(DerivedParameterNode):
                gw=P('Gross Weight Smoothed'),
                approaches=S('Approach And Landing'),
                touchdowns=KTI('Touchdown'),
+               model=A('Model'),
                series=A('Series'),
                family=A('Family'),
                engine=A('Engine Series'),
@@ -507,9 +508,9 @@ class AirspeedReferenceLookup(DerivedParameterNode):
                 # Not the final landing and max setting not in vspeed table,
                 # so use the maximum setting possible as a reference.
                 if setting_param.name == 'Flap':
-                    max_setting = max(get_flap_map(series.value, family.value))
+                    max_setting = max(get_flap_map(model.value, series.value, family.value))
                 else:
-                    max_setting = max(get_conf_map(series.value, family.value).keys())
+                    max_setting = max(get_conf_map(model.value, series.value, family.value).keys())
                 self.info("No touchdown in this approach and maximum "
                           "%s '%s' not in lookup table. Using max "
                           "possible setting '%s' as reference",
@@ -3333,7 +3334,7 @@ class FlapAngle(DerivedParameterNode):
         flap_B = flap_B or flap_B_inboard
         
         if family_name == 'B787':
-            conf_map = get_conf_map(None, family_name)
+            conf_map = get_conf_map(None, None, family_name)
             # Flap settings 1 and 25 only affect Slat.
             # Combine Flap Angle (L) and Flap Angle (R).
             self.array, self.frequency, self.offset = blend_two_parameters(

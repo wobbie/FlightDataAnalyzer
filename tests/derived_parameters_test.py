@@ -614,6 +614,7 @@ class TestAirspeedReferenceLookup(unittest.TestCase):
         vspeed_table.vref_settings = [15, 20, 30]
         vspeed_map.return_value = vspeed_table
 
+        model = A('Model', value='B737-333')
         series = A('Series', value='B737-300')
         family = A('Family', value='B737 Classic')
         approaches = App('Approach Information', items=[
@@ -637,7 +638,7 @@ class TestAirspeedReferenceLookup(unittest.TestCase):
             expected[approaches[0].slice] = 135
             expected[approaches[1].slice] = 130
 
-            args = [flap, None, air_spd, gw, approaches, touchdowns, series, family, None, None, None]
+            args = [flap, None, air_spd, gw, approaches, touchdowns, model, series, family, None, None, None]
             node = self.node_class()
             node.get_derived(args)
             np.testing.assert_array_equal(node.array, expected)
@@ -651,6 +652,7 @@ class TestAirspeedReferenceLookup(unittest.TestCase):
 
     def test_derive__beechcraft(self):
         air_spd = P('Airspeed', np.ma.array([0] * 120))
+        model = A('Model', value='1900D')
         series = A('Series', value='1900D')
         family = A('Family', value='1900')
         approaches = App('Approach Information', items=[
@@ -665,7 +667,7 @@ class TestAirspeedReferenceLookup(unittest.TestCase):
             flap = M('Flap', np.ma.array([detent] * 120),
                      values_mapping={detent: str(detent)})
             args = [flap, None, air_spd, None, approaches, touchdowns, 
-                    series, family, None, None, None]
+                    model, series, family, None, None, None]
             node = self.node_class()
             node.get_derived(args)
             expected = np.ma.array([vref] * 120)

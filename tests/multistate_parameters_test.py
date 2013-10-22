@@ -274,8 +274,8 @@ class TestConfiguration(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = Configuration
         self.operational_combinations = [
-            ('Flap', 'Slat', 'Series', 'Family'),
-            ('Flap', 'Slat', 'Flaperon', 'Series', 'Family'),
+            ('Flap', 'Slat', 'Model', 'Series', 'Family'),
+            ('Flap', 'Slat', 'Flaperon', 'Model', 'Series', 'Family'),
         ]
         # Note: The last state is invalid...
         s = [0] * 2 + [16] * 4 + [20] * 4 + [23] * 6 + [16]
@@ -288,21 +288,22 @@ class TestConfiguration(unittest.TestCase, NodeTest):
     
     def test_can_operate_not_airbus(self):
         self.assertFalse(self.node_class.can_operate(
-            ['Flap', 'Slat', 'Series', 'Family'],
-            manu=Attribute('Manufacturer', 'Boeing')))
+            ['Flap', 'Slat', 'Model', 'Series', 'Family'],
+            manufacturer=Attribute('Manufacturer', 'Boeing')))
         self.assertTrue(self.node_class.can_operate(
-            ['Flap', 'Slat', 'Series', 'Family'],
-            manu=Attribute('Manufacturer', 'Airbus')))
+            ['Flap', 'Slat', 'Model', 'Series', 'Family'],
+            manufacturer=Attribute('Manufacturer', 'Airbus')))
 
     def test_conf_for_a330(self):
         # Note: The last state is invalid...
         expected = ['0', '1', '1+F', '1*', '2', '2*', '3', 'Full']
         expected = list(reduce(operator.add, zip(expected, expected)))
         expected += [np.ma.masked]
-        series = A('Series', 'A330-301')
+        model = A('Model', 'A330-301')
+        series = A('Series', 'A330-300')
         family = A('Family', 'A330')
         node = self.node_class()
-        node.derive(self.slat, self.flap, self.ails, series, family)
+        node.derive(self.slat, self.flap, self.ails, model, series, family)
         self.assertEqual(list(node.array[:17]), expected)
 
     def test_time_taken(self):
@@ -655,14 +656,14 @@ class TestFlapExcludingTransition(unittest.TestCase):
         
     def test_can_operate(self):
         self.assertTrue(FlapExcludingTransition.can_operate(
-            ('Flap Angle', 'Series', 'Family',)))
+            ('Flap Angle', 'Model', 'Series', 'Family',)))
 
 
 class TestFlapIncludingTransition(unittest.TestCase):
         
     def test_can_operate(self):
         self.assertTrue(FlapIncludingTransition.can_operate(
-            ('Flap Angle', 'Series', 'Family',)))
+            ('Flap Angle', 'Model', 'Series', 'Family',)))
 
 
 class TestFlap(unittest.TestCase):
@@ -670,12 +671,12 @@ class TestFlap(unittest.TestCase):
     def test_can_operate(self):
         self.assertTrue(Flap.can_operate(('Altitude AAL',),
                                          frame=Attribute('Frame', 'L382-Hercules')))
-        self.assertTrue(Flap.can_operate(('Flap Angle', 'Series', 'Family')))
+        self.assertTrue(Flap.can_operate(('Flap Angle', 'Model', 'Series', 'Family')))
 
     def test_flap_stepped_nearest_5(self):
         flap = P('Flap Angle', np.ma.arange(50))
         node = Flap()
-        node.derive(flap, A('Series', None), A('Family', None))
+        node.derive(flap, A('Model', None), A('Series', None), A('Family', None))
         expected = [0] + [5]*5 + [10]*5 + [15]*5 + [20]*5 + [25]*5 + [30]*5 + \
                    [35]*5 + [40]*5 + [45]*5 + [50]*4
         self.assertEqual(list(node.array.raw), expected)
@@ -685,7 +686,7 @@ class TestFlap(unittest.TestCase):
              50: '50', 20: '20', 25: '25', 30: '30'})
 
         flap = P('Flap Angle', np.ma.array(range(20), mask=[True] * 10 + [False] * 10))
-        node.derive(flap, A('Series', None), A('Family', None))
+        node.derive(flap, A('Model', None), A('Series', None), A('Family', None))
         expected = [-1]*10 + [10] + [15]*5 + [20]*4
         self.assertEqual(np.ma.filled(node.array, fill_value=-1).tolist(),
                          expected)
@@ -703,7 +704,7 @@ class TestFlap(unittest.TestCase):
             flap.array[index] = np.ma.masked
 
         node = Flap()
-        node.derive(flap, A('Series', None), A('Family', 'DC-9'))
+        node.derive(flap, A('Model', None), A('Series', None), A('Family', 'DC-9'))
 
         self.assertEqual(node.array.size, 59)
         self.assertEqual(list(node.array.raw.data),
@@ -727,7 +728,7 @@ class TestFlap(unittest.TestCase):
              17, 17.4, 17.9, 20, 
              30]))
         flap = Flap()
-        flap.derive(flap_param, A('Series', '1900D'), A('Family', 'Beechcraft'))
+        flap.derive(flap_param, A('Model', None), A('Series', '1900D'), A('Family', 'Beechcraft'))
         self.assertEqual(flap.values_mapping,
                          {0: '0', 17.5: '17.5', 35: '35'})
         ma_test.assert_array_equal(
@@ -739,6 +740,7 @@ class TestFlap(unittest.TestCase):
             [0, 0, 50, 1500, 1500, 1500, 2500, 2500, 1500, 1500, 50, 50]))
         flap = Flap()
         flap.derive(None, 
+                    A('Model', ''), 
                     A('Series', ''), 
                     A('Family', 'C-130'), 
                     A('Frame', 'L382-Hercules'),
@@ -756,7 +758,7 @@ class TestFlapLever(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = FlapLever
         self.operational_combinations = [
-            ('Flap Lever Angle', 'Series', 'Family'),
+            ('Flap Lever Angle', 'Model', 'Series', 'Family'),
         ]
     
     @unittest.skip('Test Not Implemented')
@@ -767,17 +769,19 @@ class TestFlapLever(unittest.TestCase, NodeTest):
 class TestFlaperon(unittest.TestCase):
     def test_can_operate(self):
         self.assertTrue(Flaperon.can_operate(
-            ('Aileron (L)', 'Aileron (R)'),
+            ('Aileron (L)', 'Aileron (R)', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', 'A330-222'),
             series=Attribute('Series', 'A330-200'),
             family=Attribute('Family', 'A330')))
         
     def test_derive(self):
         al = load(os.path.join(test_data_path, 'aileron_left.nod'))
         ar = load(os.path.join(test_data_path, 'aileron_right.nod'))
+        model = A('Model', 'A330-222')
         series = A('Series', 'A330-200')
         family = A('Family', 'A330')
         flaperon = Flaperon()
-        flaperon.derive(al, ar, series, family)
+        flaperon.derive(al, ar, model, series, family)
         # ensure values are grouped into aileron settings accordingly
         # flaperon is now step at movement start
         self.assertEqual(unique_values(flaperon.array.astype(int)),
@@ -1134,11 +1138,13 @@ class TestSlat(unittest.TestCase):
     def test_can_operate(self):
         #TODO: Improve get_operational_combinations to support optional args
         ##opts = Slat.get_operational_combinations()
-        ##self.assertEqual(opts, [('Slat Angle', 'Series', 'Family')])
+        ##self.assertEqual(opts, [('Slat Angle', 'Model', 'Series', 'Family')])
         self.assertFalse(Slat.can_operate(['Slat Angle'], 
+                                          A('Model', None),
                                           A('Series', None),
                                           A('Family', None)))
         self.assertFalse(Slat.can_operate(['Slat Angle'], 
+                                          A('Model', None),
                                           A('Series', 'A318-BJ'),
                                           A('Family', 'A318')))
 
@@ -1146,6 +1152,7 @@ class TestSlat(unittest.TestCase):
         # slats are 0, 16, 25
         slat = Slat()
         slat.derive(P('Slat Angle', [0]*5 + range(50)),
+                    A('Model', None),
                     A('Series', 'A300B4(F)'),
                     A('Family', 'A300'))
         res = unique_values(list(slat.array.raw))
