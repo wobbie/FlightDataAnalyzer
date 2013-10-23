@@ -786,12 +786,12 @@ class AltitudeAAL(DerivedParameterNode):
         
             alt_result[bounce_end:hundred_feet] = alt_rad_aal[bounce_end:hundred_feet]
             alt_result[:bounce_end] = 0.0
-            ralt_sections_no_bounce = [slice(0,hundred_feet)]
+            ralt_sections = [slice(0,hundred_feet)]
 
-        baro_sections = slices_not(ralt_sections_no_bounce, begin_at=0, 
+        baro_sections = slices_not(ralt_sections, begin_at=0, 
                                    end_at=len(alt_std))
 
-        for ralt_section in ralt_sections_no_bounce:
+        for ralt_section in ralt_sections:
             if np.ma.mean(alt_std[ralt_section] - alt_rad_aal[ralt_section]) > 10000:
                 # Difference between Altitude STD and Altitude Radio should not
                 # be greater than 10000 ft when Altitude Radio is recording below
