@@ -1463,7 +1463,8 @@ class OffBlocks(KeyTimeInstanceNode):
     '''
     
     def derive(self, mobile=S('Mobile')):
-        self.create_kti(mobile[0].slice.start or 0)
+        if len(mobile):
+            self.create_kti(mobile[0].slice.start or 0)
         
         
 class OnBlocks(KeyTimeInstanceNode):
@@ -1472,4 +1473,5 @@ class OnBlocks(KeyTimeInstanceNode):
     '''
     
     def derive(self, mobile=S('Mobile'), hdg=P('Heading')):
-        self.create_kti(mobile[0].slice.stop or len(hdg.array))
+        if len(mobile):
+            self.create_kti(mobile[0].slice.stop or len(hdg.array))

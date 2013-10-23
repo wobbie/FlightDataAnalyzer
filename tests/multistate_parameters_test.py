@@ -1119,21 +1119,22 @@ class TestPitchAlternateLaw(unittest.TestCase, NodeTest):
 
 
 class TestSlat(unittest.TestCase):
+
     def test_can_operate(self):
         #TODO: Improve get_operational_combinations to support optional args
         ##opts = Slat.get_operational_combinations()
-        ##self.assertEqual(opts, [('Slat Surface', 'Series', 'Family')])
-        self.assertFalse(Slat.can_operate(['Slat Surface'], 
+        ##self.assertEqual(opts, [('Slat Angle', 'Series', 'Family')])
+        self.assertFalse(Slat.can_operate(['Slat Angle'], 
                                           A('Series', None),
                                           A('Family', None)))
-        self.assertFalse(Slat.can_operate(['Slat Surface'], 
+        self.assertFalse(Slat.can_operate(['Slat Angle'], 
                                           A('Series', 'A318-BJ'),
                                           A('Family', 'A318')))
 
     def test_derive_A300B4F(self):
         # slats are 0, 16, 25
         slat = Slat()
-        slat.derive(P('Slat Surface', [0]*5 + range(50)),
+        slat.derive(P('Slat Angle', [0]*5 + range(50)),
                     A('Series', 'A300B4(F)'),
                     A('Family', 'A300'))
         res = unique_values(list(slat.array.raw))

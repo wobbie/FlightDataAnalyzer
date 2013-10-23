@@ -1037,8 +1037,7 @@ class Mobile(FlightPhaseNode):
             if lands:
                 move[1] = max(move[1], lands[-1].slice.stop)
 
-        moves = [slice(move[0], move[1])]
-        self.create_phases(moves)
+        self.create_phase(slice(move[0], move[1]))
 
 
 class Landing(FlightPhaseNode):
