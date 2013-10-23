@@ -1202,6 +1202,8 @@ class Slat(MultistateDerivedParameterNode):
     Steps raw Slat angle into detents.
     """
 
+    units = 'deg'
+
     @classmethod
     def can_operate(cls, available, series=A('Series'), family=A('Family')):
         try:

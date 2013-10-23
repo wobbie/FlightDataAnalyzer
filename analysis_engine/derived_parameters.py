@@ -3367,6 +3367,8 @@ class SlatAngle(DerivedParameterNode):
     Combines Slat Angle (L) and Slat Angle (R).
     '''
 
+    units = 'deg'
+
     @classmethod
     def can_operate(cls, available):
 
