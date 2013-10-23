@@ -29,6 +29,14 @@ if platform.system() == 'Windows':
 
 import matplotlib.pyplot as plt
 
+'''
+Note: if you are having problems with blocking plots try
+    import matplotlib.pyplot as plt
+    plt.ion()
+
+This turns interactive mode on. If this works there is an interactive setting
+in matplotlibrc to turn this on globally
+'''
 
 logger = logging.getLogger(name=__name__)
 
