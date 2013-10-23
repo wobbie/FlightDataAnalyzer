@@ -1186,9 +1186,11 @@ class AltitudeQNH(DerivedParameterNode):
     def can_operate(cls, available):
         return 'Altitude AAL' in available and 'Altitude Peak' in available
 
-    def derive(self, alt_aal=P('Altitude AAL'), alt_peak=KTI('Altitude Peak'),
-            l_apt=A('FDR Landing Airport'), l_rwy=A('FDR Landing Runway'),
-            t_apt=A('FDR Takeoff Airport'), t_rwy=A('FDR Takeoff Runway')):
+    def derive(self, alt_aal=P('Altitude AAL'), alt_std=P('Altitude STD'),
+               alt_peak=KTI('Altitude Peak'),
+               l_apt=A('FDR Landing Airport'), l_rwy=A('FDR Landing Runway'),
+               t_apt=A('FDR Takeoff Airport'), t_rwy=A('FDR Takeoff Runway'),
+               climbs=S('Climb'), descends=S('Descent')):
         '''
         We attempt to adjust Altitude AAL by adding elevation at takeoff and
         landing. We need to know the takeoff and landing runway to get the most
@@ -1227,35 +1229,73 @@ class AltitudeQNH(DerivedParameterNode):
             # both have valid values
             smooth = True
 
-        # Break the "journey" at the "midpoint" - actually max altitude aal -
-        # and be sure to account for rise/fall in the data and stick the peak
-        # in the correct half:
-        peak = alt_peak.get_first()  # NOTE: Fix for multiple approaches...
-        fall = alt_aal.array[peak.index - 1] > alt_aal.array[peak.index + 1]
-        peak = peak.index
-        if fall:
-            peak += int(fall)
+        ### Break the "journey" at the "midpoint" - actually max altitude aal -
+        ### and be sure to account for rise/fall in the data and stick the peak
+        ### in the correct half:
+        ##peak = alt_peak.get_first()  # NOTE: Fix for multiple approaches...
+        ##fall = alt_aal.array[peak.index - 1] > alt_aal.array[peak.index + 1]
+        ##peak = peak.index
+        ##if fall:
+            ##peak += int(fall)
 
-        # Add the elevation at takeoff to the climb portion of the array:
-        alt_qnh[:peak] += t_elev
+        ### Add the elevation at takeoff to the climb portion of the array:
+        ##alt_qnh[:peak] += t_elev
 
-        # Add the elevation at landing to the descent portion of the array:
-        alt_qnh[peak:] += l_elev
+        ### Add the elevation at landing to the descent portion of the array:
+        ##alt_qnh[peak:] += l_elev
 
-        # Attempt to smooth out any ugly transitions due to differences in
-        # pressure so that we don't get horrible bumps in visualisation:
-        if smooth:
-            # step jump transforms into linear slope
-            delta = np.ma.ptp(alt_qnh[peak - 1:peak + 1])
-            width = ceil(delta * alt_aal.frequency / 3)
-            window = slice(peak - width, peak + width + 1)
-            alt_qnh[window] = np.ma.masked
-            repair_mask(
-                array=alt_qnh,
-                repair_duration=window.stop - window.start,
-            )
+        ### Attempt to smooth out any ugly transitions due to differences in
+        ### pressure so that we don't get horrible bumps in visualisation:
+        ##if smooth:
+            ### step jump transforms into linear slope
+            ##delta = np.ma.ptp(alt_qnh[peak - 1:peak + 1])
+            ##width = ceil(delta * alt_aal.frequency / 3)
+            ##window = slice(peak - width, peak + width + 1)
+            ##alt_qnh[window] = np.ma.masked
+            ##repair_mask(
+                ##array=alt_qnh,
+                ##repair_duration=window.stop - window.start,
+            ##)
 
-        self.array = alt_qnh
+        # Climb phase adjustment
+        first_climb = slice(climbs[0].slice.start, 
+                            climbs[0].slice.stop+1)
+        adjust_up = self._qnh_adjust(alt_aal.array[first_climb], 
+                                alt_std.array[first_climb], 
+                                t_elev)
+        
+        # Descent phase adjustment        
+        last_descent = slice(descends[-1].slice.stop+1, 
+                             descends[-1].slice.start, 
+                             -1) 
+        adjust_down = self._qnh_adjust(alt_aal.array[last_descent], 
+                                  alt_std.array[last_descent], 
+                                  l_elev)
+        
+        alt_qnh=np_ma_masked_zeros_like(alt_aal.array)
+        
+        # Before first climb
+        alt_qnh[:first_climb.start] = alt_aal.array[:first_climb.start] + t_elev
+        
+        # First climb adjusted
+        alt_qnh[first_climb] = alt_aal.array[first_climb] + adjust_up
+        
+        # Use pressure altitude in the cruise
+        alt_qnh[first_climb.stop:last_descent.stop+1] = alt_std.array[first_climb.stop:last_descent.stop+1]
+        
+        # Last descent adjusted
+        alt_qnh[last_descent] =alt_aal.array[last_descent] + adjust_down
+        
+        # After last descent
+        alt_qnh[last_descent.start:] = alt_aal.array[last_descent.start:] + l_elev
+        
+
+        self.array = np.ma.array(data=alt_qnh, mask=alt_aal.array.mask)
+
+    @staticmethod
+    def _qnh_adjust(aal, std, elev):
+        # numpy.linspace(start, stop, num=50, endpoint=True)
+        return np.linspace(elev, std[-1]-aal[-1], len(aal))
 
     @staticmethod
     def _calc_apt_elev(apt):
