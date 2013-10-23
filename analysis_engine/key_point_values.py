@@ -6994,28 +6994,18 @@ class FlapAt1000Ft(KeyPointValueNode):
     '''
     Flap setting at 1000ft on approach.
     '''
-    @classmethod
-    def can_operate(cls, available):
-        return ('Flap' in available)
-    
     def derive(self, flap=M('Flap'), gates=KTI('Altitude When Descending')):
-        for gate in gates:
-            if gate.name=='1000 Ft Descending':
-                self.create_kpvs_at_ktis(flap.array, [gate])
+        for gate in gates.get(name='1000 Ft Descending'):
+            self.create_kpv(gate.index, flap.array.raw[gate.index])
 
 
 class FlapAt500Ft(KeyPointValueNode):
     '''
     Flap setting at 500ft on approach.
     '''
-    @classmethod
-    def can_operate(cls, available):
-        return ('Flap' in available)
-    
     def derive(self, flap=M('Flap'), gates=KTI('Altitude When Descending')):
-        for gate in gates:
-            if gate.name=='500 Ft Descending':
-                self.create_kpvs_at_ktis(flap.array, [gate])
+        for gate in gates.get(name='500 Ft Descending'):
+            self.create_kpv(gate.index, flap.array.raw[gate.index])
     
     
 ##############################################################################
