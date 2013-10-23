@@ -740,9 +740,9 @@ class FlapLever(MultistateDerivedParameterNode):
                     model=A('Model'), series=A('Series'), family=A('Family')):
 
         try:
-            mi.get_flap_map(model.value, series.value, family.value)
+            mi.get_lever_map(model.value, series.value, family.value)
         except KeyError:
-            cls.warning("No flap mapping available for '%s', '%s', '%s'.",
+            cls.warning("No lever mapping available for '%s', '%s', '%s'.",
                         model.value, series.value, family.value)
             return False
 
@@ -751,7 +751,7 @@ class FlapLever(MultistateDerivedParameterNode):
     def derive(self, flap_lever=P('Flap Lever Angle'),
                model=A('Model'), series=A('Series'), family=A('Family')):
 
-        self.values_mapping = mi.get_flap_map(model.value, series.value, family.value)
+        self.values_mapping = mi.get_lever_map(model.value, series.value, family.value)
         self.array = step_values(repair_mask(flap_lever.array),
                                  self.values_mapping.keys(),
                                  flap_lever.hz, step_at='move_start')
