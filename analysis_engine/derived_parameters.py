@@ -3367,6 +3367,7 @@ class SlatAngle(DerivedParameterNode):
     Combines Slat Angle (L) and Slat Angle (R).
     '''
 
+    align = False
     units = 'deg'
 
     @classmethod
