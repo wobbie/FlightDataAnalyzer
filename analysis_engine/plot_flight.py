@@ -443,6 +443,8 @@ def csv_flight_details(hdf_path, kti_list, kpv_list, phase_list,
     with hdf_file(hdf_path) as hdf:
         for param in params:
             # Create DerivedParameterNode to utilise the .at() method
+            if param not in hdf:
+                continue
             p = hdf[param]
             dp = Parameter(name=p.name, array=p.array, 
                            frequency=p.frequency, offset=p.offset)
