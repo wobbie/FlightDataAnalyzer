@@ -1257,6 +1257,10 @@ class AltitudeQNH(DerivedParameterNode):
                 ##repair_duration=window.stop - window.start,
             ##)
 
+        # We adjust the height during the climb and descent so that the cruise is at pressure altitudes.
+        
+        # TODO: Improvement would be to adjust to half the difference if the cruise is below 10,000ft
+        
         # Climb phase adjustment
         first_climb = slice(climbs[0].slice.start, 
                             climbs[0].slice.stop+1)
@@ -1295,7 +1299,7 @@ class AltitudeQNH(DerivedParameterNode):
     @staticmethod
     def _qnh_adjust(aal, std, elev):
         # numpy.linspace(start, stop, num=50, endpoint=True)
-        return np.linspace(elev, std[-1]-aal[-1], len(aal))
+        return np.linspace(elev, std[-1]-aal[-1], num=len(aal))
 
     @staticmethod
     def _calc_apt_elev(apt):
