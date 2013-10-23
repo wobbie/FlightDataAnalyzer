@@ -3050,7 +3050,7 @@ class FuelQty(DerivedParameterNode):
 
     Sum of fuel in left, right and middle tanks where available.
     '''
-
+    unit = 'kg'
     align = False
 
     @classmethod
