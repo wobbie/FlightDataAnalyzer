@@ -3237,7 +3237,7 @@ class FlapAngle(DerivedParameterNode):
             'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard',
         ), available)
         if family and family.value == 'B787':
-            return flap_angle and 'Slat Surface' in available
+            return flap_angle and 'Slat Angle' in available
         else:
             return flap_angle
     
@@ -3306,7 +3306,7 @@ class FlapAngle(DerivedParameterNode):
                flap_B=P('Flap Angle (R)'),
                flap_A_inboard=P('Flap Angle (L) Inboard'),
                flap_B_inboard=P('Flap Angle (R) Inboard'),
-               slat=P('Slat Surface'),
+               slat=P('Slat Angle'),
                frame=A('Frame'),
                family=A('Family')):
 
@@ -3335,9 +3335,8 @@ class FlapAngle(DerivedParameterNode):
 
 
 '''
-class SlatSurface(DerivedParameterNode):
-    """
-    """
+class SlatAngle(DerivedParameterNode):
+
     s1f = M('Slat (1) Fully Extended'),
     s1t = M('Slat (1) In Transit'),
     s1m = M('Slat (1) Mid Extended'),
@@ -3363,19 +3362,23 @@ class SlatSurface(DerivedParameterNode):
     s1m = M('Slat (1) Mid Extended'),
 '''
 
-class SlatSurface(DerivedParameterNode):
+class SlatAngle(DerivedParameterNode):
     '''
-    Combines Slat (L) and Slat (R).
-    
-    TODO: Reconsider naming of Slat parameters for consistency.
+    Combines Slat Angle (L) and Slat Angle (R).
     '''
+
+    align = False
+    units = 'deg'
+
     @classmethod
     def can_operate(cls, available):
-        return 'Slat (L)' in available or 'Slat (R)' in available
+
+        return any_of(('Slat Angle (L)', 'Slat Angle (R)'), available)
     
-    def derive(self, slat_l=P('Slat (L)'), slat_r=P('Slat (R)')):
-        self.array, self.frequency, self.offset = blend_two_parameters(slat_l,
-                                                                       slat_r)
+    def derive(self, slat_l=P('Slat Angle (L)'), slat_r=P('Slat Angle (R)')):
+
+        self.array, self.frequency, self.offset = \
+            blend_two_parameters(slat_l, slat_r)
 
 
 class SlopeToLanding(DerivedParameterNode):
