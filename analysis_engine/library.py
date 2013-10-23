@@ -2146,7 +2146,7 @@ def runway_snap(runway, lat, lon):
     if not a or not b:
         return lat, lon
     
-    if max(a,b,d)>10000:
+    if max(a,b,d)>20000:
         raise ValueError('Runway snap unrealistic distance')
 
     if d:
