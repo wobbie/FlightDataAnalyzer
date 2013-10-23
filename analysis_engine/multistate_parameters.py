@@ -235,10 +235,12 @@ class Configuration(MultistateDerivedParameterNode):
     }
 
     @classmethod
-    def can_operate(cls, available, manufacturer=A('Manufacturer')):
+    def can_operate(cls, available, manufacturer=A('Manufacturer'), family=A('Family')):
 
-        # FIXME: Should also exclude A300/A310?
         if manufacturer and not manufacturer.value == 'Airbus':
+            return False
+
+        if family and family.value in ('A300', 'A310'):
             return False
 
         return all_of(('Slat', 'Flap', 'Model', 'Series', 'Family'), available)

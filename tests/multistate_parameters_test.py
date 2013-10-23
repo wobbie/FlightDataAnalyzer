@@ -293,6 +293,16 @@ class TestConfiguration(unittest.TestCase, NodeTest):
         self.assertTrue(self.node_class.can_operate(
             ['Flap', 'Slat', 'Model', 'Series', 'Family'],
             manufacturer=Attribute('Manufacturer', 'Airbus')))
+        for family in ('A318', 'A319', 'A320', 'A321', 'A330', 'A340', 'A350'):
+            self.assertTrue(self.node_class.can_operate(
+                ['Flap', 'Slat', 'Model', 'Series', 'Family'],
+                manufacturer=Attribute('Manufacturer', 'Airbus'),
+                family=Attribute('Family', family)))
+        for family in ('A300', 'A310'):
+            self.assertFalse(self.node_class.can_operate(
+                ['Flap', 'Slat', 'Model', 'Series', 'Family'],
+                manufacturer=Attribute('Manufacturer', 'Airbus'),
+                family=Attribute('Family', family)))
 
     def test_conf_for_a330(self):
         # Note: The last state is invalid...
