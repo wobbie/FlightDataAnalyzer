@@ -1944,36 +1944,6 @@ class TestAirspeedWithFlapMax(unittest.TestCase, NodeTest):
         self.assertEqual(air_spd_flap_max[2].index, 29)
         self.assertEqual(air_spd_flap_max[2].value, 29)
 
-    def test_derive_alternative_method(self):
-        # Note: This test will produce the following warning:
-        #       "No flap settings - rounding to nearest 5"
-        flap = [[0, 1, 2, 5, 10, 15, 25, 30, 40, 0]] * 2
-        flap_array = np.ma.array(reduce(operator.add, zip(*flap)))
-        flap_angle = P('Flap Angle', flap_array)
-        air_spd = P('Airspeed', np.ma.arange(20))
-        fast = buildsection('Fast', 0, 20)
-        flap_inc_trans = FlapIncludingTransition()
-        flap_inc_trans.derive(flap_angle)
-        flap_exc_trans = FlapExcludingTransition()
-        flap_exc_trans.derive(flap_angle)
-        air_spd_flap_max = AirspeedWithFlapMax()
-        air_spd_flap_max.derive(None, None, flap_inc_trans, flap_exc_trans, air_spd, fast)
-
-        self.assertEqual(air_spd_flap_max.get_ordered_by_index(), [
-            KeyPointValue(index=7, value=7, name='Airspeed With Flap Including Transition 5 Max'),
-            KeyPointValue(index=7, value=7, name='Airspeed With Flap Excluding Transition 5 Max'),
-            KeyPointValue(index=9, value=9, name='Airspeed With Flap Including Transition 10 Max'),
-            KeyPointValue(index=9, value=9, name='Airspeed With Flap Excluding Transition 10 Max'),
-            KeyPointValue(index=11, value=11, name='Airspeed With Flap Including Transition 15 Max'),
-            KeyPointValue(index=11, value=11, name='Airspeed With Flap Excluding Transition 15 Max'),
-            KeyPointValue(index=13, value=13, name='Airspeed With Flap Including Transition 25 Max'),
-            KeyPointValue(index=13, value=13, name='Airspeed With Flap Excluding Transition 25 Max'),
-            KeyPointValue(index=15, value=15, name='Airspeed With Flap Including Transition 30 Max'),
-            KeyPointValue(index=15, value=15, name='Airspeed With Flap Excluding Transition 30 Max'),
-            KeyPointValue(index=17, value=17, name='Airspeed With Flap Including Transition 40 Max'),
-            KeyPointValue(index=17, value=17, name='Airspeed With Flap Excluding Transition 40 Max'),
-        ])
-
     @patch.dict('analysis_engine.key_point_values.AirspeedWithFlapMax.NAME_VALUES',
             {'flap': (5.5, 10.1, 20.9)})
     def test_derive_fractional_settings(self):

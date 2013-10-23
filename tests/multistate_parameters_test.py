@@ -656,41 +656,33 @@ class TestFlapExcludingTransition(unittest.TestCase):
         
     def test_can_operate(self):
         self.assertTrue(FlapExcludingTransition.can_operate(
-            ('Flap Angle', 'Model', 'Series', 'Family',)))
+            ('Flap Angle', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', 'B737-333'),
+            series=Attribute('Series', 'B737-300'),
+            family=Attribute('Family', 'B737 Classic')))
 
 
 class TestFlapIncludingTransition(unittest.TestCase):
         
     def test_can_operate(self):
         self.assertTrue(FlapIncludingTransition.can_operate(
-            ('Flap Angle', 'Model', 'Series', 'Family',)))
+            ('Flap Angle', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', 'B737-333'),
+            series=Attribute('Series', 'B737-300'),
+            family=Attribute('Family', 'B737 Classic')))
 
 
 class TestFlap(unittest.TestCase):
         
     def test_can_operate(self):
-        self.assertTrue(Flap.can_operate(('Altitude AAL',),
-                                         frame=Attribute('Frame', 'L382-Hercules')))
-        self.assertTrue(Flap.can_operate(('Flap Angle', 'Model', 'Series', 'Family')))
-
-    def test_flap_stepped_nearest_5(self):
-        flap = P('Flap Angle', np.ma.arange(50))
-        node = Flap()
-        node.derive(flap, A('Model', None), A('Series', None), A('Family', None))
-        expected = [0] + [5]*5 + [10]*5 + [15]*5 + [20]*5 + [25]*5 + [30]*5 + \
-                   [35]*5 + [40]*5 + [45]*5 + [50]*4
-        self.assertEqual(list(node.array.raw), expected)
-        self.assertEqual(
-            node.values_mapping,
-            {0: '0', 35: '35', 5: '5', 40: '40', 10: '10', 45: '45', 15: '15',
-             50: '50', 20: '20', 25: '25', 30: '30'})
-
-        flap = P('Flap Angle', np.ma.array(range(20), mask=[True] * 10 + [False] * 10))
-        node.derive(flap, A('Model', None), A('Series', None), A('Family', None))
-        expected = [-1]*10 + [10] + [15]*5 + [20]*4
-        self.assertEqual(np.ma.filled(node.array, fill_value=-1).tolist(),
-                         expected)
-        self.assertEqual(node.values_mapping, {10: '10', 20: '20', 15: '15'})
+        self.assertTrue(Flap.can_operate(
+            ('Altitude AAL',),
+            frame=Attribute('Frame', 'L382-Hercules')))
+        self.assertTrue(Flap.can_operate(
+            ('Flap Angle', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', 'B737-333'),
+            series=Attribute('Series', 'B737-300'),
+            family=Attribute('Family', 'B737 Classic')))
 
     def test_flap_using_md82_settings(self):
         # Note: Using flap detents for MD-82 of (0, 13, 20, 25, 30, 40)
@@ -753,13 +745,14 @@ class TestFlap(unittest.TestCase):
         self.assertEqual(flap.units, '%')
 
 
-class TestFlapLever(unittest.TestCase, NodeTest):
+class TestFlapLever(unittest.TestCase):
     
-    def setUp(self):
-        self.node_class = FlapLever
-        self.operational_combinations = [
+    def test_can_operate(self):
+        self.assertTrue(FlapLever.can_operate(
             ('Flap Lever Angle', 'Model', 'Series', 'Family'),
-        ]
+            model=Attribute('Model', 'B737-333'),
+            series=Attribute('Series', 'B737-300'),
+            family=Attribute('Family', 'B737 Classic')))
     
     @unittest.skip('Test Not Implemented')
     def test_derive(self):

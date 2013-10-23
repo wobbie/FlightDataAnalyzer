@@ -108,31 +108,6 @@ from analysis_engine.library import (#actuator_mismatch,
 logger = logging.getLogger(name=__name__)
 
 
-class FlapMapFallback(object):
-
-    def get_flap_map_fallback(self, flap):
-        '''
-        Generates a fallback flap mapping where none was available.
-
-        This fallback is created by rounding the available flap array to the
-        nearest 5 degrees.
-
-        Returns a dictionary in the following form::
-
-            {value: state, ...}
-
-        :param flap: Recorded flap parameter.
-        :type flap: Parameter
-        :returns: A fallback generated flap values mapping.
-        :rtype: dict
-        '''
-        angle = 5.0
-        self.warning('No flap settings - rounding to nearest %.1f deg' % angle)
-        array = round_to_nearest(flap.array, angle)
-        detents = [int(f) for f in np.ma.unique(array) if f is not np.ma.masked]
-        return {f: str(f) for f in detents}
-
-
 class APEngaged(MultistateDerivedParameterNode):
     '''
     Determines if *any* of the "AP (*) Engaged" parameters are recording the
@@ -625,7 +600,7 @@ class EventMarker(MultistateDerivedParameterNode):
         ).any(axis=0)
 
 
-class Flap(MultistateDerivedParameterNode, FlapMapFallback):
+class Flap(MultistateDerivedParameterNode):
     '''
     Steps raw Flap angle from surface into detents.
     '''
@@ -633,13 +608,21 @@ class Flap(MultistateDerivedParameterNode, FlapMapFallback):
     units = 'deg'
 
     @classmethod
-    def can_operate(cls, available, frame=A('Frame')):
+    def can_operate(cls, available, frame=A('Frame'),
+                    model=A('Model'), series=A('Series'), family=A('Family')):
 
         frame_name = frame.value if frame else None
-        
+
         if frame_name == 'L382-Hercules':
             return 'Altitude AAL' in available
-        
+
+        try:
+            mi.get_flap_map(model.value, series.value, family.value)
+        except KeyError:
+            cls.warning("No flap mapping available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
+            return False
+
         return all_of(('Flap Angle', 'Model', 'Series', 'Family'), available)
 
     def derive(self, flap=P('Flap Angle'),
@@ -650,9 +633,9 @@ class Flap(MultistateDerivedParameterNode, FlapMapFallback):
 
         if frame_name == 'L382-Hercules':
             self.values_mapping = {0: '0', 50: '50', 100: '100'}
-            
+
             self.units = '%' # Hercules flaps are unique in this regard !
-            
+
             # Flap is not recorded, so invent one of the correct length.
             flap_herc = np_ma_zeros_like(alt_aal.array)
 
@@ -668,17 +651,13 @@ class Flap(MultistateDerivedParameterNode, FlapMapFallback):
             self.frequency, self.offset = alt_aal.frequency, alt_aal.offset
             return
 
-        try:
-            self.values_mapping = mi.get_flap_map(model.value, series.value, family.value)
-        except KeyError:
-            self.values_mapping = self.get_flap_map_fallback(flap)
-
+        self.values_mapping = mi.get_flap_map(model.value, series.value, family.value)
         self.array = step_values(repair_mask(flap.array),
                                  self.values_mapping.keys(),
                                  flap.hz, step_at='move_start')
 
 
-class FlapExcludingTransition(MultistateDerivedParameterNode, FlapMapFallback):
+class FlapExcludingTransition(MultistateDerivedParameterNode):
     '''
     Specifically designed to cater for maintenance monitoring, this assumes
     that when moving the lower of the start and endpoints of the movement
@@ -687,20 +666,29 @@ class FlapExcludingTransition(MultistateDerivedParameterNode, FlapMapFallback):
 
     units = 'deg'
 
-    def derive(self, flap=P('Flap Angle'), 
-               model=A('Model'), series=A('Series'), family=A('Family')):
+    @classmethod
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family')):
 
         try:
-            self.values_mapping = mi.get_flap_map(model.value, series.value, family.value)
+            mi.get_flap_map(model.value, series.value, family.value)
         except KeyError:
-            self.values_mapping = self.get_flap_map_fallback(flap)
+            cls.warning("No flap mapping available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
+            return False
 
+        return all_of(('Flap Angle', 'Model', 'Series', 'Family'), available)
+
+    def derive(self, flap=P('Flap Angle'),
+               model=A('Model'), series=A('Series'), family=A('Family')):
+
+        self.values_mapping = mi.get_flap_map(model.value, series.value, family.value)
         self.array = step_values(repair_mask(flap.array),
                                  self.values_mapping.keys(),
                                  flap.hz, step_at='excluding_transition')
 
 
-class FlapIncludingTransition(MultistateDerivedParameterNode, FlapMapFallback):
+class FlapIncludingTransition(MultistateDerivedParameterNode):
     '''
     Specifically designed to cater for maintenance monitoring, this assumes
     that when moving the higher of the start and endpoints of the movement
@@ -711,39 +699,57 @@ class FlapIncludingTransition(MultistateDerivedParameterNode, FlapMapFallback):
 
     units = 'deg'
 
-    def derive(self, flap=P('Flap Angle'), 
-               model=A('Model'), series=A('Series'), family=A('Family')):
+    @classmethod
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family')):
 
         try:
-            self.values_mapping = mi.get_flap_map(model.value, series.value, family.value)
+            mi.get_flap_map(model.value, series.value, family.value)
         except KeyError:
-            self.values_mapping = self.get_flap_map_fallback(flap)
+            cls.warning("No flap mapping available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
+            return False
 
+        return all_of(('Flap Angle', 'Model', 'Series', 'Family'), available)
+
+    def derive(self, flap=P('Flap Angle'),
+               model=A('Model'), series=A('Series'), family=A('Family')):
+
+        self.values_mapping = mi.get_flap_map(model.value, series.value, family.value)
         self.array = step_values(repair_mask(flap.array),
                                  self.values_mapping.keys(),
                                  flap.hz, step_at='including_transition')
-            
-            
-class FlapLever(MultistateDerivedParameterNode, FlapMapFallback):
+
+
+class FlapLever(MultistateDerivedParameterNode):
     '''
     Rounds the Flap Lever Angle to the selected detent at the start of the
     angle movement.
-    
+
     Flap is not used to synthesize Flap Lever as this could be misleading.
-    Instead, all safety Key Point Values will use Flap Lever followed by Flap 
+    Instead, all safety Key Point Values will use Flap Lever followed by Flap
     if Flap Lever is not available.
     '''
 
     units = 'deg'
 
+    @classmethod
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family')):
+
+        try:
+            mi.get_flap_map(model.value, series.value, family.value)
+        except KeyError:
+            cls.warning("No flap mapping available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
+            return False
+
+        return all_of(('Flap Lever Angle', 'Model', 'Series', 'Family'), available)
+
     def derive(self, flap_lever=P('Flap Lever Angle'),
                model=A('Model'), series=A('Series'), family=A('Family')):
 
-        try:
-            self.values_mapping = mi.get_flap_map(model.value, series.value, family.value)
-        except KeyError:
-            self.values_mapping = self.get_flap_map_fallback(flap_lever)
-
+        self.values_mapping = mi.get_flap_map(model.value, series.value, family.value)
         self.array = step_values(repair_mask(flap_lever.array),
                                  self.values_mapping.keys(),
                                  flap_lever.hz, step_at='move_start')
@@ -766,11 +772,14 @@ class Flaperon(MultistateDerivedParameterNode):
     '''
 
     @classmethod
-    def can_operate(cls, available, model=A('Model'), series=A('Series'), family=A('Family')):
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family')):
 
         try:
             mi.get_aileron_map(model.value, series.value, family.value)
         except KeyError:
+            cls.warning("No aileron mapping available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
             return False
 
         return all_of(('Aileron (L)', 'Aileron (R)', 'Model', 'Series', 'Family'), available)
@@ -1236,11 +1245,14 @@ class Slat(MultistateDerivedParameterNode):
     units = 'deg'
 
     @classmethod
-    def can_operate(cls, available, model=A('Model'), series=A('Series'), family=A('Family')):
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family')):
 
         try:
             mi.get_slat_map(model.value, series.value, family.value)
         except KeyError:
+            cls.warning("No slat mapping available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
             return False
 
         return all_of(('Slat Angle', 'Model', 'Series', 'Family'), available)
