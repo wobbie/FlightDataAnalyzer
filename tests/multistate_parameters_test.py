@@ -817,7 +817,7 @@ class TestGearDown(unittest.TestCase, NodeTest):
             ('Gear (L) Down', 'Gear (N) Down', 'Gear (R) Down'),
             ('Gear Down Selected',),
         ]
-        
+
     def test_derive_from_select_down(self):
         sel_down = M(array=np.ma.array([1,0,0,1,1]), values_mapping={
             0: 'Up',
@@ -829,21 +829,23 @@ class TestGearDown(unittest.TestCase, NodeTest):
                          ['Down', 'Up', 'Up', 'Down', 'Down'])
 
 
-class TestGearDownSelected(unittest.TestCase):
+class TestGearUpSelected(unittest.TestCase):
     def test_can_operate(self):
-        opts = GearDownSelected.get_operational_combinations()
-        self.assertEqual(opts, [('Gear Up Selected',)])
+        opts = GearUpSelected.get_operational_combinations()
+        self.assertEqual(opts, [('Gear Down Selected',)])
 
-    def test_gear_down_selected_from_recorded_up(self):
-        gup_sel = M(array=np.ma.array(data=[1,1,0,0,1,1]),
-                    values_mapping={0:'Down',1:'Up'},
-                    name='Gear Up Selected', 
-                    frequency=1, 
-                    offset=0.1)
-        dn_sel = GearDownSelected()
-        dn_sel.derive(gup_sel)
-        np.testing.assert_array_equal(dn_sel.array, [0,0,1,1,0,0])
-        
+    def test_gear_up_selected_from_recorded_down(self):
+        dn_sel = M(
+            array=np.ma.array(data=[1, 1, 0, 0, 1, 1]),
+            values_mapping={0: 'Down', 1: 'Up'},
+            name='Gear Down Selected',
+            frequency=1,
+            offset=0.1
+        )
+        up_sel = GearUpSelected()
+        up_sel.derive(dn_sel)
+        np.testing.assert_array_equal(up_sel.array, [0, 0, 1, 1, 0, 0])
+
 
 class TestGearOnGround(unittest.TestCase):
     def test_can_operate(self):
@@ -913,48 +915,57 @@ class TestGearOnGround(unittest.TestCase):
         self.assertAlmostEqual(wow.offset, 0.7)
 
 
-class TestGearUpSelected(unittest.TestCase):
+class TestGearDownSelected(unittest.TestCase):
     def test_can_operate(self):
-        opts = GearUpSelected.get_operational_combinations()
+        opts = GearDownSelected.get_operational_combinations()
         self.assertEqual(opts, [('Gear Down',),
                                 ('Gear Down', 'Gear (*) Red Warning')])
-        
-    def test_gear_up_selected_basic(self):
-        gdn = M(array=np.ma.array(data=[1,1,1,0,0,0]),
-                   values_mapping={1:'Down',0:'Up'},
-                   name='Gear Down', 
-                   frequency=1, 
-                   offset=0.1)
-        up_sel = GearUpSelected()
-        up_sel.derive(gdn, None)
-        np.testing.assert_array_equal(up_sel.array, [0,0,0,1,1,1])
 
-    def test_gear_up_selected_with_warnings(self):
-        gdn = M(array=np.ma.array(data=[1,1,1,0,0,0,0,0,0,0,0,1,1,1]),
-                   values_mapping={1:'Down',0:'Up'},
-                   name='Gear Down', 
-                   frequency=1, 
-                   offset=0.1)
-        redl = M(array=np.ma.array(data=[0,0,0,1,1,1,0,0,0,0,1,1,0,0]),
-                values_mapping={0:'-',1:'Warning'},
-                name='Gear (L) Red Warning', 
-                frequency=1, 
-                offset=0.6)
+    def test_gear_dn_selected_basic(self):
+        gdn = M(
+            array=np.ma.array(data=[1, 1, 1, 0, 0, 0]),
+            values_mapping={1: 'Down', 0: 'Up'},
+            name='Gear Down',
+            frequency=1,
+            offset=0.1
+        )
+        dn_sel = GearDownSelected()
+        dn_sel.derive(gdn, None)
+        np.testing.assert_array_equal(dn_sel.array, [1, 1, 1, 0, 0, 0])
+
+    def test_gear_dn_selected_with_warnings(self):
+        gdn = M(
+            array=np.ma.array(data=[1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1]),
+            values_mapping={1: 'Down', 0: 'Up'},
+            name='Gear Down',
+            frequency=1,
+            offset=0.1
+        )
+        redl = M(
+            array=np.ma.array(data=[0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0]),
+            values_mapping={0: '-', 1: 'Warning'},
+            name='Gear (L) Red Warning',
+            frequency=1,
+            offset=0.6
+        )
         redr = redl
-        redn = M(array=np.ma.array(data=[0,0,0,1,1,1,0,0,0,1,1,0,0,0]),
-                values_mapping={0:'-',1:'Warning'},
-                name='Gear (N) Red Warning', 
-                frequency=1, 
-                offset=0.6)
+        redn = M(
+            array=np.ma.array(data=[0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0]),
+            values_mapping={0: '-', 1: 'Warning'},
+            name='Gear (N) Red Warning',
+            frequency=1,
+            offset=0.6
+        )
         # fully airborne sample
         airs = S(items=[Section('Airborne', slice(None), None, None)])
         gear_warn = Gear_RedWarning()
-        gear_warn.derive(redl, redn, redr, airs) 
+        gear_warn.derive(redl, redn, redr, airs)
         # gear selected
-        up_sel = GearUpSelected()
-        up_sel.derive(gdn, gear_warn)
-        np.testing.assert_array_equal(up_sel.array,
-                                        [0,0,0,1,1,1,1,1,1,0,0,0,0,0])
+        dn_sel = GearDownSelected()
+        dn_sel.derive(gdn, gear_warn)
+        np.testing.assert_array_equal(
+            dn_sel.array.raw,
+            [1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1])
 
 
 class TestGear_RedWarning(unittest.TestCase):
