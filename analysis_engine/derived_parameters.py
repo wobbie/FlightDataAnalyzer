@@ -1982,6 +1982,7 @@ class Eng_1_FuelBurn(DerivedParameterNode):
                ff=P('Eng (1) Fuel Flow')):
 
         flow = repair_mask(ff.array)
+        flow = np.ma.where(flow.mask==True, 0.0, flow)
         self.array = np.ma.array(integrate(flow / 3600.0, ff.frequency))
 
 
@@ -1997,6 +1998,7 @@ class Eng_2_FuelBurn(DerivedParameterNode):
                ff=P('Eng (2) Fuel Flow')):
 
         flow = repair_mask(ff.array)
+        flow = np.ma.where(flow.mask==True, 0.0, flow)
         self.array = np.ma.array(integrate(flow / 3600.0, ff.frequency))
 
 
@@ -2012,6 +2014,7 @@ class Eng_3_FuelBurn(DerivedParameterNode):
                ff=P('Eng (3) Fuel Flow')):
 
         flow = repair_mask(ff.array)
+        flow = np.ma.where(flow.mask==True, 0.0, flow)
         self.array = np.ma.array(integrate(flow / 3600.0, ff.frequency))
 
 
@@ -2027,8 +2030,8 @@ class Eng_4_FuelBurn(DerivedParameterNode):
                ff=P('Eng (4) Fuel Flow')):
 
         flow = repair_mask(ff.array)
+        flow = np.ma.where(flow.mask==True, 0.0, flow)
         self.array = np.ma.array(integrate(flow / 3600.0, ff.frequency))
-
 
 class Eng_FuelBurn(DerivedParameterNode):
     '''
