@@ -1202,15 +1202,17 @@ class Slat(MultistateDerivedParameterNode):
     Steps raw Slat angle into detents.
     """
 
+    units = 'deg'
+
     @classmethod
     def can_operate(cls, available, series=A('Series'), family=A('Family')):
         try:
             get_slat_map(series.value, family.value)
         except KeyError:
             return False
-        return all_of(['Slat Surface', 'Series', 'Family'], available)
+        return all_of(['Slat Angle', 'Series', 'Family'], available)
     
-    def derive(self, slat=P('Slat Surface'), series=A('Series'), family=A('Family')):
+    def derive(self, slat=P('Slat Angle'), series=A('Series'), family=A('Family')):
         slat_steps = get_slat_map(series.value, family.value)
         # No longer support rounding to nearest
         ##except KeyError:

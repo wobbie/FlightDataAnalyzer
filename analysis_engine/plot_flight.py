@@ -29,6 +29,14 @@ if platform.system() == 'Windows':
 
 import matplotlib.pyplot as plt
 
+'''
+Note: if you are having problems with blocking plots try
+    import matplotlib.pyplot as plt
+    plt.ion()
+
+This turns interactive mode on. If this works there is an interactive setting
+in matplotlibrc to turn this on globally
+'''
 
 logger = logging.getLogger(name=__name__)
 
@@ -443,6 +451,8 @@ def csv_flight_details(hdf_path, kti_list, kpv_list, phase_list,
     with hdf_file(hdf_path) as hdf:
         for param in params:
             # Create DerivedParameterNode to utilise the .at() method
+            if param not in hdf:
+                continue
             p = hdf[param]
             dp = Parameter(name=p.name, array=p.array, 
                            frequency=p.frequency, offset=p.offset)

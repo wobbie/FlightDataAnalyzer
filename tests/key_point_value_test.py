@@ -12,7 +12,8 @@ from flightdatautilities.geometry import midpoint
 
 from analysis_engine.library import align
 from analysis_engine.node import (
-    A, App, ApproachItem, KPV, KTI, load, M, P, KeyPointValue, MultistateDerivedParameterNode,
+    A, App, ApproachItem, KPV, KTI, load, M, P, KeyPointValue,
+    MappedArray, MultistateDerivedParameterNode,
     KeyTimeInstance, Section, S
 )
 
@@ -241,6 +242,8 @@ from analysis_engine.key_point_values import (
     EngVibN1Max,
     EngVibN2Max,
     EngVibN3Max,
+    FlapAt1000Ft,
+    FlapAt500Ft,
     FlapAtGearDownSelection,
     FlapAtLiftoff,
     FlapAtTouchdown,
@@ -6438,6 +6441,47 @@ class TestFlapWithSpeedbrakeDeployedMax(unittest.TestCase, NodeTest):
             KeyPointValue(7, 7, 'Flap With Speedbrake Deployed Max'),
         ])
 
+
+class TestFlapAt1000Ft(unittest.TestCase):
+    def can_operate(self):
+        opts = FlapAt1000Ft.get_operational_combinations()
+        self.assertEqual(opts, [
+            ('Flap', 'Altitude When Descending')])
+        
+    def test_derive(self):
+        f = FlapAt1000Ft()
+        f.derive(flap=M('Flap', np.ma.array([30]*70+[45]*30),
+                        values_mapping={30:'30', 45:'45'}), 
+                 gates=AltitudeWhenDescending('Gates', items=(
+                     KeyTimeInstance(40, '1500 Ft Descending'),
+                     KeyTimeInstance(60, '1000 Ft Descending'),
+                     KeyTimeInstance(80, '1000 Ft Descending'), # second descent after go around?
+                     KeyTimeInstance(90, '500 Ft Descending'),)))
+        self.assertEqual(len(f), 2)
+        self.assertEqual(f[0].index, 60)
+        self.assertEqual(f[0].value, 30)
+        self.assertEqual(f[1].index, 80)
+        self.assertEqual(f[1].value, 45)
+
+
+class TestFlapAt500Ft(unittest.TestCase):
+    def can_operate(self):
+        opts = FlapAt500Ft.get_operational_combinations()
+        self.assertEqual(opts, [
+            ('Flap', 'Altitude When Descending')])
+        
+    def test_derive(self):
+        f = FlapAt500Ft()
+        f.derive(flap=M('Flap', np.ma.array([30]*70+[45]*30),
+                        values_mapping={30:'30', 45:'45'}), 
+                 gates=AltitudeWhenDescending('Gates', items=(
+                     KeyTimeInstance(40, '1500 Ft Descending'),
+                     KeyTimeInstance(60, '1000 Ft Descending'),
+                     KeyTimeInstance(80, '1000 Ft Descending'), # second descent after go around?
+                     KeyTimeInstance(90, '500 Ft Descending'),)))
+        self.assertEqual(len(f), 1)
+        self.assertEqual(f[0].index, 90)
+        self.assertEqual(f[0].value, 45)
 
 ##############################################################################
 

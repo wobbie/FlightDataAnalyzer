@@ -700,6 +700,25 @@ class AltitudeAAL(DerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
         return 'Altitude STD Smoothed' in available and 'Fast' in available
+    
+
+    def find_liftoff_start(self, alt_std):
+        # Test case => NAX_8_LN-NOE_20120109063858_02_L3UQAR___dev__sdb.002.hdf5
+        # Look over the first 500ft of climb (or less if the data doesn't get that high).
+        first_val = first_valid_sample(alt_std).value
+        to = index_at_value(alt_std, min(first_val+500, np.ma.max(alt_std)))
+        # Seek the point where the altitude first curves upwards.
+        first_curve = int(peak_curvature(repair_mask(alt_std[:to]),
+                                         curve_sense='Concave',
+                                         gap = 7,
+                                         ttp = 10))
+        
+        # or where the rate of climb is > 20ft per second?
+        climbing = rate_of_change_array(alt_std, self.frequency)
+        climbing[climbing<20] = np.ma.masked
+        idx = min(first_curve, first_valid_sample(climbing[:to]).index)
+        return idx
+
 
     def compute_aal(self, mode, alt_std, low_hb, high_gnd, alt_rad=None):
 
@@ -711,14 +730,8 @@ class AltitudeAAL(DerivedParameterNode):
             have a reliable Altitude Radio.
             '''
             try:
-                # Test case => NAX_8_LN-NOE_20120109063858_02_L3UQAR___dev__sdb.002.hdf5
-                # Look over the first 500ft of climb (or less if the data doesn't get that high).
-                to = index_at_value(alt_std, min(alt_std[0]+500, np.ma.max(alt_std)))
-                # Seek the point where the altitude first curves upwards.
-                idx = int(peak_curvature(repair_mask(alt_std[:to]),
-                                         curve_sense='Concave',
-                                         gap = 7,
-                                         ttp = 10))
+                idx = self.find_liftoff_start()
+                
                 # The liftoff most probably arose in the preceding 10
                 # seconds. Allow 3 seconds afterwards for luck.
                 rotate = slice(max(idx-10*self.frequency,0),
@@ -3053,7 +3066,7 @@ class FuelQty(DerivedParameterNode):
 
     Sum of fuel in left, right and middle tanks where available.
     '''
-
+    unit = 'kg'
     align = False
 
     @classmethod
@@ -3241,7 +3254,7 @@ class FlapAngle(DerivedParameterNode):
             'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard',
         ), available)
         if family and family.value == 'B787':
-            return flap_angle and 'Slat Surface' in available
+            return flap_angle and 'Slat Angle' in available
         else:
             return flap_angle
     
@@ -3310,7 +3323,7 @@ class FlapAngle(DerivedParameterNode):
                flap_B=P('Flap Angle (R)'),
                flap_A_inboard=P('Flap Angle (L) Inboard'),
                flap_B_inboard=P('Flap Angle (R) Inboard'),
-               slat=P('Slat Surface'),
+               slat=P('Slat Angle'),
                frame=A('Frame'),
                family=A('Family')):
 
@@ -3339,9 +3352,8 @@ class FlapAngle(DerivedParameterNode):
 
 
 '''
-class SlatSurface(DerivedParameterNode):
-    """
-    """
+class SlatAngle(DerivedParameterNode):
+
     s1f = M('Slat (1) Fully Extended'),
     s1t = M('Slat (1) In Transit'),
     s1m = M('Slat (1) Mid Extended'),
@@ -3367,19 +3379,23 @@ class SlatSurface(DerivedParameterNode):
     s1m = M('Slat (1) Mid Extended'),
 '''
 
-class SlatSurface(DerivedParameterNode):
+class SlatAngle(DerivedParameterNode):
     '''
-    Combines Slat (L) and Slat (R).
-    
-    TODO: Reconsider naming of Slat parameters for consistency.
+    Combines Slat Angle (L) and Slat Angle (R).
     '''
+
+    align = False
+    units = 'deg'
+
     @classmethod
     def can_operate(cls, available):
-        return 'Slat (L)' in available or 'Slat (R)' in available
+
+        return any_of(('Slat Angle (L)', 'Slat Angle (R)'), available)
     
-    def derive(self, slat_l=P('Slat (L)'), slat_r=P('Slat (R)')):
-        self.array, self.frequency, self.offset = blend_two_parameters(slat_l,
-                                                                       slat_r)
+    def derive(self, slat_l=P('Slat Angle (L)'), slat_r=P('Slat Angle (R)')):
+
+        self.array, self.frequency, self.offset = \
+            blend_two_parameters(slat_l, slat_r)
 
 
 class SlopeToLanding(DerivedParameterNode):

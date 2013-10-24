@@ -6994,28 +6994,18 @@ class FlapAt1000Ft(KeyPointValueNode):
     '''
     Flap setting at 1000ft on approach.
     '''
-    @classmethod
-    def can_operate(cls, available):
-        return ('Flap' in available)
-    
     def derive(self, flap=M('Flap'), gates=KTI('Altitude When Descending')):
-        for gate in gates:
-            if gate.name=='1000 Ft Descending':
-                self.create_kpvs_at_ktis(flap.array, [gate])
+        for gate in gates.get(name='1000 Ft Descending'):
+            self.create_kpv(gate.index, flap.array.raw[gate.index])
 
 
 class FlapAt500Ft(KeyPointValueNode):
     '''
     Flap setting at 500ft on approach.
     '''
-    @classmethod
-    def can_operate(cls, available):
-        return ('Flap' in available)
-    
     def derive(self, flap=M('Flap'), gates=KTI('Altitude When Descending')):
-        for gate in gates:
-            if gate.name=='500 Ft Descending':
-                self.create_kpvs_at_ktis(flap.array, [gate])
+        for gate in gates.get(name='500 Ft Descending'):
+            self.create_kpv(gate.index, flap.array.raw[gate.index])
     
     
 ##############################################################################
@@ -8793,8 +8783,7 @@ class TailwindLiftoffTo100FtMax(KeyPointValueNode):
     for take-off. But this should only be altered to 15 kt if it has been
     purchased.
 
-    This event masks the tailwind array so that headwind conditions do not
-    raise any KPV.
+    Note: a negative tailwind is a headwind
     '''
 
     def derive(self,
@@ -8802,7 +8791,7 @@ class TailwindLiftoffTo100FtMax(KeyPointValueNode):
                alt_aal=P('Altitude AAL For Flight Phases')):
 
         self.create_kpvs_within_slices(
-            np.ma.masked_less_equal(tailwind.array, 0.0),
+            tailwind.array,
             alt_aal.slices_from_to(0, 100),
             max_value,
         )
@@ -8810,8 +8799,7 @@ class TailwindLiftoffTo100FtMax(KeyPointValueNode):
 
 class Tailwind100FtToTouchdownMax(KeyPointValueNode):
     '''
-    This event uses a masked tailwind array so that headwind conditions do
-    not raise any KPV.
+    Note: a negative tailwind is a headwind
     '''
 
     def derive(self,
@@ -8820,7 +8808,7 @@ class Tailwind100FtToTouchdownMax(KeyPointValueNode):
                touchdowns=KTI('Touchdown')):
 
         self.create_kpvs_within_slices(
-            np.ma.masked_less_equal(tailwind.array, 0.0),
+            tailwind.array,
             alt_aal.slices_to_kti(100, touchdowns),
             max_value,
         )

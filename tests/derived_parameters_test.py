@@ -136,7 +136,7 @@ from analysis_engine.derived_parameters import (
     RudderPedal,
     SidestickAngleCapt,
     SidestickAngleFO,
-    SlatSurface,
+    SlatAngle,
     Speedbrake,
     VerticalSpeed,
     VerticalSpeedForFlightPhases,
@@ -894,7 +894,7 @@ class TestAltitudeAAL(unittest.TestCase):
         '''
         #  Check alt aal does not try to jump to alt std in masked period of
         #  alt rad
-        self.assertEqual(alt_aal.array[45].mask, True)
+        self.assertEqual(alt_aal.array[45], 0)  # NOT 1000!
 
     def test_alt_aal_complex_doubled(self):
         testwave = np.ma.cos(np.arange(0, 3.14 * 2, 0.02)) * -5000 + 5500
@@ -1033,8 +1033,55 @@ class TestAltitudeAAL(unittest.TestCase):
         index, value = max_value(np.abs(difs))
         # Check to test that the step occurs during cruse and not the go-around
         self.assertTrue(index in range(1290, 1850))
-    
-
+        
+    def test_find_liftoff_start_on_herc(self):
+        # Herc (L100) climbs in a straight line without noticable concave
+        # curvature at liftoff; ensure index is kept close
+        aal = AltitudeAAL(frequency=2)
+        herc_alt_std = np.ma.array([
+       -143.20034375,    0.        , -142.46179687,    0.        ,
+       -140.98470312,    0.        , -140.24615625,    0.        ,
+       -138.7690625 ,    0.        , -138.03051562,    0.        ,
+       -135.814875  ,    0.        , -134.33778125,    0.        ,
+       -132.8606875 ,    0.        , -132.8606875 ,    0.        ,
+       -130.64504687,    0.        , -129.9065    ,    0.        ,
+       -128.42940625,    0.        , -127.69085937,    0.        ,
+       -125.47521875,    0.        , -123.25957812,    0.        ,
+       -121.0439375 ,    0.        , -118.82829687,    0.        ,
+       -116.61265625,    0.        , -114.39701562,    0.        ,
+       -110.70428125,    0.        , -108.48864062,    0.        ,
+       -106.273     ,    0.        , -102.58026562,    0.        ,
+        -99.62607812,    0.        ,  -97.4104375 ,    0.        ,
+        -92.97915625,    0.        ,  -89.28642187,    0.        ,
+        -84.85514062,    0.        ,  -81.16240625,    0.        ,
+        -78.20821875,    0.        , -901.50908125, -881.86373437,
+       -862.2183875 , -838.95416094, -815.68993437, -792.05643437,
+       -768.42293437, -749.14686094, -729.8707875 , -706.60656094,
+       -683.34233437, -664.06626094, -644.7901875 , -617.16853437,
+       -589.54688125, -565.54410781, -541.54133437, -526.6226875 ,
+       -511.70404062, -488.8090875 , -465.91413437, -450.9954875 ,
+       -436.07684062, -421.89674062, -407.71664062, -389.17911406,
+       -370.6415875 , -347.37736094, -324.11313437, -304.83706094,
+       -285.5609875 , -262.29676094, -239.03253437, -224.1138875 ,
+       -209.19524062, -186.3002875 , -163.40533437, -144.12926094,
+       -124.8531875 , -110.30381406,  -95.75444062,  -81.57434062,
+        -67.39424062,  -53.21414062,  -39.03404062,  -24.85394062,
+        -10.67384062,    3.50625938,   17.68635938,   27.50903281,
+         37.33170625,   51.14253281,   64.95335938,   79.13345938,
+         93.31355938,  107.49365938,  121.67375938,  127.13900625,
+        132.60425313,  150.40323281,  168.2022125 ,  182.75158594,
+        197.30095938,  211.48105938,  225.66115938,  239.84125938,
+        254.02135938,  268.20145938,  282.38155938,  296.56165938,
+        310.74175938,  324.92185938,  339.10195938,  353.28205938,
+        367.46215938,  381.64225938,  395.82235938,  414.35988594,
+        432.8974125 ,  451.8042125 ,  470.7110125 ,  485.26038594,
+        499.80975938,  513.98985938,  528.16995938,  546.70748594,
+        565.2450125 ,  579.79438594,  594.34375938,  608.52385938,
+        622.70395938,  645.5989125 ,  668.49386563,  687.76993906,
+        707.0460125 ,  721.59538594,  736.14475938,  759.0397125 ])
+        herc_alt_std[:62] = np.ma.masked
+        idx = aal.find_liftoff_start(herc_alt_std)
+        self.assertEqual(idx, 63)
 
 class TestAimingPointRange(unittest.TestCase):
     def test_basic_scaling(self):
@@ -3665,7 +3712,7 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
             ('Flap Angle (L)', 'Flap Angle (R)'),
             ('Flap Angle (L) Inboard', 'Flap Angle (R) Inboard'),
             ('Flap Angle (L)', 'Flap Angle (R)', 'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard', 'Frame'),
-            ('Flap Angle (L)', 'Flap Angle (R)', 'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard', 'Slat Surface', 'Frame'),
+            ('Flap Angle (L)', 'Flap Angle (R)', 'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard', 'Slat Angle', 'Frame'),
         ]
     
     def test_derive_787(self):
@@ -3675,7 +3722,7 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
                                          '787_flap_angle_r.nod'))
         slat_l = load(os.path.join(test_data_path, '787_slat_l.nod'))
         slat_r = load(os.path.join(test_data_path, '787_slat_r.nod'))
-        slat = SlatSurface()
+        slat = SlatAngle()
         slat.derive(slat_l, slat_r)
         family = A('Family', 'B787')
         f = FlapAngle()
@@ -3961,21 +4008,11 @@ class TestRudderPedal(unittest.TestCase):
         self.assertTrue(False, msg='Test not implemented.')
 
 
-class TestSlat(unittest.TestCase):
-    @unittest.skip('Test Not Implemented')
-    def test_can_operate(self):
-        self.assertTrue(False, msg='Test not implemented.')
-        
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
-
-
-class TestSlatSurface(unittest.TestCase):
+class TestSlatAngle(unittest.TestCase):
     def test_can_operate(self):
         self.assertEqual(
-            SlatSurface.get_operational_combinations(),
-            [('Slat (L)',), ('Slat (R)',), ('Slat (L)', 'Slat (R)')])
+            SlatAngle.get_operational_combinations(),
+            [('Slat Angle (L)',), ('Slat Angle (R)',), ('Slat Angle (L)', 'Slat Angle (R)')])
     
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
