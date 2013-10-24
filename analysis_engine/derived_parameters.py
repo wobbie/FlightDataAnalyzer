@@ -700,6 +700,25 @@ class AltitudeAAL(DerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
         return 'Altitude STD Smoothed' in available and 'Fast' in available
+    
+
+    def find_liftoff_start(self, alt_std):
+        # Test case => NAX_8_LN-NOE_20120109063858_02_L3UQAR___dev__sdb.002.hdf5
+        # Look over the first 500ft of climb (or less if the data doesn't get that high).
+        first_val = first_valid_sample(alt_std).value
+        to = index_at_value(alt_std, min(first_val+500, np.ma.max(alt_std)))
+        # Seek the point where the altitude first curves upwards.
+        first_curve = int(peak_curvature(repair_mask(alt_std[:to]),
+                                         curve_sense='Concave',
+                                         gap = 7,
+                                         ttp = 10))
+        
+        # or where the rate of climb is > 20ft per second?
+        climbing = rate_of_change_array(alt_std, self.frequency)
+        climbing[climbing<20] = np.ma.masked
+        idx = min(first_curve, first_valid_sample(climbing[:to]).index)
+        return idx
+
 
     def compute_aal(self, mode, alt_std, low_hb, high_gnd, alt_rad=None):
 
@@ -711,14 +730,8 @@ class AltitudeAAL(DerivedParameterNode):
             have a reliable Altitude Radio.
             '''
             try:
-                # Test case => NAX_8_LN-NOE_20120109063858_02_L3UQAR___dev__sdb.002.hdf5
-                # Look over the first 500ft of climb (or less if the data doesn't get that high).
-                to = index_at_value(alt_std, min(alt_std[0]+500, np.ma.max(alt_std)))
-                # Seek the point where the altitude first curves upwards.
-                idx = int(peak_curvature(repair_mask(alt_std[:to]),
-                                         curve_sense='Concave',
-                                         gap = 7,
-                                         ttp = 10))
+                idx = self.find_liftoff_start()
+                
                 # The liftoff most probably arose in the preceding 10
                 # seconds. Allow 3 seconds afterwards for luck.
                 rotate = slice(max(idx-10*self.frequency,0),
