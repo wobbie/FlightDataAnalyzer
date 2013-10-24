@@ -6,8 +6,7 @@ import geomag
 from math import ceil, radians
 from scipy.interpolate import interp1d
 
-from flightdatautilities.model_information import (get_conf_map,
-                                                   get_flap_map)
+from flightdatautilities import model_information as mi
 from flightdatautilities.velocity_speed import get_vspeed_map
 from flightdatautilities.vmo_mmo import get_vmo_procedure
 
@@ -460,6 +459,7 @@ class AirspeedReferenceLookup(DerivedParameterNode):
                gw=P('Gross Weight Smoothed'),
                approaches=S('Approach And Landing'),
                touchdowns=KTI('Touchdown'),
+               model=A('Model'),
                series=A('Series'),
                family=A('Family'),
                engine=A('Engine Series'),
@@ -507,9 +507,11 @@ class AirspeedReferenceLookup(DerivedParameterNode):
                 # Not the final landing and max setting not in vspeed table,
                 # so use the maximum setting possible as a reference.
                 if setting_param.name == 'Flap':
-                    max_setting = max(get_flap_map(series.value, family.value))
+                    mapping = mi.get_flap_map(model.value, series.value, family.value)
+                    max_setting = max(mapping.items())[0]  # using raw value
                 else:
-                    max_setting = max(get_conf_map(series.value, family.value).keys())
+                    mapping = mi.get_conf_map(model.value, series.value, family.value)
+                    max_setting = max(mapping.items())[1]  # using state name
                 self.info("No touchdown in this approach and maximum "
                           "%s '%s' not in lookup table. Using max "
                           "possible setting '%s' as reference",
@@ -3249,17 +3251,19 @@ class FlapAngle(DerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available, family=A('Family')):
+
         flap_angle = any_of((
             'Flap Angle (L)', 'Flap Angle (R)',
             'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard',
         ), available)
+
         if family and family.value == 'B787':
             return flap_angle and 'Slat Angle' in available
         else:
             return flap_angle
     
     @staticmethod
-    def _combine_flap_slat(slat_array, flap_array, conf_map):
+    def _combine_flap_slat(slat_array, flap_array, lever_angles):
         '''
         Combines Flap and Slat parameters and returns a Flap Angle array.
         
@@ -3283,21 +3287,21 @@ class FlapAngle(DerivedParameterNode):
         :type slat_array: np.ma.masked_array
         :param flap_array: Flap parameter array.
         :type flap_array: np.ma.masked_array
-        :param conf_map: Configuration map from model information.
-        :type conf_map: {int: (int, int)}
+        :param lever_angles: Configuration map from model information.
+        :type lever_angles: {int: (int, int)}
         '''
         # Assumes states are strings.
-        previous_state = None
+        previous_value = None
         previous_slat = None
         previous_flap = None
         slat_interp_x = []
         slat_interp_y = []
         flap_interp_x = []
         flap_interp_y = []
-        for index, (current_state, (current_slat, current_flap)) in enumerate(sorted(conf_map.items())):
+        for index, (current_value, (current_slat, current_flap)) in enumerate(sorted(lever_angles.items())):
             if index == 0:
-                previous_state = current_state
-            state_difference = current_state - previous_state
+                previous_value = current_value
+            state_difference = current_value - previous_value
             if index == 0 or (previous_slat != current_slat):
                 slat_interp_x.append(current_slat)
                 slat_interp_y.append((slat_interp_y[-1] if slat_interp_y else 0)
@@ -3308,7 +3312,7 @@ class FlapAngle(DerivedParameterNode):
                 flap_interp_y.append((flap_interp_y[-1] if flap_interp_y else 0)
                                      + state_difference)
                 previous_flap = current_flap
-            previous_state = current_state
+            previous_value = current_value
         slat_interp = interp1d(slat_interp_x, slat_interp_y)
         flap_interp = interp1d(flap_interp_x, flap_interp_y)
         # Exclude masked values which may be outside of the interpolation range.
@@ -3333,7 +3337,7 @@ class FlapAngle(DerivedParameterNode):
         flap_B = flap_B or flap_B_inboard
         
         if family_name == 'B787':
-            conf_map = get_conf_map(None, family_name)
+            lever_angles = mi.get_lever_angles(None, None, family_name, key='value')
             # Flap settings 1 and 25 only affect Slat.
             # Combine Flap Angle (L) and Flap Angle (R).
             self.array, self.frequency, self.offset = blend_two_parameters(
@@ -3341,7 +3345,7 @@ class FlapAngle(DerivedParameterNode):
             # Frequency will be doubled after blending parameters.
             slat.array = align(slat, self)
             self.array = self._combine_flap_slat(slat.array, self.array,
-                                                 conf_map)
+                                                 lever_angles)
         elif frame_name in ['747-200-GE', '747-200-PW', '747-200-AP-BIB']:
             # Only the right inboard flap is instrumented.
             self.array = flap_B.array

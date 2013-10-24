@@ -44,6 +44,7 @@ from analysis_engine.multistate_parameters import (
     FlapExcludingTransition,
     FlapIncludingTransition,
     FlapLever,
+    FlapLeverSynthetic,
     Flaperon,
     FuelQty_Low,
     GearDown,
@@ -274,8 +275,8 @@ class TestConfiguration(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = Configuration
         self.operational_combinations = [
-            ('Flap', 'Slat', 'Series', 'Family'),
-            ('Flap', 'Slat', 'Flaperon', 'Series', 'Family'),
+            ('Flap', 'Slat', 'Model', 'Series', 'Family'),
+            ('Flap', 'Slat', 'Flaperon', 'Model', 'Series', 'Family'),
         ]
         # Note: The last state is invalid...
         s = [0] * 2 + [16] * 4 + [20] * 4 + [23] * 6 + [16]
@@ -288,21 +289,32 @@ class TestConfiguration(unittest.TestCase, NodeTest):
     
     def test_can_operate_not_airbus(self):
         self.assertFalse(self.node_class.can_operate(
-            ['Flap', 'Slat', 'Series', 'Family'],
-            manu=Attribute('Manufacturer', 'Boeing')))
+            ['Flap', 'Slat', 'Model', 'Series', 'Family'],
+            manufacturer=Attribute('Manufacturer', 'Boeing')))
         self.assertTrue(self.node_class.can_operate(
-            ['Flap', 'Slat', 'Series', 'Family'],
-            manu=Attribute('Manufacturer', 'Airbus')))
+            ['Flap', 'Slat', 'Model', 'Series', 'Family'],
+            manufacturer=Attribute('Manufacturer', 'Airbus')))
+        for family in ('A318', 'A319', 'A320', 'A321', 'A330', 'A340', 'A350'):
+            self.assertTrue(self.node_class.can_operate(
+                ['Flap', 'Slat', 'Model', 'Series', 'Family'],
+                manufacturer=Attribute('Manufacturer', 'Airbus'),
+                family=Attribute('Family', family)))
+        for family in ('A300', 'A310'):
+            self.assertFalse(self.node_class.can_operate(
+                ['Flap', 'Slat', 'Model', 'Series', 'Family'],
+                manufacturer=Attribute('Manufacturer', 'Airbus'),
+                family=Attribute('Family', family)))
 
     def test_conf_for_a330(self):
         # Note: The last state is invalid...
         expected = ['0', '1', '1+F', '1*', '2', '2*', '3', 'Full']
         expected = list(reduce(operator.add, zip(expected, expected)))
         expected += [np.ma.masked]
-        series = A('Series', 'A330-301')
+        model = A('Model', 'A330-301')
+        series = A('Series', 'A330-300')
         family = A('Family', 'A330')
         node = self.node_class()
-        node.derive(self.slat, self.flap, self.ails, series, family)
+        node.derive(self.slat, self.flap, self.ails, model, series, family)
         self.assertEqual(list(node.array[:17]), expected)
 
     def test_time_taken(self):
@@ -655,41 +667,33 @@ class TestFlapExcludingTransition(unittest.TestCase):
         
     def test_can_operate(self):
         self.assertTrue(FlapExcludingTransition.can_operate(
-            ('Flap Angle', 'Series', 'Family',)))
+            ('Flap Angle', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', 'B737-333'),
+            series=Attribute('Series', 'B737-300'),
+            family=Attribute('Family', 'B737 Classic')))
 
 
 class TestFlapIncludingTransition(unittest.TestCase):
         
     def test_can_operate(self):
         self.assertTrue(FlapIncludingTransition.can_operate(
-            ('Flap Angle', 'Series', 'Family',)))
+            ('Flap Angle', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', 'B737-333'),
+            series=Attribute('Series', 'B737-300'),
+            family=Attribute('Family', 'B737 Classic')))
 
 
 class TestFlap(unittest.TestCase):
         
     def test_can_operate(self):
-        self.assertTrue(Flap.can_operate(('Altitude AAL',),
-                                         frame=Attribute('Frame', 'L382-Hercules')))
-        self.assertTrue(Flap.can_operate(('Flap Angle', 'Series', 'Family')))
-
-    def test_flap_stepped_nearest_5(self):
-        flap = P('Flap Angle', np.ma.arange(50))
-        node = Flap()
-        node.derive(flap, A('Series', None), A('Family', None))
-        expected = [0] + [5]*5 + [10]*5 + [15]*5 + [20]*5 + [25]*5 + [30]*5 + \
-                   [35]*5 + [40]*5 + [45]*5 + [50]*4
-        self.assertEqual(list(node.array.raw), expected)
-        self.assertEqual(
-            node.values_mapping,
-            {0: '0', 35: '35', 5: '5', 40: '40', 10: '10', 45: '45', 15: '15',
-             50: '50', 20: '20', 25: '25', 30: '30'})
-
-        flap = P('Flap Angle', np.ma.array(range(20), mask=[True] * 10 + [False] * 10))
-        node.derive(flap, A('Series', None), A('Family', None))
-        expected = [-1]*10 + [10] + [15]*5 + [20]*4
-        self.assertEqual(np.ma.filled(node.array, fill_value=-1).tolist(),
-                         expected)
-        self.assertEqual(node.values_mapping, {10: '10', 20: '20', 15: '15'})
+        self.assertTrue(Flap.can_operate(
+            ('Altitude AAL',),
+            frame=Attribute('Frame', 'L382-Hercules')))
+        self.assertTrue(Flap.can_operate(
+            ('Flap Angle', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', 'B737-333'),
+            series=Attribute('Series', 'B737-300'),
+            family=Attribute('Family', 'B737 Classic')))
 
     def test_flap_using_md82_settings(self):
         # Note: Using flap detents for MD-82 of (0, 13, 20, 25, 30, 40)
@@ -703,7 +707,7 @@ class TestFlap(unittest.TestCase):
             flap.array[index] = np.ma.masked
 
         node = Flap()
-        node.derive(flap, A('Series', None), A('Family', 'DC-9'))
+        node.derive(flap, A('Model', None), A('Series', None), A('Family', 'DC-9'))
 
         self.assertEqual(node.array.size, 59)
         self.assertEqual(list(node.array.raw.data),
@@ -727,7 +731,7 @@ class TestFlap(unittest.TestCase):
              17, 17.4, 17.9, 20, 
              30]))
         flap = Flap()
-        flap.derive(flap_param, A('Series', '1900D'), A('Family', 'Beechcraft'))
+        flap.derive(flap_param, A('Model', None), A('Series', '1900D'), A('Family', 'Beechcraft'))
         self.assertEqual(flap.values_mapping,
                          {0: '0', 17.5: '17.5', 35: '35'})
         ma_test.assert_array_equal(
@@ -739,6 +743,7 @@ class TestFlap(unittest.TestCase):
             [0, 0, 50, 1500, 1500, 1500, 2500, 2500, 1500, 1500, 50, 50]))
         flap = Flap()
         flap.derive(None, 
+                    A('Model', ''), 
                     A('Series', ''), 
                     A('Family', 'C-130'), 
                     A('Frame', 'L382-Hercules'),
@@ -751,33 +756,114 @@ class TestFlap(unittest.TestCase):
         self.assertEqual(flap.units, '%')
 
 
-class TestFlapLever(unittest.TestCase, NodeTest):
+class TestFlapLever(unittest.TestCase):
     
-    def setUp(self):
-        self.node_class = FlapLever
-        self.operational_combinations = [
-            ('Flap Lever Angle', 'Series', 'Family'),
-        ]
+    def test_can_operate(self):
+        self.assertTrue(FlapLever.can_operate(
+            ('Flap Lever Angle', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', 'B737-333'),
+            series=Attribute('Series', 'B737-300'),
+            family=Attribute('Family', 'B737 Classic')))
     
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
 
 
+class TestFlapLeverSynthetic(unittest.TestCase):
+
+    def test_can_operate(self):
+        # Test we can operate for something in the lever mapping.
+        self.assertTrue(FlapLeverSynthetic.can_operate(
+            ('Flap Angle', 'Slat Angle', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', 'CRJ900 (CL-600-2D24)'),
+            series=Attribute('Series', 'CRJ900'),
+            family=Attribute('Family', 'CL-600')))
+        # Test we can operate for the above even though slat missing.
+        self.assertTrue(FlapLeverSynthetic.can_operate(
+            ('Flap Angle', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', 'CRJ900 (CL-600-2D24)'),
+            series=Attribute('Series', 'CRJ900'),
+            family=Attribute('Family', 'CL-600')))
+        # Test we can operate for something not in the lever mapping.
+        self.assertTrue(FlapLeverSynthetic.can_operate(
+            ('Flap Angle', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', 'B737-333'),
+            series=Attribute('Series', 'B737-300'),
+            family=Attribute('Family', 'B737 Classic')))
+        # Test we can operate even though the above *has* a slat.
+        self.assertTrue(FlapLeverSynthetic.can_operate(
+            ('Flap Angle', 'Slat Angle', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', 'B737-333'),
+            series=Attribute('Series', 'B737-300'),
+            family=Attribute('Family', 'B737 Classic')))
+
+    def test_derive__crj900(self):
+        # Prepare our generated flap and slat arrays:
+        flap_array = [0.0, 0, 8, 8, 0, 0, 0, 8, 20, 30, 45, 8, 0, 0, 0]
+        slat_array = [0.0, 0, 20, 20, 20, 0, 0, 20, 20, 25, 25, 20, 20, 0, 0]
+        flap_array = np.repeat(flap_array, 10)
+        slat_array = np.repeat(slat_array, 10)
+
+        # Add some noise to make our flap and slat angles more realistic:
+        flap_array += np.ma.sin(range(len(flap_array))) * 0.1
+        slat_array -= np.ma.sin(range(len(slat_array))) * 0.1
+
+        # Derive the synthetic flap lever:
+        flap = P('Flap Angle', flap_array)
+        slat = P('Slat Angle', slat_array)
+        model = A('Model', 'CRJ900 (CL-600-2D24)')
+        series = A('Series', 'CRJ900')
+        family = A('Family', 'CL-600')
+        node = FlapLeverSynthetic()
+        node.derive(flap, slat, model, series, family)
+
+        # Check against an expected array of lever detents:
+        expected = [0, 0, 8, 8, 1, 0, 0, 8, 20, 30, 45, 8, 1, 0, 0]
+        mapping = {x: str(x) for x in sorted(set(expected))}
+        array = MappedArray(np.repeat(expected, 10), values_mapping=mapping)
+        np.testing.assert_array_equal(node.array, array)
+
+    def test_derive__b737ng(self):
+        # Prepare our generated flap array:
+        flap_array = [0.0, 0, 5, 2, 1, 0, 0, 10, 15, 25, 30, 40, 0, 0, 0]
+        flap_array = np.repeat(flap_array, 10)
+
+        # Add some noise to make our flap angles more realistic:
+        flap_array += np.ma.sin(range(len(flap_array))) * 0.05
+
+        # Derive the synthetic flap lever:
+        flap = P('Flap Angle', flap_array)
+        slat = None
+        model = A('Model', 'B737-333')
+        series = A('Series', 'B737-300')
+        family = A('Family', 'B737 Classic')
+        node = FlapLeverSynthetic()
+        node.derive(flap, slat, model, series, family)
+
+        # Check against an expected array of lever detents:
+        expected = [0, 0, 5, 2, 1, 0, 0, 10, 15, 25, 30, 40, 0, 0, 0]
+        mapping = {x: str(x) for x in sorted(set(expected))}
+        array = MappedArray(np.repeat(expected, 10), values_mapping=mapping)
+        np.testing.assert_array_equal(node.array, array)
+
+
 class TestFlaperon(unittest.TestCase):
     def test_can_operate(self):
         self.assertTrue(Flaperon.can_operate(
-            ('Aileron (L)', 'Aileron (R)'),
+            ('Aileron (L)', 'Aileron (R)', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', 'A330-222'),
             series=Attribute('Series', 'A330-200'),
             family=Attribute('Family', 'A330')))
         
     def test_derive(self):
         al = load(os.path.join(test_data_path, 'aileron_left.nod'))
         ar = load(os.path.join(test_data_path, 'aileron_right.nod'))
+        model = A('Model', 'A330-222')
         series = A('Series', 'A330-200')
         family = A('Family', 'A330')
         flaperon = Flaperon()
-        flaperon.derive(al, ar, series, family)
+        flaperon.derive(al, ar, model, series, family)
         # ensure values are grouped into aileron settings accordingly
         # flaperon is now step at movement start
         self.assertEqual(unique_values(flaperon.array.astype(int)),
@@ -1134,11 +1220,13 @@ class TestSlat(unittest.TestCase):
     def test_can_operate(self):
         #TODO: Improve get_operational_combinations to support optional args
         ##opts = Slat.get_operational_combinations()
-        ##self.assertEqual(opts, [('Slat Angle', 'Series', 'Family')])
+        ##self.assertEqual(opts, [('Slat Angle', 'Model', 'Series', 'Family')])
         self.assertFalse(Slat.can_operate(['Slat Angle'], 
+                                          A('Model', None),
                                           A('Series', None),
                                           A('Family', None)))
         self.assertFalse(Slat.can_operate(['Slat Angle'], 
+                                          A('Model', None),
                                           A('Series', 'A318-BJ'),
                                           A('Family', 'A318')))
 
@@ -1146,6 +1234,7 @@ class TestSlat(unittest.TestCase):
         # slats are 0, 16, 25
         slat = Slat()
         slat.derive(P('Slat Angle', [0]*5 + range(50)),
+                    A('Model', None),
                     A('Series', 'A300B4(F)'),
                     A('Family', 'A300'))
         res = unique_values(list(slat.array.raw))

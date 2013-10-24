@@ -496,11 +496,13 @@ class FlapSet(KeyTimeInstanceNode):
     
     @classmethod
     def can_operate(cls, available):
-        return 'Flap Lever' in available or 'Flap' in available
-    
+
+        return any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available)
+
     def derive(self,
                flap_lever=M('Flap Lever'),
-               flap_synth=M('Flap')):
+               flap_synth=M('Flap Lever (Synthetic)')):
+
         flap = flap_lever or flap_synth
 
         # Mark all flap changes, and annotate with the new flap position.
@@ -514,19 +516,20 @@ class FirstFlapExtensionWhileAirborne(KeyTimeInstanceNode):
     '''
     Records each flap extension from clean configuration.
     '''
-    
+
     @classmethod
     def can_operate(cls, available):
-        return ('Airborne' in available and ('Flap Lever' in available or
-                                             'Flap' in available))
-    
+
+        return 'Airborne' in available and \
+            any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available)
+
     def derive(self,
                flap_lever=M('Flap Lever'),
-               flap_synth=M('Flap'),
+               flap_synth=M('Flap Lever (Synthetic)'),
                airborne=S('Airborne')):
-        
+
         flap = flap_lever or flap_synth
-        
+
         for air in airborne:
             cleans = np.ma.flatnotmasked_contiguous(
                 np.ma.masked_not_equal(flap.array[air.slice],0.0))
@@ -544,16 +547,18 @@ class FlapExtensionWhileAirborne(KeyTimeInstanceNode):
     '''
     Records every flap extension in flight.
     '''
-    
+
     @classmethod
     def can_operate(cls, available):
-        return ('Airborne' in available and ('Flap Lever' in available or
-                                             'Flap' in available))
-    
+
+        return 'Airborne' in available and \
+            any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available)
+
     def derive(self,
                flap_lever=M('Flap Lever'),
-               flap_synth=M('Flap'),
+               flap_synth=M('Flap Lever (Synthetic)'),
                airborne=S('Airborne')):
+
         flap = flap_lever or flap_synth
         self.create_ktis_at_edges(flap.array.raw, phase=airborne)
 
@@ -624,18 +629,20 @@ class SpeedbrakeOpen(KeyTimeInstanceNode):
 class FlapRetractionWhileAirborne(KeyTimeInstanceNode):
     '''
     '''
-    
+
     @classmethod
     def can_operate(cls, available):
-        return ('Airborne' in available and
-                ('Flap Lever' in available or 'Flap' in available))
+
+        return 'Airborne' in available and \
+            any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available)
 
     def derive(self,
                flap_lever=M('Flap Lever'),
-               flap_synth=M('Flap'),
+               flap_synth=M('Flap Lever (Synthetic)'),
                airborne=S('Airborne')):
+
         flap = flap_lever or flap_synth
-        
+
         self.create_ktis_at_edges(
             flap.array.raw,
             direction='falling_edges',
@@ -646,18 +653,20 @@ class FlapRetractionWhileAirborne(KeyTimeInstanceNode):
 class FlapRetractionDuringGoAround(KeyTimeInstanceNode):
     '''
     '''
-    
+
     @classmethod
     def can_operate(cls, available):
-        return ('Go Around And Climbout' in available and
-                ('Flap Lever' in available or 'Flap' in available))
+
+        return 'Go Around And Climbout' in available and \
+            any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available)
 
     def derive(self,
                flap_lever=M('Flap Lever'),
-               flap_synth=M('Flap'),
+               flap_synth=M('Flap Lever (Synthetic)'),
                go_arounds=S('Go Around And Climbout')):
+
         flap = flap_lever or flap_synth
-        
+
         self.create_ktis_at_edges(
             flap.array.raw,
             direction='falling_edges',
