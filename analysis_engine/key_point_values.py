@@ -8360,6 +8360,26 @@ class Roll1000To300FtMax(KeyPointValueNode):
         )
 
 
+class Roll1000To500FtMax(KeyPointValueNode):
+    '''
+    '''
+
+    units = 'deg'
+
+    def derive(self,
+               roll=P('Roll'),
+               alt_aal=P('Altitude AAL For Flight Phases'),
+               fin_app=S('Final Approach')):
+
+        alt_band = np.ma.masked_outside(alt_aal.array, 1000, 500)
+        alt_app_sections = valid_slices_within_array(alt_band, fin_app)
+        self.create_kpvs_within_slices(
+            roll.array,
+            alt_app_sections,
+            max_abs_value,
+        )
+
+
 class Roll300To20FtMax(KeyPointValueNode):
     '''
     '''
@@ -8391,6 +8411,24 @@ class Roll20FtToTouchdownMax(KeyPointValueNode):
         self.create_kpvs_within_slices(
             roll.array,
             alt_aal.slices_to_kti(20, touchdowns),
+            max_abs_value,
+        )
+
+
+class Roll500FtToTouchdownMax(KeyPointValueNode):
+    '''
+    '''
+
+    units = 'deg'
+
+    def derive(self,
+               roll=P('Roll'),
+               alt_aal=P('Altitude AAL For Flight Phases'),
+               touchdowns=KTI('Touchdown')):
+
+        self.create_kpvs_within_slices(
+            roll.array,
+            alt_aal.slices_to_kti(500, touchdowns),
             max_abs_value,
         )
 
