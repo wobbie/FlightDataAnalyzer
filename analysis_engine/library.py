@@ -2678,7 +2678,13 @@ def integ_value(array,
 
     :returns: Value named tuple of index and value.
     """
-    index = stop_edge or _slice.stop or len(array)
+    if stop_edge:
+        index = stop_edge
+    elif _slice.stop:
+        index = _slice.stop - 1
+    else:
+        index = len(array) - 1
+
     try:
         value = integrate(array[_slice],
                           frequency=frequency,
