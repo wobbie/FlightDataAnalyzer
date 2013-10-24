@@ -8427,11 +8427,29 @@ class TestTCASTAWarningDuration(unittest.TestCase, NodeTest):
         tcas = M(
             'TCAS Combined Control', array=np.ma.array([0,1,2,3,4,6,6,6,4,5]),
             values_mapping=values_mapping)
-        airborne = buildsection('Airborne', 2, 8)
+        airborne = buildsection('Airborne', 2, 7)
         node = self.node_class()
         node.derive(tcas, airborne)
         self.assertEqual([KeyPointValue(5.0, 2.0, 'TCAS TA Warning Duration')],
                          node)
+
+    def test_ignore_one_second_TAs(self):
+        values_mapping = {
+            0: 'A',
+            1: 'B',
+            2: 'C',
+            3: 'D',
+            4: 'E',
+            5: 'F',
+            6: 'Preventive',
+        }
+        tcas = M(
+            'TCAS Combined Control', array=np.ma.array([0,0,6,0,0,6,0,0,6,0]),
+            values_mapping=values_mapping)
+        airborne = buildsection('Airborne', 1, 9)
+        node = self.node_class()
+        node.derive(tcas, airborne)
+        self.assertEqual(node, [])
 
 
 class TestTCASRAWarningDuration(unittest.TestCase, NodeTest):

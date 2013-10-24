@@ -1842,7 +1842,7 @@ class KeyPointValueNode(FormattedNameNode):
                     self.create_kpv(index, duration, **kwargs)
             else:
                 duration = (slice_.stop - slice_.start) / frequency
-                if duration > min_duration:
+                if duration >= min_duration:
                     if mark == 'start':
                         index = slice_.start
                     elif mark == 'end':
