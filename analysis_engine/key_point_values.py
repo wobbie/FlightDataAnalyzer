@@ -9272,6 +9272,9 @@ class TAWSWindshearSirenBelow1500FtDuration(KeyPointValueNode):
 class TCASTAWarningDuration(KeyPointValueNode):
     '''
     This is simply the number of seconds during which the TCAS TA was set.
+    
+    One second warnings are commonplace around airports, hence the 2 second
+    minimum threshold.
     '''
 
     name = 'TCAS TA Warning Duration'
@@ -9283,6 +9286,7 @@ class TCASTAWarningDuration(KeyPointValueNode):
             ras_local = tcas.array[air.slice] == 'Preventive'
             ras_slices = shift_slices(runs_of_ones(ras_local), air.slice.start)
             self.create_kpvs_from_slice_durations(ras_slices, self.frequency,
+                                                  min_duration=2.0,
                                                   mark='start')
 
 
