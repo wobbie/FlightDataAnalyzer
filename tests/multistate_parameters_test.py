@@ -44,6 +44,7 @@ from analysis_engine.multistate_parameters import (
     FlapExcludingTransition,
     FlapIncludingTransition,
     FlapLever,
+    FlapLeverSynthetic,
     Flaperon,
     FuelQty_Low,
     GearDown,
@@ -767,6 +768,84 @@ class TestFlapLever(unittest.TestCase):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestFlapLeverSynthetic(unittest.TestCase):
+
+    def test_can_operate(self):
+        # Test we can operate for something in the lever mapping.
+        self.assertTrue(FlapLeverSynthetic.can_operate(
+            ('Flap Angle', 'Slat Angle', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', 'CRJ900 (CL-600-2D24)'),
+            series=Attribute('Series', 'CRJ900'),
+            family=Attribute('Family', 'CL-600')))
+        # Test we can operate for the above even though slat missing.
+        self.assertTrue(FlapLeverSynthetic.can_operate(
+            ('Flap Angle', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', 'CRJ900 (CL-600-2D24)'),
+            series=Attribute('Series', 'CRJ900'),
+            family=Attribute('Family', 'CL-600')))
+        # Test we can operate for something not in the lever mapping.
+        self.assertTrue(FlapLeverSynthetic.can_operate(
+            ('Flap Angle', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', 'B737-333'),
+            series=Attribute('Series', 'B737-300'),
+            family=Attribute('Family', 'B737 Classic')))
+        # Test we can operate even though the above *has* a slat.
+        self.assertTrue(FlapLeverSynthetic.can_operate(
+            ('Flap Angle', 'Slat Angle', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', 'B737-333'),
+            series=Attribute('Series', 'B737-300'),
+            family=Attribute('Family', 'B737 Classic')))
+
+    def test_derive__crj900(self):
+        # Prepare our generated flap and slat arrays:
+        flap_array = [0.0, 0, 8, 8, 0, 0, 0, 8, 20, 30, 45, 8, 0, 0, 0]
+        slat_array = [0.0, 0, 20, 20, 20, 0, 0, 20, 20, 25, 25, 20, 20, 0, 0]
+        flap_array = np.repeat(flap_array, 10)
+        slat_array = np.repeat(slat_array, 10)
+
+        # Add some noise to make our flap and slat angles more realistic:
+        flap_array += np.ma.sin(range(len(flap_array))) * 0.1
+        slat_array -= np.ma.sin(range(len(slat_array))) * 0.1
+
+        # Derive the synthetic flap lever:
+        flap = P('Flap Angle', flap_array)
+        slat = P('Slat Angle', slat_array)
+        model = A('Model', 'CRJ900 (CL-600-2D24)')
+        series = A('Series', 'CRJ900')
+        family = A('Family', 'CL-600')
+        node = FlapLeverSynthetic()
+        node.derive(flap, slat, model, series, family)
+
+        # Check against an expected array of lever detents:
+        expected = [0, 0, 8, 8, 1, 0, 0, 8, 20, 30, 45, 8, 1, 0, 0]
+        mapping = {x: str(x) for x in sorted(set(expected))}
+        array = MappedArray(np.repeat(expected, 10), values_mapping=mapping)
+        np.testing.assert_array_equal(node.array, array)
+
+    def test_derive__b737ng(self):
+        # Prepare our generated flap array:
+        flap_array = [0.0, 0, 5, 2, 1, 0, 0, 10, 15, 25, 30, 40, 0, 0, 0]
+        flap_array = np.repeat(flap_array, 10)
+
+        # Add some noise to make our flap angles more realistic:
+        flap_array += np.ma.sin(range(len(flap_array))) * 0.05
+
+        # Derive the synthetic flap lever:
+        flap = P('Flap Angle', flap_array)
+        slat = None
+        model = A('Model', 'B737-333')
+        series = A('Series', 'B737-300')
+        family = A('Family', 'B737 Classic')
+        node = FlapLeverSynthetic()
+        node.derive(flap, slat, model, series, family)
+
+        # Check against an expected array of lever detents:
+        expected = [0, 0, 5, 2, 1, 0, 0, 10, 15, 25, 30, 40, 0, 0, 0]
+        mapping = {x: str(x) for x in sorted(set(expected))}
+        array = MappedArray(np.repeat(expected, 10), values_mapping=mapping)
+        np.testing.assert_array_equal(node.array, array)
 
 
 class TestFlaperon(unittest.TestCase):

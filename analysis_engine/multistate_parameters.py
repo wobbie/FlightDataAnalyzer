@@ -757,6 +757,64 @@ class FlapLever(MultistateDerivedParameterNode):
                                  flap_lever.hz, step_at='move_start')
 
 
+class FlapLeverSynthetic(MultistateDerivedParameterNode):
+    '''
+    '''
+
+    name = 'Flap Lever (Synthetic)'
+
+    @classmethod
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family')):
+
+        try:
+            mi.get_lever_map(model.value, series.value, family.value)
+        except KeyError:
+            cls.warning("No lever mapping available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
+            return False
+
+        try:
+            mi.get_lever_angles(model.value, series.value, family.value)
+        except KeyError:
+            cls.warning("No lever angles available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
+            return False
+
+        return all_of(('Flap Angle', 'Model', 'Series', 'Family'), available)
+
+    def derive(self, flap=P('Flap Angle'), slat=P('Slat Angle'),
+               model=A('Model'), series=A('Series'), family=A('Family')):
+
+        lever_angles = mi.get_lever_angles(model.value, series.value, family.value)
+        slat_angles, flap_angles = map(set, zip(*lever_angles.itervalues()))
+
+        # Check whether slat angle is available and mapping has slat angles:
+        use_slat = (slat is not None and list(slat_angles)[0] is not None)
+
+        flap_array = step_values(repair_mask(flap.array), flap_angles,
+                                 flap.hz, step_at='move_start')
+
+        if use_slat:
+            slat_array = step_values(repair_mask(slat.array), slat_angles,
+                                     slat.hz, step_at='move_start')
+
+        # Prepare the destination array:
+        self.values_mapping = mi.get_lever_map(model.value, series.value, family.value)
+        array = MappedArray(np_ma_masked_zeros_like(flap_array),
+                            values_mapping=self.values_mapping)
+
+        # Update the destination array according to the mappings:
+        for (state, (s, f)) in lever_angles.iteritems():
+            condition = (flap_array == f)
+            if use_slat:
+                condition &= (slat_array == s)
+            array[condition] = state
+
+        # Repair the mask to smooth out transitions:
+        self.array = repair_mask(array, extrapolate=False)
+
+
 class Flaperon(MultistateDerivedParameterNode):
     '''
     Where Ailerons move together and used as Flaps, these are known as
