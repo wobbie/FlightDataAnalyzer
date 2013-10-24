@@ -3222,7 +3222,8 @@ class Groundspeed(DerivedParameterNode):
                 blend_two_parameters(source_A, source_B)
 
         else:
-            raise DataFrameError(self.name, frame_name)
+            self.array, self.frequency, self.offset = \
+                blend_two_parameters(source_A, source_B)
 
 
 class FlapAngle(DerivedParameterNode):
