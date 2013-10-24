@@ -1,6 +1,21 @@
 Changes
 =======
 
+0.2.1
+-----
+
+ - Added analyzer profiles
+ - Support for CL-600 Aircraft Families
+ - Support for A340 Aircraft Families
+ - Support for BD-100 Aircraft Families
+ - Speedbrake refactoring
+ - Added Airbus KPV's
+ - Support for ground runs
+ - Support for slat stepping
+ - Clip replaced with second_window
+  - Improves speed
+  - Corrects truncation of adjacent peaks
+
 0.0.6
 -----
 
