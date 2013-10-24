@@ -4705,10 +4705,11 @@ class TestEngGasTempDuringEngStartForXSecMax(unittest.TestCase, NodeTest):
         self.node_class = EngGasTempDuringEngStartForXSecMax
         self.operational_combinations = [('Eng (*) Gas Temp Max', 'Eng (*) N2 Min', 'Takeoff Turn Onto Runway')]
 
-    @unittest.skip('Test Not Implemented')
     def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
-
+        egt = EngGasTempDuringEngStartForXSecMax()
+        # frequency is forced to 1Hz
+        self.assertEqual(egt.frequency, 1.0)
+        
 
 class TestEngGasTempDuringFlightMin(unittest.TestCase, CreateKPVsWithinSlicesTest):
 

@@ -5408,24 +5408,23 @@ class Speedbrake(DerivedParameterNode):
         family_name = family.value if family else None
         return family_name and (
             family_name == 'B737-NG' and (
-                'Spoiler (4)' in available or
+                'Spoiler (4)' in available and
                 'Spoiler (9)' in available
             ) or
-            # FIXME: this is currently used with frame A320_SFIM_ED45_CFM
             family_name in ['B737-Classic', 'A320'] and (
-                'Spoiler (2)' in available or
+                'Spoiler (2)' in available and
                 'Spoiler (7)' in available
             ) or
             family_name == 'B787' and (
-                'Spoiler (1)' in available or
+                'Spoiler (1)' in available and
                 'Spoiler (14)' in available
             ) or
-            family_name in ['G-V', 'Learjet'] and any_of((
+            family_name in ['G-V', 'Learjet'] and all_of((
                 'Spoiler (L)',
                 'Spoiler (R)'),
                 available
             ) or
-            family_name in ['CRJ 900', 'CL-600'] and any_of((
+            family_name in ['CRJ 900', 'CL-600'] and all_of((
                 'Spoiler (L) Inboard',
                 'Spoiler (L) Outboard',
                 'Spoiler (R) Inboard',
@@ -5442,11 +5441,13 @@ class Speedbrake(DerivedParameterNode):
         to roll control. Small values are ignored as these arise from control
         trim settings.
         '''
-        offset = (spoiler_a.offset + spoiler_b.offset) / 2.0
+        assert spoiler_a.frequency == spoiler_b.frequency, \
+               "Cannot merge Spoilers of differing frequencies"
+        self.frequency = spoiler_a.frequency
+        self.offset = (spoiler_a.offset + spoiler_b.offset) / 2.0
         array = np.ma.minimum(spoiler_a.array, spoiler_b.array)
         # Force small angles to indicate zero:
-        array = np.ma.where(array < 10.0, 0.0, array)
-        return array, offset
+        self.array = np.ma.where(array < 10.0, 0.0, array)
 
     def derive(self,
                spoiler_1=P('Spoiler (1)'),
@@ -5468,16 +5469,16 @@ class Speedbrake(DerivedParameterNode):
         family_name = family.value
 
         if family_name == 'B737-Classic':
-            self.array, self.offset = self.merge_spoiler(spoiler_4, spoiler_9)
-
+            self.merge_spoiler(spoiler_4, spoiler_9)
+            
         elif family_name in ['B737-NG', 'A320']:
-            self.array, self.offset = self.merge_spoiler(spoiler_2, spoiler_7)
+            self.merge_spoiler(spoiler_2, spoiler_7)
 
         elif family_name == 'B787':
-            self.array, self.offset = self.merge_spoiler(spoiler_1, spoiler_14)
+            self.merge_spoiler(spoiler_1, spoiler_14)
 
         elif family_name in ['G-V', 'Learjet']:
-            self.array, self.offset = self.merge_spoiler(spoiler_L, spoiler_R)
+            self.merge_spoiler(spoiler_L, spoiler_R)
 
         elif family_name in ['CRJ 900', 'CL-600']:
             # First blend inboard and outboard, then merge
@@ -5485,9 +5486,7 @@ class Speedbrake(DerivedParameterNode):
                 'Spoiler (L)', *blend_two_parameters(spoiler_LI, spoiler_LO))
             spoiler_R = DerivedParameterNode(
                 'Spoiler (R)', *blend_two_parameters(spoiler_RI, spoiler_RO))
-            self.array, self.offset = self.merge_spoiler(spoiler_L, spoiler_R)
-            # FIXME: the parameter is not aligned
-            self.frequency = spoiler_L.frequency
+            self.merge_spoiler(spoiler_L, spoiler_R)
 
         else:
             raise DataFrameError(self.name, family_name)

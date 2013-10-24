@@ -58,6 +58,7 @@ from analysis_engine.library import (ambiguous_runway,
                                      runway_deviation,
                                      runway_distance_from_end,
                                      runway_heading,
+                                     second_window,
                                      shift_slice,
                                      shift_slices,
                                      slice_duration,
@@ -5535,6 +5536,7 @@ class EngGasTempDuringEngStartForXSecMax(KeyPointValueNode):
     NAME_FORMAT = 'Eng Gas Temp During Eng Start For %(seconds)d Sec Max'
     NAME_VALUES = {'seconds': [5, 10, 40]}
     units = 'C'
+    align_frequency = 1
 
     def derive(self,
                eng_egt_max=P('Eng (*) Gas Temp Max'),
@@ -5558,13 +5560,17 @@ class EngGasTempDuringEngStartForXSecMax(KeyPointValueNode):
         chunks = np.ma.clump_unmasked(n2_data)
 
         for seconds in self.NAME_VALUES['seconds']:
-
             # Remove chunks of data that are too small to clip:
             slices = slices_remove_small_slices(chunks, seconds, eng_egt_max.hz)
             if not slices:
                 continue
-
-            array = clip(eng_egt_max.array, seconds, hz=eng_egt_max.hz)
+            # second_window is more accurate than clip and much faster
+            if seconds % 2:
+                # shh... we'll add one so that second_window will work!
+                dur = seconds + 1
+            else:
+                dur = seconds
+            array = second_window(eng_egt_max.array, eng_egt_max.hz, dur)
             self.create_kpvs_within_slices(array, slices, max_value, seconds=seconds)
 
 
