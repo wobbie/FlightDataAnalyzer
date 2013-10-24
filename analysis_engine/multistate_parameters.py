@@ -865,46 +865,19 @@ class GearOnGround(MultistateDerivedParameterNode):
 
 class GearDownSelected(MultistateDerivedParameterNode):
     '''
-    Derivation of gear selection for aircraft without this separately recorded.
-    Where 'Gear Down Selected' is recorded, this derived parameter will be
-    skipped automatically.
-
-    This is the inverse of 'Gear Up Selected' which does all the hard work
-    for us establishing transitions from 'Gear Down' with the assocaited Red
-    Warnings.
-    '''
-
-    values_mapping = {
-        0: 'Up',
-        1: 'Down',
-    }
-
-    def derive(self, gear_up_sel=P('Gear Up Selected')):
-        # Invert the Gear Up Selected array
-        #Q: which is easier to understand?!
-        #self.array = np.ma.where(gear_up_sel.array == 'Up', 'Down', 'Up')
-        self.array = 1 - gear_up_sel.array.raw
-
-
-class GearUpSelected(MultistateDerivedParameterNode):
-    '''
-    Derivation of gear selection for aircraft without this separately recorded.
-    Where 'Gear Up Selected' is recorded, this derived parameter will be
-    skipped automatically.
-
     Red warnings are included as the selection may first be indicated by one
     of the red warning lights coming on, rather than the gear status
     changing.
-    
-    This is the basis for 'Gear Down Selected'.
-    
+
+    This is the basis for 'Gear Up Selected'.
+
     TODO: Add a transit delay (~10secs) to the selection to when the gear down.
     TODO: Derive from "Gear Up" only if recorded.
     '''
 
     values_mapping = {
-        0: 'Down',
-        1: 'Up',
+        0: 'Up',
+        1: 'Down',
     }
 
     @classmethod
@@ -914,28 +887,50 @@ class GearUpSelected(MultistateDerivedParameterNode):
     def derive(self,
                gear_down=M('Gear Down'),
                gear_warn=M('Gear (*) Red Warning')):
-        # use the inverse of the gear down array as a start
-        self.array = gear_down.array != 'Down'  # True for 'Up'
+
+        self.array = np.ma.zeros(gear_down.array.size)
+        self.array[gear_down.array == 'Down'] = 'Down'
         if gear_warn:
-            start_warning = find_edges_on_state_change(
-                'Warning', gear_warn.array)
-            last = 0
-            state = 'Down'
-            for start in start_warning:
-                # for clarity, we're only interested in the start of the
-                # transition - so ceiling finds the start
+            # We use up to 10s of `Gear (*) Red Warning` == 'Warning'
+            # preceeding the actual gear position change state to define the
+            # gear transition.
+            start_end_warnings = find_edges_on_state_change(
+                'Warning', gear_warn.array, change='entering_and_leaving')
+            starts = start_end_warnings[::2]
+            ends = start_end_warnings[1::2]
+            start_end_warnings = zip(starts, ends)
+
+            for start, end in start_end_warnings:
+                # for clarity, we're only interested in the end of the
+                # transition - so ceiling finds the end
                 start = math.ceil(start)
+                end = math.ceil(end)
+                if (end - start) / self.frequency > 10:
+                    # we are only using 10s gear transitions
+                    start = end - 10 * self.frequency
+
                 # look for state before gear started moving (back one sample)
-                state = 'Down' if gear_down.array[start-1] == 'Down' else 'Up'
-                self.array[last:start+1] = state
-                last = start
-            else:
-                # finish off the rest of the array with the inverse of the
-                # last state
-                if state == 'Down':
-                    self.array[last:] = 'Up'
-                else:
-                    self.array[last:] = 'Down'
+                if gear_down.array[end + 1] == 'Down':
+                    # Prepend the warning to the gear position to define the
+                    # selection
+                    self.array[start:end + 1] = 'Down'
+
+
+class GearUpSelected(MultistateDerivedParameterNode):
+    '''
+    This is the inverse of 'Gear Down Selected' which does all the hard work
+    for us establishing transitions from 'Gear Down' with the assocaited Red
+    Warnings.
+    '''
+
+    values_mapping = {
+        0: 'Down',
+        1: 'Up',
+    }
+
+    def derive(self, gear_dn_sel=P('Gear Down Selected')):
+        # Invert the Gear Down Selected array
+        self.array = 1 - gear_dn_sel.array.raw
 
 
 class Gear_RedWarning(MultistateDerivedParameterNode):
@@ -973,7 +968,9 @@ class Gear_RedWarning(MultistateDerivedParameterNode):
             ##True: 'Warning'})
         red_air = red_warning.any(axis=0) & in_air
         # creating mapped array is probably not be required due to __setattr__
-        self.array = MappedArray(red_air, values_mapping=self.values_mapping)
+        red = np.ma.zeros(len(red_air))
+        red[red_air] = 1
+        self.array = MappedArray(red, values_mapping=self.values_mapping)
 
 
 class ILSInnerMarker(MultistateDerivedParameterNode):
