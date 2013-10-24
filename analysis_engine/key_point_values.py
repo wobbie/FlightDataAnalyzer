@@ -7347,7 +7347,7 @@ class GroundspeedSpeedbrakeDuringTakeoffMax(KeyPointValueNode):
 
 class GroundspeedFlapChangeDuringTakeoffMax(KeyPointValueNode):
     '''
-    Maximum Groundspeed turing takeoff roll when the speedbrake handle is over
+    Maximum Groundspeed turing takeoff roll when the flaps are being changed.
     limit.
     '''
     units = 'kt'
