@@ -24,6 +24,7 @@ from analysis_engine.node import (
     powerset,
     SectionNode,
     Section,
+    _calculate_offset,
 )
 
 from hdfaccess.file import hdf_file
@@ -48,6 +49,24 @@ def _get_mock_params():
     param2.get_aligned.return_value = 2
     return param1, param2
 
+class TestCalculateOffset(unittest.TestCase):
+    tests = (
+        #(in freq, offset),(out freq, offset)
+        ((0.5, 1.09),(1, 0.09)),
+        ((0.5, 1.9 ),(1, 0.9)),
+        ((0.5, 1.09),(2, 0.09)),
+        ((0.5, 1.9 ),(2, 0.4)),
+        ((  1, 0.6 ),(2, 0.1)),
+        ((  1, 0.9 ),(2, 0.4)),
+        ((  2, 0.4 ),(1, 0.4)), # Decread in frequency always maintains offset
+        ((0.5, 1.75),(8, 0.0)),
+        ((0.25, 3.75),(0.5, 1.75)),
+        ((0.5, 1.79),(8, 0.04)),
+    )
+    def test_calculate_offset(self):
+        for test in self.tests:
+            offset = _calculate_offset(test[1][0], test[0][1])
+            self.assertAlmostEqual(offset, test[1][1], places=3)
 
 class TestNode(unittest.TestCase):
 
@@ -212,11 +231,43 @@ class TestNode(unittest.TestCase):
         node.derive.return_value = None
         derived_parameter = node.get_derived([param1, param2])
         self.assertEqual(param1.get_aligned.call_args[0][0].frequency, 4)
-        self.assertEqual(param1.get_aligned.call_args[0][0].offset, 0.5)
+        self.assertEqual(param1.get_aligned.call_args[0][0].offset, 0.0)
         self.assertEqual(param2.get_aligned.call_args[0][0].frequency, 4)
-        self.assertEqual(param2.get_aligned.call_args[0][0].offset, 0.5)
+        self.assertEqual(param2.get_aligned.call_args[0][0].offset, 0.0)
         self.assertEqual(derived_parameter.frequency, 4)
-        self.assertEqual(derived_parameter.offset, 0.5)
+        self.assertEqual(derived_parameter.offset, 0.0)
+        node.derive.assert_called_with(1, 2)
+
+    def test_get_derived_align_to_frequency_large_offset(self):
+        param_big_offset = mock.Mock()
+        param_big_offset.name = 'Big Offset'
+        param_big_offset.frequency = 0.5
+        param_big_offset.offset = 1.09
+        param_big_offset.get_aligned = mock.Mock()
+        param_big_offset.get_aligned.return_value = 1
+        param = mock.Mock()
+        param.name = 'param'
+        param.frequency = 1
+        param.offset = 0.5
+        param.get_aligned = mock.Mock()
+        param.get_aligned.return_value = 2
+
+        class AlignedToFrequencyNode(Node):
+            align = True
+            align_frequency = 1
+            def derive(self, kwarg1=param_big_offset, kwarg2=param):
+                pass
+
+        node = AlignedToFrequencyNode()
+        node.derive = mock.Mock()
+        node.derive.return_value = None
+        derived_parameter = node.get_derived([param_big_offset, param])
+        self.assertAlmostEqual(param_big_offset.get_aligned.call_args[0][0].frequency, 1)
+        self.assertAlmostEqual(param_big_offset.get_aligned.call_args[0][0].offset, 0.09)
+        self.assertAlmostEqual(param.get_aligned.call_args[0][0].frequency, 1)
+        self.assertAlmostEqual(param.get_aligned.call_args[0][0].offset, 0.09)
+        self.assertAlmostEqual(derived_parameter.frequency, 1)
+        self.assertAlmostEqual(derived_parameter.offset, 0.09)
         node.derive.assert_called_with(1, 2)
 
     def test_get_derived_align_to_frequency_offset(self):
