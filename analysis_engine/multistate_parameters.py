@@ -1343,7 +1343,7 @@ class Slat(MultistateDerivedParameterNode):
                model=A('Model'), series=A('Series'), family=A('Family')):
 
         self.values_mapping = mi.get_slat_map(model.value, series.value, family.value)
-        self.array = step_values(slat.array,
+        self.array = step_values(repair_mask(slat.array),
                                  self.values_mapping.keys(),
                                  slat.hz, step_at='move_start')
 
