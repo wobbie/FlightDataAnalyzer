@@ -404,7 +404,8 @@ def can_operate(cls, available):
     # Logging
     ############################################################################
 
-    def _get_logger(self):
+    @classmethod
+    def _get_logger(cls):
         """
         :returns: A logger with name based on module and class name.
         """
@@ -421,53 +422,58 @@ def can_operate(cls, available):
         #     ))
         # return self._logger
         return logging.getLogger('%s.%s' % (
-            self.__class__.__module__,
-            self.__class__.__name__,
+            cls.__module__,
+            cls.__name__,
         ))
 
-    def debug(self, *args, **kwargs):
+    @classmethod
+    def debug(cls, *args, **kwargs):
         """
         Log a debug level message.
 
         :rtype: None
         """
-        logger = self._get_logger()
+        logger = cls._get_logger()
         logger.debug(*args, **kwargs)
 
-    def error(self, *args, **kwargs):
+    @classmethod
+    def error(cls, *args, **kwargs):
         """
         Log an error level message.
 
         :rtype: None
         """
-        logger = self._get_logger()
+        logger = cls._get_logger()
         logger.error(*args, **kwargs)
 
-    def exception(self, *args, **kwargs):
+    @classmethod
+    def exception(cls, *args, **kwargs):
         """
         Log an exception level message.
 
         :rtype: None
         """
-        logger = self._get_logger()
+        logger = cls._get_logger()
         logger.exception(*args, **kwargs)
 
-    def info(self, *args, **kwargs):
+    @classmethod
+    def info(cls, *args, **kwargs):
         """
         Log an info level message.
 
         :rtype: None
         """
-        logger = self._get_logger()
+        logger = cls._get_logger()
         logger.info(*args, **kwargs)
 
-    def warning(self, *args, **kwargs):
+    @classmethod
+    def warning(cls, *args, **kwargs):
         """
         Log a warning level message.
 
         :rtype: None
         """
-        logger = self._get_logger()
+        logger = cls._get_logger()
         logger.warning(*args, **kwargs)
 
 
@@ -1840,7 +1846,7 @@ class KeyPointValueNode(FormattedNameNode):
                     self.create_kpv(index, duration, **kwargs)
             else:
                 duration = (slice_.stop - slice_.start) / frequency
-                if duration > min_duration:
+                if duration >= min_duration:
                     if mark == 'start':
                         index = slice_.start
                     elif mark == 'end':
