@@ -774,6 +774,7 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
     '''
 
     name = 'Flap Lever (Synthetic)'
+    units = 'deg'
 
     @classmethod
     def can_operate(cls, available,
