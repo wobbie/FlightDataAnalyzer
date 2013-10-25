@@ -60,6 +60,7 @@ from analysis_engine.library import (#actuator_mismatch,
                                      merge_sources,
                                      merge_two_parameters,
                                      moving_average,
+                                     nearest_neighbour_mask_repair,
                                      #np_ma_ones_like,
                                      np_ma_masked_zeros_like,
                                      np_ma_zeros_like,
@@ -817,18 +818,20 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
 
         # Prepare the destination array:
         self.values_mapping = mi.get_lever_map(model.value, series.value, family.value)
-        array = MappedArray(np_ma_masked_zeros_like(flap_array),
-                            values_mapping=self.values_mapping)
+        self.array = MappedArray(np_ma_masked_zeros_like(flap_array),
+                                 values_mapping=self.values_mapping)
 
         # Update the destination array according to the mappings:
         for (state, (s, f)) in lever_angles.iteritems():
             condition = (flap_array == f)
             if use_slat:
                 condition &= (slat_array == s)
-            array[condition] = state
+            self.array[condition] = state
 
         # Repair the mask to smooth out transitions:
-        self.array = repair_mask(array, extrapolate=False)
+        nearest_neighbour_mask_repair(self.array, copy=False,
+                                      repair_gap_size=(30 * self.hz),
+                                      direction='backward')
 
 
 class Flaperon(MultistateDerivedParameterNode):
