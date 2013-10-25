@@ -1,6 +1,29 @@
 Changes
 =======
 
+<<<<<<< HEAD
+=======
+0.2.2
+-----
+ - Fix to nodes to calculate a new offset when aligning to a higher frequency
+     to ensure offset does not exceed the time of the first sample
+
+0.2.1
+-----
+
+ - Added analyzer profiles
+ - Support for CL-600 Aircraft Families
+ - Support for A340 Aircraft Families
+ - Support for BD-100 Aircraft Families
+ - Speedbrake refactoring
+ - Added Airbus KPV's
+ - Support for ground runs
+ - Support for slat stepping
+ - Clip replaced with second_window
+  - Improves speed
+  - Corrects truncation of adjacent peaks
+
+>>>>>>> f40d8cf... updated CHANGES for 0.2.2 release
 0.0.6
 -----
 
