@@ -961,16 +961,16 @@ class TestFlapSet(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = FlapSet
         self.operational_combinations = [('Flap Lever',),
-                                         ('Flap',),
-                                         ('Flap Lever', 'Flap')]
+                                         ('Flap Lever (Synthetic)',),
+                                         ('Flap Lever', 'Flap Lever (Synthetic)')]
         flap_lever_array = np.ma.array([0, 0, 5, 5, 10, 10, 15, 10, 10, 5, 5, 0, 0, 17.5])
         flap_lever_values_mapping = {f: str(f) for f in np.ma.unique(flap_lever_array)}
-        flap_array = np.ma.array([0, 0, 0, 5, 5, 10, 10, 15, 10, 10, 5, 5, 0, 17.5])
-        flap_values_mapping = {f: str(f) for f in np.ma.unique(flap_array)}
+        flap_synth_array = np.ma.array([0, 0, 0, 5, 5, 10, 10, 15, 10, 10, 5, 5, 0, 17.5])
+        flap_synth_values_mapping = {f: str(f) for f in np.ma.unique(flap_synth_array)}
         self.flap_lever = M(name='Flap Lever', array=flap_lever_array,
                             values_mapping=flap_lever_values_mapping)
-        self.flap = M(name='Flap', array=flap_array,
-                      values_mapping=flap_values_mapping)
+        self.flap_synth = M(name='Flap Lever (Synthetic)', array=flap_synth_array,
+                            values_mapping=flap_synth_values_mapping)
 
     def test_derive(self):
         node = FlapSet()
@@ -985,7 +985,7 @@ class TestFlapSet(unittest.TestCase, NodeTest):
             KeyTimeInstance(index=12.5, name='Flap 17.5 Set'),
         ])
         node = FlapSet()
-        node.derive(None, self.flap)
+        node.derive(None, self.flap_synth)
         self.assertEqual(node, [
             KeyTimeInstance(index=2.5, name='Flap 5 Set'),
             KeyTimeInstance(index=4.5, name='Flap 10 Set'),
@@ -996,7 +996,7 @@ class TestFlapSet(unittest.TestCase, NodeTest):
             KeyTimeInstance(index=12.5, name='Flap 17.5 Set'),
         ])
         node = FlapSet()
-        node.derive(self.flap_lever, self.flap)
+        node.derive(self.flap_lever, self.flap_synth)
         self.assertEqual(node, [
             KeyTimeInstance(index=1.5, name='Flap 5 Set'),
             KeyTimeInstance(index=3.5, name='Flap 10 Set'),
@@ -1051,17 +1051,19 @@ class TestFlapExtensionWhileAirborne(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = FlapExtensionWhileAirborne
-        self.operational_combinations = [('Flap Lever', 'Airborne'),
-                                         ('Flap', 'Airborne'),
-                                         ('Flap Lever', 'Flap', 'Airborne')]
+        self.operational_combinations = [
+            ('Flap Lever', 'Airborne'),
+            ('Flap Lever (Synthetic)', 'Airborne'),
+            ('Flap Lever', 'Flap Lever (Synthetic)', 'Airborne'),
+        ]
         flap_lever_array = np.ma.array([0, 0, 5, 5, 10, 10, 15, 10, 10, 5, 5, 0, 0])
         flap_lever_values_mapping = {f: str(f) for f in np.ma.unique(flap_lever_array)}
-        flap_array = np.ma.array([0, 0, 0, 5, 5, 10, 10, 15, 10, 10, 5, 5, 0])
-        flap_values_mapping = {f: str(f) for f in np.ma.unique(flap_array)}
+        flap_synth_array = np.ma.array([0, 0, 0, 5, 5, 10, 10, 15, 10, 10, 5, 5, 0])
+        flap_synth_values_mapping = {f: str(f) for f in np.ma.unique(flap_synth_array)}
         self.flap_lever = M(name='Flap Lever', array=flap_lever_array,
                             values_mapping=flap_lever_values_mapping)
-        self.flap = M(name='Flap', array=flap_array,
-                      values_mapping=flap_values_mapping)
+        self.flap_synth = M(name='Flap Lever (Synthetic)', array=flap_synth_array,
+                            values_mapping=flap_synth_values_mapping)
 
     def test_derive(self):
         airborne = buildsection('Airborne', 1, 12)
@@ -1073,14 +1075,14 @@ class TestFlapExtensionWhileAirborne(unittest.TestCase, NodeTest):
             KeyTimeInstance(index=5.5, name='Flap Extension While Airborne'),
         ])
         node = FlapExtensionWhileAirborne()
-        node.derive(None, self.flap, airborne)
+        node.derive(None, self.flap_synth, airborne)
         self.assertEqual(node, [
             KeyTimeInstance(index=2.5, name='Flap Extension While Airborne'),
             KeyTimeInstance(index=4.5, name='Flap Extension While Airborne'),
             KeyTimeInstance(index=6.5, name='Flap Extension While Airborne'),
         ])
         node = FlapExtensionWhileAirborne()
-        node.derive(self.flap_lever, self.flap, airborne)
+        node.derive(self.flap_lever, self.flap_synth, airborne)
         self.assertEqual(node, [
             KeyTimeInstance(index=1.5, name='Flap Extension While Airborne'),
             KeyTimeInstance(index=3.5, name='Flap Extension While Airborne'),
@@ -1151,17 +1153,19 @@ class TestFirstFlapExtensionWhileAirborne(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = FirstFlapExtensionWhileAirborne
-        self.operational_combinations = [('Flap Lever', 'Airborne'),
-                                         ('Flap', 'Airborne'),
-                                         ('Flap Lever', 'Flap', 'Airborne')]
+        self.operational_combinations = [
+            ('Flap Lever', 'Airborne'),
+            ('Flap Lever (Synthetic)', 'Airborne'),
+            ('Flap Lever', 'Flap Lever (Synthetic)', 'Airborne'),
+        ]
         flap_lever_array = np.ma.array([0, 0, 5, 5, 10, 10, 15, 10, 10, 5, 5, 0, 0])
         flap_lever_values_mapping = {f: str(f) for f in np.ma.unique(flap_lever_array)}
-        flap_array = np.ma.array([0, 0, 0, 5, 10, 10, 15, 10, 10, 5, 5, 0, 0])
-        flap_values_mapping = {f: str(f) for f in np.ma.unique(flap_array)}
+        flap_synth_array = np.ma.array([0, 0, 0, 5, 10, 10, 15, 10, 10, 5, 5, 0, 0])
+        flap_synth_values_mapping = {f: str(f) for f in np.ma.unique(flap_synth_array)}
         self.flap_lever = M(name='Flap Lever', array=flap_lever_array,
                             values_mapping=flap_lever_values_mapping)
-        self.flap = M(name='Flap', array=flap_array,
-                      values_mapping=flap_values_mapping)
+        self.flap_synth = M(name='Flap Lever (Synthetic)', array=flap_synth_array,
+                            values_mapping=flap_synth_values_mapping)
 
     def test_derive(self):
         airborne = buildsection('Airborne', 1, 12)
@@ -1171,12 +1175,12 @@ class TestFirstFlapExtensionWhileAirborne(unittest.TestCase, NodeTest):
             KeyTimeInstance(index=1.5, name='First Flap Extension While Airborne'),
             ])
         node = FirstFlapExtensionWhileAirborne()
-        node.derive(None, self.flap, airborne)
+        node.derive(None, self.flap_synth, airborne)
         self.assertEqual(node, [
             KeyTimeInstance(index=2.5, name='First Flap Extension While Airborne'),
         ])
         node = FirstFlapExtensionWhileAirborne()
-        node.derive(self.flap_lever, self.flap, airborne)
+        node.derive(self.flap_lever, self.flap_synth, airborne)
         self.assertEqual(node, [
             KeyTimeInstance(index=1.5, name='First Flap Extension While Airborne'),
         ])
@@ -1186,20 +1190,19 @@ class TestFlapRetractionWhileAirborne(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = FlapRetractionWhileAirborne
-        self.operational_combinations = [('Flap Lever', 'Airborne'),
-                                         ('Flap', 'Airborne'),
-                                         ('Flap Lever', 'Flap', 'Airborne')]
+        self.operational_combinations = [
+            ('Flap Lever', 'Airborne'),
+            ('Flap Lever (Synthetic)', 'Airborne'),
+            ('Flap Lever', 'Flap Lever (Synthetic)', 'Airborne'),
+        ]
         flap_lever_array = np.ma.array([0, 0, 5, 5, 10, 10, 15, 10, 10, 5, 5, 0, 0])
         flap_lever_values_mapping = {f: str(f) for f in np.ma.unique(flap_lever_array)}
-        flap_array = np.ma.array([0, 0, 0, 5, 5, 10, 10, 15, 10, 10, 5, 5, 0])
-        flap_values_mapping = {f: str(f) for f in np.ma.unique(flap_array)}
-        self.flap_lever = M(
-            name='Flap Lever', array=flap_lever_array,
-            values_mapping=flap_lever_values_mapping,
-        )
-        self.flap = M(
-            name='Flap', array=flap_array, values_mapping=flap_values_mapping,
-        )
+        flap_synth_array = np.ma.array([0, 0, 0, 5, 5, 10, 10, 15, 10, 10, 5, 5, 0])
+        flap_synth_values_mapping = {f: str(f) for f in np.ma.unique(flap_synth_array)}
+        self.flap_lever = M(name='Flap Lever', array=flap_lever_array,
+                            values_mapping=flap_lever_values_mapping)
+        self.flap_synth = M(name='Flap Lever (Synthetic)', array=flap_synth_array,
+                            values_mapping=flap_synth_values_mapping)
 
     def test_derive(self):
         airborne = buildsection('Airborne', 2, 12)
@@ -1211,13 +1214,13 @@ class TestFlapRetractionWhileAirborne(unittest.TestCase, NodeTest):
             KeyTimeInstance(index=10.5, name='Flap Retraction While Airborne'),
         ])
         node = FlapRetractionWhileAirborne()
-        node.derive(None, self.flap, airborne)
+        node.derive(None, self.flap_synth, airborne)
         self.assertEqual(node, [
             KeyTimeInstance(index=7.5, name='Flap Retraction While Airborne'),
             KeyTimeInstance(index=9.5, name='Flap Retraction While Airborne'),
         ])
         node = FlapRetractionWhileAirborne()
-        node.derive(self.flap_lever, self.flap, airborne)
+        node.derive(self.flap_lever, self.flap_synth, airborne)
         self.assertEqual(node, [
             KeyTimeInstance(index=6.5, name='Flap Retraction While Airborne'),
             KeyTimeInstance(index=8.5, name='Flap Retraction While Airborne'),
@@ -1231,19 +1234,17 @@ class TestFlapRetractionDuringGoAround(unittest.TestCase, NodeTest):
         self.node_class = FlapRetractionDuringGoAround
         self.operational_combinations = [
             ('Flap Lever', 'Go Around And Climbout'),
-            ('Flap', 'Go Around And Climbout'),
-            ('Flap Lever', 'Flap', 'Go Around And Climbout')]
+            ('Flap Lever (Synthetic)', 'Go Around And Climbout'),
+            ('Flap Lever', 'Flap Lever (Synthetic)', 'Go Around And Climbout'),
+        ]
         flap_lever_array = np.ma.array([0, 0, 5, 5, 10, 10, 15, 10, 10, 5, 5, 0, 0])
         flap_lever_values_mapping = {f: str(f) for f in np.ma.unique(flap_lever_array)}
-        flap_array = np.ma.array([0, 0, 0, 5, 5, 10, 10, 15, 10, 10, 5, 5, 0])
-        flap_values_mapping = {f: str(f) for f in np.ma.unique(flap_array)}
-        self.flap_lever = M(
-            name='Flap Lever', array=flap_lever_array,
-            values_mapping=flap_lever_values_mapping,
-        )
-        self.flap = M(
-            name='Flap', array=flap_array, values_mapping=flap_values_mapping,
-        )
+        flap_synth_array = np.ma.array([0, 0, 0, 5, 5, 10, 10, 15, 10, 10, 5, 5, 0])
+        flap_synth_values_mapping = {f: str(f) for f in np.ma.unique(flap_synth_array)}
+        self.flap_lever = M(name='Flap Lever', array=flap_lever_array,
+                            values_mapping=flap_lever_values_mapping)
+        self.flap_synth = M(name='Flap Lever (Synthetic)', array=flap_synth_array,
+                            values_mapping=flap_synth_values_mapping)
 
     def test_derive(self):
         go_arounds = buildsection('Go Around', 2, 12)
@@ -1255,13 +1256,13 @@ class TestFlapRetractionDuringGoAround(unittest.TestCase, NodeTest):
             KeyTimeInstance(index=10.5, name='Flap Retraction During Go Around'),
         ])
         node = FlapRetractionDuringGoAround()
-        node.derive(None, self.flap, go_arounds)
+        node.derive(None, self.flap_synth, go_arounds)
         self.assertEqual(node, [
             KeyTimeInstance(index=7.5, name='Flap Retraction During Go Around'),
             KeyTimeInstance(index=9.5, name='Flap Retraction During Go Around'),
         ])
         node = FlapRetractionDuringGoAround()
-        node.derive(self.flap_lever, None, go_arounds)
+        node.derive(self.flap_lever, self.flap_synth, go_arounds)
         self.assertEqual(node, [
             KeyTimeInstance(index=6.5, name='Flap Retraction During Go Around'),
             KeyTimeInstance(index=8.5, name='Flap Retraction During Go Around'),

@@ -5,13 +5,7 @@ import logging
 
 import numpy as np
 
-from flightdatautilities.model_information import (
-    get_aileron_map,
-    get_conf_map,
-    get_flap_map,
-    get_flap_values_mapping,
-    get_slat_map,
-)
+from flightdatautilities import model_information as mi
 
 from hdfaccess.parameter import MappedArray
 
@@ -202,16 +196,16 @@ class Configuration(MultistateDerivedParameterNode):
     Multi-state with the following mapping::
 
         {
-            0 : '0',
-            1 : '1',
-            2 : '1+F',
-            3 : '1*',
-            4 : '2',
-            5 : '2*',
-            6 : '3',
-            7 : '4',
-            8 : '5',
-            9 : 'Full',
+            0: '0',
+            1: '1',
+            2: '1+F',
+            3: '1*',
+            4: '2',
+            5: '2*',
+            6: '3',
+            7: '4',
+            8: '5',
+            9: 'Full',
         }
 
     Some values are based on footnotes in various pieces of documentation:
@@ -228,28 +222,33 @@ class Configuration(MultistateDerivedParameterNode):
     '''
 
     values_mapping = {
-        0 : '0',
-        1 : '1',
-        2 : '1+F',
-        3 : '1*',
-        4 : '2',
-        5 : '2*',
-        6 : '3',
-        7 : '4',
-        8 : '5',
-        9 : 'Full',
+        0: '0',
+        1: '1',
+        2: '1+F',
+        3: '1*',
+        4: '2',
+        5: '2*',
+        6: '3',
+        7: '4',
+        8: '5',
+        9: 'Full',
     }
 
     @classmethod
-    def can_operate(cls, available, manu=A('Manufacturer')):
-        if manu and manu.value != 'Airbus':
+    def can_operate(cls, available, manufacturer=A('Manufacturer'), family=A('Family')):
+
+        if manufacturer and not manufacturer.value == 'Airbus':
             return False
-        return all_of(('Slat', 'Flap', 'Series', 'Family'), available)
+
+        if family and family.value in ('A300', 'A310'):
+            return False
+
+        return all_of(('Slat', 'Flap', 'Model', 'Series', 'Family'), available)
 
     def derive(self, slat=P('Slat'), flap=M('Flap'), flaperon=P('Flaperon'),
-               series=A('Series'), family=A('Family')):
+               model=A('Model'), series=A('Series'), family=A('Family')):
 
-        mapping = get_conf_map(series.value, family.value)
+        mapping = mi.get_conf_angles(model.value, series.value, family.value)
         qty_param = len(mapping.itervalues().next())
         if qty_param == 3 and not flaperon:
             # potential problem here!
@@ -611,31 +610,34 @@ class Flap(MultistateDerivedParameterNode):
     units = 'deg'
 
     @classmethod
-    def can_operate(cls, available, frame=A('Frame')):
-        '''
-        can operate with Frame and Alt aal if herc or Flap surface
-        '''
+    def can_operate(cls, available, frame=A('Frame'),
+                    model=A('Model'), series=A('Series'), family=A('Family')):
+
         frame_name = frame.value if frame else None
-        
+
         if frame_name == 'L382-Hercules':
             return 'Altitude AAL' in available
-        
-        return all_of(('Flap Angle', 'Series', 'Family'), available)
 
-    def derive(self,
-               flap=P('Flap Angle'),
-               series=A('Series'),
-               family=A('Family'),
-               frame=A('Frame'),
-               alt_aal=P('Altitude AAL')):
+        try:
+            mi.get_flap_map(model.value, series.value, family.value)
+        except KeyError:
+            cls.warning("No flap mapping available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
+            return False
+
+        return all_of(('Flap Angle', 'Model', 'Series', 'Family'), available)
+
+    def derive(self, flap=P('Flap Angle'),
+               model=A('Model'), series=A('Series'), family=A('Family'),
+               frame=A('Frame'), alt_aal=P('Altitude AAL')):
 
         frame_name = frame.value if frame else None
 
         if frame_name == 'L382-Hercules':
             self.values_mapping = {0: '0', 50: '50', 100: '100'}
-            
+
             self.units = '%' # Hercules flaps are unique in this regard !
-            
+
             # Flap is not recorded, so invent one of the correct length.
             flap_herc = np_ma_zeros_like(alt_aal.array)
 
@@ -650,16 +652,10 @@ class Flap(MultistateDerivedParameterNode):
             self.array = np.ma.array(flap_herc)
             self.frequency, self.offset = alt_aal.frequency, alt_aal.offset
             return
-        try:
-            flap_steps = get_flap_map(series.value, family.value)
-        except KeyError:
-            # no flaps mapping, round to nearest 5 degrees
-            self.warning("No flap settings - rounding to nearest 5")
-            # round to nearest 5 degrees
-            array = round_to_nearest(flap.array, 5.0)
-            flap_steps = [int(f) for f in np.ma.unique(array) if f is not np.ma.masked]
-        self.values_mapping = {f: str(f) for f in flap_steps}
-        self.array = step_values(repair_mask(flap.array), flap_steps, 
+
+        self.values_mapping = mi.get_flap_map(model.value, series.value, family.value)
+        self.array = step_values(repair_mask(flap.array),
+                                 self.values_mapping.keys(),
                                  flap.hz, step_at='move_start')
 
 
@@ -672,9 +668,23 @@ class FlapExcludingTransition(MultistateDerivedParameterNode):
 
     units = 'deg'
 
-    def derive(self, flap=P('Flap Angle'), 
-               series=A('Series'), family=A('Family')):
-        self.values_mapping = get_flap_values_mapping(series, family, flap)
+    @classmethod
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family')):
+
+        try:
+            mi.get_flap_map(model.value, series.value, family.value)
+        except KeyError:
+            cls.warning("No flap mapping available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
+            return False
+
+        return all_of(('Flap Angle', 'Model', 'Series', 'Family'), available)
+
+    def derive(self, flap=P('Flap Angle'),
+               model=A('Model'), series=A('Series'), family=A('Family')):
+
+        self.values_mapping = mi.get_flap_map(model.value, series.value, family.value)
         self.array = step_values(repair_mask(flap.array),
                                  self.values_mapping.keys(),
                                  flap.hz, step_at='excluding_transition')
@@ -691,33 +701,118 @@ class FlapIncludingTransition(MultistateDerivedParameterNode):
 
     units = 'deg'
 
-    def derive(self, flap=P('Flap Angle'), 
-               series=A('Series'), family=A('Family')):
-        self.values_mapping = get_flap_values_mapping(series, family, flap)
+    @classmethod
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family')):
+
+        try:
+            mi.get_flap_map(model.value, series.value, family.value)
+        except KeyError:
+            cls.warning("No flap mapping available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
+            return False
+
+        return all_of(('Flap Angle', 'Model', 'Series', 'Family'), available)
+
+    def derive(self, flap=P('Flap Angle'),
+               model=A('Model'), series=A('Series'), family=A('Family')):
+
+        self.values_mapping = mi.get_flap_map(model.value, series.value, family.value)
         self.array = step_values(repair_mask(flap.array),
                                  self.values_mapping.keys(),
                                  flap.hz, step_at='including_transition')
-            
-            
+
+
 class FlapLever(MultistateDerivedParameterNode):
     '''
     Rounds the Flap Lever Angle to the selected detent at the start of the
     angle movement.
-    
+
     Flap is not used to synthesize Flap Lever as this could be misleading.
-    Instead, all safety Key Point Values will use Flap Lever followed by Flap 
+    Instead, all safety Key Point Values will use Flap Lever followed by Flap
     if Flap Lever is not available.
     '''
 
     units = 'deg'
 
+    @classmethod
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family')):
+
+        try:
+            mi.get_lever_map(model.value, series.value, family.value)
+        except KeyError:
+            cls.warning("No lever mapping available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
+            return False
+
+        return all_of(('Flap Lever Angle', 'Model', 'Series', 'Family'), available)
+
     def derive(self, flap_lever=P('Flap Lever Angle'),
-               series=A('Series'), family=A('Family')):
-        self.values_mapping = get_flap_values_mapping(series, family, flap_lever)
-        # Take the moment the flap starts to move.
+               model=A('Model'), series=A('Series'), family=A('Family')):
+
+        self.values_mapping = mi.get_lever_map(model.value, series.value, family.value)
         self.array = step_values(repair_mask(flap_lever.array),
                                  self.values_mapping.keys(),
                                  flap_lever.hz, step_at='move_start')
+
+
+class FlapLeverSynthetic(MultistateDerivedParameterNode):
+    '''
+    '''
+
+    name = 'Flap Lever (Synthetic)'
+
+    @classmethod
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family')):
+
+        try:
+            mi.get_lever_map(model.value, series.value, family.value)
+        except KeyError:
+            cls.warning("No lever mapping available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
+            return False
+
+        try:
+            mi.get_lever_angles(model.value, series.value, family.value)
+        except KeyError:
+            cls.warning("No lever angles available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
+            return False
+
+        return all_of(('Flap Angle', 'Model', 'Series', 'Family'), available)
+
+    def derive(self, flap=P('Flap Angle'), slat=P('Slat Angle'),
+               model=A('Model'), series=A('Series'), family=A('Family')):
+
+        lever_angles = mi.get_lever_angles(model.value, series.value, family.value)
+        slat_angles, flap_angles = map(set, zip(*lever_angles.itervalues()))
+
+        # Check whether slat angle is available and mapping has slat angles:
+        use_slat = (slat is not None and list(slat_angles)[0] is not None)
+
+        flap_array = step_values(repair_mask(flap.array), flap_angles,
+                                 flap.hz, step_at='move_start')
+
+        if use_slat:
+            slat_array = step_values(repair_mask(slat.array), slat_angles,
+                                     slat.hz, step_at='move_start')
+
+        # Prepare the destination array:
+        self.values_mapping = mi.get_lever_map(model.value, series.value, family.value)
+        array = MappedArray(np_ma_masked_zeros_like(flap_array),
+                            values_mapping=self.values_mapping)
+
+        # Update the destination array according to the mappings:
+        for (state, (s, f)) in lever_angles.iteritems():
+            condition = (flap_array == f)
+            if use_slat:
+                condition &= (slat_array == s)
+            array[condition] = state
+
+        # Repair the mask to smooth out transitions:
+        self.array = repair_mask(array, extrapolate=False)
 
 
 class Flaperon(MultistateDerivedParameterNode):
@@ -735,23 +830,31 @@ class Flaperon(MultistateDerivedParameterNode):
     Note: This is used for Airbus models and does not necessarily mean as
     much to other aircraft types.
     '''
+
     @classmethod
-    def can_operate(cls, available, series=A('Series'), family=A('Family')):
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family')):
+
         try:
-            get_aileron_map(series.value, family.value)
+            mi.get_aileron_map(model.value, series.value, family.value)
         except KeyError:
+            cls.warning("No aileron mapping available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
             return False
-        return 'Aileron (L)' in available and 'Aileron (R)' in available
+
+        return all_of(('Aileron (L)', 'Aileron (R)', 'Model', 'Series', 'Family'), available)
     
     def derive(self, al=P('Aileron (L)'), ar=P('Aileron (R)'),
-               series=A('Series'), family=A('Family')):
+               model=A('Model'), series=A('Series'), family=A('Family')):
+
         # Take the difference of the two signals (which should cancel each
         # other out when rolling) and divide the range by two (to account for
         # the left going negative and right going positive when flaperons set)
         flaperon_angle = (al.array - ar.array) / 2
-        ail_steps = get_aileron_map(series.value, family.value)
-        self.values_mapping = {int(f): str(f) for f in ail_steps}
-        self.array = step_values(flaperon_angle, ail_steps,
+
+        self.values_mapping = mi.get_aileron_map(model.value, series.value, family.value)
+        self.array = step_values(flaperon_angle,
+                                 self.values_mapping.keys(),
                                  al.hz, step_at='move_start')
 
 
@@ -865,46 +968,19 @@ class GearOnGround(MultistateDerivedParameterNode):
 
 class GearDownSelected(MultistateDerivedParameterNode):
     '''
-    Derivation of gear selection for aircraft without this separately recorded.
-    Where 'Gear Down Selected' is recorded, this derived parameter will be
-    skipped automatically.
-
-    This is the inverse of 'Gear Up Selected' which does all the hard work
-    for us establishing transitions from 'Gear Down' with the assocaited Red
-    Warnings.
-    '''
-
-    values_mapping = {
-        0: 'Up',
-        1: 'Down',
-    }
-
-    def derive(self, gear_up_sel=P('Gear Up Selected')):
-        # Invert the Gear Up Selected array
-        #Q: which is easier to understand?!
-        #self.array = np.ma.where(gear_up_sel.array == 'Up', 'Down', 'Up')
-        self.array = 1 - gear_up_sel.array.raw
-
-
-class GearUpSelected(MultistateDerivedParameterNode):
-    '''
-    Derivation of gear selection for aircraft without this separately recorded.
-    Where 'Gear Up Selected' is recorded, this derived parameter will be
-    skipped automatically.
-
     Red warnings are included as the selection may first be indicated by one
     of the red warning lights coming on, rather than the gear status
     changing.
-    
-    This is the basis for 'Gear Down Selected'.
-    
+
+    This is the basis for 'Gear Up Selected'.
+
     TODO: Add a transit delay (~10secs) to the selection to when the gear down.
     TODO: Derive from "Gear Up" only if recorded.
     '''
 
     values_mapping = {
-        0: 'Down',
-        1: 'Up',
+        0: 'Up',
+        1: 'Down',
     }
 
     @classmethod
@@ -914,28 +990,50 @@ class GearUpSelected(MultistateDerivedParameterNode):
     def derive(self,
                gear_down=M('Gear Down'),
                gear_warn=M('Gear (*) Red Warning')):
-        # use the inverse of the gear down array as a start
-        self.array = gear_down.array != 'Down'  # True for 'Up'
+
+        self.array = np.ma.zeros(gear_down.array.size)
+        self.array[gear_down.array == 'Down'] = 'Down'
         if gear_warn:
-            start_warning = find_edges_on_state_change(
-                'Warning', gear_warn.array)
-            last = 0
-            state = 'Down'
-            for start in start_warning:
-                # for clarity, we're only interested in the start of the
-                # transition - so ceiling finds the start
+            # We use up to 10s of `Gear (*) Red Warning` == 'Warning'
+            # preceeding the actual gear position change state to define the
+            # gear transition.
+            start_end_warnings = find_edges_on_state_change(
+                'Warning', gear_warn.array, change='entering_and_leaving')
+            starts = start_end_warnings[::2]
+            ends = start_end_warnings[1::2]
+            start_end_warnings = zip(starts, ends)
+
+            for start, end in start_end_warnings:
+                # for clarity, we're only interested in the end of the
+                # transition - so ceiling finds the end
                 start = math.ceil(start)
+                end = math.ceil(end)
+                if (end - start) / self.frequency > 10:
+                    # we are only using 10s gear transitions
+                    start = end - 10 * self.frequency
+
                 # look for state before gear started moving (back one sample)
-                state = 'Down' if gear_down.array[start-1] == 'Down' else 'Up'
-                self.array[last:start+1] = state
-                last = start
-            else:
-                # finish off the rest of the array with the inverse of the
-                # last state
-                if state == 'Down':
-                    self.array[last:] = 'Up'
-                else:
-                    self.array[last:] = 'Down'
+                if gear_down.array[end + 1] == 'Down':
+                    # Prepend the warning to the gear position to define the
+                    # selection
+                    self.array[start:end + 1] = 'Down'
+
+
+class GearUpSelected(MultistateDerivedParameterNode):
+    '''
+    This is the inverse of 'Gear Down Selected' which does all the hard work
+    for us establishing transitions from 'Gear Down' with the assocaited Red
+    Warnings.
+    '''
+
+    values_mapping = {
+        0: 'Down',
+        1: 'Up',
+    }
+
+    def derive(self, gear_dn_sel=P('Gear Down Selected')):
+        # Invert the Gear Down Selected array
+        self.array = 1 - gear_dn_sel.array.raw
 
 
 class Gear_RedWarning(MultistateDerivedParameterNode):
@@ -973,7 +1071,9 @@ class Gear_RedWarning(MultistateDerivedParameterNode):
             ##True: 'Warning'})
         red_air = red_warning.any(axis=0) & in_air
         # creating mapped array is probably not be required due to __setattr__
-        self.array = MappedArray(red_air, values_mapping=self.values_mapping)
+        red = np.ma.zeros(len(red_air))
+        red[red_air] = 1
+        self.array = MappedArray(red, values_mapping=self.values_mapping)
 
 
 class ILSInnerMarker(MultistateDerivedParameterNode):
@@ -1198,32 +1298,33 @@ class PitchAlternateLaw(MultistateDerivedParameterNode):
 
 
 class Slat(MultistateDerivedParameterNode):
-    """
-    Steps raw Slat angle into detents.
-    """
+    '''
+    Steps raw slat angle into detents.
+    '''
 
     units = 'deg'
 
     @classmethod
-    def can_operate(cls, available, series=A('Series'), family=A('Family')):
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family')):
+
         try:
-            get_slat_map(series.value, family.value)
+            mi.get_slat_map(model.value, series.value, family.value)
         except KeyError:
+            cls.warning("No slat mapping available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
             return False
-        return all_of(['Slat Angle', 'Series', 'Family'], available)
-    
-    def derive(self, slat=P('Slat Angle'), series=A('Series'), family=A('Family')):
-        slat_steps = get_slat_map(series.value, family.value)
-        # No longer support rounding to nearest
-        ##except KeyError:
-            ### no slats mapping, round to nearest 5 degrees
-            ##self.warning("No slat settings - rounding to nearest 5")
-            ### round to nearest 5 degrees
-            ##self.array = round_to_nearest(slat.array, 5.0)
-        self.values_mapping = {int(f): str(f) for f in slat_steps}
-        self.array = step_values(slat.array, slat_steps,
+
+        return all_of(('Slat Angle', 'Model', 'Series', 'Family'), available)
+
+    def derive(self, slat=P('Slat Angle'),
+               model=A('Model'), series=A('Series'), family=A('Family')):
+
+        self.values_mapping = mi.get_slat_map(model.value, series.value, family.value)
+        self.array = step_values(slat.array,
+                                 self.values_mapping.keys(),
                                  slat.hz, step_at='move_start')
-            
+
 
 class StickPusher(MultistateDerivedParameterNode):
     '''
