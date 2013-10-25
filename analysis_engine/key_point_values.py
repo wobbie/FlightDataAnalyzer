@@ -7372,7 +7372,7 @@ class GroundspeedSpeedbrakeHandleDuringTakeoffMax(KeyPointValueNode):
 
         # Masking groundspeed where speedbrake is within limit.
         # WARNING: in this particular case we don't want the KPV to be created
-        # when the condition (stabilizer out of trim) is not met.
+        # when the condition (speedbrake handle limit exceedance) is not met.
         gspd_masked = np.ma.array(gnd_spd.array, mask=masked_in_range.mask)
         self.create_kpvs_within_slices(gspd_masked, takeoff_roll, max_value)
 
@@ -7397,7 +7397,7 @@ class GroundspeedSpeedbrakeDuringTakeoffMax(KeyPointValueNode):
 
         # Masking groundspeed where speedbrake is within limit.
         # WARNING: in this particular case we don't want the KPV to be created
-        # when the condition (stabilizer out of trim) is not met.
+        # when the condition (speedbrake limit exceedance) is not met.
         gspd_masked = np.ma.array(gnd_spd.array, mask=masked_in_range.mask)
         self.create_kpvs_within_slices(gspd_masked, takeoff_roll, max_value)
 
@@ -7420,7 +7420,7 @@ class GroundspeedFlapChangeDuringTakeoffMax(KeyPointValueNode):
 
         # Masking groundspeed where speedbrake is within limit.
         # WARNING: in this particular case we don't want the KPV to be created
-        # when the condition (stabilizer out of trim) is not met.
+        # when the condition is not met.
         gspd_masked = np.ma.array(gnd_spd.array, mask=masked_in_range.mask)
         self.create_kpvs_within_slices(gspd_masked, takeoff_roll, max_value)
 
