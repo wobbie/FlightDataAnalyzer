@@ -452,7 +452,7 @@ class TopOfClimb(KeyTimeInstanceNode):
                 continue
             # if this is the first point in the slice, it's come from
             # data that is already in the cruise, so we'll ignore this as well
-            if n_toc==0:
+            if n_toc == 0:
                 continue
             # Record the moment (with respect to this section of data)
             self.create_kti(n_toc)
@@ -475,7 +475,7 @@ class TopOfDescent(KeyTimeInstanceNode):
                 continue
             # if this is the last point in the slice, it's come from
             # data that ends in the cruise, so we'll ignore this too.
-            if n_tod==ccd_slice.stop - 1:
+            if n_tod == ccd_slice.stop - 1:
                 continue
             # Record the moment (with respect to this section of data)
             self.create_kti(n_tod)
