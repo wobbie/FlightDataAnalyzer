@@ -4064,7 +4064,7 @@ def moving_average(array, window=9, weightings=None, pad=True):
         return averaged
 
 
-def nearest_neighbour_mask_repair(array, copy=True, repair_gap_size=None):
+def nearest_neighbour_mask_repair(array, copy=True, repair_gap_size=None, direction='both'):
     """
     Repairs gaps in data by replacing it with the nearest neighbour from
     either side until the gaps are filled. Designed for lots of fairly short 
@@ -4083,6 +4083,8 @@ def nearest_neighbour_mask_repair(array, copy=True, repair_gap_size=None):
 
     Ref: http://stackoverflow.com/questions/3662361/fill-in-missing-values-with-nearest-neighbour-in-python-numpy-masked-arrays
     """
+    if direction not in ('both', 'forward', 'backward'):
+        raise ValueError('Unexpected direction value provided: %s' % direction)
     if copy:
         array = array.copy()
     def next_neighbour(start=1):
@@ -4093,8 +4095,10 @@ def nearest_neighbour_mask_repair(array, copy=True, repair_gap_size=None):
         """
         x = start
         while True:
-            yield x
-            yield -x
+            if direction in ('both', 'forward'):
+                yield x
+            if direction in ('both', 'backward'):
+                yield -x
             x += 1
     # if first or last masked, repair now (extrapolate)
     start, stop = np.ma.notmasked_edges(array)
