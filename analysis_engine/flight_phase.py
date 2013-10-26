@@ -781,7 +781,21 @@ def scan_ils(beam, ils_dots, height, scan_slice, frequency, duration=10):
     if ils_capture_idx is None or ils_lost_idx is None:
         return None
     else:
-        return slice(ils_capture_idx, ils_lost_idx)
+        # OK, we have seen an ILS signal, but let's make sure we did respond
+        # to it. The test here is to make sure that we didn't just pass
+        # through the beam (L>R or R>L or U>D or D>U) without making an
+        # effort to correct the variation.
+        ils_slice = slice(ils_capture_idx, ils_lost_idx)
+        ils_rate = rate_of_change_array(ils_dots[ils_slice], frequency, width=5.0, method='regression')
+        top = max(ils_rate)
+        bottom = min(ils_rate)
+        if top*bottom > 0.0:
+            # the signal never changed direction, so went straight through
+            # the beam without getting established...
+            return None
+        else:
+            # Hurrah! We did capture the beam
+            return ils_slice
 
 
 class ILSLocalizerEstablished(FlightPhaseNode):
