@@ -3042,7 +3042,7 @@ class TestNearestNeighbourMaskRepair(unittest.TestCase):
         self.assertEqual(len(res), 30)
         self.assertEqual(list(res[:10]), [10]*10)
         self.assertEqual(list(res[-3:]), [27,27,27])
-        
+
     def test_nn_mask_repair_limited_rolls(self):
         array = np.ma.array([101.5]*10 + [0]*10 + [107.4]*10)
         array[10:20] = np.ma.masked
@@ -3058,6 +3058,29 @@ class TestNearestNeighbourMaskRepair(unittest.TestCase):
         ##self.assertEqual(np.ma.count(array), 20)
         ##res = nearest_neighbour_mask_repair(array, repair_gap_size=2)
         ##self.assertEqual(np.ma.count(res), 24)
+
+    def test_nn_mask_repair_forward(self):
+        array = np.ma.arange(30)
+        array[20:22] = np.ma.masked
+        res = nearest_neighbour_mask_repair(array, direction='forward')
+        self.assertEqual(len(res), 30)
+        self.assertEqual(list(res[19:23]), [19,19,19,22])
+
+    def test_nn_mask_repair_backward(self):
+        array = np.ma.arange(30)
+        array[20:22] = np.ma.masked
+        res = nearest_neighbour_mask_repair(array, direction='backward')
+        self.assertEqual(len(res), 30)
+        self.assertEqual(list(res[19:23]), [19,22,22,22])
+
+    def test_nn_mask_repair_direction(self):
+        args = (np.ma.array([]), )
+        try:
+            for direction in ('both', 'forward', 'backward'):
+                nearest_neighbour_mask_repair(*args, direction=direction)
+        except ValueError:
+            self.fail('ValueError from nearest_neighbour_mask_repair() for valid direction.')
+        self.assertRaises(ValueError, nearest_neighbour_mask_repair, *args, direction='invalid')
 
 
 class TestNormalise(unittest.TestCase):
