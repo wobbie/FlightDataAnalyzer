@@ -338,10 +338,12 @@ class ClimbCruiseDescent(FlightPhaseNode):
                     pk_idx = pk_idxs[n]
                     next_pk_val = pk_vals[n + 1]
                     next_pk_idx = pk_idxs[n + 1]
-                    if next_pk_val < pk_val:
+                    if pk_val > next_pk_val:
+                        # descending
                         self.create_phase(slice(None, next_pk_idx))
                         n += 1
                     else:
+                        # ascending
                         # We are going upwards from n->n+1, does it go down
                         # again?
                         if n + 2 < n_vals:
