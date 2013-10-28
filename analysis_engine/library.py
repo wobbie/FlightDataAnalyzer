@@ -1493,15 +1493,19 @@ def find_toc_tod(alt_data, ccd_slice, mode='Climb'):
     # update index_at_value_or_level_off() which currently reverses the slice.
     
     # Find the maximum altitude in this slice to reduce the effort later
-    peak_index = np.ma.argmax(alt_data[ccd_slice])
+    peak_index = max_value(alt_data, ccd_slice).index
 
+    # We shrink the section to exclude data under 500ft. The logic here is
+    # that all climb and descent phases will have been generated with at
+    # least 500ft changes in altitude.
     if mode == 'Climb':
-        section = slice(ccd_slice.start, ccd_slice.start + peak_index + 1,
-                        None)
+        start = floor(index_at_value(alt_data, 500, ccd_slice) or 0)
+        section = slice(start, peak_index + 1)
         slope = SLOPE_FOR_TOC_TOD
     else:
-        section = slice((ccd_slice.start or 0) + peak_index, ccd_slice.stop,
-                        None)
+        stop = ceil(index_at_value(
+            alt_data, 500, slice(ccd_slice.stop, ccd_slice.start, -1)) or 0)
+        section = slice(peak_index, stop)
         slope = -SLOPE_FOR_TOC_TOD
 
     # Quit if there is nothing to do here.
@@ -1515,12 +1519,8 @@ def find_toc_tod(alt_data, ccd_slice, mode='Climb'):
     # For airborne data only, subtract the slope from the climb, then the
     # peak is at the top of climb or descent. 
     
-    # We remove data within 500ft of the lowest level to avoid mising the
-    # endpoint in some cases with extended level flight sections. The logic
-    # here is that all climb and descent phases will have been generated with
-    # at least 500ft changes in altitude.
     alt_min = np.ma.min(alt_data[section])
-    test_slope = np.ma.masked_less(alt_data[section], alt_min+500) - ramp
+    test_slope = np.ma.masked_less(alt_data[section], alt_min) - ramp
     if np.ma.count(test_slope):
         return np.ma.argmax(test_slope) + section.start
     else:
