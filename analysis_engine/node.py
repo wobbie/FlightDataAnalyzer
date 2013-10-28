@@ -744,7 +744,7 @@ class MultistateDerivedParameterNode(DerivedParameterNode):
                     #int_array = value.astype(int)
                 #except ValueError:
                     ## could not convert, therefore likely to be strings inside
-            if value.dtype == np.object_:
+            if value.dtype.type in (np.string_, np.object_):
                 # Array contains strings, convert to ints with mapping.
                 value = multistate_string_to_integer(value, self.values_mapping)
             value = MappedArray(value, values_mapping=self.values_mapping)
