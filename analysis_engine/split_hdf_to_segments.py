@@ -676,6 +676,7 @@ def main():
     import argparse
     import pprint
     import tempfile
+    from analysis_engine.utils import get_aircraft_info
     from flightdatautilities.filesystem_tools import copy_file
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)    
@@ -685,11 +686,12 @@ def main():
                         help='Path of file to process.')
     parser.add_argument('-tail', dest='tail_number', type=str, default='G-FDSL',
                         help='Aircraft Tail Number for processing.')
-    args = parser.parse_args()    
+    args = parser.parse_args()
+    ac_info = get_aircraft_info(args.tail_number)
     hdf_copy = copy_file(args.file, dest_dir=tempfile.gettempdir(), postfix='_split')
     logger.info("Working on copy: %s", hdf_copy)
     segs = split_hdf_to_segments(hdf_copy,
-                                 {'Tail Number': args.tail_number,},
+                                 ac_info,
                                  fallback_dt=datetime(2012,12,12,12,12,12),
                                  draw=False)
     pprint.pprint(segs)
