@@ -1668,7 +1668,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
                armed=M('Speedbrake Armed'),
                handle=P('Speedbrake Handle'),
                spdbrk=P('Speedbrake'),
-               spdsw=M('Spoiler Switch'),
+               spdsw=M('Speedbrake Switch'),
                family=A('Family')):
 
         family_name = family.value if family else ''

@@ -1,6 +1,11 @@
 Changes
 =======
 
+0.2.2
+-----
+ - Fix to nodes to calculate a new offset when aligning to a higher frequency
+     to ensure offset does not exceed the time of the first sample
+
 0.2.1
 -----
 
