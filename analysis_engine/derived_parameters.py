@@ -722,62 +722,60 @@ class AltitudeAAL(DerivedParameterNode):
         idx = min(first_curve, first_valid_sample(climbing[:to]).index)
         return idx
 
+    def shift_alt_std(self, alt_std):
+        '''
+        Return Altitude STD Smoothed shifted relative to 0 for cases where we do not
+        have a reliable Altitude Radio.
+        '''
+        try:
+            idx = self.find_liftoff_start(alt_std)
+            
+            # The liftoff most probably arose in the preceding 10
+            # seconds. Allow 3 seconds afterwards for luck.
+            rotate = slice(max(idx-10*self.frequency,0),
+                           idx+3*self.frequency)
+            # Draw a straight line across this period with a ruler.
+            p,m,c = coreg(alt_std[rotate])
+            ruler = np.ma.arange(rotate.stop-rotate.start)*m+c
+            # Measure how far the altitude is below the ruler.
+            delta = alt_std[rotate] - ruler
+            # The liftoff occurs where the gap is biggest because this is
+            # where the wing lift has caused the local pressure to
+            # increase, hence the altitude appears to decrease.
+            pit = alt_std[np.ma.argmin(delta)+rotate.start]
+            
+            '''
+            # Quick visual check of the operation of the takeoff point detection.
+            import matplotlib.pyplot as plt
+            plt.plot(alt_std[:to])
+            xnew = np.linspace(rotate.start,rotate.stop,num=2)
+            ynew = (xnew-rotate.start)*m + c
+            plt.plot(xnew,ynew,'-')                
+            plt.plot(np.ma.argmin(delta)+rotate.start, pit, 'dg')
+            plt.plot(idx, alt_std[idx], 'dr')
+            plt.show()
+            plt.clf()
+            '''
+
+        except:
+            # If something odd about the data causes a problem with this
+            # technique, use a simpler solution. This can give
+            # significantly erroneous results in the case of sloping
+            # runways, but it's the most robust technique.
+            pit = np.ma.min(alt_std)
+        alt_result = alt_std - pit
+        return np.ma.maximum(alt_result, 0.0)
 
     def compute_aal(self, mode, alt_std, low_hb, high_gnd, alt_rad=None):
-
+        
         alt_result = np_ma_zeros_like(alt_std)
-
-        def shift_alt_std():
-            '''
-            Return Altitude STD Smoothed shifted relative to 0 for cases where we do not
-            have a reliable Altitude Radio.
-            '''
-            try:
-                idx = self.find_liftoff_start()
-                
-                # The liftoff most probably arose in the preceding 10
-                # seconds. Allow 3 seconds afterwards for luck.
-                rotate = slice(max(idx-10*self.frequency,0),
-                               idx+3*self.frequency)
-                # Draw a straight line across this period with a ruler.
-                p,m,c = coreg(alt_std[rotate])
-                ruler = np.ma.arange(rotate.stop-rotate.start)*m+c
-                # Measure how far the altitude is below the ruler.
-                delta = alt_std[rotate] - ruler
-                # The liftoff occurs where the gap is biggest because this is
-                # where the wing lift has caused the local pressure to
-                # increase, hence the altitude appears to decrease.
-                pit = alt_std[np.ma.argmin(delta)+rotate.start]
-                
-                '''
-                # Quick visual check of the operation of the takeoff point detection.
-                import matplotlib.pyplot as plt
-                plt.plot(alt_std[:to])
-                xnew = np.linspace(rotate.start,rotate.stop,num=2)
-                ynew = (xnew-rotate.start)*m + c
-                plt.plot(xnew,ynew,'-')                
-                plt.plot(np.ma.argmin(delta)+rotate.start, pit, 'dg')
-                plt.plot(idx, alt_std[idx], 'dr')
-                plt.show()
-                plt.clf()
-                '''
-
-            except:
-                # If something odd about the data causes a problem with this
-                # technique, use a simpler solution. This can give
-                # significantly erroneous results in the case of sloping
-                # runways, but it's the most robust technique.
-                pit = np.ma.min(alt_std)
-            alt_result = alt_std - pit
-            return np.ma.maximum(alt_result, 0.0)
-
         if alt_rad is None or np.ma.count(alt_rad)==0:
             # This backstop trap for negative values is necessary as aircraft
             # without rad alts will indicate negative altitudes as they land.
             if mode != 'land':
                 return alt_std - high_gnd
             else:
-                return shift_alt_std()
+                return self.shift_alt_std(alt_std)
 
         if mode=='over_gnd' and (low_hb-high_gnd)>100.0:
             return alt_std - high_gnd
@@ -786,19 +784,19 @@ class AltitudeAAL(DerivedParameterNode):
         # We pretend the aircraft can't go below ground level for altitude AAL:
         alt_rad_aal = np.ma.maximum(alt_rad, 0.0)
         ralt_sections = np.ma.clump_unmasked(np.ma.masked_outside(alt_rad_aal, 0.1, 100.0))
-        if len(ralt_sections)==0:
+        if len(ralt_sections) == 0:
             # Either Altitude Radio did not drop below 100, or did not get
             # above 100. Either way, we are better off working with just the
             # pressure altitude signal.
-            return shift_alt_std()
+            return self.shift_alt_std(alt_std)
 
-        if mode=='land':
+        if mode == 'land':
             # We refine our definition of the radio altimeter sections to
             # take account of bounced landings and altimeters which read
             # small positive values on the ground.
             bounce_sections = [y for y in ralt_sections if np.ma.max(alt_rad[y]>BOUNCED_LANDING_THRESHOLD)]
-            bounce_end = bounce_sections [0].start
-            hundred_feet = bounce_sections [-1].stop
+            bounce_end = bounce_sections[0].start
+            hundred_feet = bounce_sections[-1].stop
         
             alt_result[bounce_end:hundred_feet] = alt_rad_aal[bounce_end:hundred_feet]
             alt_result[:bounce_end] = 0.0
@@ -834,9 +832,9 @@ class AltitudeAAL(DerivedParameterNode):
 
         for speedy in speedies:
             quick = speedy.slice
-            if speedy.slice == slice(None, None, None):
+            if quick == slice(None, None, None):
                 self.array = alt_aal
-                break
+                return
 
             # We set the minimum height for detecting flights to 500 ft. This
             # ensures that low altitude "hops" are still treated as complete
@@ -1169,7 +1167,7 @@ class AltitudeSTDSmoothed(DerivedParameterNode):
 
     name = "Altitude STD Smoothed"
     units = 'ft'
-    align=False
+    align = False
 
     @classmethod
     def can_operate(cls, available):
