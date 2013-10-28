@@ -1134,12 +1134,13 @@ class TestKeyPointValueNode(unittest.TestCase):
 
     def test_create_kpv_between_ktis(self):
         knode = self.knode
-        param = P('Param', np.ma.arange(10))
+        param = P('Param', np.ma.arange(10)+2)
         kti_1= KTI('KTI', items=[KeyTimeInstance( 1, 'a')])
         kti_2 = KTI('KTI', items=[KeyTimeInstance( 4, 'b')])
         knode.create_kpv_between_ktis(param.array, param.frequency, kti_1, kti_2, max_value)
+        # value should be that of the second KTI
         self.assertEqual(list(knode),
-                         [KeyPointValue(index=3, value=3, name='Kpv')])
+                         [KeyPointValue(index=4, value=6, name='Kpv')])
 
 
     def test_create_kpvs_at_ktis_suppressed_zeros(self):

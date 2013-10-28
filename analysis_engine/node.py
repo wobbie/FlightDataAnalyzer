@@ -1771,8 +1771,15 @@ class KeyPointValueNode(FormattedNameNode):
         '''
         Convenient function to link a parameter and function to periods
         between two KTIs. Especially useful for fuel usage.
+        
+        This is inclusive, from kti_1 up to and including kti_2.
+        
+        Assumes lists are of equal length (ignores any additional entries in
+        kti_1) and ordered so that it's between index 0 of each, and index 1
+        of each etc.
         '''
-        self.create_kpv_from_slices(array, [slice(kti_1, kti_2)], function)
+        slices = [slice(a.index, b.index+1) for a, b in zip(kti_1, kti_2)]
+        self.create_kpv_from_slices(array, slices, function)
         return
         
         
