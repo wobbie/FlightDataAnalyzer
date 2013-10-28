@@ -1539,6 +1539,60 @@ class AirspeedWithFlapMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
             self.create_kpv(index, value, flap=detent)
 
 
+class AirspeedWithFlapAndSlatExtendedMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
+    '''
+    '''
+
+    NAME_FORMAT = 'Airspeed With %(parameter)s 0 And Slat Extended Max'
+    NAME_VALUES = NAME_VALUES_FLAP.copy()
+    NAME_VALUES.update({
+        'parameter': [
+            'Flap Including Transition',
+            'Flap Excluding Transition',
+        ],
+    })
+    units = 'kt'
+
+    @classmethod
+    def can_operate(cls, available):
+
+        exc = all_of((
+            'Flap Excluding Transition',
+            'Slat Excluding Transition',
+        ), available)
+        inc = all_of((
+            'Flap Including Transition',
+            'Slat Including Transition',
+        ), available)
+        return (exc or inc) and all_of(('Airspeed', 'Fast'), available)
+
+    def derive(self,
+               flap_exc_trsn=M('Flap Excluding Transition'),
+               flap_inc_trsn=M('Flap Including Transition'),
+               slat_exc_trsn=M('Slat Excluding Transition'),
+               slat_inc_trsn=M('Slat Including Transition'),
+               airspeed=P('Airspeed'),
+               fast=S('Fast')):
+
+        pairs = (flap_inc_trsn, slat_inc_trsn), (flap_exc_trsn, slat_exc_trsn)
+        for flap, slat in pairs:
+            # Fast scope traps flap changes very late on the approach and
+            # raising flaps before 80 kt on the landing run.
+            #
+            # We take the intersection of the fast slices and the slices where
+            # the slat was extended.
+            array = np.ma.array(slat.array != '0', mask=slat.array.mask, dtype=int)
+            scope = slices_and(fast.get_slices(), runs_of_ones(array))
+            scope = S(items=[Section('', s, s.start, s.stop) for s in scope])
+
+            data = self.flap_or_conf_max_or_min(flap, airspeed, max_value, scope,
+                                                include_zero=True)
+            for index, value, detent in data:
+                if not detent == '0':
+                    continue  # skip as only interested when flap is retracted.
+                self.create_kpv(index, value, parameter=flap.name)
+
+
 class AirspeedWithFlapDuringClimbMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
     '''
