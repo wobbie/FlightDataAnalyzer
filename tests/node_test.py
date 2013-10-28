@@ -1191,6 +1191,11 @@ class TestKeyPointValueNode(unittest.TestCase):
         knode.create_kpv_from_slices(array, slices, max_value)
         self.assertEqual(list(knode)[1],
                          KeyPointValue(index=29, value=44, name='Kpv'))
+        # test with single indexes as it was one out!
+        knode.create_kpv_from_slices(array, 
+                        [slice(1, 2), slice(3, 4), slice(5, 6)], max_value)
+        self.assertEqual(list(knode)[-1],
+                         KeyPointValue(index=5, value=20, name='Kpv'))
         
     def test_create_kpvs_from_slice_durations_basic(self):
         # Basic

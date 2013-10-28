@@ -1753,15 +1753,15 @@ class KeyPointValueNode(FormattedNameNode):
         joined_array = np.ma.concatenate(arrays)
         index, value = function(joined_array)
         if index is None:
-
+            
             return
         # Find where the joined_array index is in the original array.
         for _slice in slices:
             start = _slice.start or 0
             stop = _slice.stop or len(array)
             duration = (stop - start)
-            if index <= duration:
-                index += start or 0
+            if index < duration:
+                index += start## or 0
                 break
             index -= duration
         self.create_kpv(index, value, **kwargs)
