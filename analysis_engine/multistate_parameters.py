@@ -1351,6 +1351,76 @@ class Slat(MultistateDerivedParameterNode):
                                  slat.hz, step_at='move_start')
 
 
+class SlatExcludingTransition(MultistateDerivedParameterNode):
+    '''
+    Specifically designed to cater for maintenance monitoring, this assumes
+    that when moving the lower of the start and endpoints of the movement
+    apply. This minimises the chance of needing a slat overspeed inspection.
+    '''
+
+    units = 'deg'
+
+    @classmethod
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family')):
+
+        if not all_of(('Slat Angle', 'Model', 'Series', 'Family'), available):
+            return False
+
+        try:
+            mi.get_slat_map(model.value, series.value, family.value)
+        except KeyError:
+            cls.warning("No slat mapping available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
+            return False
+
+        return True
+
+    def derive(self, slat=P('Slat Angle'),
+               model=A('Model'), series=A('Series'), family=A('Family')):
+
+        self.values_mapping = mi.get_slat_map(model.value, series.value, family.value)
+        self.array = step_values(repair_mask(slat.array),
+                                 self.values_mapping.keys(),
+                                 slat.hz, step_at='excluding_transition')
+
+
+class SlatIncludingTransition(MultistateDerivedParameterNode):
+    '''
+    Specifically designed to cater for maintenance monitoring, this assumes
+    that when moving the higher of the start and endpoints of the movement
+    apply. This increases the chance of needing a slat overspeed inspection,
+    but provides a more cautious interpretation of the maintenance
+    requirements.
+    '''
+
+    units = 'deg'
+
+    @classmethod
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family')):
+
+        if not all_of(('Slat Angle', 'Model', 'Series', 'Family'), available):
+            return False
+
+        try:
+            mi.get_slat_map(model.value, series.value, family.value)
+        except KeyError:
+            cls.warning("No slat mapping available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
+            return False
+
+        return True
+
+    def derive(self, slat=P('Slat Angle'),
+               model=A('Model'), series=A('Series'), family=A('Family')):
+
+        self.values_mapping = mi.get_slat_map(model.value, series.value, family.value)
+        self.array = step_values(repair_mask(slat.array),
+                                 self.values_mapping.keys(),
+                                 slat.hz, step_at='including_transition')
+
+
 class StickPusher(MultistateDerivedParameterNode):
     '''
     Merge left and right stick pushers where fitted.
