@@ -1202,7 +1202,7 @@ class TestKeyPointValueNode(unittest.TestCase):
         # Basic
         knode = self.knode
         slices = [slice(2,5), slice(9,13)]
-        knode.create_kpvs_from_slice_durations(slices, 1.0, min_duration=3.0)
+        knode.create_kpvs_from_slice_durations(slices, 1.0, min_duration=4.0)
         self.assertEqual(knode[0].index, 11)
         self.assertEqual(knode[0].value, 4)
         
