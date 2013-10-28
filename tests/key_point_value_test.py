@@ -1370,10 +1370,6 @@ class TestAirspeed1000To8000FtMax(unittest.TestCase, CreateKPVFromSlicesTest):
         self.function = max_value
         self.second_param_method_calls = [('slices_from_to', (1000, 8000), {})]
 
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test Not Implemented')
-
     def test_basic(self):
         testline = np.arange(0, 12.6, 0.1)
         testwave = (np.cos(testline) * -100) + 100
@@ -1381,7 +1377,7 @@ class TestAirspeed1000To8000FtMax(unittest.TestCase, CreateKPVFromSlicesTest):
         alt_aal = P('Altitude AAL For Flight Phases', np.ma.array(testwave) * 50)
         alt_std = P('Altitude STD Smoothed', np.ma.array(testwave) * 50 + 2000)
         climb = buildsections('Climb', [3, 28], [65, 91])
-        event=Airspeed1000To8000FtMax()
+        event = Airspeed1000To8000FtMax()
         event.derive(spd, alt_aal, alt_std, climb)
         self.assertEqual(event[0].index, 22)
         self.assertEqual(event[1].index, 84)
@@ -2163,9 +2159,9 @@ class TestAirspeedWithGearDownMax(unittest.TestCase, NodeTest):
         node = self.node_class()
         node.derive(air_spd, gear, airs)
         self.assertItemsEqual(node, [
-            KeyPointValue(index=1, value=1.0, name='Airspeed With Gear Down Max'),
-            KeyPointValue(index=3, value=3.0, name='Airspeed With Gear Down Max'),
-            KeyPointValue(index=5, value=5.0, name='Airspeed With Gear Down Max'),
+            # Only maximum in flight is taken
+            #FIXME: Surely 5 is the right index, not 4?? Check the method ok KPV.create......
+            KeyPointValue(index=5, value=5.0, name='Airspeed With Gear Down Max'), 
         ])
 
 
@@ -3444,10 +3440,6 @@ class TestAltitudeWithGearDownMax(unittest.TestCase, NodeTest):
         node = self.node_class()
         node.derive(alt_aal, gear, airs)
         self.assertItemsEqual(node, [
-            KeyPointValue(index=1, value=1.0,
-                          name='Altitude With Gear Down Max'),
-            KeyPointValue(index=3, value=3.0,
-                          name='Altitude With Gear Down Max'),
             KeyPointValue(index=5, value=5.0,
                           name='Altitude With Gear Down Max'),
         ])
@@ -3474,10 +3466,10 @@ class TestAltitudeSTDWithGearDownMax(unittest.TestCase, NodeTest):
         node = self.node_class()
         node.derive(alt_aal, gear, airs)
         self.assertItemsEqual(node, [
-            KeyPointValue(index=1, value=1.0,
-                          name='Altitude STD With Gear Down Max'),
-            KeyPointValue(index=3, value=3.0,
-                          name='Altitude STD With Gear Down Max'),
+            ##KeyPointValue(index=1, value=1.0,
+                          ##name='Altitude STD With Gear Down Max'),
+            ##KeyPointValue(index=3, value=3.0,
+                          ##name='Altitude STD With Gear Down Max'),
             KeyPointValue(index=5, value=5.0,
                           name='Altitude STD With Gear Down Max'),
         ])
@@ -3931,8 +3923,6 @@ class TestMachWithGearDownMax(unittest.TestCase, NodeTest):
         node = self.node_class()
         node.derive(mach, gear, airs)
         self.assertItemsEqual(node, [
-            KeyPointValue(index=1, value=1.0, name='Mach With Gear Down Max'),
-            KeyPointValue(index=3, value=3.0, name='Mach With Gear Down Max'),
             KeyPointValue(index=5, value=5.0, name='Mach With Gear Down Max'),
         ])
 

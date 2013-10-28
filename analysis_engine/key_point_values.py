@@ -1791,21 +1791,19 @@ class AirspeedAtFirstFlapExtensionWhileAirborne(KeyPointValueNode):
 
 class AirspeedWithGearDownMax(KeyPointValueNode):
     '''
-    Maximum airspeed observed while the landing gear down.
+    Maximum airspeed observed while the landing gear down. Only records the
+    single maximum value per flight.
     '''
 
     units = 'kt'
 
-    def derive(self,
-               air_spd=P('Airspeed'),
-               gear=M('Gear Down'),
-               airs=S('Airborne')):
+    def derive(self, air_spd=P('Airspeed'),
+               gear=M('Gear Down'), airs=S('Airborne')):
 
         gear.array[gear.array != 'Down'] = np.ma.masked
         gear_downs = np.ma.clump_unmasked(gear.array)
         self.create_kpv_from_slices(
-            air_spd.array, slices_and(airs.get_slices(), gear_downs),
-            max_value)
+           air_spd.array, slices_and(airs.get_slices(), gear_downs), max_value)
 
 
 class AirspeedWhileGearRetractingMax(KeyPointValueNode):
