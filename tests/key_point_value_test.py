@@ -4,7 +4,6 @@ import numpy as np
 import sys
 import unittest
 import math
-import operator
 
 from mock import Mock, call, patch
 
@@ -106,6 +105,7 @@ from analysis_engine.key_point_values import (
     AirspeedWhileGearExtendingMax,
     AirspeedWhileGearRetractingMax,
     AirspeedWithConfigurationMax,
+    AirspeedWithFlapAndSlatExtendedMax,
     AirspeedWithFlapDuringClimbMax,
     AirspeedWithFlapDuringClimbMin,
     AirspeedWithFlapDuringDescentMax,
@@ -1917,13 +1917,10 @@ class TestAirspeedWithFlapMax(unittest.TestCase, NodeTest):
         ]
 
     def test_derive(self):
-        flap = [[0, 5, 10]] * 10
-        flap_array = np.ma.array(reduce(operator.add, zip(*flap)))
-        values_mapping = {f: str(f) for f in set(flap_array)}
-        flap_inc_trans = M('Flap Including Transition', flap_array.copy(),
-                           values_mapping=values_mapping)
-        flap_exc_trans = M('Flap Excluding Transition', flap_array.copy(),
-                           values_mapping=values_mapping)
+        array = np.ma.repeat((0, 5, 10), 10)
+        mapping = {0: '0', 5: '5', 10: '10'}
+        flap_inc_trans = M('Flap Including Transition', array.copy(), values_mapping=mapping)
+        flap_exc_trans = M('Flap Excluding Transition', array.copy(), values_mapping=mapping)
         air_spd = P('Airspeed', np.ma.arange(30))
         fast = buildsection('Fast', 0, 30)
         flap_inc_trans.array[19] = np.ma.masked  # mask the max value
@@ -1945,19 +1942,14 @@ class TestAirspeedWithFlapMax(unittest.TestCase, NodeTest):
         self.assertEqual(air_spd_flap_max[2].value, 29)
 
     @patch.dict('analysis_engine.key_point_values.AirspeedWithFlapMax.NAME_VALUES',
-            {'flap': (5.5, 10.1, 20.9)})
+                {'flap': (5.5, 10.1, 20.9)})
     def test_derive_fractional_settings(self):
-        flap = [[0, 5.5, 10.1, 20.85]] * 5
-        flap_array = np.ma.array(reduce(operator.add, zip(*flap)))
-        values_mapping = {f: str(f) for f in set(flap_array)}
-        flap_lever = M('Flap Lever', flap_array.copy(),
-                       values_mapping=values_mapping)
-        flap_synth = M('Flap Lever (Synthetic)', flap_array.copy(),
-                       values_mapping=values_mapping)
-        flap_inc_trans = M('Flap Including Transition', flap_array.copy(),
-                           values_mapping=values_mapping)
-        flap_exc_trans = M('Flap Excluding Transition', flap_array.copy(),
-                           values_mapping=values_mapping)
+        array = np.ma.repeat((0, 5.5, 10.1, 20.9), 5)
+        mapping = {0: '0', 5.5: '5.5', 10.1: '10.1', 20.9: '20.9'}
+        flap_lever = M('Flap Lever', array.copy(), values_mapping=mapping)
+        flap_synth = M('Flap Lever (Synthetic)', array.copy(), values_mapping=mapping)
+        flap_inc_trans = M('Flap Including Transition', array.copy(), values_mapping=mapping)
+        flap_exc_trans = M('Flap Excluding Transition', array.copy(), values_mapping=mapping)
         air_spd = P('Airspeed', np.ma.arange(30))
         fast = buildsection('Fast', 0, 30)
         
@@ -2006,6 +1998,41 @@ class TestAirspeedWithFlapMin(unittest.TestCase, NodeTest):
         self.assertTrue(False, msg='Test not implemented.')
 
 
+class TestAirspeedWithFlapAndSlatExtendedMax(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = AirspeedWithFlapAndSlatExtendedMax
+        self.operational_combinations = [
+            ('Flap Excluding Transition', 'Slat Excluding Transition', 'Airspeed', 'Fast'),
+            ('Flap Including Transition', 'Slat Including Transition', 'Airspeed', 'Fast'),
+        ]
+
+    def test_derive_basic(self):
+        mapping = {0: '0', 5: '5', 10: '10', 15: '15', 35: '35'}
+        array = np.ma.array((0, 0, 5, 10, 10, 10, 15, 15, 15, 35) * 2)
+        flap_inc_trsn = M('Flap Including Transition', array, values_mapping=mapping)
+        array = np.ma.array((0, 0, 5, 10, 15, 35, 35, 15, 10, 0) * 2)
+        flap_exc_trsn = M('Flap Excluding Transition', array, values_mapping=mapping)
+
+        mapping = {0: '0', 10: '10', 20: '20'}
+        array = np.ma.array((0, 10, 10, 10, 10, 10, 20, 20, 20, 20) * 2)
+        slat_inc_trsn = M('Slat Including Transition', array, values_mapping=mapping)
+        array = np.ma.array((0, 10, 10, 10, 20, 20, 20, 20, 10, 10) * 2)
+        slat_exc_trsn = M('Slat Excluding Transition', array, values_mapping=mapping)
+
+        airspeed = P('Airspeed', np.ma.arange(0, 200, 10))
+        airspeed.array[1] = 500.0  # excluded for inc - outside fast section.
+        airspeed.array[9] = 500.0  # selected for exc - max value.
+        fast = buildsection('Fast', 5, None)
+
+        node = self.node_class()
+        node.derive(flap_exc_trsn, flap_inc_trsn, slat_exc_trsn, slat_inc_trsn, airspeed, fast)
+        self.assertEqual(node.get_ordered_by_index(), [
+            KeyPointValue(index=9.0, value=500.0, name='Airspeed With Flap Excluding Transition 0 And Slat Extended Max'),
+            KeyPointValue(index=11.0, value=110.0, name='Airspeed With Flap Including Transition 0 And Slat Extended Max'),
+        ])
+
+
 class TestAirspeedWithFlapDuringClimbMax(unittest.TestCase, NodeTest):
 
     def setUp(self):
@@ -2017,15 +2044,11 @@ class TestAirspeedWithFlapDuringClimbMax(unittest.TestCase, NodeTest):
         ]
 
     def test_derive_basic(self):
-        flap_inc_trans_array = np.ma.array(
-            [0, 0, 5, 10, 10, 10, 15, 15, 15, 35])
-        flap_inc_trans_values_mapping = {f: str(f) for f in np.ma.unique(flap_inc_trans_array)}
-        flap_inc_trans = M('Flap Including Transition', flap_inc_trans_array,
-                           values_mapping=flap_inc_trans_values_mapping)
-        flap_exc_trans_array = np.ma.array([0, 0, 5, 10, 15, 35, 35, 15, 10, 0])
-        flap_exc_trans_values_mapping = {f: str(f) for f in np.ma.unique(flap_exc_trans_array)}
-        flap_exc_trans = M('Flap Excluding Transition', flap_exc_trans_array,
-                           values_mapping=flap_exc_trans_values_mapping)
+        mapping = {0: '0', 5: '5', 10: '10', 15: '15', 35: '35'}
+        array = np.ma.array((0, 0, 5, 10, 10, 10, 15, 15, 15, 35))
+        flap_inc_trans = M('Flap Including Transition', array, values_mapping=mapping)
+        array = np.ma.array((0, 0, 5, 10, 15, 35, 35, 15, 10, 0))
+        flap_exc_trans = M('Flap Excluding Transition', array, values_mapping=mapping)
         airspeed = P('Airspeed', np.ma.arange(0, 100, 10))
         climb = buildsection('Climbing', 2, 8)
         node = self.node_class()
@@ -2067,12 +2090,11 @@ class TestAirspeedWithFlapDuringDescentMax(unittest.TestCase, NodeTest):
         ]
 
     def test_derive_basic(self):
-        flap_inc_trans_array = np.ma.array([0, 0, 5, 10, 10, 10, 15, 15, 15, 35])
-        flap_inc_trans = M('Flap Including Transition', flap_inc_trans_array,
-                           values_mapping={f: str(f) for f in np.ma.unique(flap_inc_trans_array)})
-        flap_exc_trans_array = np.ma.array([0, 0, 5, 10, 15, 35, 35, 15, 10, 0])
-        flap_exc_trans = M('Flap Excluding Transition', flap_exc_trans_array,
-                           values_mapping={f: str(f) for f in np.ma.unique(flap_exc_trans_array)})
+        mapping = {0: '0', 5: '5', 10: '10', 15: '15', 35: '35'}
+        array = np.ma.array((0, 0, 5, 10, 10, 10, 15, 15, 15, 35))
+        flap_inc_trans = M('Flap Including Transition', array, values_mapping=mapping)
+        array = np.ma.array((0, 0, 5, 10, 15, 35, 35, 15, 10, 0))
+        flap_exc_trans = M('Flap Excluding Transition', array, values_mapping=mapping)
         airspeed = P('Airspeed', np.ma.arange(100, 0, -10))
         desc = buildsection('Descending', 2, 8)
         node = self.node_class()
@@ -2950,10 +2972,9 @@ class TestAltitudeAtFirstFlapChangeAfterLiftoff(unittest.TestCase, NodeTest):
         flap_takeoff = KPV('Flap At Liftoff', items=[
             KeyPointValue(name='Flap At Liftoff', index=2, value=5.0),
         ])
-        flap_array = np.ma.array(
-            [0, 5, 5, 5, 5, 0, 0, 0, 0, 15, 30, 30, 30, 30, 15, 0])
-        flap_synth = M('Flap Lever (Synthetic)', flap_array,
-                 values_mapping={f: str(f) for f in np.ma.unique(flap_array)})
+        mapping = {0: '0', 5: '5', 15: '15', 30: '30'}
+        array = np.ma.array((0, 5, 5, 5, 5, 0, 0, 0, 0, 15, 30, 30, 30, 30, 15, 0))
+        flap_synth = M('Flap Lever (Synthetic)', array, values_mapping=mapping)
         alt_aal_array = np.ma.array([0, 0, 0, 50, 100, 200, 300, 400])
         alt_aal_array = np.ma.concatenate((alt_aal_array,alt_aal_array[::-1]))
         alt_aal = P('Altitude AAL', alt_aal_array)
@@ -2973,10 +2994,9 @@ class TestAltitudeAtFirstFlapChangeAfterLiftoff(unittest.TestCase, NodeTest):
         flap_takeoff = KPV('Flap At Liftoff', items=[
             KeyPointValue(name='Flap At Liftoff', index=2, value=0.0),
         ])
-        flap_array = np.ma.array(
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 30, 30, 30, 30, 15, 0])
-        flap_synth = M('Flap Lever (Synthetic)', flap_array,
-                 values_mapping={f: str(f) for f in np.ma.unique(flap_array)})
+        mapping = {0: '0', 5: '5', 15: '15', 30: '30'}
+        array = np.ma.array((0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 30, 30, 30, 30, 15, 0))
+        flap_synth = M('Flap Lever (Synthetic)', array, values_mapping=mapping)
         alt_aal_array = np.ma.array([0, 0, 0, 50, 100, 200, 300, 400])
         alt_aal_array = np.ma.concatenate((alt_aal_array,alt_aal_array[::-1]))
         alt_aal = P('Altitude AAL', alt_aal_array)
@@ -3004,8 +3024,9 @@ class TestAltitudeAtFlapExtensionWithGearDown(unittest.TestCase, NodeTest):
         ]
 
     def test_derive(self):
-        flap_array = np.ma.array([0, 5, 5, 0, 0, 0, 1, 1, 10, 20, 20, 20, 35, 35, 15, 0.0])
-        flap_synth = M('Flap Lever (Synthetic)', flap_array, values_mapping={f: str(f) for f in np.ma.unique(flap_array)})
+        mapping = {0: '0', 1: '1', 5: '5', 10: '10', 15: '15', 20: '20', 35: '35'}
+        array = np.ma.array((0, 5, 5, 0, 0, 0, 1, 1, 10, 20, 20, 20, 35, 35, 15, 0.0))
+        flap_synth = M('Flap Lever (Synthetic)', array, values_mapping=mapping)
         gear = buildsection('Gear Extended', 7, None)
         
         alt_aal_array = np.ma.array([0, 0, 0, 50, 100, 200, 300, 400])
@@ -3046,8 +3067,9 @@ class TestAirspeedAtFlapExtensionWithGearDown(unittest.TestCase, NodeTest):
         ]
 
     def test_derive(self):
-        flap_array = np.ma.array([0, 5, 5, 0, 0, 0, 1, 1, 10, 20, 20, 20, 35, 35, 15, 0.0])
-        flap_synth = M('Flap Lever (Synthetic)', flap_array, values_mapping={f: str(f) for f in np.ma.array(flap_array)})
+        mapping = {0: '0', 1: '1', 5: '5', 10: '10', 15: '15', 20: '20', 35: '35'}
+        array = np.ma.array((0, 5, 5, 0, 0, 0, 1, 1, 10, 20, 20, 20, 35, 35, 15, 0.0))
+        flap_synth = M('Flap Lever (Synthetic)', array, values_mapping=mapping)
         gear = buildsection('Gear Extended', 7, None)
         
         air_spd_array = np.ma.array([0, 0, 0, 50, 100, 200, 250, 280])
@@ -3119,9 +3141,9 @@ class TestAltitudeAtLastFlapChangeBeforeTouchdown(unittest.TestCase, NodeTest):
         ]
 
     def test_derive(self):
-        flap_array = np.ma.array(([10] * 8) + ([15] * 7))
-        flap_lever = M('Flap Lever', flap_array,
-                       values_mapping={f: str(f) for f in np.ma.unique(flap_array)})
+        mapping = {0: '0', 10: '10', 15: '15'}
+        array = np.ma.array(([10] * 8) + ([15] * 7))
+        flap_lever = M('Flap Lever', array, values_mapping=mapping)
         alt_aal = P('Altitude AAL',
                     array=np.ma.concatenate([np.ma.arange(1000, 0, -100),
                                              [0] * 5]))
@@ -3297,8 +3319,9 @@ class TestAltitudeAtGearDownSelectionWithFlapDown(unittest.TestCase, NodeTest):
                                                        KeyTimeInstance(4),
                                                        KeyTimeInstance(6),
                                                        KeyTimeInstance(8)])
-        flap_lever = M('Flap Lever', array=np.ma.array([5] * 3 + [0] * 5 + [20] * 2),
-                       values_mapping={f: str(f) for f in [0, 5, 20]})
+        mapping = {0: '0', 5: '5', 20: '20'}
+        array = np.ma.array([5] * 3 + [0] * 5 + [20] * 2)
+        flap_lever = M('Flap Lever', array, values_mapping=mapping)
         node = self.node_class()
         node.derive(alt_aal, gear_downs, flap_lever, None)
         self.assertEqual(node, [KeyPointValue(2, 200, 'Altitude At Gear Down Selection With Flap Down'),
@@ -3343,8 +3366,9 @@ class TestAltitudeAtGearDownSelectionWithFlapUp(unittest.TestCase, NodeTest):
                                                        KeyTimeInstance(4),
                                                        KeyTimeInstance(6),
                                                        KeyTimeInstance(8)])
-        flap_lever = M('Flap Lever', array=np.ma.array([5] * 3 + [0] * 5 + [20] * 2),
-                       values_mapping={f: str(f) for f in [0, 5, 20]})
+        mapping = {0: '0', 5: '5', 20: '20'}
+        array = np.ma.array([5] * 3 + [0] * 5 + [20] * 2)
+        flap_lever = M('Flap Lever', array, values_mapping=mapping)
         node = self.node_class()
         node.derive(alt_aal, gear_downs, flap_lever, None)
         self.assertEqual(node, [KeyPointValue(4, 400, 'Altitude At Gear Down Selection With Flap Up'),

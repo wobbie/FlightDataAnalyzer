@@ -59,6 +59,8 @@ from analysis_engine.multistate_parameters import (
     PilotFlying,
     PitchAlternateLaw,
     Slat,
+    SlatExcludingTransition,
+    SlatIncludingTransition,
     SpeedbrakeSelected,
     StableApproach,
     StickPusher,
@@ -663,28 +665,8 @@ class TestEngThrustModeRequired(unittest.TestCase):
                         values_mapping=EngThrustModeRequired.values_mapping).tolist())
 
 
-class TestFlapExcludingTransition(unittest.TestCase):
-        
-    def test_can_operate(self):
-        self.assertTrue(FlapExcludingTransition.can_operate(
-            ('Flap Angle', 'Model', 'Series', 'Family'),
-            model=Attribute('Model', 'B737-333'),
-            series=Attribute('Series', 'B737-300'),
-            family=Attribute('Family', 'B737 Classic')))
-
-
-class TestFlapIncludingTransition(unittest.TestCase):
-        
-    def test_can_operate(self):
-        self.assertTrue(FlapIncludingTransition.can_operate(
-            ('Flap Angle', 'Model', 'Series', 'Family'),
-            model=Attribute('Model', 'B737-333'),
-            series=Attribute('Series', 'B737-300'),
-            family=Attribute('Family', 'B737 Classic')))
-
-
 class TestFlap(unittest.TestCase):
-        
+
     def test_can_operate(self):
         self.assertTrue(Flap.can_operate(
             ('Altitude AAL',),
@@ -723,12 +705,12 @@ class TestFlap(unittest.TestCase):
         timer = Timer(self.test_flap_using_md82_settings)
         time = min(timer.repeat(2, 50))
         self.assertLess(time, 1.5, msg='Took too long: %.3fs' % time)
-        
+
     def test_decimal_flap_settings(self):
         # Beechcraft has a flap 17.5
         flap_param = Parameter('Flap Angle', array=np.ma.array(
-            [0, 5, 7.2, 
-             17, 17.4, 17.9, 20, 
+            [0, 5, 7.2,
+             17, 17.4, 17.9, 20,
              30]))
         flap = Flap()
         flap.derive(flap_param, A('Model', None), A('Series', '1900D'), A('Family', 'Beechcraft'))
@@ -736,35 +718,55 @@ class TestFlap(unittest.TestCase):
                          {0: '0', 17.5: '17.5', 35: '35'})
         ma_test.assert_array_equal(
             flap.array, ['0', '17.5', '17.5', '17.5', '17.5', '17.5', '35', '35'])
-        
+
     def test_flap_settings_for_hercules(self):
         # No flap recorded; ensure it converts exactly the same
         alt_aal = Parameter('Altitude AAL', array=np.ma.array(
             [0, 0, 50, 1500, 1500, 1500, 2500, 2500, 1500, 1500, 50, 50]))
         flap = Flap()
-        flap.derive(None, 
-                    A('Model', ''), 
-                    A('Series', ''), 
-                    A('Family', 'C-130'), 
+        flap.derive(None,
+                    A('Model', ''),
+                    A('Series', ''),
+                    A('Family', 'C-130'),
                     A('Frame', 'L382-Hercules'),
                     alt_aal)
         self.assertEqual(flap.values_mapping,
                          {0: '0', 50: '50', 100: '100'})
         ma_test.assert_array_equal(
-            flap.array, ['50', '50', '50', '0', '0', '0', '0', '0', 
+            flap.array, ['50', '50', '50', '0', '0', '0', '0', '0',
                          '50', '50', '100', '100'])
         self.assertEqual(flap.units, '%')
 
 
+class TestFlapExcludingTransition(unittest.TestCase):
+
+    def test_can_operate(self):
+        self.assertTrue(FlapExcludingTransition.can_operate(
+            ('Flap Angle', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', 'B737-333'),
+            series=Attribute('Series', 'B737-300'),
+            family=Attribute('Family', 'B737 Classic')))
+
+
+class TestFlapIncludingTransition(unittest.TestCase):
+
+    def test_can_operate(self):
+        self.assertTrue(FlapIncludingTransition.can_operate(
+            ('Flap Angle', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', 'B737-333'),
+            series=Attribute('Series', 'B737-300'),
+            family=Attribute('Family', 'B737 Classic')))
+
+
 class TestFlapLever(unittest.TestCase):
-    
+
     def test_can_operate(self):
         self.assertTrue(FlapLever.can_operate(
             ('Flap Lever Angle', 'Model', 'Series', 'Family'),
             model=Attribute('Model', 'B737-333'),
             series=Attribute('Series', 'B737-300'),
             family=Attribute('Family', 'B737 Classic')))
-    
+
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
@@ -1218,33 +1220,51 @@ class TestPitchAlternateLaw(unittest.TestCase, NodeTest):
 class TestSlat(unittest.TestCase):
 
     def test_can_operate(self):
-        #TODO: Improve get_operational_combinations to support optional args
-        ##opts = Slat.get_operational_combinations()
-        ##self.assertEqual(opts, [('Slat Angle', 'Model', 'Series', 'Family')])
-        self.assertFalse(Slat.can_operate(['Slat Angle'], 
-                                          A('Model', None),
-                                          A('Series', None),
-                                          A('Family', None)))
-        self.assertFalse(Slat.can_operate(['Slat Angle'], 
-                                          A('Model', None),
-                                          A('Series', 'A318-BJ'),
-                                          A('Family', 'A318')))
+        self.assertTrue(Slat.can_operate(
+            ('Slat Angle', 'Model', 'Series', 'Family'),
+            A('Model', 'CRJ900 (CL-600-2D24)'),
+            A('Series', 'CRJ900'),
+            A('Family', 'CL-600')))
+        self.assertFalse(Slat.can_operate(
+            ('Slat Angle', 'Model', 'Series', 'Family'),
+            A('Model', 'B737-333'),
+            A('Series', 'B737-300'),
+            A('Family', 'B737 Classic')))
 
     def test_derive_A300B4F(self):
-        # slats are 0, 16, 25
-        slat = Slat()
-        slat.derive(P('Slat Angle', [0]*5 + range(50)),
-                    A('Model', None),
-                    A('Series', 'A300B4(F)'),
-                    A('Family', 'A300'))
-        res = unique_values(list(slat.array.raw))
-        self.assertEqual(res,
-                         [(0, 6), (16, 16), (25, 33)])
-        
-        self.assertEqual(slat.values_mapping,
-                         {0: '0', 16: '16', 25: '25'})
-        
-        
+        model = A('Model', None)
+        series = A('Series', 'A300B4(F)')
+        family = A('Family', 'A300')
+
+        slat = P('Slat Angle', [0] * 5 + range(50))
+
+        node = Slat()
+        node.derive(slat, model, series, family)
+        values = unique_values(list(node.array.raw))
+        self.assertEqual(values, [(0, 6), (16, 16), (25, 33)])
+        self.assertEqual(node.values_mapping, {0: '0', 16: '16', 25: '25'})
+
+
+class TestSlatExcludingTransition(unittest.TestCase):
+
+    def test_can_operate(self):
+        self.assertTrue(SlatExcludingTransition.can_operate(
+            ('Slat Angle', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', 'CRJ900 (CL-600-2D24)'),
+            series=Attribute('Series', 'CRJ900'),
+            family=Attribute('Family', 'CL-600')))
+
+
+class TestSlatIncludingTransition(unittest.TestCase):
+
+    def test_can_operate(self):
+        self.assertTrue(SlatIncludingTransition.can_operate(
+            ('Slat Angle', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', 'CRJ900 (CL-600-2D24)'),
+            series=Attribute('Series', 'CRJ900'),
+            family=Attribute('Family', 'CL-600')))
+
+
 class TestSpeedbrakeSelected(unittest.TestCase):
 
     def test_can_operate(self):
