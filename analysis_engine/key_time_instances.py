@@ -1416,21 +1416,31 @@ class SecsToTouchdown(KeyTimeInstanceNode):
 
 class Autoland(KeyTimeInstanceNode):
     '''
-    All autopilots engaged at touchdown.
+    All requried autopilots engaged at touchdown. Many Boeing aircraft require
+    all three AutoPilot channels to be engaged.
     '''
-    TRIPLE_FAMILIES = set((
-        '737',
-        '757',
-        '767',
-    ))
+    TRIPLE_FAMILIES = (
+        'B737 Classic',
+        'B737 NG',
+        'B757',
+        'B767',
+    )
 
+    @classmethod
+    def can_operate(cls, available):
+        return all_of(('AP Channels Engaged', 'Touchdown'), available)
+    
     def derive(self, ap=M('AP Channels Engaged'), touchdowns=KTI('Touchdown'),
                family=A('Family')):
+        family = family.value if family else None
         for td in touchdowns:
-            if (family.value in self.TRIPLE_FAMILIES and
-                ap.array[td.index] == 'Triple') or \
-                    ap.array[td.index] == 'Dual':
+            if ap.array[td.index] == 'Dual' and family not in self.TRIPLE_FAMILIES:
                 self.create_kti(td.index)
+            elif ap.array[td.index] == 'Triple':
+                self.create_kti(td.index)
+            else:
+                # in Single OR Dual and Triple was required
+                continue
 
 
 #################################################################

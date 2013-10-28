@@ -16,6 +16,7 @@ from analysis_engine.key_time_instances import (
     APEngagedSelection,
     ATDisengagedSelection,
     ATEngagedSelection,
+    Autoland,
     BottomOfDescent,
     ClimbStart,
     ClimbThrustDerateDeselected,
@@ -1450,44 +1451,48 @@ class TestSecsToTouchdown(unittest.TestCase):
 
 
 class TestAutoland(unittest.TestCase):
-    def setUp(self):
-        from analysis_engine.key_time_instances import Autoland
-
-        self.node_class = Autoland
-
     def test_can_operate(self):
-        expected = [('AP Channels Engaged', 'Touchdown', 'Family')]
-        self.assertEqual(
-            expected,
-            self.node_class.get_operational_combinations())
+        expected = [('AP Channels Engaged', 'Touchdown'),
+                    ('AP Channels Engaged', 'Touchdown', 'Family')]
+        opts = Autoland.get_operational_combinations()
+        self.assertEqual(opts, expected)
 
-    def test_derive(self):
+    def test_derive_autoland_dual(self):
+        # test with no family
         td = [KeyTimeInstance(index=5, name='Touchdown')]
-        ap = M(
-            'AP Engaged',
-            ['Off', 'Off', 'Off', 'Engaged', 'Engaged', 'Engaged', 'Off',
-             'Off', 'Off'],
-            values_mapping={0: 'Off', 1: 'Engaged'})
-        node = self.node_class()
-        node.derive(ap, td)
-        expected = [KeyTimeInstance(
-            index=5, name='Autoland')]
+        ap = M('AP Channels Engaged',
+               array=['-', '-', '-', 'Dual', 'Dual', 'Dual', '-', '-', '-'],
+               values_mapping={0: '-', 1: 'Single', 2: 'Dual', 3: 'Triple'})
+        node = Autoland()
+        node.derive(ap, td, None)
+        expected = [KeyTimeInstance(index=5, name='Autoland')]
         self.assertEqual(node, expected)
+        # test with B737 Classic creates no autoland as requires Triple mode
+        node = Autoland()
+        node.derive(ap, td, A('Family', 'B737 Classic'))
+        self.assertEqual(node, [])
 
-    def test_derive_noautoland(self):
-        '''
-        Node should not be derived if autopilot is not engaged ad touchdown.
-        '''
-        td = [KeyTimeInstance(index=5, name='Touchdown')]
-        ap = M(
-            'AP Engaged',
-            ['Engaged', 'Engaged', 'Engaged', 'Off', 'Off', 'Off', 'Off',
-             'Off', 'Off'],
-            values_mapping={0: 'Off', 1: 'Engaged'})
-        node = self.node_class()
-        node.derive(ap, td)
-        expected = []
-        self.assertEqual(node, expected)
+    def test_derive_autoland(self):
+        # simulate each of the states at touchdown using the indexes
+        td = [KeyTimeInstance(index=3, name='Touchdown'),
+              KeyTimeInstance(index=4, name='Touchdown'),
+              KeyTimeInstance(index=5, name='Touchdown'),
+              KeyTimeInstance(index=6, name='Touchdown')]
+        ap = M('AP Channels Engaged',
+               array=['-', '-', '-', 'Triple', 'Dual', 'Single', '-', '-', '-'],
+               values_mapping={0: '-', 1: 'Single', 2: 'Dual', 3: 'Triple'})
+        # test with no family
+        node = Autoland()
+        node.derive(ap, td, None)
+        self.assertEqual([n.index for n in node], [3, 4])
+        # test with no A330
+        node = Autoland()
+        node.derive(ap, td, A('Family', 'A330'))
+        self.assertEqual([n.index for n in node], [3, 4])
+        # test with no A330
+        node = Autoland()
+        node.derive(ap, td, A('Family', 'B757'))
+        self.assertEqual([n.index for n in node], [3])
 
 
 class TestTouchAndGo(unittest.TestCase):
