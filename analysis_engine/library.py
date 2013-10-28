@@ -1498,13 +1498,13 @@ def find_toc_tod(alt_data, ccd_slice, mode='Climb'):
     # We shrink the section to exclude data under 500ft. The logic here is
     # that all climb and descent phases will have been generated with at
     # least 500ft changes in altitude.
+    #WARNING: 500ft STD is not AAL!
     if mode == 'Climb':
         start = floor(index_at_value(alt_data, 500, ccd_slice) or 0)
         section = slice(start, peak_index + 1)
         slope = SLOPE_FOR_TOC_TOD
     else:
-        stop = ceil(index_at_value(
-            alt_data, 500, slice(ccd_slice.stop, ccd_slice.start, -1)) or 0)
+        stop = ceil(index_at_value(alt_data, 500, slice(ccd_slice.stop, ccd_slice.start, -1)) or len(alt_data))
         section = slice(peak_index, stop)
         slope = -SLOPE_FOR_TOC_TOD
 

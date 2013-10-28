@@ -479,7 +479,7 @@ class TopOfDescent(KeyTimeInstanceNode):
             ccd_slice = ccd_phase.slice
             try:
                 n_tod = find_toc_tod(alt_std.array, ccd_slice, 'Descent')
-            except:
+            except ValueError:
                 # altitude data does not have a decreasing section, so quit.
                 continue
             # If this slice ended in mid-cruise, the ccd slice will end in None.
