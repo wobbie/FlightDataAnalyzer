@@ -107,19 +107,20 @@ class TestAltitudePeak(unittest.TestCase):
 
 class TestBottomOfDescent(unittest.TestCase):
     def test_can_operate(self):
-        expected = [('Climb Cruise Descent', 'Airborne')]
+        expected = [('Climb Cruise Descent',)]
         opts = BottomOfDescent.get_operational_combinations()
         self.assertEqual(opts, expected) 
         
     def test_bottom_of_descent_basic(self):
         testwave = np.cos(np.arange(0,6.3,0.1))*(2500)+2560
-        alt_aal = Parameter('Altitude AAL For Flight Phases', np.ma.array(testwave))
-        dlc = buildsection('Descent Low Climb', 14, 50) # See dlc flight phase test.
+        alt_std = Parameter('Altitude STD Smoothed', np.ma.array(testwave))
+        from analysis_engine.flight_phase import ClimbCruiseDescent
+        ccd = ClimbCruiseDescent()
         air = buildsection('Airborne', 0,50)
+        ccd.derive(alt_std, air)
         bod = BottomOfDescent()
-        bod.derive(alt_aal, dlc, air)    
-        expected = [KeyTimeInstance(index=31, name='Bottom Of Descent'),
-                    KeyTimeInstance(index=50, name='Bottom Of Descent')]        
+        bod.derive(ccd)    
+        expected = [KeyTimeInstance(index=31, name='Bottom Of Descent')]
         self.assertEqual(bod, expected)
 
 
