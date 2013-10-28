@@ -4,7 +4,8 @@ import os
 import sys
 import unittest
 
-from analysis_engine.node import (KeyTimeInstance, KTI, load, Parameter, P, Section, S, M)
+from analysis_engine.node import (
+    A, KeyTimeInstance, KTI, load, Parameter, P, Section, S, M)
 
 from analysis_engine.flight_phase import Climbing
 
@@ -322,8 +323,7 @@ class TestAltitudeWhenClimbing(unittest.TestCase):
         self.assertEqual(AltitudeWhenClimbing.get_operational_combinations(),
                          [('Climbing', 'Altitude AAL', 'Altitude STD Smoothed')])
     
-    @mock.patch('analysis_engine.key_time_instances.hysteresis')
-    def test_derive(self, hysteresis):
+    def test_derive(self):
         climbing = S('Climbing', items=[Section('a', slice(4, 10), 4, 10),
                                         Section('b', slice(12, 20), 12, 20)])
         alt_aal = P('Altitude AAL',
@@ -1283,7 +1283,7 @@ class TestGearDownSelection(unittest.TestCase, NodeTest):
         self.operational_combinations = [('Gear Down Selected', 'Airborne')]
         self.gear_dn_sel = M(
             name='Gear Down Selected',
-            array=np.ma.array(['Down'] * 3 + ['Up'] * 2 + ['Down'] * 2),
+            array=['Down'] * 3 + ['Up'] * 2 + ['Down'] * 2,
             values_mapping={0: 'Up', 1: 'Down'},
         )
         self.airborne = buildsection('Airborne', 0, 7)
@@ -1303,7 +1303,7 @@ class TestGearUpSelection(unittest.TestCase, NodeTest):
         self.operational_combinations = [('Gear Up Selected', 'Airborne', 'Go Around And Climbout')]
         self.gear_up_sel = M(
             name='Gear Up Selected',
-            array=np.ma.array(['Down'] * 3 + ['Up'] * 2 + ['Down'] * 2),
+            array=['Down'] * 3 + ['Up'] * 2 + ['Down'] * 2,
             values_mapping={0: 'Down', 1: 'Up'},
         )
         self.airborne = buildsection('Airborne', 0, 7)
@@ -1330,7 +1330,7 @@ class TestGearUpSelectionDuringGoAround(unittest.TestCase, NodeTest):
         self.operational_combinations = [('Gear Up Selected', 'Go Around And Climbout')]
         self.gear_up_sel = M(
             name='Gear Up Selected',
-            array=np.ma.array(['Down'] * 3 + ['Up'] * 2 + ['Down'] * 2),
+            array=['Down'] * 3 + ['Up'] * 2 + ['Down'] * 2,
             values_mapping={0: 'Down', 1: 'Up'},
         )
 
