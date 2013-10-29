@@ -3646,7 +3646,7 @@ class ILSFrequency(DerivedParameterNode):
         # Mask invalid frequencies
         f1_trim = filter_vor_ils_frequencies(first, 'ILS')
         if f1v and not f2v:
-            mask = first.mask
+            mask = f1_trim.mask
         else:
             # We look for both
             # receivers being tuned together to form a valid signal
