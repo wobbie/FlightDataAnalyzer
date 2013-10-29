@@ -3295,7 +3295,8 @@ class FlapAngle(DerivedParameterNode):
     def can_operate(cls, available, family=A('Family')):
 
         flap_angle = any_of((
-            'Flap Angle (L)', 'Flap Angle (R)',
+            'Flap Angle (L)', 'Flap Angle (R)', 
+            'Flap Angle (C)', 'Flap Angle (MCP)',
             'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard',
         ), available)
 
@@ -3367,6 +3368,8 @@ class FlapAngle(DerivedParameterNode):
     def derive(self,
                flap_A=P('Flap Angle (L)'),
                flap_B=P('Flap Angle (R)'),
+               flap_C=P('Flap Angle (C)'),
+               flap_D=P('Flap Angle (MCP)'),
                flap_A_inboard=P('Flap Angle (L) Inboard'),
                flap_B_inboard=P('Flap Angle (R) Inboard'),
                slat=P('Slat Angle'),
@@ -3392,9 +3395,12 @@ class FlapAngle(DerivedParameterNode):
             # Only the right inboard flap is instrumented.
             self.array = flap_B.array
         else:
-            # By default, blend the two parameters.
-            self.array, self.frequency, self.offset = blend_two_parameters(
-                flap_A, flap_B)
+            # By default, blend all the available parameters.
+            sources = [flap_A, flap_B, flap_C, flap_D]
+            self.frequency = max([s.frequency for s in sources if s]) * 2
+            self.offset = 0.0
+            self.array = blend_parameters(sources, offset=self.offset, 
+                                          frequency=self.frequency)
 
 
 '''
@@ -3621,7 +3627,7 @@ class ILSFrequency(DerivedParameterNode):
                 'ILS (2) Frequency' in available) or \
                ('ILS-VOR (1) Frequency' in available)
     
-    def derive(self, f1=P('ILS (1) Frequency'),f2=P('ILS (2) Frequency'),
+    def derive(self, f1=P('ILS (1) Frequency'), f2=P('ILS (2) Frequency'),
                f1v=P('ILS-VOR (1) Frequency'), f2v=P('ILS-VOR (2) Frequency')):
         
         #TODO: Extend to allow for three-receiver installations
