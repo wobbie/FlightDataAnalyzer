@@ -1297,10 +1297,14 @@ class TestAirspeedV2Plus20DifferenceAtVNAVModeAndEngThrustModeRequired(unittest.
             KeyTimeInstance(index=15, name=kti_name)])
         node = self.node_class()
         node.derive(airspeed, v2, vnav_thrusts)
-        self.assertEqual(
-            node,
-            [KeyPointValue(index=5, value=170.0, name='Airspeed V2 Plus 20 Difference At Vnav Mode And Eng Thrust Mode Required'),
-             KeyPointValue(index=15, value=70.0, name='Airspeed V2 Plus 20 Difference At Vnav Mode And Eng Thrust Mode Required')])
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].index, 5)
+        self.assertEqual(node[0].value, 170)
+        self.assertEqual(node[1].index, 15)
+        self.assertEqual(node[1].value, 70)
+        self.assertEqual(node[0].name,
+            'V2+20 Minus Airspeed At VNAV Mode And Eng Thrust Mode Required')
+            ##'Airspeed V2 Plus 20 Difference At Vnav Mode And Eng Thrust Mode Required')
 
 
 ########################################
@@ -1379,10 +1383,10 @@ class TestAirspeed1000To8000FtMax(unittest.TestCase, CreateKPVFromSlicesTest):
         climb = buildsections('Climb', [3, 28], [65, 91])
         event = Airspeed1000To8000FtMax()
         event.derive(spd, alt_aal, alt_std, climb)
-        self.assertEqual(event[0].index, 22)
-        self.assertEqual(event[1].index, 84)
-        self.assertGreater(event[0].value, 150.0)
-        self.assertGreater(event[1].value, 150.0)
+        self.assertEqual(event[0].index, 17)
+        self.assertAlmostEqual(event[0].value, 112.88, 1)
+        self.assertEqual(event[1].index, 80.0)
+        self.assertAlmostEqual(event[1].value, 114.55, 1)
         
 
 class TestAirspeed8000To10000FtMax(unittest.TestCase):
