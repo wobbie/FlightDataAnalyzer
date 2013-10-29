@@ -3243,6 +3243,7 @@ class GrossWeightSmoothed(DerivedParameterNode):
 class Groundspeed(DerivedParameterNode):
     """
     This caters for cases where some preprocessing is required.
+    
     :param frame: The frame attribute, e.g. '737-i'
     :type frame: An attribute
     :returns groundspeed as the mean between two valid sensors.
