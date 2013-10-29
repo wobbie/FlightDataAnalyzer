@@ -1753,7 +1753,6 @@ class KeyPointValueNode(FormattedNameNode):
         joined_array = np.ma.concatenate(arrays)
         index, value = function(joined_array)
         if index is None:
-            
             return
         # Find where the joined_array index is in the original array.
         for _slice in slices:
@@ -1761,13 +1760,29 @@ class KeyPointValueNode(FormattedNameNode):
             stop = _slice.stop or len(array)
             duration = (stop - start)
             if index < duration:
-                index += start## or 0
+                index += start
                 break
             index -= duration
         self.create_kpv(index, value, **kwargs)
 
 
-    def create_kpv_between_ktis(self, array, frequency, kti_1, kti_2, function):
+    def create_kpv_between(self, array, index_1, index_2, function):
+        '''
+        Convenient function to link a parameter and function to periods
+        between two indexes. Especially useful for fuel usage.
+        
+        This is inclusive, from index_1 up to and including index_2.
+        
+        :param index_1: Start index
+        :type index_1: Int
+        :param index_2: End index
+        :type index_2: Int
+        '''
+        self.create_kpvs_within_slices(array, [slice(index_1, index_2+1)], function)
+        return
+        
+
+    def create_kpvs_between_ktis(self, array, kti_1, kti_2, function):
         '''
         Convenient function to link a parameter and function to periods
         between two KTIs. Especially useful for fuel usage.
@@ -1777,12 +1792,16 @@ class KeyPointValueNode(FormattedNameNode):
         Assumes lists are of equal length (ignores any additional entries in
         kti_1) and ordered so that it's between index 0 of each, and index 1
         of each etc.
+        
+        :param kti_1: Start KTIs
+        :type kti_1: KTI Node or List
+        :param kti_2: End KTIs
+        :type kti_2: KTI Node or List
         '''
         slices = [slice(a.index, b.index+1) for a, b in zip(kti_1, kti_2)]
-        self.create_kpv_from_slices(array, slices, function)
-        return
-        
-        
+        self.create_kpvs_within_slices(array, slices, function)
+        return    
+    
     def create_kpv_outside_slices(self, array, slices, function, **kwargs):
         '''
         Shortcut for creating a KPV excluding values within provided slices or

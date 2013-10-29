@@ -1132,15 +1132,32 @@ class TestKeyPointValueNode(unittest.TestCase):
                           KeyPointValue(index=8, value=8, name='Kpv')])
 
 
-    def test_create_kpv_between_ktis(self):
+    def test_create_kpv_between_indexes(self):
         knode = self.knode
         param = P('Param', np.ma.arange(10)+2)
-        kti_1= KTI('KTI', items=[KeyTimeInstance( 1, 'a')])
-        kti_2 = KTI('KTI', items=[KeyTimeInstance( 4, 'b')])
-        knode.create_kpv_between_ktis(param.array, param.frequency, kti_1, kti_2, max_value)
+        kti_1= KeyTimeInstance( 1, 'a')
+        kti_2 = KeyTimeInstance( 4, 'b')
+        knode.create_kpv_between(param.array, kti_1.index, kti_2.index, max_value)
         # value should be that of the second KTI
         self.assertEqual(list(knode),
                          [KeyPointValue(index=4, value=6, name='Kpv')])
+        
+        
+    def test_create_kpvs_between_ktis(self):
+        knode = self.knode
+        param = P('Param', np.ma.arange(10)+2)
+        kti_1= KTI('KTI', items=[KeyTimeInstance( 1, 'a'),
+                                 KeyTimeInstance( 7, 'a'),
+                                 KeyTimeInstance( 9, 'a'), # this is ignored
+                                 ])
+        kti_2 = KTI('KTI', items=[KeyTimeInstance( 4, 'b'),
+                                  KeyTimeInstance( 8, 'b')])
+        knode.create_kpvs_between_ktis(param.array, kti_1, kti_2, max_value)
+        # value should be that of the second KTI
+        self.assertEqual(len(knode), 2)
+        self.assertEqual(list(knode),
+                         [KeyPointValue(index=4, value=6, name='Kpv'),
+                          KeyPointValue(index=8, value=10, name='Kpv')])
 
 
     def test_create_kpvs_at_ktis_suppressed_zeros(self):
