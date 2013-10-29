@@ -3628,21 +3628,24 @@ class ILSFrequency(DerivedParameterNode):
 
         if f1 and f2:
             first = f1.array
-            second = f2.array
+            # align second to the first
+            #TODO: Could check which is the higher frequency and align to that
+            second = align(f2, f1, interpolate=False)
         else:
-            if f1v and f2v==None:
+            if f1v and not f2v:
                 # Some aircraft have inoperative ILS-VOR (2) systems, which
                 # record frequencies outside the valid range.
                 first = f1v.array
             elif f1v and f2v:
                 first = f1v.array
-                second = f2v.array
+                # align second to the first
+                second = align(f2v, f1v, interpolate=False)
             else:
-                raise "Unrecognised set of ILS frequency parameters"
-
+                raise ValueError("Incorrect set of ILS frequency parameters")
+        
         # Mask invalid frequencies
         f1_trim = filter_vor_ils_frequencies(first, 'ILS')
-        if f1v and f2v==None:
+        if f1v and not f2v:
             mask = first.mask
         else:
             # We look for both
