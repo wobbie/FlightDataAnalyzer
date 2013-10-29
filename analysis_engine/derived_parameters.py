@@ -3622,26 +3622,25 @@ class ILSFrequency(DerivedParameterNode):
     
     def derive(self, f1=P('ILS (1) Frequency'),f2=P('ILS (2) Frequency'),
                f1v=P('ILS-VOR (1) Frequency'), f2v=P('ILS-VOR (2) Frequency')):
-
+        
         #TODO: Extend to allow for three-receiver installations
-
-
+        #TODO: Support just one of the ILS (1/2) Frequency params incase the
+        # other signal is invalid
         if f1 and f2:
             first = f1.array
             # align second to the first
             #TODO: Could check which is the higher frequency and align to that
             second = align(f2, f1, interpolate=False)
+        elif f1v and f2v:
+            first = f1v.array
+            # align second to the first
+            second = align(f2v, f1v, interpolate=False)            
+        elif f1v and not f2v:
+            # Some aircraft have inoperative ILS-VOR (2) systems, which
+            # record frequencies outside the valid range.
+            first = f1v.array
         else:
-            if f1v and not f2v:
-                # Some aircraft have inoperative ILS-VOR (2) systems, which
-                # record frequencies outside the valid range.
-                first = f1v.array
-            elif f1v and f2v:
-                first = f1v.array
-                # align second to the first
-                second = align(f2v, f1v, interpolate=False)
-            else:
-                raise ValueError("Incorrect set of ILS frequency parameters")
+            raise ValueError("Incorrect set of ILS frequency parameters")
         
         # Mask invalid frequencies
         f1_trim = filter_vor_ils_frequencies(first, 'ILS')
