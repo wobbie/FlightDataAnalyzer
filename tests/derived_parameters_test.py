@@ -920,6 +920,27 @@ class TestAltitudeAAL(unittest.TestCase):
         self.assertNotEqual(alt_aal.array[200], 0.0)
         np.testing.assert_equal(alt_aal.array[0], 0.0)
 
+    def test_alt_aal_complex_doubled_with_touch_and_go(self):
+        testwave = np.ma.cos(np.arange(0, 3.14 * 2, 0.02)) * -5000 + 5000
+        rad_wave = np.copy(testwave)-500
+        #rad_wave[110:140] -= 8765 # The ground is 8,765 ft high at this point.
+        rad_data = np.ma.masked_greater(rad_wave, 2600)
+        double_test = np.ma.concatenate((testwave, testwave))
+        double_rad = np.ma.concatenate((rad_data, rad_data))
+        phase_fast = buildsection('Fast', 0, 2*len(testwave))
+        alt_aal = AltitudeAAL()
+        alt_aal.derive(P('Altitude Radio', double_rad),
+                       P('Altitude STD', double_test),
+                       phase_fast)
+        '''
+        import matplotlib.pyplot as plt
+        plt.plot(double_test, '-b')
+        plt.plot(double_rad, 'o-r')
+        plt.plot(alt_aal.array, '-k')
+        plt.show()
+        '''
+        np.testing.assert_equal(alt_aal.array[300:310], [0.0]*10)
+        
 
     def test_alt_aal_complex_no_rad_alt(self):
         testwave = np.ma.cos(np.arange(0, 3.14 * 2 * 5, 0.1)) * -3000 + \
