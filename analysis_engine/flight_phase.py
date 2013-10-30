@@ -786,7 +786,10 @@ def scan_ils(beam, ils_dots, height, scan_slice, frequency, duration=10):
         # through the beam (L>R or R>L or U>D or D>U) without making an
         # effort to correct the variation.
         ils_slice = slice(ils_capture_idx, ils_lost_idx)
-        ils_rate = rate_of_change_array(ils_dots[ils_slice], frequency, width=5.0, method='regression')
+        width = 5.0
+        if frequency < 0.5:
+            width = 10.0
+        ils_rate = rate_of_change_array(ils_dots[ils_slice], frequency, width=width, method='regression')
         top = max(ils_rate)
         bottom = min(ils_rate)
         if top*bottom > 0.0:
