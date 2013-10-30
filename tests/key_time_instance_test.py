@@ -112,16 +112,38 @@ class TestBottomOfDescent(unittest.TestCase):
         self.assertEqual(opts, expected) 
         
     def test_bottom_of_descent_basic(self):
-        testwave = np.cos(np.arange(0,6.3,0.1))*(2500)+2560
-        alt_aal = Parameter('Altitude AAL For Flight Phases', np.ma.array(testwave))
-        dlc = buildsection('Descent Low Climb', 14, 50) # See dlc flight phase test.
-        air = buildsection('Airborne', 0,50)
+        ccd = buildsections('Climb Cruise Descent', [14, 31], [40,50]) # See dlc flight phase test.
+        air = buildsection('Airborne', 0,51)
         bod = BottomOfDescent()
-        bod.derive(alt_aal, dlc, air)    
+        bod.derive(ccd, air)    
         expected = [KeyTimeInstance(index=31, name='Bottom Of Descent'),
                     KeyTimeInstance(index=50, name='Bottom Of Descent')]        
         self.assertEqual(bod, expected)
 
+    def test_bottom_of_descent_complex(self):
+        airs = buildsections('Airborne', [896, 1654], [1688, 2055])
+        ccds = buildsections('Climb Cruise Descent', [897, 1253], [1291, 1651], [1689, 2054])
+        bod = BottomOfDescent()
+        bod.derive(ccds, airs)    
+        expected = [KeyTimeInstance(index=1253, name='Bottom Of Descent'),
+                    KeyTimeInstance(index=1651, name='Bottom Of Descent'),
+                    KeyTimeInstance(index=2054, name='Bottom Of Descent')]        
+        self.assertEqual(bod, expected)
+
+    def test_bod_air_only(self):
+        air = buildsection('Airborne', 0,51)
+        bod = BottomOfDescent()
+        bod.derive(None, air)    
+        expected = [KeyTimeInstance(index=51, name='Bottom Of Descent')]        
+        self.assertEqual(bod, expected)
+        
+    def test_bod_ccd_only(self):
+        ccds = buildsection('Climb Cruise Descent', 897, 1253)
+        bod = BottomOfDescent()
+        bod.derive(ccds, None)    
+        expected = [KeyTimeInstance(index=1253, name='Bottom Of Descent')]        
+        self.assertEqual(bod, expected)
+        
 
 class TestClimbStart(unittest.TestCase):
     def test_can_operate(self):

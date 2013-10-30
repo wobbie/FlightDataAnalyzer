@@ -8,6 +8,7 @@ from analysis_engine.library import (all_of,
                                      find_toc_tod,
                                      first_valid_sample,
                                      index_at_value,
+                                     is_index_within_slice,
                                      max_value,
                                      minimum_unmasked,
                                      np_ma_masked_zeros_like,
@@ -43,36 +44,29 @@ def sorted_valid_list(x):
 
 class BottomOfDescent(KeyTimeInstanceNode):
     '''
+    Bottom of a descent phase, which may be a go-around, touch and go or landing.
     '''
-    def derive(self, ccd=S('Climb Cruise Descent'),
+    def derive(self, ccds=S('Climb Cruise Descent'),
                airs=S('Airborne')):
-        for air in airs:
-            if air.slice.stop:
-                self.create_kti(air.stop_edge)
-        if len(ccd)<=1:
-            return # With only one climb and descent, there can be no dip.
-        previous_ccd = ccd.get_first()
-        while ccd.get_next(previous_ccd.slice.stop-1):
-            next_ccd = ccd.get_next(previous_ccd.slice.stop-1)
-            self.create_kti(previous_ccd.slice.stop)
-            # Prepare for the next dip...
-            previous_ccd = next_ccd
-        
-    """
-    def derive(self, alt_std=P('Altitude AAL For Flight Phases'),
-               dlc=S('Descent Low Climb'),
-               airs=S('Airborne')):
-        # In the case of descents without landing, this finds the minimum
-        # point of the dip.
-        for this_dlc in dlc:
-            kti = np.ma.argmin(alt_std.array[this_dlc.slice])
-            self.create_kti(kti + this_dlc.start_edge)
-        # For descents to landing, end where the aircraft is no longer airborne.
-        for air in airs:
-            if air.slice.stop:
-                self.create_kti(air.stop_edge)
-                """
-
+        air_list = [a.stop_edge for a in airs] if airs else []
+        climb_list = [c.stop_edge for c in ccds] if ccds else []
+        ends = sorted(air_list+climb_list)
+        index = 0
+        while index<len(ends)-1:
+            delta = ends[index+1] - ends[index]
+            # The differences should be less than a second, arising from
+            # different ways of identifying the touchdown point. Ten seconds
+            # is a generous tolerance.
+            print
+            print 'Delta = ',delta
+            print
+            if delta < 10.0:
+                ends.pop(index+1)
+            else:
+                self.create_kti(ends[index])
+                index += 1
+        self.create_kti(ends[-1])
+                
 
 # TODO: Determine an altitude peak per climb.
 class AltitudePeak(KeyTimeInstanceNode):
