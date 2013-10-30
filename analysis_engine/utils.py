@@ -1,15 +1,96 @@
 import argparse
+import logging
 import os
 
 from datetime import datetime
+from inspect import isclass
 
 from hdfaccess.file import hdf_file
 from hdfaccess.utils import strip_hdf
 
+from analysis_engine.api_handler import APIError, get_api_handler
 from analysis_engine.dependency_graph import dependencies3, graph_nodes
-from analysis_engine.node import NodeManager
-from analysis_engine.process_flight import get_derived_nodes
-from analysis_engine.settings import NODE_MODULES
+from analysis_engine.node import Node, NodeManager
+from analysis_engine import settings
+
+
+logger = logging.getLogger(__name__)
+
+
+def get_aircraft_info(tail_number):
+    '''
+    Fetch aircraft info from settings.API_HANDLER or from LOCAL_API_HANDLER
+    if there is an API_ERROR raised.
+    
+    :param tail_number: Aircraft tail registration
+    :type tail_number: string
+    :returns: Aircraft information key:value pairs
+    :rtype: dict
+    '''
+    # Fetch aircraft info through the API.
+    api_handler = get_api_handler(settings.API_HANDLER)
+    
+    try:
+        aircraft_info = api_handler.get_aircraft(tail_number)
+    except APIError:
+        if settings.API_HANDLER == settings.LOCAL_API_HANDLER:
+            raise
+        # Fallback to the local API handler.
+        logger.info(
+            "Aircraft '%s' could not be found with '%s' API handler. "
+            "Falling back to '%s'.", tail_number, settings.API_HANDLER,
+            settings.LOCAL_API_HANDLER)
+        api_handler = get_api_handler(settings.LOCAL_API_HANDLER)
+        aircraft_info = api_handler.get_aircraft(tail_number)
+    logger.info("Using aircraft_info provided by '%s' '%s'.",
+                api_handler.__class__.__name__, aircraft_info)        
+    return aircraft_info
+
+
+def get_derived_nodes(module_names):
+    '''
+    Create a key:value pair of each node_name to Node class for all Nodes
+    within modules provided.
+    
+    sample module_names = ['path_to.module', 'analysis_engine.flight_phase',..]
+    
+    :param module_names: Module names to import as locations on PYTHON PATH
+    :type module_names: List of Strings
+    :returns: Module name to Classes
+    :rtype: Dict
+    '''
+    def isclassandsubclass(value, classinfo):
+        return isclass(value) and issubclass(value, classinfo)
+
+    nodes = {}
+    for name in module_names:
+        #Ref:
+        #http://code.activestate.com/recipes/223972-import-package-modules-at-runtime/
+        # You may notice something odd about the call to __import__(): why is
+        # the last parameter a list whose only member is an empty string? This
+        # hack stems from a quirk about __import__(): if the last parameter is
+        # empty, loading class "A.B.C.D" actually only loads "A". If the last
+        # parameter is defined, regardless of what its value is, we end up
+        # loading "A.B.C"
+        ##abstract_nodes = ['Node', 'Derived Parameter Node', 'Key Point Value Node', 'Flight Phase Node'
+        ##print 'importing', name
+        module = __import__(name, globals(), locals(), [''])
+        for c in vars(module).values():
+            if isclassandsubclass(c, Node) \
+                    and c.__module__ != 'analysis_engine.node':
+                try:
+                    #TODO: Alert when dupe node_name found which overrides previous
+                    ##name = c.get_name()
+                    ##if name in nodes:
+                        ### alert about overide happening or raise out?
+                    ##nodes[name] = c
+                    nodes[c.get_name()] = c
+                except TypeError:
+                    #TODO: Handle the expected error of top level classes
+                    # Can't instantiate abstract class DerivedParameterNode
+                    # - but don't know how to detect if we're at that level without resorting to 'if c.get_name() in 'derived parameter node',..
+                    logger.exception('Failed to import class: %s' % c.get_name())
+    return nodes
 
 
 def derived_trimmer(hdf_path, node_names, dest):
@@ -28,7 +109,7 @@ def derived_trimmer(hdf_path, node_names, dest):
     '''
     params = []
     with hdf_file(hdf_path) as hdf:
-        derived_nodes = get_derived_nodes(NODE_MODULES)
+        derived_nodes = get_derived_nodes(settings.NODE_MODULES)
         node_mgr = NodeManager(
             datetime.now(), hdf.duration, hdf.valid_param_names(), [],
             derived_nodes, {}, {})
@@ -134,7 +215,7 @@ def list_everything():
     '''
     Return an ordered list of all parameters both derived and required.
     '''
-    return _get_names(NODE_MODULES, True, True)
+    return _get_names(settings.NODE_MODULES, True, True)
 
 
 def list_kpvs():

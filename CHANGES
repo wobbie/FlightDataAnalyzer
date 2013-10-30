@@ -1,9 +1,27 @@
 Changes
 =======
 
+The highlighted changes are shown for the following production releases. Each
+release will have included many additional new features and improvements.
+
+0.3.1
+-----
+ - Flap Angle supports more than two signals, including (C) and (MCP) channels
+ - Improvements to Top Of Climb (find_toc_tod) and Bottom of Descent (uses just 
+   ClimbCruiseDescent) make climbs and descents more robust.
+ - ILS Frequency only reports valid frequency if both (1) and (2) channels are 
+   recording same frequency.
+ - Airspeed with Flap 0 and Slat something.
+ - Support for Slat included in Flap Lever (Synthetic) to ensure slat only 
+   transitions are included.
+
+0.2.2
+-----
+ - Fix to nodes to calculate a new offset when aligning to a higher frequency
+   to ensure offset does not exceed the time of the first sample
+
 0.2.1
 -----
-
  - Added analyzer profiles
  - Support for CL-600 Aircraft Families
  - Support for A340 Aircraft Families

@@ -86,72 +86,77 @@ class FlapOrConfigurationMaxOrMin(object):
     '''
     Abstract superclass.
     '''
+
     def flap_or_conf_max_or_min(self, conflap, parameter, function, scope=None,
                                 include_zero=False):
         '''
-        Generic flap and conf key point value creation process.
+        Generic flap and configuration key point value search process.
 
-        :param conflap: conf or flap data, restricted to detent settings.
-        :type conflap: parameter (conf = float or flap = degrees or %)
+        This will determine key point values for a parameter based on the
+        provided flap or configuration parameter. The function argument
+        determines what operation should be applied and can be one of the many
+        library functions, e.g. ``max_value`` or ``min_value``.
+
+        The ``scope`` argument is used to restrict the period that should be
+        monitored which is essential for minimum speed checks.
+
+        Setting the ``include_zero`` flag will detect key point values where
+        the aircraft configuration is clean.
+
+        Note: This routine does not actually create the key point values.
+
+        :param conflap: flap or configuration, restricted to detent settings.
+        :type conflap: parameter
         :param parameter: parameter to be measured at flap/conf detent.
-        :type parameter: parameter
-        :param function: function to be applied to the parameter values
-        :type function: function ('max_value' or 'min_value')
-        :param scope: Periods to restrict period to be monitored. Essential for
-            minimum speed checks, otherwise all the results relate to taxi
-            periods! (Optional)
-        :type scope: list of slice
-        :param include_zero: option to include zero flap settings. Used for
-            monitoring AOA with clean configuration. (Default: False)
+        :type parameter: Parameter
+        :param function: function to be applied to the parameter values.
+        :type function: function
+        :param scope: periods to restrict the search to. (optional)
+        :type scope: list of slices
+        :param include_zero: include zero flap detents. (default: false)
         :type include_zero: boolean
-        :returns: Nothing as KPVs are created within the routine.
+        :returns: a tuple of data to create KPVs from.
+        :rtype: tuple
         '''
+        assert isinstance(conflap, M), 'Expected a multi-state.'
+
         if scope == []:
-            return  # Can't have an event if the scope is empty.
+            return  # can't have an event if the scope is empty.
 
         if scope:
             scope_array = np_ma_masked_zeros_like(parameter.array)
             for valid in scope:
-                scope_array.mask[
-                    int(valid.slice.start or 0):
-                    int(valid.slice.stop or len(scope_array)) + 1] = False
+                a = int(valid.slice.start or 0)
+                b = int(valid.slice.stop or len(scope_array)) + 1
+                scope_array.mask[a:b] = False
 
-        kpvs = []
-        
-        if hasattr(conflap, 'values_mapping'):
-            # Multistate
-            conflap_detents = conflap.values_mapping.keys()
-        else:
-            conflap_detents = np.ma.unique(conflap.array)
-        
-        for detent in conflap_detents:
+        data = []
+
+        for detent in conflap.values_mapping.values():
+
             if np.ma.is_masked(detent):
                 continue
-            if detent == 0.0 and include_zero == False:
+            if detent == '0' and include_zero == False:
                 continue
 
-            p_with_conflap = np.ma.copy(parameter.array)
-            p_with_conflap.mask = np.ma.mask_or(parameter.array.mask,
-                                                conflap.array.mask)
-            p_with_conflap[conflap.array != detent] = np.ma.masked
+            array = np.ma.copy(parameter.array)
+            array.mask = np.ma.mask_or(parameter.array.mask, conflap.array.mask)
+            array[conflap.array != detent] = np.ma.masked
             if scope:
-                p_with_conflap.mask = np.ma.mask_or(p_with_conflap.mask,
-                                                    scope_array.mask)
+                array.mask = np.ma.mask_or(array.mask, scope_array.mask)
 
             # TODO: Check logical or is sensible for all values. (Probably fine
             #       as airspeed will always be higher than max flap setting!)
-            index, value = function(p_with_conflap)
+            index, value = function(array)
 
             # Check we have a result to record. Note that most flap settings
             # will not be used in the climb, hence this is normal operation.
             if not index or not value:
                 continue
 
-            # Ensure KPVs with integer detents don't have decimal places and
-            # that those that are floats only have one decimal place:
-            detent = int(detent) if float(detent).is_integer() else '%.1f' % detent
-            kpvs.append((index, value, detent))
-        return kpvs
+            data.append((index, value, detent))
+
+        return data
 
 
 ##############################################################################
@@ -1460,7 +1465,6 @@ class AirspeedWithFlapMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
     '''
 
-    # Note: We must use %s not %d as we've encountered a flap of 17.5 degrees.
     NAME_FORMAT = 'Airspeed With %(parameter)s %(flap)s Max'
     NAME_VALUES = NAME_VALUES_FLAP.copy()
     NAME_VALUES.update({
@@ -1492,27 +1496,24 @@ class AirspeedWithFlapMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
 
         # We want to use flap lever detents if they are available, but we need
         # to ensure that the parameter is called flap with the name hack below:
-        flap = flap_lever or flap_synth
-        if flap:
-            flap.name = 'Flap'
+        flap_avail = flap_lever or flap_synth
+        if flap_avail:
+            flap_avail.name = 'Flap'
 
-        for parameter in (flap, flap_inc_trans, flap_exc_trans):
-            if not parameter:
+        for flap in (flap_avail, flap_inc_trans, flap_exc_trans):
+            if not flap:
                 continue
             # Fast scope traps flap changes very late on the approach and
             # raising flaps before 80 kt on the landing run.
-            data = self.flap_or_conf_max_or_min(parameter, airspeed, max_value,
-                                                scope=scope)
+            data = self.flap_or_conf_max_or_min(flap, airspeed, max_value, scope)
             for index, value, detent in data:
-                self.create_kpv(index, value, parameter=parameter.name,
-                                flap=detent)
+                self.create_kpv(index, value, parameter=flap.name, flap=detent)
 
 
 class AirspeedWithFlapMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
     '''
 
-    # Note: We must use %s not %d as we've encountered a flap of 17.5 degrees.
     NAME_FORMAT = 'Airspeed With Flap %(flap)s Min'
     NAME_VALUES = NAME_VALUES_FLAP
 
@@ -1530,20 +1531,72 @@ class AirspeedWithFlapMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
                airspeed=P('Airspeed'),
                scope=S('Airborne')):
 
-        flap = flap_lever or flap_synth
         # Airborne scope avoids deceleration on the runway "corrupting" the
         # minimum airspeed with landing flap.
-        data = self.flap_or_conf_max_or_min(flap, airspeed, min_value,
-                                            scope=scope)
+        flap = flap_lever or flap_synth
+        data = self.flap_or_conf_max_or_min(flap, airspeed, min_value, scope)
         for index, value, detent in data:
             self.create_kpv(index, value, flap=detent)
+
+
+class AirspeedWithFlapAndSlatExtendedMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
+    '''
+    '''
+
+    NAME_FORMAT = 'Airspeed With %(parameter)s 0 And Slat Extended Max'
+    NAME_VALUES = NAME_VALUES_FLAP.copy()
+    NAME_VALUES.update({
+        'parameter': [
+            'Flap Including Transition',
+            'Flap Excluding Transition',
+        ],
+    })
+    units = 'kt'
+
+    @classmethod
+    def can_operate(cls, available):
+
+        exc = all_of((
+            'Flap Excluding Transition',
+            'Slat Excluding Transition',
+        ), available)
+        inc = all_of((
+            'Flap Including Transition',
+            'Slat Including Transition',
+        ), available)
+        return (exc or inc) and all_of(('Airspeed', 'Fast'), available)
+
+    def derive(self,
+               flap_exc_trsn=M('Flap Excluding Transition'),
+               flap_inc_trsn=M('Flap Including Transition'),
+               slat_exc_trsn=M('Slat Excluding Transition'),
+               slat_inc_trsn=M('Slat Including Transition'),
+               airspeed=P('Airspeed'),
+               fast=S('Fast')):
+
+        pairs = (flap_inc_trsn, slat_inc_trsn), (flap_exc_trsn, slat_exc_trsn)
+        for flap, slat in pairs:
+            # Fast scope traps flap changes very late on the approach and
+            # raising flaps before 80 kt on the landing run.
+            #
+            # We take the intersection of the fast slices and the slices where
+            # the slat was extended.
+            array = np.ma.array(slat.array != '0', mask=slat.array.mask, dtype=int)
+            scope = slices_and(fast.get_slices(), runs_of_ones(array))
+            scope = S(items=[Section('', s, s.start, s.stop) for s in scope])
+
+            data = self.flap_or_conf_max_or_min(flap, airspeed, max_value, scope,
+                                                include_zero=True)
+            for index, value, detent in data:
+                if not detent == '0':
+                    continue  # skip as only interested when flap is retracted.
+                self.create_kpv(index, value, parameter=flap.name)
 
 
 class AirspeedWithFlapDuringClimbMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
     '''
 
-    # Note: We must use %s not %d as we've encountered a flap of 17.5 degrees.
     NAME_FORMAT = 'Airspeed With %(parameter)s %(flap)s During Climb Max'
     NAME_VALUES = NAME_VALUES_FLAP.copy()
     NAME_VALUES.update({
@@ -1575,27 +1628,24 @@ class AirspeedWithFlapDuringClimbMax(KeyPointValueNode, FlapOrConfigurationMaxOr
 
         # We want to use flap lever detents if they are available, but we need
         # to ensure that the parameter is called flap with the name hack below:
-        flap = flap_lever or flap_synth
-        if flap:
-            flap.name = 'Flap'
+        flap_avail = flap_lever or flap_synth
+        if flap_avail:
+            flap_avail.name = 'Flap'
 
-        for parameter in (flap, flap_inc_trans, flap_exc_trans):
-            if not parameter:
+        for flap in (flap_avail, flap_inc_trans, flap_exc_trans):
+            if not flap:
                 continue
             # Fast scope traps flap changes very late on the approach and
             # raising flaps before 80 kt on the landing run.
-            data = self.flap_or_conf_max_or_min(parameter, airspeed, max_value,
-                                                scope=scope)
+            data = self.flap_or_conf_max_or_min(flap, airspeed, max_value, scope)
             for index, value, detent in data:
-                self.create_kpv(index, value, parameter=parameter.name,
-                                flap=detent)
+                self.create_kpv(index, value, parameter=flap.name, flap=detent)
 
 
 class AirspeedWithFlapDuringClimbMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
     '''
 
-    # Note: We must use %s not %d as we've encountered a flap of 17.5 degrees.
     NAME_FORMAT = 'Airspeed With Flap %(flap)s During Climb Min'
     NAME_VALUES = NAME_VALUES_FLAP
 
@@ -1614,8 +1664,7 @@ class AirspeedWithFlapDuringClimbMin(KeyPointValueNode, FlapOrConfigurationMaxOr
                scope=S('Climb')):
 
         flap = flap_lever or flap_synth
-        data = self.flap_or_conf_max_or_min(flap, airspeed, min_value,
-                                            scope=scope)
+        data = self.flap_or_conf_max_or_min(flap, airspeed, min_value, scope)
         for index, value, detent in data:
             self.create_kpv(index, value, flap=detent)
 
@@ -1624,7 +1673,6 @@ class AirspeedWithFlapDuringDescentMax(KeyPointValueNode, FlapOrConfigurationMax
     '''
     '''
 
-    # Note: We must use %s not %d as we've encountered a flap of 17.5 degrees.
     NAME_FORMAT = 'Airspeed With %(parameter)s %(flap)s During Descent Max'
     NAME_VALUES = NAME_VALUES_FLAP.copy()
     NAME_VALUES.update({
@@ -1656,27 +1704,24 @@ class AirspeedWithFlapDuringDescentMax(KeyPointValueNode, FlapOrConfigurationMax
 
         # We want to use flap lever detents if they are available, but we need
         # to ensure that the parameter is called flap with the name hack below:
-        flap = flap_lever or flap_synth
-        if flap:
-            flap.name = 'Flap'
+        flap_avail = flap_lever or flap_synth
+        if flap_avail:
+            flap_avail.name = 'Flap'
 
-        for parameter in (flap, flap_inc_trans, flap_exc_trans):
-            if not parameter:
+        for flap in (flap_avail, flap_inc_trans, flap_exc_trans):
+            if not flap:
                 continue
             # Fast scope traps flap changes very late on the approach and
             # raising flaps before 80 kt on the landing run.
-            data = self.flap_or_conf_max_or_min(parameter, airspeed, max_value,
-                                                scope=scope)
+            data = self.flap_or_conf_max_or_min(flap, airspeed, max_value, scope)
             for index, value, detent in data:
-                self.create_kpv(index, value, parameter=parameter.name,
-                                flap=detent)
+                self.create_kpv(index, value, parameter=flap.name, flap=detent)
 
 
 class AirspeedWithFlapDuringDescentMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
     '''
 
-    # Note: We must use %s not %d as we've encountered a flap of 17.5 degrees.
     NAME_FORMAT = 'Airspeed With Flap %(flap)s During Descent Min'
     NAME_VALUES = NAME_VALUES_FLAP
 
@@ -1695,8 +1740,7 @@ class AirspeedWithFlapDuringDescentMin(KeyPointValueNode, FlapOrConfigurationMax
                scope=S('Descent To Flare')):
 
         flap = flap_lever or flap_synth
-        data = self.flap_or_conf_max_or_min(flap, airspeed, min_value,
-                                            scope=scope)
+        data = self.flap_or_conf_max_or_min(flap, airspeed, min_value, scope)
         for index, value, detent in data:
             self.create_kpv(index, value, flap=detent)
 
@@ -1705,7 +1749,6 @@ class AirspeedRelativeWithFlapDuringDescentMin(KeyPointValueNode, FlapOrConfigur
     '''
     '''
 
-    # Note: We must use %s not %d as we've encountered a flap of 17.5 degrees.
     NAME_FORMAT = 'Airspeed Relative With Flap %(flap)s During Descent Min'
     NAME_VALUES = NAME_VALUES_FLAP
 
@@ -1724,8 +1767,7 @@ class AirspeedRelativeWithFlapDuringDescentMin(KeyPointValueNode, FlapOrConfigur
                scope=S('Descent To Flare')):
 
         flap = flap_lever or flap_synth
-        data = self.flap_or_conf_max_or_min(flap, airspeed, min_value,
-                                            scope=scope)
+        data = self.flap_or_conf_max_or_min(flap, airspeed, min_value, scope)
         for index, value, detent in data:
             self.create_kpv(index, value, flap=detent)
 
@@ -1749,21 +1791,19 @@ class AirspeedAtFirstFlapExtensionWhileAirborne(KeyPointValueNode):
 
 class AirspeedWithGearDownMax(KeyPointValueNode):
     '''
-    Maximum airspeed observed while the landing gear down.
+    Maximum airspeed observed while the landing gear down. Only records the
+    single maximum value per flight.
     '''
 
     units = 'kt'
 
-    def derive(self,
-               air_spd=P('Airspeed'),
-               gear=M('Gear Down'),
-               airs=S('Airborne')):
+    def derive(self, air_spd=P('Airspeed'),
+               gear=M('Gear Down'), airs=S('Airborne')):
 
         gear.array[gear.array != 'Down'] = np.ma.masked
         gear_downs = np.ma.clump_unmasked(gear.array)
         self.create_kpv_from_slices(
-            air_spd.array, slices_and(airs.get_slices(), gear_downs),
-            max_value)
+           air_spd.array, slices_and(airs.get_slices(), gear_downs), max_value)
 
 
 class AirspeedWhileGearRetractingMax(KeyPointValueNode):
@@ -1848,12 +1888,9 @@ class AirspeedWithConfigurationMax(KeyPointValueNode, FlapOrConfigurationMaxOrMi
 
         # Fast scope traps configuration changes very late on the approach and
         # before 80 kt on the landing run.
-        data = self.flap_or_conf_max_or_min(conf, airspeed, max_value,
-                                            scope=scope)
+        data = self.flap_or_conf_max_or_min(conf, airspeed, max_value, scope)
         for index, value, detent in data:
-            conf_setting = conf.values_mapping[detent]
-            self.create_kpv(index, value, parameter=conf.name,
-                            conf=conf_setting)
+            self.create_kpv(index, value, conf=detent)
 
 
 class AirspeedRelativeWithConfigurationDuringDescentMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
@@ -1870,10 +1907,9 @@ class AirspeedRelativeWithConfigurationDuringDescentMin(KeyPointValueNode, FlapO
                airspeed=P('Airspeed Relative'),
                scope=S('Descent To Flare')):
 
-        data = self.flap_or_conf_max_or_min(conf, airspeed, min_value, scope=scope)
+        data = self.flap_or_conf_max_or_min(conf, airspeed, min_value, scope)
         for index, value, detent in data:
-            conf_setting = conf.values_mapping[detent]
-            self.create_kpv(index, value, conf=conf_setting)
+            self.create_kpv(index, value, conf=detent)
 
 
 ########################################
@@ -2159,7 +2195,6 @@ class AOAWithFlapMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     may suffice.
     '''
 
-    # Note: We must use %s not %d as we've encountered a flap of 17.5 degrees.
     NAME_FORMAT = 'AOA With Flap %(flap)s Max'
     NAME_VALUES = NAME_VALUES_FLAP
 
@@ -2178,13 +2213,12 @@ class AOAWithFlapMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
                aoa=P('AOA'),
                scope=S('Airborne')):
 
-        flap = flap_lever or flap_synth
         # Airborne scope avoids triggering during the takeoff or landing runs.
-        data = self.flap_or_conf_max_or_min(flap, aoa, max_value,
-                                     scope=scope, include_zero=True)
+        flap = flap_lever or flap_synth
+        data = self.flap_or_conf_max_or_min(flap, aoa, max_value, scope,
+                                            include_zero=True)
         for index, value, detent in data:
-            self.create_kpv(index, value, parameter=flap.name,
-                            flap=detent)
+            self.create_kpv(index, value, flap=detent)
 
 
 class AOADuringGoAroundMax(KeyPointValueNode):
@@ -2821,8 +2855,7 @@ class AltitudeAtFlapExtensionWithGearDown(KeyPointValueNode):
                 # The flap we are moving to is +1 from the diff index
                 index = (air_down.start or 0) + extend_index + 1
                 value = alt_aal.array[index]
-                selected_flap = int(flap.array.raw[index])
-                self.create_kpv(index, value, flap=int(selected_flap))
+                self.create_kpv(index, value, flap=flap.array[index])
 
 
 class AirspeedAtFlapExtensionWithGearDown(KeyPointValueNode):
@@ -2860,8 +2893,7 @@ class AirspeedAtFlapExtensionWithGearDown(KeyPointValueNode):
                 # The flap we are moving to is +1 from the diff index
                 index = (air_down.start or 0) + extend_index + 1
                 value = air_spd.array[index]
-                selected_flap = int(flap.array.raw[index])
-                self.create_kpv(index, value, flap=int(selected_flap))
+                self.create_kpv(index, value, flap=flap.array[index])
 
 
 class AltitudeRadioCleanConfigurationMin(KeyPointValueNode):
@@ -5006,7 +5038,6 @@ class MachWithFlapMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
     '''
 
-    # Note: We must use %s not %d as we've encountered a flap of 17.5 degrees.
     NAME_FORMAT = 'Mach With Flap %(flap)s Max'
     NAME_VALUES = NAME_VALUES_FLAP
 
@@ -5024,10 +5055,10 @@ class MachWithFlapMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
                mach=P('Mach'),
                scope=S('Fast')):
 
-        flap = flap_lever or flap_synth
         # Fast scope traps flap changes very late on the approach and raising
         # flaps before 80kn on the landing run.
-        data = self.flap_or_conf_max_or_min(flap, mach, max_value, scope=scope)
+        flap = flap_lever or flap_synth
+        data = self.flap_or_conf_max_or_min(flap, mach, max_value, scope)
         for index, value, detent in data:
             self.create_kpv(index, value, flap=detent)
 
@@ -7372,7 +7403,7 @@ class GroundspeedSpeedbrakeHandleDuringTakeoffMax(KeyPointValueNode):
 
         # Masking groundspeed where speedbrake is within limit.
         # WARNING: in this particular case we don't want the KPV to be created
-        # when the condition (stabilizer out of trim) is not met.
+        # when the condition (speedbrake handle limit exceedance) is not met.
         gspd_masked = np.ma.array(gnd_spd.array, mask=masked_in_range.mask)
         self.create_kpvs_within_slices(gspd_masked, takeoff_roll, max_value)
 
@@ -7397,7 +7428,7 @@ class GroundspeedSpeedbrakeDuringTakeoffMax(KeyPointValueNode):
 
         # Masking groundspeed where speedbrake is within limit.
         # WARNING: in this particular case we don't want the KPV to be created
-        # when the condition (stabilizer out of trim) is not met.
+        # when the condition (speedbrake limit exceedance) is not met.
         gspd_masked = np.ma.array(gnd_spd.array, mask=masked_in_range.mask)
         self.create_kpvs_within_slices(gspd_masked, takeoff_roll, max_value)
 
@@ -7420,7 +7451,7 @@ class GroundspeedFlapChangeDuringTakeoffMax(KeyPointValueNode):
 
         # Masking groundspeed where speedbrake is within limit.
         # WARNING: in this particular case we don't want the KPV to be created
-        # when the condition (stabilizer out of trim) is not met.
+        # when the condition is not met.
         gspd_masked = np.ma.array(gnd_spd.array, mask=masked_in_range.mask)
         self.create_kpvs_within_slices(gspd_masked, takeoff_roll, max_value)
 

@@ -1504,15 +1504,21 @@ def find_toc_tod(alt_data, ccd_slice, mode='Climb'):
     # update index_at_value_or_level_off() which currently reverses the slice.
     
     # Find the maximum altitude in this slice to reduce the effort later
-    peak_index = np.ma.argmax(alt_data[ccd_slice])
+    peak_index = max_value(alt_data, ccd_slice).index
 
+    # We shrink the section to exclude data under 500ft. The logic here is
+    # that all climb and descent phases will have been generated with at
+    # least 500ft changes in altitude.
+    #WARNING: 500ft STD is not AAL!
     if mode == 'Climb':
-        section = slice(ccd_slice.start, ccd_slice.start + peak_index + 1,
-                        None)
+        start = floor(index_at_value(alt_data, 500, 
+                    slice(ccd_slice.start, peak_index)) or ccd_slice.start or 0)
+        section = slice(start, peak_index + 1)
         slope = SLOPE_FOR_TOC_TOD
     else:
-        section = slice((ccd_slice.start or 0) + peak_index, ccd_slice.stop,
-                        None)
+        stop = ceil(index_at_value(alt_data, 500, 
+                    slice(ccd_slice.stop, peak_index, -1)) or len(alt_data))
+        section = slice(peak_index, stop)
         slope = -SLOPE_FOR_TOC_TOD
 
     # Quit if there is nothing to do here.
@@ -1526,12 +1532,8 @@ def find_toc_tod(alt_data, ccd_slice, mode='Climb'):
     # For airborne data only, subtract the slope from the climb, then the
     # peak is at the top of climb or descent. 
     
-    # We remove data within 500ft of the lowest level to avoid mising the
-    # endpoint in some cases with extended level flight sections. The logic
-    # here is that all climb and descent phases will have been generated with
-    # at least 500ft changes in altitude.
     alt_min = np.ma.min(alt_data[section])
-    test_slope = np.ma.masked_less(alt_data[section], alt_min+500) - ramp
+    test_slope = np.ma.masked_less(alt_data[section], alt_min) - ramp
     if np.ma.count(test_slope):
         return np.ma.argmax(test_slope) + section.start
     else:
@@ -4075,7 +4077,7 @@ def moving_average(array, window=9, weightings=None, pad=True):
         return averaged
 
 
-def nearest_neighbour_mask_repair(array, copy=True, repair_gap_size=None):
+def nearest_neighbour_mask_repair(array, copy=True, repair_gap_size=None, direction='both'):
     """
     Repairs gaps in data by replacing it with the nearest neighbour from
     either side until the gaps are filled. Designed for lots of fairly short 
@@ -4094,6 +4096,8 @@ def nearest_neighbour_mask_repair(array, copy=True, repair_gap_size=None):
 
     Ref: http://stackoverflow.com/questions/3662361/fill-in-missing-values-with-nearest-neighbour-in-python-numpy-masked-arrays
     """
+    if direction not in ('both', 'forward', 'backward'):
+        raise ValueError('Unexpected direction value provided: %s' % direction)
     if copy:
         array = array.copy()
     def next_neighbour(start=1):
@@ -4104,8 +4108,10 @@ def nearest_neighbour_mask_repair(array, copy=True, repair_gap_size=None):
         """
         x = start
         while True:
-            yield x
-            yield -x
+            if direction in ('both', 'forward'):
+                yield x
+            if direction in ('both', 'backward'):
+                yield -x
             x += 1
     # if first or last masked, repair now (extrapolate)
     start, stop = np.ma.notmasked_edges(array)
@@ -5011,10 +5017,12 @@ def slices_between(array, min_, max_):
     :returns: Slices where the array is above a certain value.
     :rtype: list of slice
     '''
-    if len(array) == 0:
+    if np.ma.count(array) == 0:
         return array, []
-    repaired_array = repair_mask(array)
-    if repaired_array is None: # Array length is too short to be repaired.
+    try:
+        repaired_array = repair_mask(array)
+    except ValueError:
+        # data is entirely masked or too short to be repaired
         return array, []
     # Slice through the array at the top and bottom of the band of interest
     band = np.ma.masked_outside(repaired_array, min_, max_)

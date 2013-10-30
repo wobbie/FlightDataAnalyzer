@@ -281,8 +281,9 @@ METRES_TO_FEET = 1000/25.4/12
 # Conversion from metres to nautical miles.
 METRES_TO_NM = 1852.0
 
-# Minimum core speed for engine to sustain operation.
-MIN_CORE_SUSTAINABLE = 50.0 # %
+# Minimum core speed for engine to sustain operation. 
+# Note: Challenger 300 reports 49.5% after engine start.
+MIN_CORE_SUSTAINABLE = 49.0 # %
 
 # Minimum fan speed at idle for engines where N2/N3 not recorded.
 MIN_FAN_RUNNING = 5.0 # %

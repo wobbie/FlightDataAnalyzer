@@ -4,7 +4,8 @@ import os
 import sys
 import unittest
 
-from analysis_engine.node import (KeyTimeInstance, KTI, load, Parameter, P, Section, S, M)
+from analysis_engine.node import (
+    A, KeyTimeInstance, KTI, load, Parameter, P, Section, S, M)
 
 from analysis_engine.flight_phase import Climbing
 
@@ -16,6 +17,7 @@ from analysis_engine.key_time_instances import (
     APEngagedSelection,
     ATDisengagedSelection,
     ATEngagedSelection,
+    Autoland,
     BottomOfDescent,
     ClimbStart,
     ClimbThrustDerateDeselected,
@@ -107,17 +109,20 @@ class TestAltitudePeak(unittest.TestCase):
 
 class TestBottomOfDescent(unittest.TestCase):
     def test_can_operate(self):
-        expected = [('Climb Cruise Descent', 'Airborne')]
+        expected = [('Climb Cruise Descent','Airborne')]
         opts = BottomOfDescent.get_operational_combinations()
         self.assertEqual(opts, expected) 
         
     def test_bottom_of_descent_basic(self):
-        ccd = buildsections('Climb Cruise Descent', [14, 31], [40,50]) # See dlc flight phase test.
-        air = buildsection('Airborne', 0,51)
+        testwave = np.cos(np.arange(0,6.3,0.1))*(2500)+2560
+        alt_std = Parameter('Altitude STD Smoothed', np.ma.array(testwave))
+        from analysis_engine.flight_phase import ClimbCruiseDescent
+        ccd = ClimbCruiseDescent()
+        air = buildsection('Airborne', 0,50)
+        ccd.derive(alt_std)
         bod = BottomOfDescent()
         bod.derive(ccd, air)    
-        expected = [KeyTimeInstance(index=31, name='Bottom Of Descent'),
-                    KeyTimeInstance(index=50, name='Bottom Of Descent')]        
+        expected = [KeyTimeInstance(index=31, name='Bottom Of Descent')]
         self.assertEqual(bod, expected)
 
     def test_bottom_of_descent_complex(self):
@@ -342,8 +347,7 @@ class TestAltitudeWhenClimbing(unittest.TestCase):
         self.assertEqual(AltitudeWhenClimbing.get_operational_combinations(),
                          [('Climbing', 'Altitude AAL', 'Altitude STD Smoothed')])
     
-    @mock.patch('analysis_engine.key_time_instances.hysteresis')
-    def test_derive(self, hysteresis):
+    def test_derive(self):
         climbing = S('Climbing', items=[Section('a', slice(4, 10), 4, 10),
                                         Section('b', slice(12, 20), 12, 20)])
         alt_aal = P('Altitude AAL',
@@ -1303,7 +1307,7 @@ class TestGearDownSelection(unittest.TestCase, NodeTest):
         self.operational_combinations = [('Gear Down Selected', 'Airborne')]
         self.gear_dn_sel = M(
             name='Gear Down Selected',
-            array=np.ma.array(['Down'] * 3 + ['Up'] * 2 + ['Down'] * 2),
+            array=['Down'] * 3 + ['Up'] * 2 + ['Down'] * 2,
             values_mapping={0: 'Up', 1: 'Down'},
         )
         self.airborne = buildsection('Airborne', 0, 7)
@@ -1323,7 +1327,7 @@ class TestGearUpSelection(unittest.TestCase, NodeTest):
         self.operational_combinations = [('Gear Up Selected', 'Airborne', 'Go Around And Climbout')]
         self.gear_up_sel = M(
             name='Gear Up Selected',
-            array=np.ma.array(['Down'] * 3 + ['Up'] * 2 + ['Down'] * 2),
+            array=['Down'] * 3 + ['Up'] * 2 + ['Down'] * 2,
             values_mapping={0: 'Down', 1: 'Up'},
         )
         self.airborne = buildsection('Airborne', 0, 7)
@@ -1350,7 +1354,7 @@ class TestGearUpSelectionDuringGoAround(unittest.TestCase, NodeTest):
         self.operational_combinations = [('Gear Up Selected', 'Go Around And Climbout')]
         self.gear_up_sel = M(
             name='Gear Up Selected',
-            array=np.ma.array(['Down'] * 3 + ['Up'] * 2 + ['Down'] * 2),
+            array=['Down'] * 3 + ['Up'] * 2 + ['Down'] * 2,
             values_mapping={0: 'Down', 1: 'Up'},
         )
 
@@ -1471,44 +1475,48 @@ class TestSecsToTouchdown(unittest.TestCase):
 
 
 class TestAutoland(unittest.TestCase):
-    def setUp(self):
-        from analysis_engine.key_time_instances import Autoland
-
-        self.node_class = Autoland
-
     def test_can_operate(self):
-        expected = [('AP Channels Engaged', 'Touchdown', 'Family')]
-        self.assertEqual(
-            expected,
-            self.node_class.get_operational_combinations())
+        expected = [('AP Channels Engaged', 'Touchdown'),
+                    ('AP Channels Engaged', 'Touchdown', 'Family')]
+        opts = Autoland.get_operational_combinations()
+        self.assertEqual(opts, expected)
 
-    def test_derive(self):
+    def test_derive_autoland_dual(self):
+        # test with no family
         td = [KeyTimeInstance(index=5, name='Touchdown')]
-        ap = M(
-            'AP Engaged',
-            ['Off', 'Off', 'Off', 'Engaged', 'Engaged', 'Engaged', 'Off',
-             'Off', 'Off'],
-            values_mapping={0: 'Off', 1: 'Engaged'})
-        node = self.node_class()
-        node.derive(ap, td)
-        expected = [KeyTimeInstance(
-            index=5, name='Autoland')]
+        ap = M('AP Channels Engaged',
+               array=['-', '-', '-', 'Dual', 'Dual', 'Dual', '-', '-', '-'],
+               values_mapping={0: '-', 1: 'Single', 2: 'Dual', 3: 'Triple'})
+        node = Autoland()
+        node.derive(ap, td, None)
+        expected = [KeyTimeInstance(index=5, name='Autoland')]
         self.assertEqual(node, expected)
+        # test with B737 Classic creates no autoland as requires Triple mode
+        node = Autoland()
+        node.derive(ap, td, A('Family', 'B737 Classic'))
+        self.assertEqual(node, [])
 
-    def test_derive_noautoland(self):
-        '''
-        Node should not be derived if autopilot is not engaged ad touchdown.
-        '''
-        td = [KeyTimeInstance(index=5, name='Touchdown')]
-        ap = M(
-            'AP Engaged',
-            ['Engaged', 'Engaged', 'Engaged', 'Off', 'Off', 'Off', 'Off',
-             'Off', 'Off'],
-            values_mapping={0: 'Off', 1: 'Engaged'})
-        node = self.node_class()
-        node.derive(ap, td)
-        expected = []
-        self.assertEqual(node, expected)
+    def test_derive_autoland(self):
+        # simulate each of the states at touchdown using the indexes
+        td = [KeyTimeInstance(index=3, name='Touchdown'),
+              KeyTimeInstance(index=4, name='Touchdown'),
+              KeyTimeInstance(index=5, name='Touchdown'),
+              KeyTimeInstance(index=6, name='Touchdown')]
+        ap = M('AP Channels Engaged',
+               array=['-', '-', '-', 'Triple', 'Dual', 'Single', '-', '-', '-'],
+               values_mapping={0: '-', 1: 'Single', 2: 'Dual', 3: 'Triple'})
+        # test with no family
+        node = Autoland()
+        node.derive(ap, td, None)
+        self.assertEqual([n.index for n in node], [3, 4])
+        # test with no A330
+        node = Autoland()
+        node.derive(ap, td, A('Family', 'A330'))
+        self.assertEqual([n.index for n in node], [3, 4])
+        # test with no A330
+        node = Autoland()
+        node.derive(ap, td, A('Family', 'B757'))
+        self.assertEqual([n.index for n in node], [3])
 
 
 class TestTouchAndGo(unittest.TestCase):

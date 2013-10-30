@@ -5,7 +5,6 @@ import os
 import sys
 
 from datetime import datetime, timedelta
-from inspect import isclass
 from networkx.readwrite import json_graph
 
 from flightdatautilities.filesystem_tools import copy_file
@@ -13,7 +12,6 @@ from flightdatautilities.filesystem_tools import copy_file
 from hdfaccess.file import hdf_file
 
 from analysis_engine import hooks, settings, __version__
-from analysis_engine.api_handler import APIError, get_api_handler
 from analysis_engine.dependency_graph import dependency_order
 from analysis_engine.library import np_ma_masked_zeros_like, repair_mask
 from analysis_engine.node import (ApproachNode, Attribute,
@@ -21,8 +19,9 @@ from analysis_engine.node import (ApproachNode, Attribute,
                                   DerivedParameterNode,
                                   FlightAttributeNode,
                                   KeyPointValueNode,
-                                  KeyTimeInstanceNode, Node,
+                                  KeyTimeInstanceNode,
                                   NodeManager, P, Section, SectionNode)
+from analysis_engine.utils import get_aircraft_info, get_derived_nodes
 
 
 logger = logging.getLogger(__name__)
@@ -244,39 +243,6 @@ def derive_parameters(hdf, node_mgr, process_order):
     return kti_list, kpv_list, section_list, approach_list, flight_attrs
 
 
-def get_derived_nodes(module_names):
-    '''
-    Get all nodes into a dictionary.
-    '''
-    def isclassandsubclass(value, classinfo):
-        return isclass(value) and issubclass(value, classinfo)
-
-    nodes = {}
-    for name in module_names:
-        #Ref:
-        #http://code.activestate.com/recipes/223972-import-package-modules-at-runtime/
-        # You may notice something odd about the call to __import__(): why is
-        # the last parameter a list whose only member is an empty string? This
-        # hack stems from a quirk about __import__(): if the last parameter is
-        # empty, loading class "A.B.C.D" actually only loads "A". If the last
-        # parameter is defined, regardless of what its value is, we end up
-        # loading "A.B.C"
-        ##abstract_nodes = ['Node', 'Derived Parameter Node', 'Key Point Value Node', 'Flight Phase Node'
-        ##print 'importing', name
-        module = __import__(name, globals(), locals(), [''])
-        for c in vars(module).values():
-            if isclassandsubclass(c, Node) \
-                    and c.__module__ != 'analysis_engine.node':
-                try:
-                    nodes[c.get_name()] = c
-                except TypeError:
-                    #TODO: Handle the expected error of top level classes
-                    # Can't instantiate abstract class DerivedParameterNode
-                    # - but don't know how to detect if we're at that level without resorting to 'if c.get_name() in 'derived parameter node',..
-                    logger.exception('Failed to import class: %s' % c.get_name())
-    return nodes
-
-
 def parse_analyser_profiles(analyser_profiles):
     '''
     Parse analyser profiles into additional_modules and required nodes as
@@ -473,24 +439,8 @@ def process_flight(hdf_path, tail_number, aircraft_info={},
             "Using aircraft_info dictionary passed into process_flight '%s'." %
             aircraft_info)
     else:
-        # Fetch aircraft info through the API.
-        api_handler = get_api_handler(settings.API_HANDLER)
+        aircraft_info = get_aircraft_info(tail_number)
         
-        try:
-            aircraft_info = api_handler.get_aircraft(tail_number)
-        except APIError:
-            if settings.API_HANDLER == settings.LOCAL_API_HANDLER:
-                raise
-            # Fallback to the local API handler.
-            logger.info(
-                "Aircraft '%s' could not be found with '%s' API handler. "
-                "Falling back to '%s'.", tail_number, settings.API_HANDLER,
-                settings.LOCAL_API_HANDLER)
-            api_handler = get_api_handler(settings.LOCAL_API_HANDLER)
-            aircraft_info = api_handler.get_aircraft(tail_number)
-        
-        logger.info("Using aircraft_info provided by '%s' '%s'.",
-                    api_handler.__class__.__name__, aircraft_info)
     
     aircraft_info['Tail Number'] = tail_number
     

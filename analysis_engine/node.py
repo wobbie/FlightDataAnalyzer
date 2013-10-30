@@ -138,6 +138,14 @@ def get_param_kwarg_names(method):
 #------------------------------------------------------------------------------
 # Abstract Node Classes
 # =====================
+
+def _calculate_offset(frequency, offset):
+    '''
+    Simple function to calculate offset when aligning nodes to different frequencies.
+    Put in own function to allow dedicated test case.
+    '''
+    return offset % (1.0 / frequency)
+
 class Node(object):
     '''
     Note about aligning options
@@ -292,13 +300,9 @@ def can_operate(cls, available):
                 self.frequency = self.align_frequency
                 self.offset = self.align_offset
             elif self.align_frequency:
-                # align to class frequency, but set offset to first dependency
-                # This will cause a problem during alignment if the offset is
-                # greater than the frequency allows (e.g. 0.6 offset for a 2Hz
-                # parameter). It may be best to always define a suitable
-                # align_offset.
+                # align to class frequency, but set suitable offset
+                self.offset = _calculate_offset(self.align_frequency, dependencies_to_align[0].offset)
                 self.frequency = self.align_frequency
-                self.offset = dependencies_to_align[0].offset
             elif self.align_offset is not None:
                 # align to class offset, but set frequency to first dependency
                 self.frequency = dependencies_to_align[0].frequency
@@ -740,7 +744,7 @@ class MultistateDerivedParameterNode(DerivedParameterNode):
                     #int_array = value.astype(int)
                 #except ValueError:
                     ## could not convert, therefore likely to be strings inside
-            if value.dtype == np.object_:
+            if value.dtype.type in (np.string_, np.object_):
                 # Array contains strings, convert to ints with mapping.
                 value = multistate_string_to_integer(value, self.values_mapping)
             value = MappedArray(value, values_mapping=self.values_mapping)
@@ -1749,29 +1753,55 @@ class KeyPointValueNode(FormattedNameNode):
         joined_array = np.ma.concatenate(arrays)
         index, value = function(joined_array)
         if index is None:
-
             return
         # Find where the joined_array index is in the original array.
         for _slice in slices:
             start = _slice.start or 0
             stop = _slice.stop or len(array)
             duration = (stop - start)
-            if index <= duration:
-                index += start or 0
+            if index < duration:
+                index += start
                 break
             index -= duration
         self.create_kpv(index, value, **kwargs)
 
 
-    def create_kpv_between_ktis(self, array, frequency, kti_1, kti_2, function):
+    def create_kpv_between(self, array, index_1, index_2, function):
+        '''
+        Convenient function to link a parameter and function to periods
+        between two indexes. Especially useful for fuel usage.
+        
+        This is inclusive, from index_1 up to and including index_2.
+        
+        :param index_1: Start index
+        :type index_1: Int
+        :param index_2: End index
+        :type index_2: Int
+        '''
+        self.create_kpvs_within_slices(array, [slice(index_1, index_2+1)], function)
+        return
+        
+
+    def create_kpvs_between_ktis(self, array, kti_1, kti_2, function):
         '''
         Convenient function to link a parameter and function to periods
         between two KTIs. Especially useful for fuel usage.
+        
+        This is inclusive, from kti_1 up to and including kti_2.
+        
+        Assumes lists are of equal length (ignores any additional entries in
+        kti_1) and ordered so that it's between index 0 of each, and index 1
+        of each etc.
+        
+        :param kti_1: Start KTIs
+        :type kti_1: KTI Node or List
+        :param kti_2: End KTIs
+        :type kti_2: KTI Node or List
         '''
-        self.create_kpv_from_slices(array, [slice(kti_1, kti_2)], function)
-        return
-        
-        
+        slices = [slice(a.index, b.index+1) for a, b in zip(kti_1, kti_2)]
+        self.create_kpvs_within_slices(array, slices, function)
+        return    
+    
     def create_kpv_outside_slices(self, array, slices, function, **kwargs):
         '''
         Shortcut for creating a KPV excluding values within provided slices or

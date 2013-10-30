@@ -72,6 +72,7 @@ from analysis_engine.library import (actuator_mismatch,
                                      slices_from_to,
                                      slices_not,
                                      slices_or,
+                                     slices_remove_small_gaps,
                                      smooth_track,
                                      straighten_headings,
                                      track_linking,
@@ -721,62 +722,60 @@ class AltitudeAAL(DerivedParameterNode):
         idx = min(first_curve, first_valid_sample(climbing[:to]).index)
         return idx
 
+    def shift_alt_std(self, alt_std):
+        '''
+        Return Altitude STD Smoothed shifted relative to 0 for cases where we do not
+        have a reliable Altitude Radio.
+        '''
+        try:
+            idx = self.find_liftoff_start(alt_std)
+            
+            # The liftoff most probably arose in the preceding 10
+            # seconds. Allow 3 seconds afterwards for luck.
+            rotate = slice(max(idx-10*self.frequency,0),
+                           idx+3*self.frequency)
+            # Draw a straight line across this period with a ruler.
+            p,m,c = coreg(alt_std[rotate])
+            ruler = np.ma.arange(rotate.stop-rotate.start)*m+c
+            # Measure how far the altitude is below the ruler.
+            delta = alt_std[rotate] - ruler
+            # The liftoff occurs where the gap is biggest because this is
+            # where the wing lift has caused the local pressure to
+            # increase, hence the altitude appears to decrease.
+            pit = alt_std[np.ma.argmin(delta)+rotate.start]
+            
+            '''
+            # Quick visual check of the operation of the takeoff point detection.
+            import matplotlib.pyplot as plt
+            plt.plot(alt_std[:to])
+            xnew = np.linspace(rotate.start,rotate.stop,num=2)
+            ynew = (xnew-rotate.start)*m + c
+            plt.plot(xnew,ynew,'-')                
+            plt.plot(np.ma.argmin(delta)+rotate.start, pit, 'dg')
+            plt.plot(idx, alt_std[idx], 'dr')
+            plt.show()
+            plt.clf()
+            '''
+
+        except:
+            # If something odd about the data causes a problem with this
+            # technique, use a simpler solution. This can give
+            # significantly erroneous results in the case of sloping
+            # runways, but it's the most robust technique.
+            pit = np.ma.min(alt_std)
+        alt_result = alt_std - pit
+        return np.ma.maximum(alt_result, 0.0)
 
     def compute_aal(self, mode, alt_std, low_hb, high_gnd, alt_rad=None):
-
+        
         alt_result = np_ma_zeros_like(alt_std)
-
-        def shift_alt_std():
-            '''
-            Return Altitude STD Smoothed shifted relative to 0 for cases where we do not
-            have a reliable Altitude Radio.
-            '''
-            try:
-                idx = self.find_liftoff_start()
-                
-                # The liftoff most probably arose in the preceding 10
-                # seconds. Allow 3 seconds afterwards for luck.
-                rotate = slice(max(idx-10*self.frequency,0),
-                               idx+3*self.frequency)
-                # Draw a straight line across this period with a ruler.
-                p,m,c = coreg(alt_std[rotate])
-                ruler = np.ma.arange(rotate.stop-rotate.start)*m+c
-                # Measure how far the altitude is below the ruler.
-                delta = alt_std[rotate] - ruler
-                # The liftoff occurs where the gap is biggest because this is
-                # where the wing lift has caused the local pressure to
-                # increase, hence the altitude appears to decrease.
-                pit = alt_std[np.ma.argmin(delta)+rotate.start]
-                
-                '''
-                # Quick visual check of the operation of the takeoff point detection.
-                import matplotlib.pyplot as plt
-                plt.plot(alt_std[:to])
-                xnew = np.linspace(rotate.start,rotate.stop,num=2)
-                ynew = (xnew-rotate.start)*m + c
-                plt.plot(xnew,ynew,'-')                
-                plt.plot(np.ma.argmin(delta)+rotate.start, pit, 'dg')
-                plt.plot(idx, alt_std[idx], 'dr')
-                plt.show()
-                plt.clf()
-                '''
-
-            except:
-                # If something odd about the data causes a problem with this
-                # technique, use a simpler solution. This can give
-                # significantly erroneous results in the case of sloping
-                # runways, but it's the most robust technique.
-                pit = np.ma.min(alt_std)
-            alt_result = alt_std - pit
-            return np.ma.maximum(alt_result, 0.0)
-
         if alt_rad is None or np.ma.count(alt_rad)==0:
             # This backstop trap for negative values is necessary as aircraft
             # without rad alts will indicate negative altitudes as they land.
             if mode != 'land':
                 return alt_std - high_gnd
             else:
-                return shift_alt_std()
+                return self.shift_alt_std(alt_std)
 
         if mode=='over_gnd' and (low_hb-high_gnd)>100.0:
             return alt_std - high_gnd
@@ -784,21 +783,20 @@ class AltitudeAAL(DerivedParameterNode):
 
         # We pretend the aircraft can't go below ground level for altitude AAL:
         alt_rad_aal = np.ma.maximum(alt_rad, 0.0)
+        ralt_sections = np.ma.clump_unmasked(np.ma.masked_outside(alt_rad_aal, 0.1, 100.0))
+        if len(ralt_sections) == 0:
+            # Either Altitude Radio did not drop below 100, or did not get
+            # above 100. Either way, we are better off working with just the
+            # pressure altitude signal.
+            return self.shift_alt_std(alt_std)
 
-        if mode=='land':
-            ralt_sections = np.ma.clump_unmasked(np.ma.masked_outside(alt_rad_aal, 0.1, 100.0))
-            if len(ralt_sections)==0:
-                # Either Altitude Radio did not drop below 100, or did not get
-                # above 100. Either way, we are better off working with just the
-                # pressure altitude signal.
-                return shift_alt_std()
-
+        if mode == 'land':
             # We refine our definition of the radio altimeter sections to
             # take account of bounced landings and altimeters which read
             # small positive values on the ground.
             bounce_sections = [y for y in ralt_sections if np.ma.max(alt_rad[y]>BOUNCED_LANDING_THRESHOLD)]
-            bounce_end = bounce_sections [0].start
-            hundred_feet = bounce_sections [-1].stop
+            bounce_end = bounce_sections[0].start
+            hundred_feet = bounce_sections[-1].stop
         
             alt_result[bounce_end:hundred_feet] = alt_rad_aal[bounce_end:hundred_feet]
             alt_result[:bounce_end] = 0.0
@@ -843,9 +841,9 @@ class AltitudeAAL(DerivedParameterNode):
 
         for speedy in speedies:
             quick = speedy.slice
-            if speedy.slice == slice(None, None, None):
+            if quick == slice(None, None, None):
                 self.array = alt_aal
-                break
+                return
 
             # We set the minimum height for detecting flights to 500 ft. This
             # ensures that low altitude "hops" are still treated as complete
@@ -1104,6 +1102,40 @@ class AltitudeRadio(DerivedParameterNode):
         return any_of([name for name in cls.get_dependency_names() \
                        if name.startswith('Altitude Radio')], available)
 
+    def _overflow_correction(self, param, max_val=4095):
+        '''
+        Overflow Correction postprocessing procedure.
+
+        This function fixes the wrong values resulting from too narrow bit
+        range. The value range is extended using an algorithm similar to binary
+        overflow: we detect value changes bigger than 75% and modify the result
+        ranges.
+        '''
+        delta = max_val * 0.75
+
+        # We are removing small masks (up to 10 samples) related to the
+        # overflow.
+        slices = slices_remove_small_gaps(
+            np.ma.clump_unmasked(param.array), time_limit=10.0 / param.hz,
+            hz=param.hz)
+        for sl in slices:
+            param.array.mask[sl] = False
+            jump = np.ma.ediff1d(param.array[sl], to_begin=0.0)
+            abs_jump = np.ma.abs(jump)
+            jump_sign = -jump / abs_jump
+            steps = np.ma.where(abs_jump > delta, max_val * jump_sign, 0)
+
+            correction = np.ma.cumsum(steps)
+
+            param.array[sl] += correction
+
+            if np.ma.min(param.array[sl]) < -delta:
+                # FIXME: compensate for the descent starting at the overflown
+                # value
+                param.array[sl] += max_val
+
+        return param
+
     def derive(self,
                source_A = P('Altitude Radio (A)'),
                source_B = P('Altitude Radio (B)'),
@@ -1112,16 +1144,24 @@ class AltitudeRadio(DerivedParameterNode):
                source_R = P('Altitude Radio (R)'),
                source_efis = P('Altitude Radio (EFIS)'),
                source_efis_L = P('Altitude Radio (EFIS) (L)'),
-               source_efis_R = P('Altitude Radio (EFIS) (R)')):
-        
-        # Reminder: If you add parameters here, they need limits adding in the database !!!
-        
+               source_efis_R = P('Altitude Radio (EFIS) (R)'),
+               family=A('Family')):
+
+        # Reminder: If you add parameters here, they need limits adding in the
+        # database !!!
+
         sources = [source_A, source_B, source_C, source_L, source_R,
                    source_efis, source_efis_L, source_efis_R]
+
         self.offset = 0.0
         self.frequency = 4.0
+
+        if family and family.value == 'A340':
+            sources = [self._overflow_correction(p)
+                       for p in sources if p is not None]
+
         self.array = blend_parameters(sources,
-                                      offset=self.offset, 
+                                      offset=self.offset,
                                       frequency=self.frequency)
 
 
@@ -1136,7 +1176,7 @@ class AltitudeSTDSmoothed(DerivedParameterNode):
 
     name = "Altitude STD Smoothed"
     units = 'ft'
-    align=False
+    align = False
 
     @classmethod
     def can_operate(cls, available):
@@ -3212,6 +3252,7 @@ class GrossWeightSmoothed(DerivedParameterNode):
 class Groundspeed(DerivedParameterNode):
     """
     This caters for cases where some preprocessing is required.
+    
     :param frame: The frame attribute, e.g. '737-i'
     :type frame: An attribute
     :returns groundspeed as the mean between two valid sensors.
@@ -3263,7 +3304,8 @@ class FlapAngle(DerivedParameterNode):
     def can_operate(cls, available, family=A('Family')):
 
         flap_angle = any_of((
-            'Flap Angle (L)', 'Flap Angle (R)',
+            'Flap Angle (L)', 'Flap Angle (R)', 
+            'Flap Angle (C)', 'Flap Angle (MCP)',
             'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard',
         ), available)
 
@@ -3335,6 +3377,8 @@ class FlapAngle(DerivedParameterNode):
     def derive(self,
                flap_A=P('Flap Angle (L)'),
                flap_B=P('Flap Angle (R)'),
+               flap_C=P('Flap Angle (C)'),
+               flap_D=P('Flap Angle (MCP)'),
                flap_A_inboard=P('Flap Angle (L) Inboard'),
                flap_B_inboard=P('Flap Angle (R) Inboard'),
                slat=P('Slat Angle'),
@@ -3360,9 +3404,12 @@ class FlapAngle(DerivedParameterNode):
             # Only the right inboard flap is instrumented.
             self.array = flap_B.array
         else:
-            # By default, blend the two parameters.
-            self.array, self.frequency, self.offset = blend_two_parameters(
-                flap_A, flap_B)
+            # By default, blend all the available parameters.
+            sources = [flap_A, flap_B, flap_C, flap_D]
+            self.frequency = max([s.frequency for s in sources if s]) * 2
+            self.offset = 0.0
+            self.array = blend_parameters(sources, offset=self.offset, 
+                                          frequency=self.frequency)
 
 
 '''
@@ -3589,30 +3636,32 @@ class ILSFrequency(DerivedParameterNode):
                 'ILS (2) Frequency' in available) or \
                ('ILS-VOR (1) Frequency' in available)
     
-    def derive(self, f1=P('ILS (1) Frequency'),f2=P('ILS (2) Frequency'),
+    def derive(self, f1=P('ILS (1) Frequency'), f2=P('ILS (2) Frequency'),
                f1v=P('ILS-VOR (1) Frequency'), f2v=P('ILS-VOR (2) Frequency')):
-
+        
         #TODO: Extend to allow for three-receiver installations
-
-
+        #TODO: Support just one of the ILS (1/2) Frequency params incase the
+        # other signal is invalid
         if f1 and f2:
             first = f1.array
-            second = f2.array
+            # align second to the first
+            #TODO: Could check which is the higher frequency and align to that
+            second = align(f2, f1, interpolate=False)
+        elif f1v and f2v:
+            first = f1v.array
+            # align second to the first
+            second = align(f2v, f1v, interpolate=False)            
+        elif f1v and not f2v:
+            # Some aircraft have inoperative ILS-VOR (2) systems, which
+            # record frequencies outside the valid range.
+            first = f1v.array
         else:
-            if f1v and f2v==None:
-                # Some aircraft have inoperative ILS-VOR (2) systems, which
-                # record frequencies outside the valid range.
-                first = f1v.array
-            elif f1v and f2v:
-                first = f1v.array
-                second = f2v.array
-            else:
-                raise "Unrecognised set of ILS frequency parameters"
-
+            raise ValueError("Incorrect set of ILS frequency parameters")
+        
         # Mask invalid frequencies
         f1_trim = filter_vor_ils_frequencies(first, 'ILS')
-        if f1v and f2v==None:
-            mask = first.mask
+        if f1v and not f2v:
+            mask = f1_trim.mask
         else:
             # We look for both
             # receivers being tuned together to form a valid signal
@@ -5433,7 +5482,7 @@ class Speedbrake(DerivedParameterNode):
                 'Spoiler (1)' in available and
                 'Spoiler (14)' in available
             ) or
-            family_name in ['G-V', 'Learjet'] and all_of((
+            family_name in ['G-V', 'Learjet', 'A300'] and all_of((
                 'Spoiler (L)',
                 'Spoiler (R)'),
                 available
@@ -5491,7 +5540,7 @@ class Speedbrake(DerivedParameterNode):
         elif family_name == 'B787':
             self.merge_spoiler(spoiler_1, spoiler_14)
 
-        elif family_name in ['G-V', 'Learjet']:
+        elif family_name in ['G-V', 'Learjet', 'A300']:
             self.merge_spoiler(spoiler_L, spoiler_R)
 
         elif family_name in ['CRJ 900', 'CL-600']:

@@ -2820,8 +2820,24 @@ class TestILSFrequency(unittest.TestCase):
         ils = ILSFrequency()
         result = ils.get_derived([f1, f2])
         expected_array = np.ma.array(
-            data=[108.10,99,108.10,111.95,99,111.95], 
-             mask=[False,True,False,False,True,False])
+            data= [  99,   99, 108.10, 111.95,   99, 111.95], 
+             mask=[True, True,  False,  False, True,  False])
+        ma_test.assert_masked_array_approx_equal(result.array, expected_array)
+
+    def test_ils_frequency_different_sample_rates(self):
+        f1 = P('ILS-VOR (1) Frequency', 
+               np.ma.array([108.10]*3+[111.95]*3),
+               frequency = 0.5,
+               offset = 0.423828125)
+        f2 = P('ILS-VOR (2) Frequency', 
+               np.ma.array([108.10]*3),
+               frequency = 0.25,
+               offset = 1.423828125)
+        ils = ILSFrequency()
+        result = ils.get_derived([f1, f2])
+        expected_array = np.ma.array(
+            data= [108.10, 108.10, 108.10, 111.95,   99, 111.95], 
+             mask=[  True,  False,  False,   True, True,   True])
         ma_test.assert_masked_array_approx_equal(result.array, expected_array)
 
 
@@ -3734,6 +3750,7 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
             ('Flap Angle (R) Inboard',),
             ('Flap Angle (L)', 'Flap Angle (R)'),
             ('Flap Angle (L) Inboard', 'Flap Angle (R) Inboard'),
+            ('Flap Angle (L)', 'Flap Angle (R)', 'Flap Angle (C)', 'Flap Angle (MCP)'),
             ('Flap Angle (L)', 'Flap Angle (R)', 'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard', 'Frame'),
             ('Flap Angle (L)', 'Flap Angle (R)', 'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard', 'Slat Angle', 'Frame'),
         ]
@@ -3749,7 +3766,8 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
         slat.derive(slat_l, slat_r)
         family = A('Family', 'B787')
         f = FlapAngle()
-        f.derive(flap_angle_l, flap_angle_r, None, None, slat, None, family)
+        f.derive(flap_angle_l, flap_angle_r, None, None, None, None,
+                 slat, None, family)
         # Include transitions.
         self.assertEqual(f.array[18635], 0.70000000000000007)
         self.assertEqual(f.array[18650], 1.0)
@@ -3770,8 +3788,8 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
             25:   (100, 20),
             30:   (100, 30),
         }
-        slat_array = np.ma.array([0, 50, 50, 50, 50, 100, 100])
-        flap_array = np.ma.array([0, 0, 5, 15, 20, 20, 30])
+        slat_array = np.ma.array([0, 50, 50, 50, 50, 100, 100], dtype=float)
+        flap_array = np.ma.array([0, 0, 5, 15, 20, 20, 30], dtype=float)
         flap_slat = FlapAngle._combine_flap_slat(slat_array, flap_array,
                                                  conf_map)
         self.assertEqual(flap_slat.tolist(),
@@ -3780,7 +3798,8 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
     def test_hercules(self):
         f = FlapAngle()
         f.derive(P(array=np.ma.array(range(0, 5000, 100) + range(5000, 0, -200))),
-                 None, None, None, A('Frame', 'L382-Hercules'))
+                 None, None, None, None, None, None, None, A('Frame', 'L382-Hercules'))
+        self.assertAlmostEqual(f.array[50], 2500, 1)
 
 
 class TestHeadingTrueContinuous(unittest.TestCase):

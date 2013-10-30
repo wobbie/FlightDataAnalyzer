@@ -1651,6 +1651,63 @@ class TestFindEdgesOnStateChange(unittest.TestCase):
         self.assertEqual(edges, [])
 
 
+class FindTocTod(unittest.TestCase):
+    def test_find_tod_with_smoothed_data(self):
+        # sample data from Hercules during a low level circuit
+        array = np.ma.array(
+            [  30.83249375,   46.78510625,   48.2622    ,   48.2622    ,
+               48.2622    ,   56.97705313,   57.7156    ,   75.14530625,
+               76.6224    ,   85.33725313,   86.0758    ,   86.0758    ,
+               86.0758    ,   86.0758    ,  103.50550625,  104.9826    ,
+              113.69745313,  131.86570625,  142.05765313,  142.7962    ,
+              160.22590625,  161.703     ,  161.703     ,  161.703     ,
+              170.41785313,  188.58610625,  190.0632    ,  190.0632    ,
+              216.20775938,  218.4234    ,  227.13825313,  245.30650625,
+              255.49845313,  256.237     ,  256.237     ,  273.66670625,
+              275.1438    ,  283.85865313,  302.02690625,  320.93370625,
+              322.4108    ,  331.12565313,  349.29390625,  359.48585313,
+              377.65410625,  379.1312    ,  387.84605313,  406.01430625,
+              416.20625313,  416.9448    ,  443.08935938,  462.73470625,
+              490.35635938,  501.28685313,  545.59966563,  549.2924    ,
+              575.43695938,  586.36745313,  604.53570625,  632.15735938,
+              651.80270625,  653.2798    ,  661.99465313,  688.87775938,
+              708.52310625,  718.71505313,  736.88330625,  747.07525313,
+              765.24350625,  775.43545313,  793.60370625,  795.0808    ,
+              795.0808    ,  795.0808    ,  795.0808    ,  795.0808    ,
+              795.0808    ,  795.0808    ,  803.79565313,  795.81934688,
+              803.79565313,  804.5342    ,  804.5342    ,  821.96390625,
+              823.441     ,  823.441     ,  823.441     ,  806.01129375,
+              795.81934688,  795.0808    ,  777.65109375,  776.174     ,
+              776.174     ,  776.174     ,  776.174     ,  776.174     ,
+              776.174     ,  776.174     ,  776.174     ,  776.174     ,
+              776.174     ,  776.174     ,  776.174     ,  776.174     ,
+              776.174     ,  776.174     ,  776.174     ,  776.174     ,
+              793.60370625,  795.0808    ,  795.0808    ,  795.0808    ,
+              795.0808    ,  795.0808    ,  795.0808    ,  795.0808    ,
+              795.0808    ,  795.0808    ,  777.65109375,  750.02944063,
+              739.09894688,  720.93069375,  693.30904063,  682.37854688,
+              664.21029375,  654.01834688,  635.85009375,  608.22844063,
+              588.58309375,  578.39114688,  560.22289375,  558.7458    ,
+              550.03094688,  531.86269375,  504.24104063,  493.31054688,
+              492.572     ,  475.14229375,  464.95034688,  464.2118    ,
+              446.78209375,  436.59014688,  418.42189375,  416.9448    ,
+              416.9448    ,  408.22994688,  407.4914    ,  407.4914    ,
+              390.06169375,  379.86974688,  379.1312    ,  379.1312    ,
+              379.1312    ,  379.1312    ,  379.1312    ,  379.1312    ,
+              387.84605313,  388.5846    ,  406.01430625,  407.4914    ,
+              416.20625313,  408.22994688,  407.4914    ,  390.06169375,
+              379.86974688,  379.1312    ,  379.1312    ,  361.70149375,
+              351.50954688,  333.34129375,  331.8642    ,  331.8642    ,
+              323.14934688])
+        # data is already sliced for the required section
+        res = find_toc_tod(array, slice(0, len(array)), mode='Descent')
+        self.assertEqual(res, 117)
+        # with some smoothing (as per Hercules Alt Std Smoothed
+        smooth = moving_average(array, window=3, weightings=[0.25,0.5,0.25])
+        res = find_toc_tod(smooth, slice(0, len(smooth)), mode='Descent')
+        self.assertEqual(res, 116) # bit before previous
+        
+
 class TestFirstOrderLag(unittest.TestCase):
 
     # first_order_lag (in_param, time_constant, hz, gain = 1.0, initial_value = 0.0)
@@ -3055,7 +3112,7 @@ class TestNearestNeighbourMaskRepair(unittest.TestCase):
         self.assertEqual(len(res), 30)
         self.assertEqual(list(res[:10]), [10]*10)
         self.assertEqual(list(res[-3:]), [27,27,27])
-        
+
     def test_nn_mask_repair_limited_rolls(self):
         array = np.ma.array([101.5]*10 + [0]*10 + [107.4]*10)
         array[10:20] = np.ma.masked
@@ -3071,6 +3128,29 @@ class TestNearestNeighbourMaskRepair(unittest.TestCase):
         ##self.assertEqual(np.ma.count(array), 20)
         ##res = nearest_neighbour_mask_repair(array, repair_gap_size=2)
         ##self.assertEqual(np.ma.count(res), 24)
+
+    def test_nn_mask_repair_forward(self):
+        array = np.ma.arange(30)
+        array[20:22] = np.ma.masked
+        res = nearest_neighbour_mask_repair(array, direction='forward')
+        self.assertEqual(len(res), 30)
+        self.assertEqual(list(res[19:23]), [19,19,19,22])
+
+    def test_nn_mask_repair_backward(self):
+        array = np.ma.arange(30)
+        array[20:22] = np.ma.masked
+        res = nearest_neighbour_mask_repair(array, direction='backward')
+        self.assertEqual(len(res), 30)
+        self.assertEqual(list(res[19:23]), [19,22,22,22])
+
+    def test_nn_mask_repair_direction(self):
+        args = (np.ma.array([]), )
+        try:
+            for direction in ('both', 'forward', 'backward'):
+                nearest_neighbour_mask_repair(*args, direction=direction)
+        except ValueError:
+            self.fail('ValueError from nearest_neighbour_mask_repair() for valid direction.')
+        self.assertRaises(ValueError, nearest_neighbour_mask_repair, *args, direction='invalid')
 
 
 class TestNormalise(unittest.TestCase):

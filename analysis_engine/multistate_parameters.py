@@ -60,6 +60,7 @@ from analysis_engine.library import (#actuator_mismatch,
                                      merge_sources,
                                      merge_two_parameters,
                                      moving_average,
+                                     nearest_neighbour_mask_repair,
                                      #np_ma_ones_like,
                                      np_ma_masked_zeros_like,
                                      np_ma_zeros_like,
@@ -618,6 +619,9 @@ class Flap(MultistateDerivedParameterNode):
         if frame_name == 'L382-Hercules':
             return 'Altitude AAL' in available
 
+        if not all_of(('Flap Angle', 'Model', 'Series', 'Family'), available):
+            return False
+
         try:
             mi.get_flap_map(model.value, series.value, family.value)
         except KeyError:
@@ -625,7 +629,7 @@ class Flap(MultistateDerivedParameterNode):
                         model.value, series.value, family.value)
             return False
 
-        return all_of(('Flap Angle', 'Model', 'Series', 'Family'), available)
+        return True
 
     def derive(self, flap=P('Flap Angle'),
                model=A('Model'), series=A('Series'), family=A('Family'),
@@ -672,6 +676,9 @@ class FlapExcludingTransition(MultistateDerivedParameterNode):
     def can_operate(cls, available,
                     model=A('Model'), series=A('Series'), family=A('Family')):
 
+        if not all_of(('Flap Angle', 'Model', 'Series', 'Family'), available):
+            return False
+
         try:
             mi.get_flap_map(model.value, series.value, family.value)
         except KeyError:
@@ -679,7 +686,7 @@ class FlapExcludingTransition(MultistateDerivedParameterNode):
                         model.value, series.value, family.value)
             return False
 
-        return all_of(('Flap Angle', 'Model', 'Series', 'Family'), available)
+        return True
 
     def derive(self, flap=P('Flap Angle'),
                model=A('Model'), series=A('Series'), family=A('Family')):
@@ -705,6 +712,9 @@ class FlapIncludingTransition(MultistateDerivedParameterNode):
     def can_operate(cls, available,
                     model=A('Model'), series=A('Series'), family=A('Family')):
 
+        if not all_of(('Flap Angle', 'Model', 'Series', 'Family'), available):
+            return False
+
         try:
             mi.get_flap_map(model.value, series.value, family.value)
         except KeyError:
@@ -712,7 +722,7 @@ class FlapIncludingTransition(MultistateDerivedParameterNode):
                         model.value, series.value, family.value)
             return False
 
-        return all_of(('Flap Angle', 'Model', 'Series', 'Family'), available)
+        return True
 
     def derive(self, flap=P('Flap Angle'),
                model=A('Model'), series=A('Series'), family=A('Family')):
@@ -739,6 +749,9 @@ class FlapLever(MultistateDerivedParameterNode):
     def can_operate(cls, available,
                     model=A('Model'), series=A('Series'), family=A('Family')):
 
+        if not all_of(('Flap Lever Angle', 'Model', 'Series', 'Family'), available):
+            return False
+
         try:
             mi.get_lever_map(model.value, series.value, family.value)
         except KeyError:
@@ -746,7 +759,7 @@ class FlapLever(MultistateDerivedParameterNode):
                         model.value, series.value, family.value)
             return False
 
-        return all_of(('Flap Lever Angle', 'Model', 'Series', 'Family'), available)
+        return True
 
     def derive(self, flap_lever=P('Flap Lever Angle'),
                model=A('Model'), series=A('Series'), family=A('Family')):
@@ -762,10 +775,14 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
     '''
 
     name = 'Flap Lever (Synthetic)'
+    units = 'deg'
 
     @classmethod
     def can_operate(cls, available,
                     model=A('Model'), series=A('Series'), family=A('Family')):
+
+        if not all_of(('Flap Angle', 'Model', 'Series', 'Family'), available):
+            return False
 
         try:
             mi.get_lever_map(model.value, series.value, family.value)
@@ -781,7 +798,7 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
                         model.value, series.value, family.value)
             return False
 
-        return all_of(('Flap Angle', 'Model', 'Series', 'Family'), available)
+        return True
 
     def derive(self, flap=P('Flap Angle'), slat=P('Slat Angle'),
                model=A('Model'), series=A('Series'), family=A('Family')):
@@ -801,18 +818,20 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
 
         # Prepare the destination array:
         self.values_mapping = mi.get_lever_map(model.value, series.value, family.value)
-        array = MappedArray(np_ma_masked_zeros_like(flap_array),
-                            values_mapping=self.values_mapping)
+        self.array = MappedArray(np_ma_masked_zeros_like(flap_array),
+                                 values_mapping=self.values_mapping)
 
         # Update the destination array according to the mappings:
         for (state, (s, f)) in lever_angles.iteritems():
             condition = (flap_array == f)
             if use_slat:
                 condition &= (slat_array == s)
-            array[condition] = state
+            self.array[condition] = state
 
         # Repair the mask to smooth out transitions:
-        self.array = repair_mask(array, extrapolate=False)
+        nearest_neighbour_mask_repair(self.array, copy=False,
+                                      repair_gap_size=(30 * self.hz),
+                                      direction='backward')
 
 
 class Flaperon(MultistateDerivedParameterNode):
@@ -835,6 +854,9 @@ class Flaperon(MultistateDerivedParameterNode):
     def can_operate(cls, available,
                     model=A('Model'), series=A('Series'), family=A('Family')):
 
+        if not all_of(('Aileron (L)', 'Aileron (R)', 'Model', 'Series', 'Family'), available):
+            return False
+
         try:
             mi.get_aileron_map(model.value, series.value, family.value)
         except KeyError:
@@ -842,8 +864,8 @@ class Flaperon(MultistateDerivedParameterNode):
                         model.value, series.value, family.value)
             return False
 
-        return all_of(('Aileron (L)', 'Aileron (R)', 'Model', 'Series', 'Family'), available)
-    
+        return True
+
     def derive(self, al=P('Aileron (L)'), ar=P('Aileron (R)'),
                model=A('Model'), series=A('Series'), family=A('Family')):
 
@@ -1308,6 +1330,9 @@ class Slat(MultistateDerivedParameterNode):
     def can_operate(cls, available,
                     model=A('Model'), series=A('Series'), family=A('Family')):
 
+        if not all_of(('Slat Angle', 'Model', 'Series', 'Family'), available):
+            return False
+
         try:
             mi.get_slat_map(model.value, series.value, family.value)
         except KeyError:
@@ -1315,15 +1340,85 @@ class Slat(MultistateDerivedParameterNode):
                         model.value, series.value, family.value)
             return False
 
-        return all_of(('Slat Angle', 'Model', 'Series', 'Family'), available)
+        return True
 
     def derive(self, slat=P('Slat Angle'),
                model=A('Model'), series=A('Series'), family=A('Family')):
 
         self.values_mapping = mi.get_slat_map(model.value, series.value, family.value)
-        self.array = step_values(slat.array,
+        self.array = step_values(repair_mask(slat.array),
                                  self.values_mapping.keys(),
                                  slat.hz, step_at='move_start')
+
+
+class SlatExcludingTransition(MultistateDerivedParameterNode):
+    '''
+    Specifically designed to cater for maintenance monitoring, this assumes
+    that when moving the lower of the start and endpoints of the movement
+    apply. This minimises the chance of needing a slat overspeed inspection.
+    '''
+
+    units = 'deg'
+
+    @classmethod
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family')):
+
+        if not all_of(('Slat Angle', 'Model', 'Series', 'Family'), available):
+            return False
+
+        try:
+            mi.get_slat_map(model.value, series.value, family.value)
+        except KeyError:
+            cls.warning("No slat mapping available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
+            return False
+
+        return True
+
+    def derive(self, slat=P('Slat Angle'),
+               model=A('Model'), series=A('Series'), family=A('Family')):
+
+        self.values_mapping = mi.get_slat_map(model.value, series.value, family.value)
+        self.array = step_values(repair_mask(slat.array),
+                                 self.values_mapping.keys(),
+                                 slat.hz, step_at='excluding_transition')
+
+
+class SlatIncludingTransition(MultistateDerivedParameterNode):
+    '''
+    Specifically designed to cater for maintenance monitoring, this assumes
+    that when moving the higher of the start and endpoints of the movement
+    apply. This increases the chance of needing a slat overspeed inspection,
+    but provides a more cautious interpretation of the maintenance
+    requirements.
+    '''
+
+    units = 'deg'
+
+    @classmethod
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family')):
+
+        if not all_of(('Slat Angle', 'Model', 'Series', 'Family'), available):
+            return False
+
+        try:
+            mi.get_slat_map(model.value, series.value, family.value)
+        except KeyError:
+            cls.warning("No slat mapping available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
+            return False
+
+        return True
+
+    def derive(self, slat=P('Slat Angle'),
+               model=A('Model'), series=A('Series'), family=A('Family')):
+
+        self.values_mapping = mi.get_slat_map(model.value, series.value, family.value)
+        self.array = step_values(repair_mask(slat.array),
+                                 self.values_mapping.keys(),
+                                 slat.hz, step_at='including_transition')
 
 
 class StickPusher(MultistateDerivedParameterNode):
@@ -1573,7 +1668,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
                armed=M('Speedbrake Armed'),
                handle=P('Speedbrake Handle'),
                spdbrk=P('Speedbrake'),
-               spdsw=M('Spoiler Switch'),
+               spdsw=M('Speedbrake Switch'),
                family=A('Family')):
 
         family_name = family.value if family else ''

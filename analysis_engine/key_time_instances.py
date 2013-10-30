@@ -57,9 +57,6 @@ class BottomOfDescent(KeyTimeInstanceNode):
             # The differences should be less than a second, arising from
             # different ways of identifying the touchdown point. Ten seconds
             # is a generous tolerance.
-            print
-            print 'Delta = ',delta
-            print
             if delta < 10.0:
                 ends.pop(index+1)
             else:
@@ -446,7 +443,7 @@ class TopOfClimb(KeyTimeInstanceNode):
                 continue
             # if this is the first point in the slice, it's come from
             # data that is already in the cruise, so we'll ignore this as well
-            if n_toc==0:
+            if n_toc == 0:
                 continue
             # Record the moment (with respect to this section of data)
             self.create_kti(n_toc)
@@ -461,7 +458,7 @@ class TopOfDescent(KeyTimeInstanceNode):
             ccd_slice = ccd_phase.slice
             try:
                 n_tod = find_toc_tod(alt_std.array, ccd_slice, 'Descent')
-            except:
+            except ValueError:
                 # altitude data does not have a decreasing section, so quit.
                 continue
             # If this slice ended in mid-cruise, the ccd slice will end in None.
@@ -469,7 +466,7 @@ class TopOfDescent(KeyTimeInstanceNode):
                 continue
             # if this is the last point in the slice, it's come from
             # data that ends in the cruise, so we'll ignore this too.
-            if n_tod==ccd_slice.stop - 1:
+            if n_tod == ccd_slice.stop - 1:
                 continue
             # Record the moment (with respect to this section of data)
             self.create_kti(n_tod)
@@ -1398,21 +1395,31 @@ class SecsToTouchdown(KeyTimeInstanceNode):
 
 class Autoland(KeyTimeInstanceNode):
     '''
-    All autopilots engaged at touchdown.
+    All requried autopilots engaged at touchdown. Many Boeing aircraft require
+    all three AutoPilot channels to be engaged.
     '''
-    TRIPLE_FAMILIES = set((
-        '737',
-        '757',
-        '767',
-    ))
+    TRIPLE_FAMILIES = (
+        'B737 Classic',
+        'B737 NG',
+        'B757',
+        'B767',
+    )
 
+    @classmethod
+    def can_operate(cls, available):
+        return all_of(('AP Channels Engaged', 'Touchdown'), available)
+    
     def derive(self, ap=M('AP Channels Engaged'), touchdowns=KTI('Touchdown'),
                family=A('Family')):
+        family = family.value if family else None
         for td in touchdowns:
-            if (family.value in self.TRIPLE_FAMILIES and
-                ap.array[td.index] == 'Triple') or \
-                    ap.array[td.index] == 'Dual':
+            if ap.array[td.index] == 'Dual' and family not in self.TRIPLE_FAMILIES:
                 self.create_kti(td.index)
+            elif ap.array[td.index] == 'Triple':
+                self.create_kti(td.index)
+            else:
+                # in Single OR Dual and Triple was required
+                continue
 
 
 #################################################################

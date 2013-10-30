@@ -5,7 +5,6 @@ import networkx as nx
 from datetime import datetime
 
 from analysis_engine.node import (DerivedParameterNode, Node, NodeManager, P)
-from analysis_engine.process_flight import get_derived_nodes
 from analysis_engine.dependency_graph import (
     any_predecessors_in_requested,
     dependency_order, 
@@ -14,6 +13,7 @@ from analysis_engine.dependency_graph import (
     indent_tree,
     process_order,
 )
+from analysis_engine.utils import get_derived_nodes
   
 def flatten(l):
     "Flatten an iterable of many levels of depth (generator)"

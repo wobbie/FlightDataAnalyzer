@@ -67,6 +67,14 @@ from analysis_engine.settings import (
 
 
 class Airborne(FlightPhaseNode):
+    '''
+    Periods where the aircraft is in the air, includes periods where on the
+    ground for short periods (touch and go).
+    
+    TODO: Review whether depending upon the "dips" calculated by Altitude AAL
+    would be more sensible as this will allow for negative AAL values longer
+    than the remove_small_gaps time_limit.
+    '''
     def derive(self, alt_aal=P('Altitude AAL For Flight Phases'),
                fast=S('Fast')):
         # Just find out when altitude above airfield is non-zero.
@@ -77,16 +85,16 @@ class Airborne(FlightPhaseNode):
 
             start_point = speedy.slice.start or 0
             stop_point = speedy.slice.stop or len(alt_aal.array)
-            # First tidy up the data we're interested in
-            working_alt = repair_mask(alt_aal.array[start_point:stop_point])
+            # Restrict data to the fast section (it's already been repaired)
+            working_alt = alt_aal.array[start_point:stop_point]
 
             # Stop here if there is inadequate airborne data to process.
             if working_alt is None:
                 break
-
-            airs = slices_remove_small_gaps(np.ma.clump_unmasked(np.ma.masked_less_equal(working_alt, 0.0)),
-                                            time_limit=10, 
-                                            hz=alt_aal.frequency)
+            airs = slices_remove_small_gaps(
+                np.ma.clump_unmasked(np.ma.masked_less_equal(working_alt, 0.0)),
+                time_limit=40, # 10 seconds was too short for Herc which flies below 0  AAL for 30 secs.
+                hz=alt_aal.frequency)
             # Make sure we propogate None ends to data which starts or ends in
             # midflight.
             for air in airs:
@@ -330,10 +338,12 @@ class ClimbCruiseDescent(FlightPhaseNode):
                     pk_idx = pk_idxs[n]
                     next_pk_val = pk_vals[n + 1]
                     next_pk_idx = pk_idxs[n + 1]
-                    if next_pk_val < pk_val:
+                    if pk_val > next_pk_val:
+                        # descending
                         self.create_phase(slice(None, next_pk_idx))
                         n += 1
                     else:
+                        # ascending
                         # We are going upwards from n->n+1, does it go down
                         # again?
                         if n + 2 < n_vals:
