@@ -690,7 +690,7 @@ class AirspeedGustsDuringFinalApproach(KeyPointValueNode):
                airborne=S('Airborne')):
 
         _, fin_apps = slices_from_to(alt_rad.array, 30, 10)
-        descents = slices_and([s.slice for s in airborne], fin_apps)
+        descents = slices_and(airborne.get_slices(), fin_apps)
         for descent in descents:
             # Ensure we encompass the range of interest.
             scope = slice(descent.start - 5, descent.stop + 5)
