@@ -1215,9 +1215,14 @@ def closest_unmasked_value(array, index, _slice=None):
     return Value(index=pos, value=array[pos])
 
 
-def clump_multistate(array, state, _slices, condition=True):
+def clump_multistate(array, state, _slices=[slice(None)], condition=True):
     '''
     This tests a multistate array and returns a classic POLARIS list of slices.
+    
+    Masked values will not be included in the slices. If this troubles you,
+    repair the masked data (maintaining the previous value or taking the
+    nearest neighbour value) using nearest_neighbour_mask_repair before
+    passing the array into this function.
 
     :param array: data to scan
     :type array: multistate numpy masked array
@@ -1230,53 +1235,21 @@ def clump_multistate(array, state, _slices, condition=True):
 
     :returns: list of slices.
     '''
-    def add_clump(clumps, _slice, start, stop):
-        #Note that the resulting clumps are expanded by half an index so that
-        #where significant the errors in timing are minimized. A clamp to avoid
-        #-0.5 values is included, but as we don't know the length of the calling
-        #array here, a limit on the maximum case is impractical.
-        if _slice.start == 0 and start == 0:
-            begin = 0
-        else:
-            begin = start-0.5
-        new_slice = slice(begin, stop+0.5)
-        clumps.append(shift_slice(new_slice,_slice.start))
-        return
-
     if not state in array.state:
         return None
 
-    try:
-        iter_this = iter(_slices)
-    except TypeError:
-        iter_this = [_slices]
+    if not hasattr(_slices, '__iter__'):
+        if _slices:  # single slice provided
+            _slices = [_slices,]
+        else:  # None provided
+            return []
 
-    clumps = []
+    if condition == True:
+        state_match = runs_of_ones(array == state)
+    else:
+        state_match = runs_of_ones(array != state)
 
-    for _slice in iter_this:
-
-        if condition==True:
-            array_tuple = np.ma.nonzero(array[_slice]==state)
-        else:
-            array_tuple = np.ma.nonzero(np.ma.logical_not(array[_slice]==state))
-
-        start = None
-        stop = None
-
-        for x in array_tuple[0]:
-            if start==None:
-                start = x
-                stop = x + 1
-            elif x==stop:
-                stop+=1
-            else:
-                add_clump(clumps, _slice, start, stop)
-                start=x
-                stop=x+1
-        if stop:
-            add_clump(clumps, _slice, start, stop)
-
-    return clumps
+    return slices_and(_slices, state_match)
 
 
 def unique_values(array):

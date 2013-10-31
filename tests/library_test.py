@@ -1257,8 +1257,11 @@ class TestClumpMultistate(unittest.TestCase):
                                   mask=[0, 0, 0, 0, 0, 0, 1])
         p = M('Test Node', array, values_mapping=values_mapping)
         result = clump_multistate(p.array, 'two', slice(0,7))
-        expected = [slice(0.5, 2.5), slice(2.5, 5.5)]
+        expected = [slice(1, 2), slice(3, 5)]
         self.assertEqual(result, expected)
+        result2 = clump_multistate(p.array, 'two')
+        self.assertEqual(result2, expected)
+        
 
     def test_complex(self):
         values_mapping = {1: 'one', 2: 'two', 3: 'three'}
@@ -1266,7 +1269,7 @@ class TestClumpMultistate(unittest.TestCase):
                                   mask=[0, 0, 0, 0, 0, 0, 1])
         p = M('Test Node', array, values_mapping=values_mapping)
         result = clump_multistate(p.array, 'three', [slice(0,7)], condition=False)
-        expected = [slice(0, 2.5), slice(2.5, 6.5)]
+        expected = [slice(0, 2), slice(3, 6)] # Last value is masked
         self.assertEqual(result, expected)
 
     def test_null(self):
@@ -1284,7 +1287,7 @@ class TestClumpMultistate(unittest.TestCase):
                                   mask=[0, 0, 0, 0, 0, 0, 0])
         p = M('Test Node', array, values_mapping=values_mapping)
         result = clump_multistate(p.array, 'two', [slice(0,2), slice(4,6)])
-        expected = [slice(0.5,2.5), slice(3.5,5.5)]
+        expected = [slice(1, 2), slice(4, 5)]
         self.assertEqual(result, expected)
 
     def test_null_slice(self):
@@ -1294,6 +1297,15 @@ class TestClumpMultistate(unittest.TestCase):
         p = M('Test Node', array, values_mapping=values_mapping)
         result = clump_multistate(p.array, 'two', [])
         expected = []
+        self.assertEqual(result, expected)
+
+    def test_slice_not_at_start(self):
+        values_mapping = {1: 'one', 2: 'two', 3: 'three'}
+        array = np.ma.MaskedArray(data=[1, 2, 3, 2, 2, 1, 1],
+                                  mask=[0, 0, 0, 0, 0, 0, 1])
+        p = M('Test Node', array, values_mapping=values_mapping)
+        result = clump_multistate(p.array, 'one', [slice(3,None)])
+        expected = [slice(5, 6)]
         self.assertEqual(result, expected)
 
 
