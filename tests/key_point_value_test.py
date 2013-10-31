@@ -2234,8 +2234,8 @@ class TestAirspeedWithThrustReversersDeployedMin(unittest.TestCase, NodeTest):
         node = AirspeedWithThrustReversersDeployedMin()
         node.derive(air_spd, tr, power, landings)
         self.assertEqual(len(node), 1)
-        self.assertEqual(node[0], KeyPointValue(index=6.5, 
-                                                value=35.0, 
+        self.assertEqual(node[0], KeyPointValue(index=7,
+                                                value=30.0,
                                                 name='Airspeed With Thrust Reversers Deployed Min'))
 
     def test_derive_inadequate_power(self):
