@@ -167,9 +167,10 @@ def thrust_reversers_working(landing, pwr, tr):
     '''
     Thrust reversers are deployed and average N1 over REVERSE_THRUST_EFFECTIVE (nominally 65% N1).
     '''
-    high_power = np.ma.masked_less(pwr.array[landing.slice], REVERSE_THRUST_EFFECTIVE)
+    high_power = np.ma.masked_less(pwr.array, REVERSE_THRUST_EFFECTIVE)
     high_power_slices = np.ma.clump_unmasked(high_power)
-    return clump_multistate(tr.array[landing.slice], 'Deployed', high_power_slices)
+    high_power_landing_slices = slices_and(high_power_slices, [landing.slice])
+    return clump_multistate(tr.array, 'Deployed', high_power_landing_slices)
 
 
 
