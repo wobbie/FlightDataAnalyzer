@@ -1103,6 +1103,15 @@ class TestClosestUnmaskedValue(unittest.TestCase):
         self.assertRaises(IndexError, closest_unmasked_value, array, 6, slice(0, 3))
         self.assertRaises(IndexError, closest_unmasked_value, array, 200, slice(3, 4))
 
+    def test_negative_step_now_available(self):
+        array = 20.0 - np.ma.arange(20)
+        array[7:19] = np.ma.masked
+        self.assertEqual(closest_unmasked_value(array, 8, slice(18,3,-1)).index, 6)
+        self.assertEqual(closest_unmasked_value(array, 8, slice(16,3,-1)).value, 14.0)
+        self.assertEqual(closest_unmasked_value(array, 8.5, slice(None,3,-1)).index, 6)
+        self.assertEqual(closest_unmasked_value(array, 9, slice(18,None,-1)).index, 6)
+        
+        
 class TestActuatorMismatch(unittest.TestCase):
     '''
     Originally written to monitor 737 elevator actuators, this may be
@@ -2138,6 +2147,10 @@ class TestIndexAtValue(unittest.TestCase):
     def test_index_at_value_threshold_closing(self):
         array = np.ma.arange(4)
         self.assertEquals (index_at_value(array, 99, slice(1, None), endpoint='closing'), 3)
+
+    def test_index_at_value_threshold_closing_backwards(self):
+        array = 6-np.ma.arange(6)
+        self.assertEquals (index_at_value(array, 99, slice(None, 4, -1), endpoint='closing'), 0)
 
     def test_index_at_value_masked(self):
         array = np.ma.arange(4)

@@ -109,7 +109,7 @@ class TestAltitudePeak(unittest.TestCase):
 
 class TestBottomOfDescent(unittest.TestCase):
     def test_can_operate(self):
-        expected = [('Climb Cruise Descent',)]
+        expected = [('Climb Cruise Descent','Airborne')]
         opts = BottomOfDescent.get_operational_combinations()
         self.assertEqual(opts, expected) 
         
@@ -119,12 +119,36 @@ class TestBottomOfDescent(unittest.TestCase):
         from analysis_engine.flight_phase import ClimbCruiseDescent
         ccd = ClimbCruiseDescent()
         air = buildsection('Airborne', 0,50)
-        ccd.derive(alt_std, air)
+        ccd.derive(alt_std)
         bod = BottomOfDescent()
-        bod.derive(ccd)    
+        bod.derive(ccd, air)    
         expected = [KeyTimeInstance(index=31, name='Bottom Of Descent')]
         self.assertEqual(bod, expected)
 
+    def test_bottom_of_descent_complex(self):
+        airs = buildsections('Airborne', [896, 1654], [1688, 2055])
+        ccds = buildsections('Climb Cruise Descent', [897, 1253], [1291, 1651], [1689, 2054])
+        bod = BottomOfDescent()
+        bod.derive(ccds, airs)    
+        expected = [KeyTimeInstance(index=1253, name='Bottom Of Descent'),
+                    KeyTimeInstance(index=1651, name='Bottom Of Descent'),
+                    KeyTimeInstance(index=2054, name='Bottom Of Descent')]        
+        self.assertEqual(bod, expected)
+
+    def test_bod_air_only(self):
+        air = buildsection('Airborne', 0,51)
+        bod = BottomOfDescent()
+        bod.derive(None, air)    
+        expected = [KeyTimeInstance(index=51, name='Bottom Of Descent')]        
+        self.assertEqual(bod, expected)
+        
+    def test_bod_ccd_only(self):
+        ccds = buildsection('Climb Cruise Descent', 897, 1253)
+        bod = BottomOfDescent()
+        bod.derive(ccds, None)    
+        expected = [KeyTimeInstance(index=1253, name='Bottom Of Descent')]        
+        self.assertEqual(bod, expected)
+        
 
 class TestClimbStart(unittest.TestCase):
     def test_can_operate(self):

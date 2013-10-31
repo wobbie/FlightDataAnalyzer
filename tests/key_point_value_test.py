@@ -8036,11 +8036,41 @@ class TestMasterWarningDuration(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = MasterWarningDuration
-        self.operational_combinations = [('Master Warning',)]
+        self.operational_combinations = [('Master Warning','Eng (*) Any Running'),
+                                         ('Master Warning',)]
 
-    @unittest.skip('Test Not Implemented')
     def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+        warn = MasterWarningDuration()
+        warn.derive(M(array=np.ma.array([0,1,1,1,0]),
+                     values_mapping={1: 'Warning'}),
+                   M(array=np.ma.array([0,0,1,1,0]), 
+                     values_mapping={1: 'Running'})                   )
+        self.assertEqual(warn[0].index, 2)
+        self.assertEqual(warn[0].value, 2)
+
+    def test_no_engines(self):
+        warn = MasterWarningDuration()
+        warn.derive(M(array=np.ma.array([0,1,1,1,0]),
+                     values_mapping={1: 'Warning'}),None)
+        self.assertEqual(warn[0].index, 1)
+        self.assertEqual(warn[0].value, 3)
+
+    def test_derive_all_running(self):
+        warn = MasterWarningDuration()
+        warn.derive(M(array=np.ma.array([0,1,1,1,1]),
+                     values_mapping={1: 'Warning'}),
+                   M(array=np.ma.array([1,1,1,1,1]), 
+                     values_mapping={1: 'Running'})                   )
+        self.assertEqual(warn[0].index, 1)
+        self.assertEqual(warn[0].value, 4)
+
+    def test_derive_not_running(self):
+        warn = MasterWarningDuration()
+        warn.derive(M(array=np.ma.array([0,1,1,1,0]),
+                     values_mapping={1: 'Warning'}),
+                   M(array=np.ma.array([0,0,0,0,0]), 
+                     values_mapping={1: 'Running'})                   )
+        self.assertEqual(len(warn), 0)
 
 
 class TestMasterWarningDuringTakeoffDuration(unittest.TestCase, NodeTest):

@@ -8961,12 +8961,25 @@ class MasterWarningDuration(KeyPointValueNode):
     "Excursions - Take-Off (Longitudinal), Master Caution or Master Warning
     triggered during takeoff. The idea of this is to inform the analyst of
     any possible distractions to the pilot"
+    
+    On some types nuisance recordings arise before first engine start, hence
+    the added condition for engine running.
     '''
 
     units = 'sec'
 
-    def derive(self, warning=M('Master Warning')):
-        self.create_kpvs_where(warning.array == 'Warning', warning.hz)
+    @classmethod
+    def can_operate(cls, available):
+        return 'Master Warning' in available
+    
+    def derive(self, warning=M('Master Warning'), 
+               any_engine=M('Eng (*) Any Running')):
+        if any_engine:
+            self.create_kpvs_where(np.ma.logical_and(warning.array == 'Warning', 
+                                                     any_engine.array == 'Running'),
+                                   warning.hz)
+        else:
+            self.create_kpvs_where(warning.array == 'Warning', warning.hz)
 
 
 class MasterWarningDuringTakeoffDuration(KeyPointValueNode):

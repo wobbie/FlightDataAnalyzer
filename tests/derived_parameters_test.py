@@ -920,6 +920,27 @@ class TestAltitudeAAL(unittest.TestCase):
         self.assertNotEqual(alt_aal.array[200], 0.0)
         np.testing.assert_equal(alt_aal.array[0], 0.0)
 
+    def test_alt_aal_complex_doubled_with_touch_and_go(self):
+        testwave = np.ma.cos(np.arange(0, 3.14 * 2, 0.02)) * -5000 + 5000
+        rad_wave = np.copy(testwave)-500
+        #rad_wave[110:140] -= 8765 # The ground is 8,765 ft high at this point.
+        rad_data = np.ma.masked_greater(rad_wave, 2600)
+        double_test = np.ma.concatenate((testwave, testwave))
+        double_rad = np.ma.concatenate((rad_data, rad_data))
+        phase_fast = buildsection('Fast', 0, 2*len(testwave))
+        alt_aal = AltitudeAAL()
+        alt_aal.derive(P('Altitude Radio', double_rad),
+                       P('Altitude STD', double_test),
+                       phase_fast)
+        '''
+        import matplotlib.pyplot as plt
+        plt.plot(double_test, '-b')
+        plt.plot(double_rad, 'o-r')
+        plt.plot(alt_aal.array, '-k')
+        plt.show()
+        '''
+        np.testing.assert_equal(alt_aal.array[300:310], [0.0]*10)
+        
 
     def test_alt_aal_complex_no_rad_alt(self):
         testwave = np.ma.cos(np.arange(0, 3.14 * 2 * 5, 0.1)) * -3000 + \
@@ -3729,6 +3750,7 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
             ('Flap Angle (R) Inboard',),
             ('Flap Angle (L)', 'Flap Angle (R)'),
             ('Flap Angle (L) Inboard', 'Flap Angle (R) Inboard'),
+            ('Flap Angle (L)', 'Flap Angle (R)', 'Flap Angle (C)', 'Flap Angle (MCP)'),
             ('Flap Angle (L)', 'Flap Angle (R)', 'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard', 'Frame'),
             ('Flap Angle (L)', 'Flap Angle (R)', 'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard', 'Slat Angle', 'Frame'),
         ]
@@ -3744,7 +3766,8 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
         slat.derive(slat_l, slat_r)
         family = A('Family', 'B787')
         f = FlapAngle()
-        f.derive(flap_angle_l, flap_angle_r, None, None, slat, None, family)
+        f.derive(flap_angle_l, flap_angle_r, None, None, None, None,
+                 slat, None, family)
         # Include transitions.
         self.assertEqual(f.array[18635], 0.70000000000000007)
         self.assertEqual(f.array[18650], 1.0)
@@ -3765,8 +3788,8 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
             25:   (100, 20),
             30:   (100, 30),
         }
-        slat_array = np.ma.array([0, 50, 50, 50, 50, 100, 100])
-        flap_array = np.ma.array([0, 0, 5, 15, 20, 20, 30])
+        slat_array = np.ma.array([0, 50, 50, 50, 50, 100, 100], dtype=float)
+        flap_array = np.ma.array([0, 0, 5, 15, 20, 20, 30], dtype=float)
         flap_slat = FlapAngle._combine_flap_slat(slat_array, flap_array,
                                                  conf_map)
         self.assertEqual(flap_slat.tolist(),
@@ -3775,7 +3798,8 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
     def test_hercules(self):
         f = FlapAngle()
         f.derive(P(array=np.ma.array(range(0, 5000, 100) + range(5000, 0, -200))),
-                 None, None, None, A('Frame', 'L382-Hercules'))
+                 None, None, None, None, None, None, None, A('Frame', 'L382-Hercules'))
+        self.assertAlmostEqual(f.array[50], 2500, 1)
 
 
 class TestHeadingTrueContinuous(unittest.TestCase):

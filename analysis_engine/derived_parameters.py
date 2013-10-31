@@ -802,6 +802,15 @@ class AltitudeAAL(DerivedParameterNode):
             alt_result[:bounce_end] = 0.0
             ralt_sections = [slice(0,hundred_feet)]
 
+        elif mode=='over_gnd':
+
+            ralt_sections = np.ma.clump_unmasked(np.ma.masked_outside(alt_rad_aal, 0.0, 100.0))
+            if len(ralt_sections)==0:
+                # Either Altitude Radio did not drop below 100, or did not get
+                # above 100. Either way, we are better off working with just the
+                # pressure altitude signal.
+                return shift_alt_std()
+        
         baro_sections = slices_not(ralt_sections, begin_at=0, 
                                    end_at=len(alt_std))
 
@@ -1004,9 +1013,9 @@ class AltitudeAAL(DerivedParameterNode):
         # Quick visual check of the altitude aal.
         if alt_rad:
             import matplotlib.pyplot as plt
-            plt.plot(alt_aal)
-            plt.plot(alt_std.array)
-            plt.plot(alt_rad.array)
+            plt.plot(alt_aal, 'b-')
+            plt.plot(alt_std.array, 'y-')
+            plt.plot(alt_rad.array, 'r-')
             plt.show()
         '''
         
@@ -3243,6 +3252,7 @@ class GrossWeightSmoothed(DerivedParameterNode):
 class Groundspeed(DerivedParameterNode):
     """
     This caters for cases where some preprocessing is required.
+    
     :param frame: The frame attribute, e.g. '737-i'
     :type frame: An attribute
     :returns groundspeed as the mean between two valid sensors.
@@ -3294,7 +3304,8 @@ class FlapAngle(DerivedParameterNode):
     def can_operate(cls, available, family=A('Family')):
 
         flap_angle = any_of((
-            'Flap Angle (L)', 'Flap Angle (R)',
+            'Flap Angle (L)', 'Flap Angle (R)', 
+            'Flap Angle (C)', 'Flap Angle (MCP)',
             'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard',
         ), available)
 
@@ -3366,6 +3377,8 @@ class FlapAngle(DerivedParameterNode):
     def derive(self,
                flap_A=P('Flap Angle (L)'),
                flap_B=P('Flap Angle (R)'),
+               flap_C=P('Flap Angle (C)'),
+               flap_D=P('Flap Angle (MCP)'),
                flap_A_inboard=P('Flap Angle (L) Inboard'),
                flap_B_inboard=P('Flap Angle (R) Inboard'),
                slat=P('Slat Angle'),
@@ -3391,9 +3404,12 @@ class FlapAngle(DerivedParameterNode):
             # Only the right inboard flap is instrumented.
             self.array = flap_B.array
         else:
-            # By default, blend the two parameters.
-            self.array, self.frequency, self.offset = blend_two_parameters(
-                flap_A, flap_B)
+            # By default, blend all the available parameters.
+            sources = [flap_A, flap_B, flap_C, flap_D]
+            self.frequency = max([s.frequency for s in sources if s]) * 2
+            self.offset = 0.0
+            self.array = blend_parameters(sources, offset=self.offset, 
+                                          frequency=self.frequency)
 
 
 '''
@@ -3620,7 +3636,7 @@ class ILSFrequency(DerivedParameterNode):
                 'ILS (2) Frequency' in available) or \
                ('ILS-VOR (1) Frequency' in available)
     
-    def derive(self, f1=P('ILS (1) Frequency'),f2=P('ILS (2) Frequency'),
+    def derive(self, f1=P('ILS (1) Frequency'), f2=P('ILS (2) Frequency'),
                f1v=P('ILS-VOR (1) Frequency'), f2v=P('ILS-VOR (2) Frequency')):
         
         #TODO: Extend to allow for three-receiver installations

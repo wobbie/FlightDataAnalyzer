@@ -1179,39 +1179,50 @@ def closest_unmasked_value(array, index, _slice=None):
     :returns: The closest index and value of an unmasked value.
     :rtype: Value
     '''
+
+    def find_unmasked_value(_slice, array, index):
+        slice_start = (_slice.start or 0)
+        slice_stop = (_slice.stop or len(array))
+        
+        if index >= 0 and index > slice_stop:
+            raise IndexError("index is beyond length of sliced data")
+        elif index < 0 and abs(index) > len(array):
+            raise IndexError("negative index goes beyond array length")
+        
+        if index < 0:
+            index = abs(len(array) + index)
+            
+        sliced_array = array[_slice]
+        # make index relative to the sliced section
+        rel_index = index - slice_start  
+        if not np.ma.count(sliced_array) or abs(rel_index) > len(sliced_array):
+            # slice contains no valid data or index is outside of the length of
+            # the array
+            #return Value(None, None)
+            raise IndexError("No valid data to find at index '%d' in sliced array "
+                             "of length '%d'" % (index, len(sliced_array)))
+        
+        indices = np.ma.arange(len(sliced_array))
+        indices.mask = sliced_array.mask
+        relative_pos = np.ma.abs(indices - rel_index).argmin()
+        pos = relative_pos + slice_start
+        return pos
+
     if _slice is not None and index < 0:
         # hard to understand what the programmer is expecting to be returned
         raise NotImplementedError("Negative indexing on slice not supported")
     if _slice is None:
         _slice = slice(None)
-    if (_slice.step and _slice.step != 1):
-        return NotImplementedError("Step '%s' not supported" % slice.step)
+    if (_slice.step and _slice.step == -1):
+        # OK neg_pos is a crazy name. The position in the array with negative indexing.
+        neg_pos = find_unmasked_value(slice(len(array)-(_slice.start or len(array)),
+                                            len(array)-(_slice.stop or 0)), 
+                                      array[::-1], 
+                                      len(array)-(_slice.start or len(array)))
+        pos = len(array) - neg_pos -1
+    else:
+        pos = find_unmasked_value(_slice, array, index)
     
-    slice_start = (_slice.start or 0)
-    slice_stop = (_slice.stop or len(array))
-    
-    if index >= 0 and index > slice_stop:
-        raise IndexError("index is beyond length of sliced data")
-    elif index < 0 and abs(index) > len(array):
-        raise IndexError("negative index goes beyond array length")
-    
-    if index < 0:
-        index = abs(len(array) + index)
-        
-    sliced_array = array[_slice]
-    # make index relative to the sliced section
-    rel_index = index - slice_start  
-    if not np.ma.count(sliced_array) or abs(rel_index) > len(sliced_array):
-        # slice contains no valid data or index is outside of the length of
-        # the array
-        #return Value(None, None)
-        raise IndexError("No valid data to find at index '%d' in sliced array "
-                         "of length '%d'" % (index, len(sliced_array)))
-    
-    indices = np.ma.arange(len(sliced_array))
-    indices.mask = array.mask
-    relative_pos = np.ma.abs(indices - rel_index).argmin()
-    pos = relative_pos + slice_start
     return Value(index=pos, value=array[pos])
 
 
@@ -4979,10 +4990,12 @@ def slices_between(array, min_, max_):
     :returns: Slices where the array is above a certain value.
     :rtype: list of slice
     '''
-    if len(array) == 0:
+    if np.ma.count(array) == 0:
         return array, []
-    repaired_array = repair_mask(array)
-    if repaired_array is None: # Array length is too short to be repaired.
+    try:
+        repaired_array = repair_mask(array)
+    except ValueError:
+        # data is entirely masked or too short to be repaired
         return array, []
     # Slice through the array at the top and bottom of the band of interest
     band = np.ma.masked_outside(repaired_array, min_, max_)
