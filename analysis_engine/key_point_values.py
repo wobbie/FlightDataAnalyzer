@@ -3,6 +3,8 @@
 import numpy as np
 
 from math import ceil
+
+from flightdatautilities import aircrafttables as at
 from flightdatautilities.geometry import midpoint
 
 from analysis_engine.settings import (ACCEL_LAT_OFFSET_LIMIT,
@@ -17,6 +19,7 @@ from analysis_engine.settings import (ACCEL_LAT_OFFSET_LIMIT,
                                       NAME_VALUES_CONF,
                                       NAME_VALUES_ENGINE,
                                       NAME_VALUES_FLAP,
+                                      NAME_VALUES_LEVER,
                                       REVERSE_THRUST_EFFECTIVE,
                                       SPOILER_DEPLOYED)
 
@@ -1467,7 +1470,7 @@ class AirspeedWithFlapMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
 
     NAME_FORMAT = 'Airspeed With %(parameter)s %(flap)s Max'
-    NAME_VALUES = NAME_VALUES_FLAP.copy()
+    NAME_VALUES = NAME_VALUES_LEVER.copy()
     NAME_VALUES.update({
         'parameter': [
             'Flap',
@@ -1516,7 +1519,7 @@ class AirspeedWithFlapMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
 
     NAME_FORMAT = 'Airspeed With Flap %(flap)s Min'
-    NAME_VALUES = NAME_VALUES_FLAP
+    NAME_VALUES = NAME_VALUES_LEVER
 
     units = 'kt'
 
@@ -1599,7 +1602,7 @@ class AirspeedWithFlapDuringClimbMax(KeyPointValueNode, FlapOrConfigurationMaxOr
     '''
 
     NAME_FORMAT = 'Airspeed With %(parameter)s %(flap)s During Climb Max'
-    NAME_VALUES = NAME_VALUES_FLAP.copy()
+    NAME_VALUES = NAME_VALUES_LEVER.copy()
     NAME_VALUES.update({
         'parameter': [
             'Flap',
@@ -1648,7 +1651,7 @@ class AirspeedWithFlapDuringClimbMin(KeyPointValueNode, FlapOrConfigurationMaxOr
     '''
 
     NAME_FORMAT = 'Airspeed With Flap %(flap)s During Climb Min'
-    NAME_VALUES = NAME_VALUES_FLAP
+    NAME_VALUES = NAME_VALUES_LEVER
 
     units = 'kt'
 
@@ -1675,7 +1678,7 @@ class AirspeedWithFlapDuringDescentMax(KeyPointValueNode, FlapOrConfigurationMax
     '''
 
     NAME_FORMAT = 'Airspeed With %(parameter)s %(flap)s During Descent Max'
-    NAME_VALUES = NAME_VALUES_FLAP.copy()
+    NAME_VALUES = NAME_VALUES_LEVER.copy()
     NAME_VALUES.update({
         'parameter': [
             'Flap',
@@ -1724,7 +1727,7 @@ class AirspeedWithFlapDuringDescentMin(KeyPointValueNode, FlapOrConfigurationMax
     '''
 
     NAME_FORMAT = 'Airspeed With Flap %(flap)s During Descent Min'
-    NAME_VALUES = NAME_VALUES_FLAP
+    NAME_VALUES = NAME_VALUES_LEVER
 
     units = 'kt'
 
@@ -1751,7 +1754,7 @@ class AirspeedRelativeWithFlapDuringDescentMin(KeyPointValueNode, FlapOrConfigur
     '''
 
     NAME_FORMAT = 'Airspeed Relative With Flap %(flap)s During Descent Min'
-    NAME_VALUES = NAME_VALUES_FLAP
+    NAME_VALUES = NAME_VALUES_LEVER
 
     units = 'kt'
 
@@ -2197,7 +2200,7 @@ class AOAWithFlapMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
 
     NAME_FORMAT = 'AOA With Flap %(flap)s Max'
-    NAME_VALUES = NAME_VALUES_FLAP
+    NAME_VALUES = NAME_VALUES_LEVER
 
     name = 'AOA With Flap Max'
     units = 'deg'
@@ -2828,7 +2831,7 @@ class AltitudeAtFlapExtensionWithGearDown(KeyPointValueNode):
     '''
 
     NAME_FORMAT = 'Altitude At Flap %(flap)s Extension With Gear Down'
-    NAME_VALUES = NAME_VALUES_FLAP
+    NAME_VALUES = NAME_VALUES_LEVER
 
     units = 'ft'
 
@@ -2866,7 +2869,7 @@ class AirspeedAtFlapExtensionWithGearDown(KeyPointValueNode):
     '''
 
     NAME_FORMAT = 'Airspeed At Flap %(flap)s Extension With Gear Down'
-    NAME_VALUES = NAME_VALUES_FLAP
+    NAME_VALUES = NAME_VALUES_LEVER
 
     units = 'kts'
 
@@ -2935,7 +2938,7 @@ class AirspeedRelativeAtFirstFlapRetraction(KeyPointValueNode):
             speed_ret = value_at_index(airspeed.array, index)
             gw_ret = value_at_index(gw.array, index)
             # Get the Vref speed for flap 30 and the current weight.
-            vref = vspeed_lookup('Vref', series.value, engine.value, 30.0, gw_ret)
+            vref = vspeed_lookup('Vref', series.value, engine.value, '30', gw_ret)
             self.create_kpv(index, speed_ret-(vref+80.0))
 
 
@@ -2966,7 +2969,7 @@ class AirspeedRelativeAtFirstFlapExtensionWithGearDown(KeyPointValueNode):
         speed_20 = kpv_20[-1].value
         
         # Get the Vref speed for a landing at flap 30 and the projected weight.
-        vref_ldg = vspeed_lookup('Vref', series.value, engine.value, 30.0, gw_ldg[0].value)
+        vref_ldg = vspeed_lookup('Vref', series.value, engine.value, '30', gw_ldg[0].value)
         self.create_kpv(index, speed_20-(vref_ldg+80.0))
 
 
@@ -2995,7 +2998,7 @@ class AirspeedRelativeAtFlap20SelectionWithGearDown(KeyPointValueNode):
         speed_20 = kpv_20[0].value
         
         # Get the Vref speed for a landing at flap 30 and the projected weight.
-        vref_ldg = vspeed_lookup('Vref', series.value, engine.value, 30.0, gw_ldg[0].value)
+        vref_ldg = vspeed_lookup('Vref', series.value, engine.value, '30', gw_ldg[0].value)
         self.create_kpv(index, speed_20-(vref_ldg+80.0))
 
 
@@ -5040,7 +5043,7 @@ class MachWithFlapMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
 
     NAME_FORMAT = 'Mach With Flap %(flap)s Max'
-    NAME_VALUES = NAME_VALUES_FLAP
+    NAME_VALUES = NAME_VALUES_LEVER
 
     units = 'kt'
 
@@ -7347,39 +7350,31 @@ class GroundspeedStabilizerOutOfTrimDuringTakeoffMax(KeyPointValueNode):
     units = 'kt'
 
     @classmethod
-    def can_operate(cls, available, family=A('Family'), series=A('Series')):
-        from flightdatautilities import trim_limits
+    def can_operate(cls, available, model=A('Model'), series=A('Series'), family=A('Family')):
 
-        family_ok = family \
-            and family.value in trim_limits.STABILIZER_LIMITS_FAMILIES
-        series_ok = series \
-            and series.value in trim_limits.STABILIZER_LIMITS_SERIES
+        if not all_of(('Groundspeed', 'Stabilizer', 'Takeoff Roll', 'Model', 'Series', 'Family'), available):
+            return False
 
-        return (family_ok or series_ok) and \
-            all_of(('Groundspeed', 'Stabilizer', 'Takeoff Roll'), available)
+        try:
+            at.get_stabilizer_limits(model.value, series.value, family.value)
+        except KeyError:
+            cls.warning("No stabilizer limits available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
+            return False
+
+        return True
 
     def derive(self,
                gnd_spd=P('Groundspeed'),
                stab=P('Stabilizer'),
                takeoff_roll=S('Takeoff Roll'),
-               family=A('Family'),
-               series=A('Series'),
-               ):
-        from flightdatautilities.trim_limits import get_stabilizer_limits
+               model=A('Model'), series=A('Series'), family=A('Family')):
 
-        family_name = family.value if family else None
-        series_name = series.value if series else None
-
-        stab_fwd, stab_aft = get_stabilizer_limits(family_name, series_name)
-
-        if stab_fwd is None or stab_aft is None:
-            self.warning('No stabilizer trim limits for aircraft family `%s`',
-                         family.value)
+        stab_fwd, stab_aft = at.get_stabilizer_limits(model.value, series.value, family.value)
 
         masked_in_trim = np.ma.masked_inside(stab.array, stab_fwd, stab_aft)
-        # Masking groundspeed where stabilizer is in trim
-        # WARNING: in this particular case we don't want the KPV to be created
-        # when the condition (stabilizer out of trim) is not met.
+        # Masking groundspeed where stabilizer is in trim - we don't want the
+        # KPV to be created when condition is not met (stabilizer out of trim)
         gspd_masked = np.ma.array(gnd_spd.array, mask=masked_in_trim.mask)
         self.create_kpvs_within_slices(gspd_masked, takeoff_roll, max_value)
 

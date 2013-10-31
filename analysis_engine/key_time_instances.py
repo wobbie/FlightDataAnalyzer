@@ -24,7 +24,7 @@ from settings import (CLIMB_THRESHOLD,
                       NAME_VALUES_CLIMB,
                       NAME_VALUES_DESCENT,
                       NAME_VALUES_ENGINE,
-                      NAME_VALUES_FLAP,
+                      NAME_VALUES_LEVER,
                       NAME_VALUES_SLAT,
                       TAKEOFF_ACCELERATION_THRESHOLD,
                       TRANSITION_ALTITUDE,
@@ -482,7 +482,7 @@ class FlapSet(KeyTimeInstanceNode):
 
     # Note: We must use %s not %d as we've encountered a flap of 17.5 degrees.
     NAME_FORMAT = 'Flap %(flap)s Set'
-    NAME_VALUES = NAME_VALUES_FLAP
+    NAME_VALUES = NAME_VALUES_LEVER
     
     
     @classmethod

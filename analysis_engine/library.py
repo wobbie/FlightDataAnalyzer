@@ -10,7 +10,7 @@ from scipy import interpolate as scipy_interpolate, optimize
 
 from hdfaccess.parameter import MappedArray
 
-from flightdatautilities.velocity_speed import get_vspeed_map
+from flightdatautilities import aircrafttables as at
 
 from settings import (CURRENT_YEAR,
                       DESCENT_LOW_CLIMB_THRESHOLD,
@@ -6032,27 +6032,25 @@ def value_at_index(array, index, interpolate=True):
         return r*high_value + (1-r) * low_value
 
 
-    
 def vspeed_lookup(vspeed, aircraft, engine, flap, gw):
     '''
     Single point lookup for the vspeed tables.
     
     :param vspeed: Selection of "V2" or "Vref"
-    :type vspeed: String
+    :type vspeed: string
     :param aircraft: Aircraft series identifier.
-    :type aircraft: String
+    :type aircraft: string
     :param engine: Engine Type identifier.
-    :type engine: String
-    :param flap: Flap setting
-    :type flap: float # TODO: Include Config - not tested yet.
+    :type engine: string
+    :param flap: Flap/conf detent
+    :type flap: string
     :param gw: Gross Weight in kg
     :type gw: float
     
     :returns: Vspeed in knots
     :type: float
     '''
-    vspeed_class = get_vspeed_map(series=aircraft, engine_type=engine)
-    vspeed_table = vspeed_class()
+    vspeed_table = at.get_vspeed_map(series=aircraft, engine_type=engine)()
     if vspeed.lower() == 'v2':
         return vspeed_table.v2(flap, gw)
     else:

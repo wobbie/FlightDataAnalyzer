@@ -588,32 +588,31 @@ class TestAirspeedReferenceLookup(unittest.TestCase):
         ]
 
     def test_can_operate(self):
-        self.assertTrue(AirspeedReferenceLookup.can_operate(
-            ('Airspeed', 'Configuration', 'Approach And Landing', 'Touchdown', 'Gross Weight Smoothed'),
+        self.assertTrue(self.node_class.can_operate(
+            ('Airspeed', 'Configuration', 'Approach And Landing', 'Touchdown', 'Gross Weight Smoothed',
+             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',),
+            model=Attribute('Model', 'A320-232'),
             series=Attribute('Series', 'A320-200'),
             family=Attribute('Family', 'A320'),
-            engine=Attribute('Engine Series', 'CFM56-5B'),
+            engine_series=Attribute('Engine Series', 'CFM56-5B'),
             engine_type=Attribute('Engine Type', 'CFM56-5B5/P'),
         ))
-        self.assertTrue(AirspeedReferenceLookup.can_operate(
-            ('Airspeed', 'Flap', 'Approach And Landing', 'Touchdown', 'Gross Weight Smoothed'),
+        self.assertTrue(self.node_class.can_operate(
+            ('Airspeed', 'Flap', 'Approach And Landing', 'Touchdown', 'Gross Weight Smoothed',
+             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',),
+            model=Attribute('Model', 'B737-333'),
             series=Attribute('Series', 'B737-300'),
             family=Attribute('Family', 'B737'),
         ))
-        self.assertFalse(AirspeedReferenceLookup.can_operate(
-            ('Airspeed', 'Approach And Landing', 'Touchdown'),
+        self.assertFalse(self.node_class.can_operate(
+            ('Airspeed', 'Approach And Landing', 'Touchdown',
+             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',),
+            model=Attribute('Model', 'B737-333'),
             series=Attribute('Series', 'B737-300'),
             family=Attribute('Family', 'B737'),
         ))
 
-    # TODO: Remove mock patch - our tables should be correct.
-    @patch('analysis_engine.derived_parameters.get_vspeed_map')
-    def test_airspeed_reference__boeing_lookup(self, vspeed_map):
-        vspeed_table = Mock
-        vspeed_table.vref = Mock(side_effect=[135, 130])
-        vspeed_table.vref_settings = [15, 20, 30]
-        vspeed_map.return_value = vspeed_table
-
+    def test_airspeed_reference__boeing_lookup(self):
         model = A('Model', value='B737-333')
         series = A('Series', value='B737-300')
         family = A('Family', value='B737 Classic')
@@ -630,18 +629,22 @@ class TestAirspeedReferenceLookup(unittest.TestCase):
         hdf_copy = copy_file(hdf_path)
         with hdf_file(hdf_copy) as hdf:
 
-            flap = P(**hdf['Flap'].__dict__)
+            # FIXME: Fudged the flap as test file is outdated:
+            flap = M(**hdf['Flap'].__dict__)
+            flap.values_mapping = {int(d): str(int(d)) for d in np.ma.unique(flap.array.raw) if not np.ma.is_masked(d)}
+
             air_spd = P(**hdf['Airspeed'].__dict__)
             gw = P(**hdf['Gross Weight Smoothed'].__dict__)
 
             expected = np_ma_masked_zeros_like(hdf['Airspeed'].array)
-            expected[approaches[0].slice] = 135
-            expected[approaches[1].slice] = 130
+            expected[approaches[0].slice] = 135.403899
+            expected[approaches[1].slice] = 132.622734
 
-            args = [flap, None, air_spd, gw, approaches, touchdowns, model, series, family, None, None, None]
+            args = [flap, None, air_spd, gw, approaches, touchdowns,
+                    model, series, family, None, None, None]
             node = self.node_class()
             node.get_derived(args)
-            np.testing.assert_array_equal(node.array, expected)
+            ma_test.assert_array_almost_equal(node.array, expected, decimal=0)
 
         if os.path.isfile(hdf_copy):
             os.remove(hdf_copy)
@@ -3012,33 +3015,45 @@ class TestV2(unittest.TestCase, NodeTest):
 
 class TestV2Lookup(unittest.TestCase):
 
+    def setUp(self):
+        self.node_class = V2Lookup
+
     def test_can_operate(self):
-        self.assertTrue(V2Lookup.can_operate(
-            ('Airspeed', 'Configuration', 'Liftoff', 'Gross Weight At Liftoff'),
+        self.assertTrue(self.node_class.can_operate(
+            ('Airspeed', 'Configuration', 'Liftoff', 'Gross Weight At Liftoff',
+             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',),
+            model=Attribute('Model', 'A320-232'),
             series=Attribute('Series', 'A320-200'),
             family=Attribute('Family', 'A320'),
-            engine=Attribute('Engine Series', 'CFM56-5B'),
+            engine_series=Attribute('Engine Series', 'CFM56-5B'),
             engine_type=Attribute('Engine Type', 'CFM56-5B5/P'),
         ))
-        self.assertTrue(V2Lookup.can_operate(
-            ('Airspeed', 'Flap', 'Liftoff', 'Gross Weight At Liftoff'),
+        self.assertTrue(self.node_class.can_operate(
+            ('Airspeed', 'Flap', 'Liftoff', 'Gross Weight At Liftoff',
+             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',),
+            model=Attribute('Model', 'B737-333'),
             series=Attribute('Series', 'B737-300'),
             family=Attribute('Family', 'B737'),
         ))
-        self.assertFalse(V2Lookup.can_operate(
-            ('Airspeed', 'Flap', 'Liftoff', 'Gross Weight At Liftoff'),
+        self.assertTrue(self.node_class.can_operate(
+            ('Airspeed', 'Flap', 'Liftoff', 'Gross Weight At Liftoff',
+             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',),
+            model=Attribute('Model', None),
             series=Attribute('Series', 'B787-8'),
             family=Attribute('Family', 'B787'),
-            engine=Attribute('Engine Series', 'Trent 1000'),
+            engine_series=Attribute('Engine Series', 'Trent 1000'),
             engine_type=Attribute('Engine Type', 'Trent 1000-A'),
         ))
-        self.assertFalse(V2Lookup.can_operate(
-            ('Airspeed', 'Flap', 'Liftoff'),
+        self.assertFalse(self.node_class.can_operate(
+            ('Airspeed', 'Flap', 'Liftoff',
+             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',),
+            model=Attribute('Model', 'B737-333'),
             series=Attribute('Series', 'B737-300'),
             family=Attribute('Family', 'B737'),
         ))
     
     def test_derive__boeing(self):
+        model = A('Model', value='B737-333')
         series = A('Series', value='B737-300')
         family = A('Family', value='B737 Classic')
         gw = KPV(name='Gross Weight At Liftoff', items=[
@@ -3048,17 +3063,20 @@ class TestV2Lookup(unittest.TestCase):
         hdf_path = os.path.join(test_data_path, 'airspeed_reference.hdf5')
         hdf_copy = copy_file(hdf_path)
         with hdf_file(hdf_copy) as hdf:
-            hdf_flap = hdf['Flap']
-            hdf_flap.__dict__['values_mapping'] = {f: str(f) for f in np.ma.unique(hdf_flap.array)}
-            flap = M(**hdf_flap.__dict__)
+
+            # FIXME: Fudged the flap as test file is outdated:
+            flap = M(**hdf['Flap'].__dict__)
+            flap.values_mapping = {int(d): str(int(d)) for d in np.ma.unique(flap.array.raw) if not np.ma.is_masked(d)}
+
             air_spd = P(**hdf['Airspeed'].__dict__)
 
-            args = [flap, None, air_spd, gw, series, family, None, None, None, None]
+            args = [flap, None, air_spd, gw,
+                    model, series, family, None, None, None, None]
 
-            node = V2Lookup()
+            node = self.node_class()
             node.get_derived(args)
             expected = np.ma.array([150.868884] * 5888)
-            np.testing.assert_array_equal(node.array, expected)
+            ma_test.assert_array_almost_equal(node.array, expected, decimal=0)
 
         if os.path.isfile(hdf_copy):
             os.remove(hdf_copy)
@@ -3069,6 +3087,7 @@ class TestV2Lookup(unittest.TestCase):
 
     def test_derive__beechcraft(self):
         air_spd = P('Airspeed', np.ma.array([0] * 20))
+        model = A('Model', value=None)
         series = A('Series', value='1900D')
         family = A('Family', value='1900')
         liftoffs = KTI(name='Liftoff', items=[KeyTimeInstance(index=5)])
@@ -3076,7 +3095,7 @@ class TestV2Lookup(unittest.TestCase):
         for detent, v2 in ((0, 125), (17.5, 114)):
             flap = M('Flap', np.ma.array([detent] * 20),
                      values_mapping={detent: str(detent)})
-            args = [flap, None, air_spd, None, series, family, None, None, None, liftoffs]
+            args = [flap, None, air_spd, None, model, series, family, None, None, None, liftoffs]
             node = V2Lookup()
             node.get_derived(args)
             expected = np.ma.array([v2] * 20)
