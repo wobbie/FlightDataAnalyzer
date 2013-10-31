@@ -8824,15 +8824,22 @@ class TestWindAcrossLandingRunwayAt50Ft(unittest.TestCase, NodeTest):
 # Weight
 
 
-class TestGrossWeightAtLiftoff(unittest.TestCase, NodeTest):
+class TestGrossWeightAtLiftoff(unittest.TestCase):
 
-    def setUp(self):
-        self.node_class = GrossWeightAtLiftoff
-        self.operational_combinations = [('Gross Weight Smoothed', 'Liftoff')]
+    def test_can_operate(self):
+        opts = GrossWeightAtLiftoff.get_operational_combinations()
+        self.assertEqual(opts, [('Gross Weight Smoothed', 'Liftoff')])
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test Not Implemented')
+        
+    def test_fully_masked_weight(self):
+        gwl = GrossWeightAtLiftoff()
+        gwl.derive(P(array=np.ma.array([1,2,3], mask=[1,1,1])),
+                   KTI(items=[KeyTimeInstance('', 1)]))
+        self.assertEqual(len(gwl), 0)
+        
 
 
 class TestGrossWeightAtTouchdown(unittest.TestCase, NodeTest):

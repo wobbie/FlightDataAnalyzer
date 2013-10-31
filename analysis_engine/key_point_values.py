@@ -10023,30 +10023,36 @@ class WindAcrossLandingRunwayAt50Ft(KeyPointValueNode):
 
 class GrossWeightAtLiftoff(KeyPointValueNode):
     '''
+    The gross weight (based on smoothed data for better accuracy) at Liftoff
     '''
-
     units = 'kg'
 
-    def derive(self,
-               gross_wgt=P('Gross Weight Smoothed'),
+    def derive(self, gross_wgt=P('Gross Weight Smoothed'),
                liftoffs=KTI('Liftoff')):
-
-        self.create_kpvs_at_ktis(
-            repair_mask(gross_wgt.array, repair_duration=None), liftoffs)
+        try:
+            #Q: Is this repair required for GWSmoothed?
+            array = repair_mask(gross_wgt.array, repair_duration=None)
+        except ValueError:
+            # No valid data to repair. 
+            return
+        self.create_kpvs_at_ktis(array, liftoffs)
 
 
 class GrossWeightAtTouchdown(KeyPointValueNode):
     '''
+    The gross weight (based on smoothed data for better accuracy) at Touchdown
     '''
-
     units = 'kg'
 
-    def derive(self,
-               gross_wgt=P('Gross Weight Smoothed'),
+    def derive(self, gross_wgt=P('Gross Weight Smoothed'),
                touchdowns=KTI('Touchdown')):
-
-        self.create_kpvs_at_ktis(
-            repair_mask(gross_wgt.array, repair_duration=None), touchdowns)
+        try:
+            #Q: Is this repair required for GWSmoothed?
+            array = repair_mask(gross_wgt.array, repair_duration=None)
+        except ValueError:
+            # No valid data to repair. 
+            return
+        self.create_kpvs_at_ktis(array, touchdowns)
 
 
 class ZeroFuelWeight(KeyPointValueNode):
@@ -10061,10 +10067,7 @@ class ZeroFuelWeight(KeyPointValueNode):
 
     units = 'kg'
 
-    def derive(self,
-               fuel_qty=P('Fuel Qty'),
-               gross_wgt=P('Gross Weight')):
-
+    def derive(self, fuel_qty=P('Fuel Qty'), gross_wgt=P('Gross Weight')):
         self.create_kpv(0, np.ma.median(gross_wgt.array - fuel_qty.array))
 
 
