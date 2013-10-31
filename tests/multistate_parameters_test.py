@@ -289,22 +289,40 @@ class TestConfiguration(unittest.TestCase, NodeTest):
                       values_mapping={x: str(x) for x in np.ma.unique(f)})
         self.ails = P('Flaperon', np.tile(np.ma.array(a), 10000))
     
-    def test_can_operate_not_airbus(self):
+    def test_can_operate(self):
+        # Non-airbus aircraft should not be able to create configuration:
         self.assertFalse(self.node_class.can_operate(
             ['Flap', 'Slat', 'Model', 'Series', 'Family'],
-            manufacturer=Attribute('Manufacturer', 'Boeing')))
-        self.assertTrue(self.node_class.can_operate(
-            ['Flap', 'Slat', 'Model', 'Series', 'Family'],
-            manufacturer=Attribute('Manufacturer', 'Airbus')))
-        for family in ('A318', 'A319', 'A320', 'A321', 'A330', 'A340', 'A350'):
-            self.assertTrue(self.node_class.can_operate(
-                ['Flap', 'Slat', 'Model', 'Series', 'Family'],
-                manufacturer=Attribute('Manufacturer', 'Airbus'),
-                family=Attribute('Family', family)))
-        for family in ('A300', 'A310'):
+            manufacturer=Attribute('Manufacturer', 'Boeing'),
+            family=Attribute('Family', 'B737 Classic')))
+        # A300 and A310 should not be able to create configuration:
+        lookups = (
+            ('A300', 'A300-600', None),
+            ('A310', None, None),  # no entry in table yet.
+        )
+        for family, series, model in lookups:
             self.assertFalse(self.node_class.can_operate(
                 ['Flap', 'Slat', 'Model', 'Series', 'Family'],
                 manufacturer=Attribute('Manufacturer', 'Airbus'),
+                model=Attribute('Model', model),
+                series=Attribute('Series', series),
+                family=Attribute('Family', family)))
+        # Any other airbus should be able to create configuration:
+        lookups = (
+            ####('A318', 'A318-000', 'A318-000'),  # no entry in table yet.
+            ('A319', 'A319-100', 'A319-132'),
+            ('A320', 'A320-200', 'A320-232'),
+            ('A321', 'A321-200', 'A321-232'),
+            ('A330', 'A330-300', None),
+            ('A340', 'A340-300', None),
+            ####('A350', 'A350-000', 'A350-000'),  # no entry in table yet.
+        )
+        for family, series, model in lookups:
+            self.assertTrue(self.node_class.can_operate(
+                ['Flap', 'Slat', 'Model', 'Series', 'Family'],
+                manufacturer=Attribute('Manufacturer', 'Airbus'),
+                model=Attribute('Model', model),
+                series=Attribute('Series', series),
                 family=Attribute('Family', family)))
 
     def test_conf_for_a330(self):

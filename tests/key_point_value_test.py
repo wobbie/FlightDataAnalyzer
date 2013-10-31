@@ -2234,8 +2234,8 @@ class TestAirspeedWithThrustReversersDeployedMin(unittest.TestCase, NodeTest):
         node = AirspeedWithThrustReversersDeployedMin()
         node.derive(air_spd, tr, power, landings)
         self.assertEqual(len(node), 1)
-        self.assertEqual(node[0], KeyPointValue(index=6.5, 
-                                                value=35.0, 
+        self.assertEqual(node[0], KeyPointValue(index=7,
+                                                value=30.0,
                                                 name='Airspeed With Thrust Reversers Deployed Min'))
 
     def test_derive_inadequate_power(self):
@@ -6673,7 +6673,7 @@ class TestGroundspeedStabilizerOutOfTrimDuringTakeoffMax(unittest.TestCase,
         self.node_class = GroundspeedStabilizerOutOfTrimDuringTakeoffMax
         self.operational_combinations = []
         # FIXME: can_operate uses the Family and Series
-        #    ('Groundspeed', 'Stabilizer', 'Takeoff Roll', 'Family', 'Series')]
+        #    ('Groundspeed', 'Stabilizer', 'Takeoff Roll', 'Model', 'Series', 'Family')]
 
     def test_derive(self):
         array = np.arange(10) + 100
@@ -6686,11 +6686,12 @@ class TestGroundspeedStabilizerOutOfTrimDuringTakeoffMax(unittest.TestCase,
         phase = S(frequency=1)
         phase.create_section(slice(0, 20))
 
-        family = A(name='Family', value='B737-NG')
+        model = A(name='Model', value=None)
         series = A(name='Series', value='B737-600')
+        family = A(name='Family', value='B737 NG')
 
         node = self.node_class()
-        node.derive(gspd, stab, phase, family, series)
+        node.derive(gspd, stab, phase, model, series, family)
         self.assertEqual(
             node,
             KPV(self.node_class.get_name(),
@@ -8036,11 +8037,41 @@ class TestMasterWarningDuration(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = MasterWarningDuration
-        self.operational_combinations = [('Master Warning',)]
+        self.operational_combinations = [('Master Warning','Eng (*) Any Running'),
+                                         ('Master Warning',)]
 
-    @unittest.skip('Test Not Implemented')
     def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+        warn = MasterWarningDuration()
+        warn.derive(M(array=np.ma.array([0,1,1,1,0]),
+                     values_mapping={1: 'Warning'}),
+                   M(array=np.ma.array([0,0,1,1,0]), 
+                     values_mapping={1: 'Running'})                   )
+        self.assertEqual(warn[0].index, 2)
+        self.assertEqual(warn[0].value, 2)
+
+    def test_no_engines(self):
+        warn = MasterWarningDuration()
+        warn.derive(M(array=np.ma.array([0,1,1,1,0]),
+                     values_mapping={1: 'Warning'}),None)
+        self.assertEqual(warn[0].index, 1)
+        self.assertEqual(warn[0].value, 3)
+
+    def test_derive_all_running(self):
+        warn = MasterWarningDuration()
+        warn.derive(M(array=np.ma.array([0,1,1,1,1]),
+                     values_mapping={1: 'Warning'}),
+                   M(array=np.ma.array([1,1,1,1,1]), 
+                     values_mapping={1: 'Running'})                   )
+        self.assertEqual(warn[0].index, 1)
+        self.assertEqual(warn[0].value, 4)
+
+    def test_derive_not_running(self):
+        warn = MasterWarningDuration()
+        warn.derive(M(array=np.ma.array([0,1,1,1,0]),
+                     values_mapping={1: 'Warning'}),
+                   M(array=np.ma.array([0,0,0,0,0]), 
+                     values_mapping={1: 'Running'})                   )
+        self.assertEqual(len(warn), 0)
 
 
 class TestMasterWarningDuringTakeoffDuration(unittest.TestCase, NodeTest):

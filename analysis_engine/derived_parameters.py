@@ -6,9 +6,7 @@ import geomag
 from math import ceil, radians
 from scipy.interpolate import interp1d
 
-from flightdatautilities import model_information as mi
-from flightdatautilities.velocity_speed import get_vspeed_map
-from flightdatautilities.vmo_mmo import get_vmo_procedure
+from flightdatautilities import aircrafttables as at
 
 from analysis_engine.exceptions import DataFrameError
 from analysis_engine.node import (
@@ -427,35 +425,38 @@ class AirspeedReferenceLookup(DerivedParameterNode):
     units = 'kts'
 
     @classmethod
-    def can_operate(cls, available, series=A('Series'), family=A('Family'),
-                    engine=A('Engine Series'), engine_type=A('Engine Type')):
-
-        try:
-            cls._get_vspeed_class(series, family, engine,
-                                  engine_type)().tables['vref']
-        except KeyError:
-            return False
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family'),
+                    engine_series=A('Engine Series'), engine_type=A('Engine Type')):
 
         x = set(available)
-        base = ['Airspeed', 'Approach And Landing', 'Touchdown']
+        base = ['Airspeed', 'Approach And Landing', 'Touchdown',
+                'Model', 'Series', 'Family', 'Engine Series', 'Engine Type']
         weight = base + ['Gross Weight Smoothed']
         airbus = set(weight + ['Configuration']).issubset(x)
         boeing = set(weight + ['Flap']).issubset(x)
-        #propeller = set(base + ['Eng (*) Np Avg']).issubset(x)
+        propeller = set(base + ['Eng (*) Np Avg']).issubset(x)
         # FIXME: Replace the flaky logic for small propeller aircraft which do
         #        not record gross weight, cannot provide achieved flight
         #        records and will be using a fixed value for processing.
-        return (airbus or boeing) # or propeller
+        if not airbus and not boeing:  # and not propeller
+            return False
 
-    @staticmethod
-    def _get_vspeed_class(series, family, engine, engine_type):
-        x = map(lambda x: x.value if x else None,
-                (series, family, engine, engine_type))
-        return get_vspeed_map(*x)
+        try:
+            extract = lambda x: x.value if x else None
+            x = (model, series, family, engine_series, engine_type)
+            at.get_vspeed_map(*map(extract, x))().tables['vref']
+        except KeyError:
+            cls.warning("No vspeed table available for '%s', '%s', '%s', '%s', '%s'.",
+                        model.value, series.value, family.value,
+                        engine_series.value, engine_type.value)
+            return False
+
+        return True
 
     def derive(self,
                flap=M('Flap'),
-               conf=P('Configuration'),
+               conf=M('Configuration'),
                air_spd=P('Airspeed'),
                gw=P('Gross Weight Smoothed'),
                approaches=S('Approach And Landing'),
@@ -463,25 +464,18 @@ class AirspeedReferenceLookup(DerivedParameterNode):
                model=A('Model'),
                series=A('Series'),
                family=A('Family'),
-               engine=A('Engine Series'),
+               engine_series=A('Engine Series'),
                engine_type=A('Engine Type'),
                spd_ref=P('Airspeed Reference'),
                eng_np=P('Eng (*) Np Avg')):
-        '''
-        Raises KeyError if no entries for Family/Series in vspeed lookup map.
-        '''
 
+        # Initialize the result space:
         self.array = np_ma_masked_zeros_like(air_spd.array)
 
-        x = map(lambda x: x.value if x else None, (series, family, engine, engine_type))
-        try:
-            vspeed_class = get_vspeed_map(*x)
-        except KeyError as err:
-            if spd_ref:
-                self.info("Error in '%s': %s", self.name, err)
-            else:
-                self.warning("Error in '%s': %s", self.name, err)
-            return
+        # Initialise the vspeed table:
+        extract = lambda x: x.value if x else None
+        x = (model, series, family, engine_series, engine_type)
+        vspeed_table = at.get_vspeed_map(*map(extract, x))()
 
         if gw is not None:  # and you must have eng_np
             try:
@@ -495,42 +489,44 @@ class AirspeedReferenceLookup(DerivedParameterNode):
                     "repaired.")
                 return
 
-        setting_param = conf or flap # check Conf as is dependant on Flap
-        vspeed_table = vspeed_class()
+        parameter = conf or flap
+
+        # Determine the maximum detent in advance to avoid multiple lookups:
+        if parameter.name == 'Flap':
+            detent_lookup = at.get_flap_map
+        else:
+            detent_lookup = at.get_conf_map
+        mapping = detent_lookup(model.value, series.value, family.value)
+        max_detent = max(mapping.items())[1]
+
         for approach in approaches:
             _slice = approach.slice
-            index, setting = max_value(setting_param.array, _slice)
+            index, detent = max_value(parameter.array, _slice)
+            detent = parameter.values_mapping[detent]
             # Allow no gross weight for aircraft which use a fixed vspeed
             weight = repaired_gw[index] if gw is not None else None
 
             if not is_index_within_slice(touchdowns.get_last().index, _slice) \
-                and setting not in vspeed_table.vref_settings:
-                # Not the final landing and max setting not in vspeed table,
-                # so use the maximum setting possible as a reference.
-                if setting_param.name == 'Flap':
-                    mapping = mi.get_flap_map(model.value, series.value, family.value)
-                    max_setting = max(mapping.items())[0]  # using raw value
-                else:
-                    mapping = mi.get_conf_map(model.value, series.value, family.value)
-                    max_setting = max(mapping.items())[1]  # using state name
+                and detent not in vspeed_table.vref_settings:
+                # Not the final landing and max detent not in vspeed table,
+                # so use the maximum detent possible as a reference.
                 self.info("No touchdown in this approach and maximum "
                           "%s '%s' not in lookup table. Using max "
-                          "possible setting '%s' as reference",
-                          setting_param.name, setting, max_setting)
-                setting = max_setting
+                          "possible detent '%s' as reference",
+                          parameter.name, detent, max_detent)
+                detent = max_detent
             else:
                 # We either touched down, so use the touchdown flap/conf
-                # setting or we had reached a maximum flap setting during the
+                # detent or we had reached a maximum flap detent during the
                 # approach which in the vref table. Continue to establish Vref.
                 pass
 
             try:
-                vspeed = vspeed_table.vref(setting, weight)
+                vspeed = vspeed_table.vref(detent, weight)
+                print vspeed
             except  (KeyError, ValueError) as err:
-                if spd_ref:
-                    self.info("Error in '%s': %s", self.name, err)
-                else:
-                    self.warning("Error in '%s': %s", self.name, err)
+                log = self.info if spd_ref else self.warning
+                log("Error in '%s': %s", self.name, err)
                 # Where the aircraft takes off with flap settings outside the
                 # documented vref range, we need the program to continue without
                 # raising an exception, so that the incorrect flap at landing
@@ -802,6 +798,15 @@ class AltitudeAAL(DerivedParameterNode):
             alt_result[:bounce_end] = 0.0
             ralt_sections = [slice(0,hundred_feet)]
 
+        elif mode=='over_gnd':
+
+            ralt_sections = np.ma.clump_unmasked(np.ma.masked_outside(alt_rad_aal, 0.0, 100.0))
+            if len(ralt_sections)==0:
+                # Either Altitude Radio did not drop below 100, or did not get
+                # above 100. Either way, we are better off working with just the
+                # pressure altitude signal.
+                return shift_alt_std()
+        
         baro_sections = slices_not(ralt_sections, begin_at=0, 
                                    end_at=len(alt_std))
 
@@ -1004,9 +1009,9 @@ class AltitudeAAL(DerivedParameterNode):
         # Quick visual check of the altitude aal.
         if alt_rad:
             import matplotlib.pyplot as plt
-            plt.plot(alt_aal)
-            plt.plot(alt_std.array)
-            plt.plot(alt_rad.array)
+            plt.plot(alt_aal, 'b-')
+            plt.plot(alt_std.array, 'y-')
+            plt.plot(alt_rad.array, 'r-')
             plt.show()
         '''
         
@@ -3382,7 +3387,7 @@ class FlapAngle(DerivedParameterNode):
         flap_B = flap_B or flap_B_inboard
         
         if family_name == 'B787':
-            lever_angles = mi.get_lever_angles(None, None, family_name, key='value')
+            lever_angles = at.get_lever_angles(None, None, family_name, key='value')
             # Flap settings 1 and 25 only affect Slat.
             # Combine Flap Angle (L) and Flap Angle (R).
             self.array, self.frequency, self.offset = blend_two_parameters(
@@ -5131,17 +5136,12 @@ class V2Lookup(DerivedParameterNode):
     units = 'kts'
 
     @classmethod
-    def can_operate(cls, available, series=A('Series'), family=A('Family'),
-                    engine=A('Engine Series'), engine_type=A('Engine Type')):
-
-        try:
-            cls._get_vspeed_class(series, family, engine,
-                                  engine_type)().tables['v2']
-        except KeyError:
-            return False
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family'),
+                    engine_series=A('Engine Series'), engine_type=A('Engine Type')):
 
         x = set(available)
-        base = ['Airspeed']
+        base = ['Airspeed', 'Model', 'Series', 'Family', 'Engine Series', 'Engine Type']
         weight = base + ['Gross Weight At Liftoff']
         airbus = set(weight + ['Configuration']).issubset(x)
         boeing = set(weight + ['Flap']).issubset(x)
@@ -5149,43 +5149,42 @@ class V2Lookup(DerivedParameterNode):
         # FIXME: Replace the flaky logic for small propeller aircraft which do
         #        not record gross weight, cannot provide achieved flight
         #        records and will be using a fixed value for processing.
-        return airbus or boeing  # or propeller
+        if not airbus and not boeing:  # and not propeller
+            return False
 
-    @staticmethod
-    def _get_vspeed_class(series, family, engine, engine_type):
-        x = map(lambda x: x.value if x else None,
-                (series, family, engine, engine_type))
-        return get_vspeed_map(*x)
+        try:
+            extract = lambda x: x.value if x else None
+            x = (model, series, family, engine_series, engine_type)
+            at.get_vspeed_map(*map(extract, x))().tables['v2']
+        except KeyError:
+            cls.warning("No vspeed table available for '%s', '%s', '%s', '%s', '%s'.",
+                        model.value, series.value, family.value,
+                        engine_series.value, engine_type.value)
+            return False
+
+        return True
 
     def derive(self,
                flap=M('Flap'),
-               conf=P('Configuration'),
+               conf=M('Configuration'),
                air_spd=P('Airspeed'),
                weight_liftoffs=KPV('Gross Weight At Liftoff'),
+               model=A('Model'),
                series=A('Series'),
                family=A('Family'),
-               engine=A('Engine Series'),
+               engine_series=A('Engine Series'),
                engine_type=A('Engine Type'),
                v2=P('V2'),
                liftoffs=KTI('Liftoff'),
                eng_np=P('Eng (*) Np Avg')):
 
-        # Initialize the result space.
+        # Initialize the result space:
         self.array = np_ma_masked_zeros_like(air_spd.array)
 
-        try:
-            vspeed_class = self._get_vspeed_class(series, family, engine,
-                                                  engine_type)
-        except KeyError as err:
-            if v2:
-                self.info("Error in '%s': %s", self.name, err)
-            else:
-                self.warning("Error in '%s': %s", self.name, err)
-            return
-
-        # check Conf as is dependant on Flap
-        setting_array = conf.array if conf else flap.array.raw
-        vspeed_table = vspeed_class()
+        # Initialise the vspeed table:
+        extract = lambda x: x.value if x else None
+        x = (model, series, family, engine_series, engine_type)
+        vspeed_table = at.get_vspeed_map(*map(extract, x))()
 
         if weight_liftoffs is not None:
             # Explicitly looking for no Gross Weight At Liftoff node, as
@@ -5195,25 +5194,20 @@ class V2Lookup(DerivedParameterNode):
         else:
             index, weight = liftoffs.get_first().index, None
 
-        setting = setting_array[index]
+        detent = (conf or flap).array[index]
 
         try:
-            vspeed = vspeed_table.v2(setting, weight)
+            vspeed = vspeed_table.v2(detent, weight)
         except (KeyError, ValueError) as err:
-            if v2:
-                self.info("Error in '%s': %s", self.name, err)
-            else:
-                self.warning("Error in '%s': %s", self.name, err)
+            log = self.info if v2 else self.warning
+            log("Error in '%s': %s", self.name, err)
             # Where the aircraft takes off with flap settings outside the
             # documented V2 range, we need the program to continue without
             # raising an exception, so that the incorrect flap at takeoff
             # can be detected.
             return
 
-        if vspeed is not None:
-            self.array[0:] = vspeed
-        else:
-            self.array[0:] = np.ma.masked
+        self.array[0:] = np.ma.masked if vspeed is None else vspeed
 
 
 class WindAcrossLandingRunway(DerivedParameterNode):
@@ -6034,15 +6028,25 @@ class VMOLookup(DerivedParameterNode):
     units = 'kts'
 
     @classmethod
-    def can_operate(cls, available, series=A('Series'), family=A('Family')):
-        return 'Altitude AAL' in available and bool(get_vmo_procedure(
-            series=series.value, family=family.value).vmo)
+    def can_operate(cls, available, model=A('Model'), series=A('Series'), family=A('Family')):
 
-    def derive(self, aal=P('Altitude AAL'), series=A('Series'),
-               family=A('Family')):
-        proc = get_vmo_procedure(series=series.value, family=family.value)
-        if proc:
-            self.array = proc.get_vmo_mmo_arrays(aal.array)[0]
+        if not all_of(('Altitude STD', 'Model', 'Series', 'Family'), available):
+            False
+
+        try:
+            at.get_max_speed_table(model.value, series.value, family.value)
+        except KeyError:
+            cls.warning("No VMO/MMO table available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
+            return False
+
+        return True
+
+    def derive(self, alt_std=P('Altitude STD'),
+               model=A('Model'), series=A('Series'), family=A('Family')):
+
+        table = at.get_max_speed_table(model.value, series.value, family.value)
+        self.array = table.get_vmo_array(alt_std.array)
 
 
 class MMOLookup(DerivedParameterNode):
@@ -6053,13 +6057,22 @@ class MMOLookup(DerivedParameterNode):
     units = 'Mach'
 
     @classmethod
-    def can_operate(cls, available, series=A('Series'), family=A('Family')):
-        return 'Altitude AAL' in available and bool(get_vmo_procedure(
-            series=series.value, family=family.value).mmo)
+    def can_operate(cls, available, model=A('Model'), series=A('Series'), family=A('Family')):
 
-    def derive(self, aal=P('Altitude AAL'), series=A('Series'),
-               family=A('Family')):
-        proc = get_vmo_procedure(series=series.value, family=family.value)
-        if proc:
-            self.array = proc.get_vmo_mmo_arrays(aal.array)[1]
+        if not all_of(('Altitude STD', 'Model', 'Series', 'Family'), available):
+            False
 
+        try:
+            at.get_max_speed_table(model.value, series.value, family.value)
+        except KeyError:
+            cls.warning("No VMO/MMO table available for '%s', '%s', '%s'.",
+                        model.value, series.value, family.value)
+            return False
+
+        return True
+
+    def derive(self, alt_std=P('Altitude STD'),
+               model=A('Model'), series=A('Series'), family=A('Family')):
+
+        table = at.get_max_speed_table(model.value, series.value, family.value)
+        self.array = table.get_mmo_array(alt_std.array)

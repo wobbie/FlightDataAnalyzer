@@ -10,7 +10,7 @@ from scipy import interpolate as scipy_interpolate, optimize
 
 from hdfaccess.parameter import MappedArray
 
-from flightdatautilities.velocity_speed import get_vspeed_map
+from flightdatautilities import aircrafttables as at
 
 from settings import (CURRENT_YEAR,
                       DESCENT_LOW_CLIMB_THRESHOLD,
@@ -1179,45 +1179,61 @@ def closest_unmasked_value(array, index, _slice=None):
     :returns: The closest index and value of an unmasked value.
     :rtype: Value
     '''
+
+    def find_unmasked_value(_slice, array, index):
+        slice_start = (_slice.start or 0)
+        slice_stop = (_slice.stop or len(array))
+        
+        if index >= 0 and index > slice_stop:
+            raise IndexError("index is beyond length of sliced data")
+        elif index < 0 and abs(index) > len(array):
+            raise IndexError("negative index goes beyond array length")
+        
+        if index < 0:
+            index = abs(len(array) + index)
+            
+        sliced_array = array[_slice]
+        # make index relative to the sliced section
+        rel_index = index - slice_start  
+        if not np.ma.count(sliced_array) or abs(rel_index) > len(sliced_array):
+            # slice contains no valid data or index is outside of the length of
+            # the array
+            #return Value(None, None)
+            raise IndexError("No valid data to find at index '%d' in sliced array "
+                             "of length '%d'" % (index, len(sliced_array)))
+        
+        indices = np.ma.arange(len(sliced_array))
+        indices.mask = sliced_array.mask
+        relative_pos = np.ma.abs(indices - rel_index).argmin()
+        pos = relative_pos + slice_start
+        return pos
+
     if _slice is not None and index < 0:
         # hard to understand what the programmer is expecting to be returned
         raise NotImplementedError("Negative indexing on slice not supported")
     if _slice is None:
         _slice = slice(None)
-    if (_slice.step and _slice.step != 1):
-        return NotImplementedError("Step '%s' not supported" % slice.step)
+    if (_slice.step and _slice.step == -1):
+        # OK neg_pos is a crazy name. The position in the array with negative indexing.
+        neg_pos = find_unmasked_value(slice(len(array)-(_slice.start or len(array)),
+                                            len(array)-(_slice.stop or 0)), 
+                                      array[::-1], 
+                                      len(array)-(_slice.start or len(array)))
+        pos = len(array) - neg_pos -1
+    else:
+        pos = find_unmasked_value(_slice, array, index)
     
-    slice_start = (_slice.start or 0)
-    slice_stop = (_slice.stop or len(array))
-    
-    if index >= 0 and index > slice_stop:
-        raise IndexError("index is beyond length of sliced data")
-    elif index < 0 and abs(index) > len(array):
-        raise IndexError("negative index goes beyond array length")
-    
-    if index < 0:
-        index = abs(len(array) + index)
-        
-    sliced_array = array[_slice]
-    # make index relative to the sliced section
-    rel_index = index - slice_start  
-    if not np.ma.count(sliced_array) or abs(rel_index) > len(sliced_array):
-        # slice contains no valid data or index is outside of the length of
-        # the array
-        #return Value(None, None)
-        raise IndexError("No valid data to find at index '%d' in sliced array "
-                         "of length '%d'" % (index, len(sliced_array)))
-    
-    indices = np.ma.arange(len(sliced_array))
-    indices.mask = array.mask
-    relative_pos = np.ma.abs(indices - rel_index).argmin()
-    pos = relative_pos + slice_start
     return Value(index=pos, value=array[pos])
 
 
-def clump_multistate(array, state, _slices, condition=True):
+def clump_multistate(array, state, _slices=[slice(None)], condition=True):
     '''
     This tests a multistate array and returns a classic POLARIS list of slices.
+    
+    Masked values will not be included in the slices. If this troubles you,
+    repair the masked data (maintaining the previous value or taking the
+    nearest neighbour value) using nearest_neighbour_mask_repair before
+    passing the array into this function.
 
     :param array: data to scan
     :type array: multistate numpy masked array
@@ -1230,53 +1246,21 @@ def clump_multistate(array, state, _slices, condition=True):
 
     :returns: list of slices.
     '''
-    def add_clump(clumps, _slice, start, stop):
-        #Note that the resulting clumps are expanded by half an index so that
-        #where significant the errors in timing are minimized. A clamp to avoid
-        #-0.5 values is included, but as we don't know the length of the calling
-        #array here, a limit on the maximum case is impractical.
-        if _slice.start == 0 and start == 0:
-            begin = 0
-        else:
-            begin = start-0.5
-        new_slice = slice(begin, stop+0.5)
-        clumps.append(shift_slice(new_slice,_slice.start))
-        return
-
     if not state in array.state:
         return None
 
-    try:
-        iter_this = iter(_slices)
-    except TypeError:
-        iter_this = [_slices]
+    if not hasattr(_slices, '__iter__'):
+        if _slices:  # single slice provided
+            _slices = [_slices,]
+        else:  # None provided
+            return []
 
-    clumps = []
+    if condition == True:
+        state_match = runs_of_ones(array == state)
+    else:
+        state_match = runs_of_ones(array != state)
 
-    for _slice in iter_this:
-
-        if condition==True:
-            array_tuple = np.ma.nonzero(array[_slice]==state)
-        else:
-            array_tuple = np.ma.nonzero(np.ma.logical_not(array[_slice]==state))
-
-        start = None
-        stop = None
-
-        for x in array_tuple[0]:
-            if start==None:
-                start = x
-                stop = x + 1
-            elif x==stop:
-                stop+=1
-            else:
-                add_clump(clumps, _slice, start, stop)
-                start=x
-                stop=x+1
-        if stop:
-            add_clump(clumps, _slice, start, stop)
-
-    return clumps
+    return slices_and(_slices, state_match)
 
 
 def unique_values(array):
@@ -6048,27 +6032,25 @@ def value_at_index(array, index, interpolate=True):
         return r*high_value + (1-r) * low_value
 
 
-    
 def vspeed_lookup(vspeed, aircraft, engine, flap, gw):
     '''
     Single point lookup for the vspeed tables.
     
     :param vspeed: Selection of "V2" or "Vref"
-    :type vspeed: String
+    :type vspeed: string
     :param aircraft: Aircraft series identifier.
-    :type aircraft: String
+    :type aircraft: string
     :param engine: Engine Type identifier.
-    :type engine: String
-    :param flap: Flap setting
-    :type flap: float # TODO: Include Config - not tested yet.
+    :type engine: string
+    :param flap: Flap/conf detent
+    :type flap: string
     :param gw: Gross Weight in kg
     :type gw: float
     
     :returns: Vspeed in knots
     :type: float
     '''
-    vspeed_class = get_vspeed_map(series=aircraft, engine_type=engine)
-    vspeed_table = vspeed_class()
+    vspeed_table = at.get_vspeed_map(series=aircraft, engine_type=engine)()
     if vspeed.lower() == 'v2':
         return vspeed_table.v2(flap, gw)
     else:

@@ -1103,6 +1103,15 @@ class TestClosestUnmaskedValue(unittest.TestCase):
         self.assertRaises(IndexError, closest_unmasked_value, array, 6, slice(0, 3))
         self.assertRaises(IndexError, closest_unmasked_value, array, 200, slice(3, 4))
 
+    def test_negative_step_now_available(self):
+        array = 20.0 - np.ma.arange(20)
+        array[7:19] = np.ma.masked
+        self.assertEqual(closest_unmasked_value(array, 8, slice(18,3,-1)).index, 6)
+        self.assertEqual(closest_unmasked_value(array, 8, slice(16,3,-1)).value, 14.0)
+        self.assertEqual(closest_unmasked_value(array, 8.5, slice(None,3,-1)).index, 6)
+        self.assertEqual(closest_unmasked_value(array, 9, slice(18,None,-1)).index, 6)
+        
+        
 class TestActuatorMismatch(unittest.TestCase):
     '''
     Originally written to monitor 737 elevator actuators, this may be
@@ -1257,8 +1266,11 @@ class TestClumpMultistate(unittest.TestCase):
                                   mask=[0, 0, 0, 0, 0, 0, 1])
         p = M('Test Node', array, values_mapping=values_mapping)
         result = clump_multistate(p.array, 'two', slice(0,7))
-        expected = [slice(0.5, 2.5), slice(2.5, 5.5)]
+        expected = [slice(1, 2), slice(3, 5)]
         self.assertEqual(result, expected)
+        result2 = clump_multistate(p.array, 'two')
+        self.assertEqual(result2, expected)
+        
 
     def test_complex(self):
         values_mapping = {1: 'one', 2: 'two', 3: 'three'}
@@ -1266,7 +1278,7 @@ class TestClumpMultistate(unittest.TestCase):
                                   mask=[0, 0, 0, 0, 0, 0, 1])
         p = M('Test Node', array, values_mapping=values_mapping)
         result = clump_multistate(p.array, 'three', [slice(0,7)], condition=False)
-        expected = [slice(0, 2.5), slice(2.5, 6.5)]
+        expected = [slice(0, 2), slice(3, 6)] # Last value is masked
         self.assertEqual(result, expected)
 
     def test_null(self):
@@ -1284,7 +1296,7 @@ class TestClumpMultistate(unittest.TestCase):
                                   mask=[0, 0, 0, 0, 0, 0, 0])
         p = M('Test Node', array, values_mapping=values_mapping)
         result = clump_multistate(p.array, 'two', [slice(0,2), slice(4,6)])
-        expected = [slice(0.5,2.5), slice(3.5,5.5)]
+        expected = [slice(1, 2), slice(4, 5)]
         self.assertEqual(result, expected)
 
     def test_null_slice(self):
@@ -1294,6 +1306,15 @@ class TestClumpMultistate(unittest.TestCase):
         p = M('Test Node', array, values_mapping=values_mapping)
         result = clump_multistate(p.array, 'two', [])
         expected = []
+        self.assertEqual(result, expected)
+
+    def test_slice_not_at_start(self):
+        values_mapping = {1: 'one', 2: 'two', 3: 'three'}
+        array = np.ma.MaskedArray(data=[1, 2, 3, 2, 2, 1, 1],
+                                  mask=[0, 0, 0, 0, 0, 0, 1])
+        p = M('Test Node', array, values_mapping=values_mapping)
+        result = clump_multistate(p.array, 'one', [slice(3,None)])
+        expected = [slice(5, 6)]
         self.assertEqual(result, expected)
 
 
@@ -2126,6 +2147,10 @@ class TestIndexAtValue(unittest.TestCase):
     def test_index_at_value_threshold_closing(self):
         array = np.ma.arange(4)
         self.assertEquals (index_at_value(array, 99, slice(1, None), endpoint='closing'), 3)
+
+    def test_index_at_value_threshold_closing_backwards(self):
+        array = 6-np.ma.arange(6)
+        self.assertEquals (index_at_value(array, 99, slice(None, 4, -1), endpoint='closing'), 0)
 
     def test_index_at_value_masked(self):
         array = np.ma.arange(4)
@@ -5045,17 +5070,17 @@ class TestValueAtIndex(unittest.TestCase):
 
 class TestVspeedLookup(unittest.TestCase):
     def test_vspdlkup_basic(self):
-        self.assertEqual(vspeed_lookup('V2', 'B737-300', None, 15, 65000), 152)
+        self.assertEqual(vspeed_lookup('V2', 'B737-300', None, '15', 65000), 152)
 
     def test_vspdlkup_vref(self):
-        self.assertEqual(vspeed_lookup('VRef', 'B737-300', None, 30, 45000), 127)
+        self.assertEqual(vspeed_lookup('VRef', 'B737-300', None, '30', 45000), 127)
         
     def test_vspdlkup_key_error(self):
-        self.assertRaises(KeyError, vspeed_lookup,'V2', 'B737_300', None, 15, 65000)
+        self.assertRaises(KeyError, vspeed_lookup, 'V2', 'B737_300', None, '15', 65000)
         
     def test_vspdlkup_out_of_range_error(self):
         # We return None so that the incorrect flap at takeoff can be reported.
-        self.assertEqual(vspeed_lookup('V2', 'B737-300', None, 25, 65000), None)
+        self.assertEqual(vspeed_lookup('V2', 'B737-300', None, '25', 65000), None)
 
 
 class TestVstackParams(unittest.TestCase):

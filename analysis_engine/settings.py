@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# vim:et:ft=python:nowrap:sts=4:sw=4:ts=4
 ##############################################################################
 # Flight Data Analyzer Settings
 ##############################################################################
@@ -6,8 +7,6 @@
 
 import os
 import sys
-
-from flightdatautilities import model_information
 
 # Note: Create an analyser_custom_settings.py module to override settings for
 # your local environment and append customised modules.
@@ -363,44 +362,19 @@ SLOPE_FOR_TOC_TOD = 600 / float(3*60)  # 600fpm in 3 mins
 
 
 ##############################################################################
-# KPV Name Values
+# KPV/KTI Name Values
 
 # These are some common frequently used name values defined here to be used in
 # multiple key point values or key time instances for consistency.
 
+NAME_VALUES_ENGINE = {'number': [1, 2, 3, 4]}
 
-NAME_VALUES_ENGINE = {
-    'number': [1, 2, 3, 4],
-}
+NAME_VALUES_CLIMB = {'altitude': [
+    10, 20, 35, 50, 75, 100, 150, 200, 300, 400, 500, 750, 1000, 1500, 2000,
+    2500, 3000, 3500, 4000, 5000, 6000, 7000, 8000, 9000, 10000,
+]}
 
-
-NAME_VALUES_FLAP = {
-    'flap': model_information.get_flap_detents()
-}
-
-
-NAME_VALUES_CONF = {
-    'conf': model_information.get_conf_detents(),
-}
-
-
-NAME_VALUES_SLAT = {
-    'slat': model_information.get_slat_detents()
-}
-
-
-NAME_VALUES_CLIMB = {
-    'altitude': [
-        10, 20, 35, 50, 75, 100, 150, 200, 300, 400, 500, 750, 1000,
-        1500, 2000, 2500, 3000, 3500, 4000, 5000, 6000, 7000, 8000, 9000,
-        10000],
-}
-
-
-NAME_VALUES_DESCENT = {
-    'altitude': NAME_VALUES_CLIMB['altitude'][::-1],
-}
-
+NAME_VALUES_DESCENT = {'altitude': NAME_VALUES_CLIMB['altitude'][::-1]}
 
 ##############################################################################
 # Custom Settings
@@ -423,6 +397,19 @@ except ImportError as err:
     logger.exception("Unable to import analysis_engine/analyser_custom_settings.py")
     pass
 
-
 ##############################################################################
-# vim:et:ft=python:nowrap:sts=4:sw=4:ts=4
+# KPV/KTI Name Values (#2)
+
+# Note: These must be created after the custom settings have been imported.
+
+from flightdatautilities import aircrafttables as at
+
+NAME_VALUES_FLAP = {'flap': at.get_flap_detents()}
+
+NAME_VALUES_SLAT = {'slat': at.get_slat_detents()}
+
+NAME_VALUES_AILERON = {'aileron': at.get_aileron_detents()}
+
+NAME_VALUES_CONF = {'conf': at.get_conf_detents()}
+
+NAME_VALUES_LEVER = {'flap': at.get_lever_detents()}  # XXX: Key must be 'flap'

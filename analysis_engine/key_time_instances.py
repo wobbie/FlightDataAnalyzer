@@ -8,6 +8,7 @@ from analysis_engine.library import (all_of,
                                      find_toc_tod,
                                      first_valid_sample,
                                      index_at_value,
+                                     is_index_within_slice,
                                      max_value,
                                      minimum_unmasked,
                                      np_ma_masked_zeros_like,
@@ -23,7 +24,7 @@ from settings import (CLIMB_THRESHOLD,
                       NAME_VALUES_CLIMB,
                       NAME_VALUES_DESCENT,
                       NAME_VALUES_ENGINE,
-                      NAME_VALUES_FLAP,
+                      NAME_VALUES_LEVER,
                       NAME_VALUES_SLAT,
                       TAKEOFF_ACCELERATION_THRESHOLD,
                       TRANSITION_ALTITUDE,
@@ -43,48 +44,26 @@ def sorted_valid_list(x):
 
 class BottomOfDescent(KeyTimeInstanceNode):
     '''
+    Bottom of a descent phase, which may be a go-around, touch and go or landing.
     '''
-    def derive(self, ccd=S('Climb Cruise Descent')):
-        #TODO: Iterate over Top Of Descent and only create matching pairs for
-        # BottomOfDescent?
-        
-        
-        # This declares the end of each Climb/Cruise/Descent period of the
-        # flight as the bottom of descent.
-        for ccd_phase in ccd:
-            # If this slice ended in mid-cruise, the ccd slice will end in None.
-            if ccd_phase.slice.stop is None:
-                continue
-            self.create_kti(ccd_phase.stop_edge)
-            
-    ###############################################
-        #for air in airs:
-            #if air.slice.stop:
-                #self.create_kti(air.stop_edge)
-        #if len(ccd) <= 1:
-            #return # With only one climb and descent, there can be no dip.
-        #previous_ccd = ccd.get_first()
-        #while ccd.get_next(previous_ccd.slice.stop-1):
-            #next_ccd = ccd.get_next(previous_ccd.slice.stop-1)
-            #self.create_kti(previous_ccd.slice.stop)
-            ## Prepare for the next dip...
-            #previous_ccd = next_ccd
-        
-    """
-    def derive(self, alt_std=P('Altitude AAL For Flight Phases'),
-               dlc=S('Descent Low Climb'),
+    def derive(self, ccds=S('Climb Cruise Descent'),
                airs=S('Airborne')):
-        # In the case of descents without landing, this finds the minimum
-        # point of the dip.
-        for this_dlc in dlc:
-            kti = np.ma.argmin(alt_std.array[this_dlc.slice])
-            self.create_kti(kti + this_dlc.start_edge)
-        # For descents to landing, end where the aircraft is no longer airborne.
-        for air in airs:
-            if air.slice.stop:
-                self.create_kti(air.stop_edge)
-                """
-
+        air_list = [a.stop_edge for a in airs] if airs else []
+        climb_list = [c.stop_edge for c in ccds] if ccds else []
+        ends = sorted(air_list+climb_list)
+        index = 0
+        while index<len(ends)-1:
+            delta = ends[index+1] - ends[index]
+            # The differences should be less than a second, arising from
+            # different ways of identifying the touchdown point. Ten seconds
+            # is a generous tolerance.
+            if delta < 10.0:
+                ends.pop(index+1)
+            else:
+                self.create_kti(ends[index])
+                index += 1
+        self.create_kti(ends[-1])
+                
 
 # TODO: Determine an altitude peak per climb.
 class AltitudePeak(KeyTimeInstanceNode):
@@ -503,7 +482,7 @@ class FlapSet(KeyTimeInstanceNode):
 
     # Note: We must use %s not %d as we've encountered a flap of 17.5 degrees.
     NAME_FORMAT = 'Flap %(flap)s Set'
-    NAME_VALUES = NAME_VALUES_FLAP
+    NAME_VALUES = NAME_VALUES_LEVER
     
     
     @classmethod
