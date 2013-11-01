@@ -2169,19 +2169,21 @@ class ModeControlPanelAirspeedSelectedAt8000FtDescending(KeyPointValueNode):
 
 
 class AlphaFloorDuration(KeyPointValueNode):
-    
+
     @classmethod
     def can_operate(cls, available):
+
         return any_of(('Alpha Floor', 'FMA AT Information'), available)
-    
+
     def derive(self,
                alpha_floor=M('Alpha Floor'),
                autothrottle_info=M('FMA AT Information')):
-        combined_alpha_floor = vstack_params_where_state(
+
+        combined = vstack_params_where_state(
             (alpha_floor, 'Engaged'),
-            (autothrottle_info, 'Alpha Floor')).any(axis=0)
-        self.create_kpvs_from_slice_durations(
-            runs_of_ones(combined_alpha_floor), self.frequency)
+            (autothrottle_info, 'Alpha Floor'),
+        ).any(axis=0)
+        self.create_kpvs_from_slice_durations(runs_of_ones(combined), self.hz)
 
 
 ##############################################################################
@@ -7455,47 +7457,53 @@ class GroundspeedFlapChangeDuringTakeoffMax(KeyPointValueNode):
 ##############################################################################
 # Law
 
+
 class AlternateLawDuration(KeyPointValueNode):
-    
+
     @classmethod
     def can_operate(cls, available):
-        return any_of(('Alternate Law', 'Pitch Alternate Law',
-                       'Pitch Alternate Law (1)', 'Pitch Alternate Law (2)',
-                       'Roll Alternate Law'), available)
-    
+
+        return any_of((
+            'Alternate Law',
+            'Pitch Alternate Law',
+            'Roll Alternate Law',
+        ), available)
+
     def derive(self,
                alternate_law=M('Alternate Law'),
                pitch_alternate_law=M('Pitch Alternate Law'),
-               pitch_alternate_law_1=M('Pitch Alternate Law (1)'),
-               pitch_alternate_law_2=M('Pitch Alternate Law (2)'),
                roll_alternate_law=M('Roll Alternate Law')):
-        combined_law = vstack_params_where_state(
+
+        combined = vstack_params_where_state(
             (alternate_law, 'Engaged'),
             (pitch_alternate_law, 'Engaged'),
-            (pitch_alternate_law_1, 'Engaged'),
-            (pitch_alternate_law_2, 'Engaged'),
-            (roll_alternate_law, 'Engaged')).any(axis=0)
-        self.create_kpvs_from_slice_durations(runs_of_ones(combined_law),
-                                              self.frequency)
+            (roll_alternate_law, 'Engaged'),
+        ).any(axis=0)
+        self.create_kpvs_from_slice_durations(runs_of_ones(combined), self.hz)
 
 
 class DirectLawDuration(KeyPointValueNode):
-    
+
     @classmethod
     def can_operate(cls, available):
-        return any_of(('Direct Law', 'Pitch Direct Law',
-                       'Roll Direct Law'), available)
-    
+
+        return any_of((
+            'Direct Law',
+            'Pitch Direct Law',
+            'Roll Direct Law',
+        ), available)
+
     def derive(self,
                direct_law=M('Direct Law'),
                pitch_direct_law=M('Pitch Direct Law'),
                roll_direct_law=M('Roll Direct Law')):
-        combined_law = vstack_params_where_state(
+
+        combined = vstack_params_where_state(
             (direct_law, 'Engaged'),
             (pitch_direct_law, 'Engaged'),
-            (roll_direct_law, 'Engaged')).any(axis=0)
-        self.create_kpvs_from_slice_durations(runs_of_ones(combined_law),
-                                              self.frequency)
+            (roll_direct_law, 'Engaged'),
+        ).any(axis=0)
+        self.create_kpvs_from_slice_durations(runs_of_ones(combined), self.hz)
 
 
 ##############################################################################
@@ -9005,30 +9013,6 @@ class MasterCautionDuringTakeoffDuration(KeyPointValueNode):
                takeoff_rolls=S('Takeoff Roll')):
         self.create_kpvs_where(caution.array == 'Caution',
                                caution.hz, phase=takeoff_rolls)
-
-
-class PitchAlternateLawDuration(KeyPointValueNode):
-    '''
-    TODO: Review
-    '''
-
-    units = 'sec'
-
-    def derive(self, alt_law=M('Pitch Alternate Law')):
-        self.create_kpvs_where(alt_law.array == 'Alternate',
-                               alt_law.hz)
-
-
-class PitchDirectLawDuration(KeyPointValueNode):
-    '''
-    TODO: Review
-    '''
-
-    units = 'sec'
-
-    def derive(self, dir_law=M('Pitch Direct Law')):
-        self.create_kpvs_where(dir_law.array == 'Direct',
-                               dir_law.hz)
 
 
 ##############################################################################

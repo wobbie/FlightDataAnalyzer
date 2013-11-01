@@ -1210,23 +1210,27 @@ class TestPitchAlternateLaw(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = PitchAlternateLaw
         self.operational_combinations = [
-            ('Pitch Alternate (1) Law',),
-            ('Pitch Alternate (2) Law',),
-            ('Pitch Alternate (1) Law', 'Pitch Alternate (2) Law'),
+            ('Pitch Alternate Law (1)',),
+            ('Pitch Alternate Law (2)',),
+            ('Pitch Alternate Law (1)', 'Pitch Alternate Law (2)'),
         ]
 
+    @unittest.skip('Test Not Implemented')
     def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+
+    def test_derive_basic(self):
         alt_law1 = M(
-            name='Pitch Alternate (1) Law',
-            array=np.ma.array(data=[0, 0, 0, 1, 1, 1]),
-            values_mapping={0: '-', 1: 'Alternate'},
+            name='Pitch Alternate Law (1)',
+            array=np.ma.array([0, 0, 0, 1, 1, 1]),
+            values_mapping={0: '-', 1: 'Engaged'},
             frequency=1,
             offset=0.1,
         )
         alt_law2 = M(
-            name='Pitch Alternate (2) Law',
-            array=np.ma.array(data=[0, 0, 1, 1, 0, 0]),
-            values_mapping={0: '-', 1: 'Alternate'},
+            name='Pitch Alternate Law (2)',
+            array=np.ma.array([0, 0, 1, 1, 0, 0]),
+            values_mapping={0: '-', 1: 'Engaged'},
             frequency=1,
             offset=0.1,
         )
