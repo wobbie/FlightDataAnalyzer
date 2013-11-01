@@ -346,13 +346,11 @@ from analysis_engine.key_point_values import (
     Pitch7FtToTouchdownMin,
     Pitch7FtToTouchdownMax,
     PitchAfterFlapRetractionMax,
-    PitchAlternateLawDuration,
     PitchAt35FtDuringClimb,
     PitchAtLiftoff,
     PitchAtTouchdown,
     PitchAtVNAVModeAndEngThrustModeRequired,
     PitchCyclesDuringFinalApproach,
-    PitchDirectLawDuration,
     PitchDuringGoAroundMax,
     PitchRate20FtToTouchdownMax,
     PitchRate20FtToTouchdownMin,
@@ -2651,46 +2649,39 @@ class TestAutobrakeRejectedTakeoffNotSetDuringTakeoff_masked(
 # Alpha Floor
 
 
-class TestAlphaFloorDruation(unittest.TestCase, NodeTest):
+class TestAlphaFloorDuration(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = AlphaFloorDuration
         self.operational_combinations = [
             ('Alpha Floor',),
             ('FMA AT Information',),
-            ('Alpha Floor', 'FMA AT Information')]
+            ('Alpha Floor', 'FMA AT Information'),
+        ]
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
-        self.assertTrue(False, msg='Test Not Implemented')
-    
+        self.assertTrue(False, msg='Test Not Implemented.')
+
     def test_derive_basic(self):
-        fma_at_information_array = np.ma.masked_array(
-            [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 3, 3, 2, 2, 1, 1, 0, 0,])
-        fma_at_information_values_mapping = {
-            0: '-',
-            1: '-',
-            2: '-',
-            3: 'Alpha Floor',
-            4: '-',
-        }
-        fma_at_information = M('FMA AT Information',
-                               array=fma_at_information_array,
-                               values_mapping=fma_at_information_values_mapping)
-        alpha_floor_array = np.ma.masked_array(
-            [0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-        alpha_floor_values_mapping = {0: '-', 1: 'Engaged'}
-        alpha_floor = M('Alpha Floor', array=alpha_floor_array,
-                        values_mapping=alpha_floor_values_mapping)
+        array = np.ma.array([0] * 3 + [1] * 3 + [0] * 14)
+        mapping = {0: '-', 1: 'Engaged'}
+        alpha_floor = M('Alpha Floor', array=array, values_mapping=mapping)
+
+        array = np.ma.repeat([0, 0, 1, 2, 3, 4, 3, 2, 1, 0], 2)
+        mapping = {0: '-', 1: '-', 2: '-', 3: 'Alpha Floor', 4: '-' }
+        autothrottle_info = M('FMA AT Information', array=array, values_mapping=mapping)
+
+        name = self.node_class.get_name()
+        expected = KPV(name=name, items=[
+            KeyPointValue(name=name, index=4.5, value=3),
+            KeyPointValue(name=name, index=9, value=2),
+            KeyPointValue(name=name, index=13, value=2),
+        ])
+
         node = self.node_class()
-        node.derive(alpha_floor, fma_at_information)
-        self.assertEqual(len(node), 3)
-        self.assertEqual(node[0].index, 4.5)
-        self.assertEqual(node[0].value, 3)
-        self.assertEqual(node[1].index, 9)
-        self.assertEqual(node[1].value, 2)
-        self.assertEqual(node[2].index, 13)
-        self.assertEqual(node[2].value, 2)
+        node.derive(alpha_floor, autothrottle_info)
+        self.assertEqual(node, expected)
 
 
 ##############################################################################
@@ -6789,80 +6780,67 @@ class TestGroundspeedFlapChangeDuringTakeoffMax(unittest.TestCase, NodeTest):
 
 
 class TestAlternateLawDuration(unittest.TestCase, NodeTest):
-    
+
     def setUp(self):
         self.node_class = AlternateLawDuration
         self.operational_combinations = [
             ('Alternate Law',),
             ('Pitch Alternate Law',),
-            ('Pitch Alternate Law (1)',),
-            ('Pitch Alternate Law (2)',),
             ('Roll Alternate Law',),
-            ('Alternate Law', 'Pitch Alternate Law', 'Pitch Alternate Law (1)',
-             'Pitch Alternate Law (2)', 'Roll Alternate Law')]
-    
-    
+            ('Alternate Law', 'Pitch Alternate Law', 'Roll Alternate Law'),
+        ]
+
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
-    
+        self.assertTrue(False, msg='Test Not Implemented.')
+
     def test_derive_basic(self):
-        law_array = np.ma.array([0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0])
-        alternate_law = M(
-            'Alternate Law', law_array, values_mapping={1: 'Engaged', 0: '-'})
-        pitch_alternate_law = M(
-            'Pitch Alternate Law', np.roll(law_array, 2),
-            values_mapping={1: 'Engaged', 0: '-'})
-        pitch_alternate_law_1 = M(
-            'Pitch Alternate Law (1)', np.roll(law_array, 4),
-            values_mapping={1: 'Engaged', 0: '-'})
-        pitch_alternate_law_2 = M(
-            'Pitch Alternate Law (2)', np.roll(law_array, 6),
-            values_mapping={1: 'Engaged', 0: '-'})
-        roll_alternate_law = M(
-            'Roll Alternate Law', np.roll(law_array, 8),
-            values_mapping={1: 'Engaged', 0: '-'})
-        
+        array = np.ma.array([0] * 7 + [1] * 3 + [0] * 6)
+        mapping = {0: '-', 1: 'Engaged'}
+        alternate_law = M('Alternate Law', array, values_mapping=mapping)
+        pitch_alternate_law = M('Pitch Alternate Law', np.roll(array, 2), values_mapping=mapping)
+        roll_alternate_law = M('Roll Alternate Law', np.roll(array, 4), values_mapping=mapping)
+
+        name = self.node_class.get_name()
+        expected = KPV(name=name, items=[
+            KeyPointValue(name=name, index=10.5, value=7),
+        ])
+
         node = self.node_class()
-        node.derive(alternate_law, pitch_alternate_law, pitch_alternate_law_1,
-                    pitch_alternate_law_2, roll_alternate_law)
-        self.assertEqual(len(node), 2)
-        self.assertEqual(node[0].index, 1)
-        self.assertEqual(node[0].value, 2)
-        self.assertEqual(node[1].index, 11.5)
-        self.assertEqual(node[1].value, 9)
+        node.derive(alternate_law, pitch_alternate_law, roll_alternate_law)
+        self.assertEqual(node, expected)
 
 
 class TestDirectLawDuration(unittest.TestCase, NodeTest):
-    
+
     def setUp(self):
         self.node_class = DirectLawDuration
         self.operational_combinations = [
             ('Direct Law',),
             ('Pitch Direct Law',),
-            ('Roll Direct Law',)
+            ('Roll Direct Law',),
+            ('Direct Law', 'Pitch Direct Law', 'Roll Direct Law'),
         ]
-    
+
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
-    
+        self.assertTrue(False, msg='Test Not Implemented.')
+
     def test_derive_basic(self):
-        law_array = np.ma.array([0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0])
-        direct_law = M(
-            'Direct Law', law_array, values_mapping={1: 'Engaged', 0: '-'})
-        pitch_direct_law = M(
-            'Pitch Direct Law', np.roll(law_array, 2),
-            values_mapping={1: 'Engaged', 0: '-'})
-        roll_direct_law = M(
-            'Roll Alternate Law', np.roll(law_array, 4),
-            values_mapping={1: 'Engaged', 0: '-'})
-        
+        array = np.ma.array([0] * 7 + [1] * 3 + [0] * 6)
+        mapping = {0: '-', 1: 'Engaged'}
+        direct_law = M('Direct Law', array, values_mapping=mapping)
+        pitch_direct_law = M('Pitch Direct Law', np.roll(array, 2), values_mapping=mapping)
+        roll_direct_law = M('Roll Direct Law', np.roll(array, 4), values_mapping=mapping)
+
+        name = self.node_class.get_name()
+        expected = KPV(name=name, items=[
+            KeyPointValue(name=name, index=10.5, value=7),
+        ])
+
         node = self.node_class()
         node.derive(direct_law, pitch_direct_law, roll_direct_law)
-        self.assertEqual(len(node), 1)
-        self.assertEqual(node[0].index, 10.5)
-        self.assertEqual(node[0].value, 7)
+        self.assertEqual(node, expected)
 
 
 ##############################################################################
@@ -9122,56 +9100,6 @@ class TestLastFlapChangeToTakeoffRollEndDuration(unittest.TestCase, NodeTest):
                 name='Last Flap Change To Takeoff Roll End Duration')
         ]
         self.assertEqual(list(node), expected)
-
-
-
-class TestPitchAlternateLawDuration(unittest.TestCase, NodeTest):
-
-    def setUp(self):
-        self.node_class = PitchAlternateLawDuration
-        self.operational_combinations = [('Pitch Alternate Law',)]
-
-    def test_derive(self):
-        alt_law = M(name='Pitch Alternate Law',
-                    array=np.ma.array([0,0,0,0,1,1,1,0,0,0,1,1,1,1,1,1,0,0],dtype=int),
-                    values_mapping={1:'Alternate'})
-        node = self.node_class()
-        node.derive(alt_law)
-
-        expected = [
-            KeyPointValue(
-                index=4, value=3,
-                name='Pitch Alternate Law Duration'),
-            KeyPointValue(
-                index=10, value=6,
-                name='Pitch Alternate Law Duration')
-        ]
-        self.assertEqual(node, expected)
-        
-
-
-class TestPitchDirectLawDuration(unittest.TestCase, NodeTest):
-
-    def setUp(self):
-        self.node_class = PitchDirectLawDuration
-        self.operational_combinations = [('Pitch Direct Law',)]
-
-    def test_derive(self):
-        dir_law = M(name='Pitch Direct Law',
-                    array=np.ma.array([0,0,0,0,1,1,1,0,0,0,1,1,1,1,1,1,0,0],dtype=int),
-                    values_mapping={1:'Direct'})
-        node = self.node_class()
-        node.derive(dir_law)
-
-        expected = [
-            KeyPointValue(
-                index=4, value=3,
-                name='Pitch Direct Law Duration'),
-            KeyPointValue(
-                index=10, value=6,
-                name='Pitch Direct Law Duration')
-        ]
-        self.assertEqual(node, expected)
 
 
 class TestAirspeedMinusVMOMax(unittest.TestCase, NodeTest):

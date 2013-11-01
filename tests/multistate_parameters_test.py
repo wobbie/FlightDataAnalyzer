@@ -1210,23 +1210,27 @@ class TestPitchAlternateLaw(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = PitchAlternateLaw
         self.operational_combinations = [
-            ('Pitch Alternate (1) Law',),
-            ('Pitch Alternate (2) Law',),
-            ('Pitch Alternate (1) Law', 'Pitch Alternate (2) Law'),
+            ('Pitch Alternate Law (1)',),
+            ('Pitch Alternate Law (2)',),
+            ('Pitch Alternate Law (1)', 'Pitch Alternate Law (2)'),
         ]
 
+    @unittest.skip('Test Not Implemented')
     def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+
+    def test_derive_basic(self):
         alt_law1 = M(
-            name='Pitch Alternate (1) Law',
-            array=np.ma.array(data=[0, 0, 0, 1, 1, 1]),
-            values_mapping={0: '-', 1: 'Alternate'},
+            name='Pitch Alternate Law (1)',
+            array=np.ma.array([0, 0, 0, 1, 1, 1]),
+            values_mapping={0: '-', 1: 'Engaged'},
             frequency=1,
             offset=0.1,
         )
         alt_law2 = M(
-            name='Pitch Alternate (2) Law',
-            array=np.ma.array(data=[0, 0, 1, 1, 0, 0]),
-            values_mapping={0: '-', 1: 'Alternate'},
+            name='Pitch Alternate Law (2)',
+            array=np.ma.array([0, 0, 1, 1, 0, 0]),
+            values_mapping={0: '-', 1: 'Engaged'},
             frequency=1,
             offset=0.1,
         )
@@ -1311,6 +1315,21 @@ class TestSpeedbrakeSelected(unittest.TestCase):
         array = spd_sel.greater_than_one(handle_array)
         self.assertEqual(list(array), # MappedArray .tolist() does not output states.
                          ['Stowed']*10+['Deployed/Cmd Up']*20+['Stowed']*10)
+    
+    def test_bd100_speedbrake(self):
+        handle = load(os.path.join(
+            test_data_path, 'SpeedbrakeSelected_SpeedbrakeHandle_2.nod'))
+        spoiler_gnd_armed = load(os.path.join(
+            test_data_path, 'SpeedbrakeSelected_SpoilerGroundArmed_2.nod'))
+        array = SpeedbrakeSelected.bd100_speedbrake(handle.array,
+                                                    spoiler_gnd_armed.array)
+        self.assertTrue(all(x == 'Armed/Cmd Dn' for x in
+                            array[spoiler_gnd_armed.array == 'Armed']))
+        self.assertEqual(np.ma.concatenate([np.ma.arange(8802, 8824),
+                                            np.ma.arange(11463, 11523),
+                                            np.ma.arange(11545, 11575),
+                                            np.ma.arange(11840, 12013)]).tolist(),
+                         np.ma.where(array == 'Deployed/Cmd Up')[0].tolist())
     
     def test_b737_speedbrake(self):
         self.maxDiff = None

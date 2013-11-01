@@ -522,7 +522,6 @@ class AirspeedReferenceLookup(DerivedParameterNode):
 
             try:
                 vspeed = vspeed_table.vref(detent, weight)
-                print vspeed
             except  (KeyError, ValueError) as err:
                 log = self.info if spd_ref else self.warning
                 log("Error in '%s': %s", self.name, err)
