@@ -1313,7 +1313,7 @@ class PitchAlternateLaw(MultistateDerivedParameterNode):
     Combine Pitch Alternate Law from sources (1) and/or (2).
     '''
 
-    values_mapping = {0: '-', 1: 'Alternate'}
+    values_mapping = {0: '-', 1: 'Engaged'}
 
     @classmethod
     def can_operate(cls, available):
