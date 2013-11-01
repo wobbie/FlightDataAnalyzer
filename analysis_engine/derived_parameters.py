@@ -502,7 +502,6 @@ class AirspeedReferenceLookup(DerivedParameterNode):
         for approach in approaches:
             _slice = approach.slice
             index, detent = max_value(parameter.array, _slice)
-            detent = parameter.values_mapping[detent]
             # Allow no gross weight for aircraft which use a fixed vspeed
             weight = repaired_gw[index] if gw is not None else None
 
