@@ -1312,6 +1312,21 @@ class TestSpeedbrakeSelected(unittest.TestCase):
         self.assertEqual(list(array), # MappedArray .tolist() does not output states.
                          ['Stowed']*10+['Deployed/Cmd Up']*20+['Stowed']*10)
     
+    def test_bd100_speedbrake(self):
+        handle = load(os.path.join(
+            test_data_path, 'SpeedbrakeSelected_SpeedbrakeHandle_2.nod'))
+        spoiler_gnd_armed = load(os.path.join(
+            test_data_path, 'SpeedbrakeSelected_SpoilerGroundArmed_2.nod'))
+        array = SpeedbrakeSelected.bd100_speedbrake(handle.array,
+                                                    spoiler_gnd_armed.array)
+        self.assertTrue(all(x == 'Armed/Cmd Dn' for x in
+                            array[spoiler_gnd_armed.array == 'Armed']))
+        self.assertEqual(np.ma.concatenate([np.ma.arange(8802, 8824),
+                                            np.ma.arange(11463, 11523),
+                                            np.ma.arange(11545, 11575),
+                                            np.ma.arange(11840, 12013)]).tolist(),
+                         np.ma.where(array == 'Deployed/Cmd Up')[0].tolist())
+    
     def test_b737_speedbrake(self):
         self.maxDiff = None
         spd_sel = SpeedbrakeSelected()
