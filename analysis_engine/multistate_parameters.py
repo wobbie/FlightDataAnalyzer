@@ -69,7 +69,7 @@ from analysis_engine.library import (#actuator_mismatch,
                                      #rate_of_change,
                                      repair_mask,
                                      #rms_noise,
-                                     round_to_nearest,
+                                     #round_to_nearest,
                                      runs_of_ones,
                                      #runway_deviation,
                                      #runway_distances,
@@ -1539,27 +1539,31 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
     }
 
     @classmethod
-    def can_operate(cls, available):
+    def can_operate(cls, available, family=A('Family')):
         '''
         '''
         x = available
+        if family and family.value == 'BD-100':
+            return 'Speedbrake Handle' in x and 'Spoiler Ground Armed' in x
         return 'Speedbrake Deployed' in x \
                or ('Family' in x and 'Spoiler Switch' in x)\
                or ('Family' in x and 'Speedbrake Handle' in x)\
                or ('Family' in x and 'Speedbrake' in x)
     
-    def greater_than_one(self, handle_array):
+    @classmethod
+    def greater_than_one(cls, handle_array):
         '''
         Basic Speedbrake algorithm for Stowed and Deployed states from
         Spoiler Handle.
         '''
         array = MappedArray(np_ma_masked_zeros_like(handle_array),
-                            values_mapping=self.values_mapping)
+                            values_mapping=cls.values_mapping)
         array[handle_array < 1] = 'Stowed'
         array[handle_array >= 1] = 'Deployed/Cmd Up'
         return array
 
-    def a320_speedbrake(self, armed, spdbrk):
+    @staticmethod
+    def a320_speedbrake(armed, spdbrk):
         '''
         Speedbrake operation for A320 family.
         '''
@@ -1567,7 +1571,8 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
                             'Deployed/Cmd Up', armed.array)
         return array
     
-    def b737_speedbrake(self, spdbrk, handle):
+    @staticmethod
+    def b737_speedbrake(spdbrk, handle):
         '''
         Speedbrake Handle Positions for 737-x:
 
@@ -1618,7 +1623,8 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
             raise ValueError("Can't work without either Speedbrake or Handle")
         return array
 
-    def b757_767_speedbrake(self, handle):
+    @staticmethod
+    def b757_767_speedbrake(handle):
         '''
         Speedbrake Handle Positions for 757 & 767:
 
@@ -1635,6 +1641,20 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
                             'Armed/Cmd Dn', 'Stowed')
         array = np.ma.where(handle.array >= 25.0,
                             'Deployed/Cmd Up', armed)
+        return array
+    
+    @classmethod
+    def bd100_speedbrake(cls, handle_array, spoiler_gnd_armed_array):
+        '''
+        Speedbrake Handle non-zero is deployed, Spoiler Ground Armed is
+        armed.
+        '''
+        # Default is stowed.
+        array = MappedArray(np_ma_masked_zeros_like(handle_array),
+                            values_mapping=cls.values_mapping)
+        array[spoiler_gnd_armed_array != 'Armed'] = 'Stowed'
+        array[spoiler_gnd_armed_array == 'Armed'] = 'Armed/Cmd Dn'
+        array[handle_array >= 1] = 'Deployed/Cmd Up'
         return array
     
     @staticmethod
@@ -1680,6 +1700,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
                handle=P('Speedbrake Handle'),
                spdbrk=P('Speedbrake'),
                spdsw=M('Speedbrake Switch'),
+               spoiler_gnd_armed=M('Spoiler Ground Armed'),
                family=A('Family')):
 
         family_name = family.value if family else ''
@@ -1730,7 +1751,8 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
             self.array = handle.array * 2
         
         elif family_name == 'BD-100':
-            self.array = self.greater_than_one(handle.array)
+            self.array = self.bd100_speedbrake(handle.array,
+                                               spoiler_gnd_armed.array)
 
         else:
             raise NotImplementedError
