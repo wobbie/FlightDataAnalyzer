@@ -2713,6 +2713,13 @@ class TestMaxValue(unittest.TestCase):
         self.assertEqual(i, None)
         self.assertEqual(v, None)
 
+    def test_max_value_mapped_array_return_state(self):
+        mapping = {0: '0', 1: 'SF1', 2: 'SF2', 3: 'SF3'}
+        array = MappedArray([0, 1, 2, 3, 2, 1, 0], values_mapping=mapping)
+        i, v = max_value(array)
+        self.assertEqual(i, 3)
+        self.assertEqual(v, 'SF3')
+
 
 class TestAverageValue(unittest.TestCase):
     def test_average_value(self):
@@ -2742,6 +2749,13 @@ class TestMaxAbsValue(unittest.TestCase):
         res = max_abs_value(d, s)
         self.assertEqual(res.value, -1.056)
         self.assertEqual(res.index, 31)
+
+    def test_max_abs_value_mapped_array_return_state(self):
+        mapping = {0: '0', 1: 'SF1', 2: 'SF2', 3: 'SF3', -4: 'Special'}
+        array = MappedArray([0, 1, 2, -4, 2, 1, 0], values_mapping=mapping)
+        i, v = max_abs_value(array)
+        self.assertEqual(i, 3)
+        self.assertEqual(v, 'Special')
 
 
 class TestMergeMasks(unittest.TestCase):
@@ -2845,6 +2859,13 @@ class TestMinValue(unittest.TestCase):
         i, v, = min_value(array, slice(100,101))
         self.assertEqual(i, None)
         self.assertEqual(v, None)
+
+    def test_min_value_mapped_array_return_state(self):
+        mapping = {0: '0', 1: 'SF1', 2: 'SF2', 3: 'SF3'}
+        array = MappedArray([3, 2, 1, 0, 1, 2, 3], values_mapping=mapping)
+        i, v = min_value(array)
+        self.assertEqual(i, 3)
+        self.assertEqual(v, '0')
 
 
 class TestMinimumUnmasked(unittest.TestCase):

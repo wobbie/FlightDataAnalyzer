@@ -5928,7 +5928,7 @@ def _value(array, _slice, operator):
     if np.ma.count(array[_slice]):
         # floor the start position as it will have been floored during the slice
         index = operator(array[_slice]) + floor(_slice.start or 0) * (_slice.step or 1)
-        value = float(array[index]) # To convert multistate strings to float.
+        value = array[index]
         return Value(index, value)
     else:
         return Value(None, None)
