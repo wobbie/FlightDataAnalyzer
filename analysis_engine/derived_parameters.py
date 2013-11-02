@@ -1564,14 +1564,23 @@ class DescendForFlightPhases(DerivedParameterNode):
 
 
 class AOA(DerivedParameterNode):
-
-    align = False
+    '''
+    Angle of Attack - merges Left and Right signals and increases the
+    frequency to twice that of the highest frequency of the dependancies.
+    '''
     name = 'AOA'
     units = 'deg'
+    align = False
 
     def derive(self, aoa_l=P('AOA (L)'), aoa_r=P('AOA (R)')):
-        self.array, self.frequency, self.offset = \
-            blend_two_parameters(aoa_l, aoa_r)
+        # double the max freq
+        self.frequency = max((aoa_l.frequency, aoa_r.frequency)) * 2
+        self.offset = 0.0
+        self.array = blend_parameters([aoa_l, aoa_r],
+                                      frequency=self.frequency, 
+                                      offset=self.offset)
+        ##self.array, self.frequency, self.offset = \
+            ##blend_two_parameters(aoa_l, aoa_r)
 
 
 class ControlColumn(DerivedParameterNode):
