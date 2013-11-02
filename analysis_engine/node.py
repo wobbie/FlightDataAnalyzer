@@ -677,7 +677,26 @@ def multistate_string_to_integer(string_array, mapping):
 
 class MultistateDerivedParameterNode(DerivedParameterNode):
     '''
-    MappedArray stored as array will be of integer dtype
+    MappedArray stored as array will be of integer dtype.
+    
+    M() is a shorthand for MultistateDerivedParameterNode()
+    
+    Can be instantiated from an array which will be converted to a MappedArray
+    
+    M(array=['one', 'two', 'three'], values_mapping={1:'one', 2:'two'})
+    M(array=np.arange(10), values_mapping={1:'one', 2:'two'})
+    
+    
+    Can be instatiated with a MappedArray. The values_mapping will be shared
+    amongst the MappedArray and self. If there is a difference, a ValueError
+    is raised.
+    
+    mappedarray = MappedArray(np.arange(10), values_mapping={1:'one', 2:'two'}
+    M(array=mappedarray))
+    
+    is the same as:
+    mappedarray = MappedArray(np.arange(10))
+    M(array=mappedarray, values_mapping={1:'one', 2:'two'})
     '''
     data_type = 'Derived Multistate'
     node_type_abbr = 'Multistate'    
@@ -730,9 +749,24 @@ class MultistateDerivedParameterNode(DerivedParameterNode):
             if hasattr(self, 'array'):
                 self.array.values_mapping = value
             return object.__setattr__(self, name, value)
+        # setting 'self.array'
         if isinstance(value, MappedArray):
-            # enforce own values mapping on the data
-            value.values_mapping = self.values_mapping
+            # see which values_mapping has been set
+            if getattr(self, 'values_mapping', '') and getattr(value, 'values_mapping', ''):
+                if self.values_mapping == value.values_mapping:
+                    # two arrays are the same, nothing to do
+                    pass
+                else:
+                    raise ValueError("values_mapping of Multistate and MappedArray differ")
+            elif getattr(self, 'values_mapping', ''):
+                # copy values_mapping to MappedArray
+                value.values_mapping = self.values_mapping
+            elif getattr(value, 'values_mapping', ''):
+                # copy MappedArray mapping to self
+                self.values_mapping = value.values_mapping
+            else:
+                # neither have a values_mapping - why?
+                pass
         elif isinstance(value, np.ma.MaskedArray):
             #if value.dtype == int:
                 ## NB: Removed allowance for float!
