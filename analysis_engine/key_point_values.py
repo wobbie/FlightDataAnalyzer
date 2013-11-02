@@ -5568,8 +5568,12 @@ class EngGasTempDuringMaximumContinuousPowerForXMinMax(KeyPointValueNode):
             end_at=max(air.slice.stop for air in airborne),
         )
         for minutes in self.NAME_VALUES['minutes']:
+            seconds = minutes * 60
+            if seconds % 2 and eng_egt_max.hz % 2:
+                seconds += 1
             self.create_kpvs_within_slices(
-                clip(eng_egt_max.array, minutes * 60, eng_egt_max.hz),
+                ##clip(eng_egt_max.array, minutes * 60, eng_egt_max.hz),
+                second_window(eng_egt_max.array, eng_egt_max.hz, seconds),
                 max_cont_rating,
                 max_value,
                 minutes=minutes,
@@ -6486,8 +6490,14 @@ class EngOilTempForXMinMax(KeyPointValueNode):
             return
 
         for minutes in self.NAME_VALUES['minutes']:
-
-            oil_sustained = clip(oil_temp.array, minutes * 60, oil_temp.hz)
+            seconds = minutes * 60
+            # second_window is more accurate than clip and much faster
+            if seconds % 2 and oil_temp.hz % 2:
+                # shh... we'll add one so that second_window will work!
+                seconds += 1
+            oil_sustained = second_window(oil_temp.array, oil_temp.hz, seconds)
+            
+            ####oil_sustained = clip(oil_temp.array, minutes * 60, oil_temp.hz)
             # There have been cases where there were no valid oil temperature
             # measurements throughout the flight, in which case there's no
             # point testing for a maximum:
