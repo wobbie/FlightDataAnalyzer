@@ -6097,6 +6097,8 @@ def vstack_params_where_state(*param_states):
         if state in param.array.state:
             array = getattr(param, 'array', param)
             param_arrays.append(array == state)
+        else:
+            logger.warning("State '%s' not found in param '%s'", state, param.name)
     return np.ma.vstack(param_arrays)
 
 
