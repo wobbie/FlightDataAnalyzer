@@ -6790,15 +6790,11 @@ class TestAlternateLawDuration(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = AlternateLawDuration
         self.operational_combinations = [
-            ('Alternate Law',),
-            ('Pitch Alternate Law',),
-            ('Roll Alternate Law',),
-            ('Alternate Law', 'Pitch Alternate Law', 'Roll Alternate Law'),
+            ('Alternate Law', 'Airborne'),
+            ('Pitch Alternate Law', 'Airborne'),
+            ('Roll Alternate Law', 'Airborne'),
+            ('Alternate Law', 'Pitch Alternate Law', 'Roll Alternate Law', 'Airborne'),
         ]
-
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test Not Implemented.')
 
     def test_derive_basic(self):
         array = np.ma.array([0] * 7 + [1] * 3 + [0] * 6)
@@ -6806,14 +6802,14 @@ class TestAlternateLawDuration(unittest.TestCase, NodeTest):
         alternate_law = M('Alternate Law', array, values_mapping=mapping)
         pitch_alternate_law = M('Pitch Alternate Law', np.roll(array, 2), values_mapping=mapping)
         roll_alternate_law = M('Roll Alternate Law', np.roll(array, 4), values_mapping=mapping)
-
+        roll_alternate_law.array[0] = 'Engaged'
+        airborne = buildsection('Airborne', 2, 20)        
         name = self.node_class.get_name()
         expected = KPV(name=name, items=[
             KeyPointValue(name=name, index=10.5, value=7),
         ])
-
         node = self.node_class()
-        node.derive(alternate_law, pitch_alternate_law, roll_alternate_law)
+        node.derive(alternate_law, pitch_alternate_law, roll_alternate_law, airborne)
         self.assertEqual(node, expected)
 
 
@@ -6822,30 +6818,26 @@ class TestDirectLawDuration(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = DirectLawDuration
         self.operational_combinations = [
-            ('Direct Law',),
-            ('Pitch Direct Law',),
-            ('Roll Direct Law',),
-            ('Direct Law', 'Pitch Direct Law', 'Roll Direct Law'),
+            ('Direct Law', 'Airborne'),
+            ('Pitch Direct Law', 'Airborne'),
+            ('Roll Direct Law', 'Airborne'),
+            ('Direct Law', 'Pitch Direct Law', 'Roll Direct Law', 'Airborne'),
         ]
-
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test Not Implemented.')
 
     def test_derive_basic(self):
         array = np.ma.array([0] * 7 + [1] * 3 + [0] * 6)
         mapping = {0: '-', 1: 'Engaged'}
         direct_law = M('Direct Law', array, values_mapping=mapping)
         pitch_direct_law = M('Pitch Direct Law', np.roll(array, 2), values_mapping=mapping)
+        pitch_direct_law.array[0] = 'Engaged'
         roll_direct_law = M('Roll Direct Law', np.roll(array, 4), values_mapping=mapping)
-
+        airborne = buildsection('Airborne', 2, 20)
         name = self.node_class.get_name()
         expected = KPV(name=name, items=[
             KeyPointValue(name=name, index=10.5, value=7),
         ])
-
         node = self.node_class()
-        node.derive(direct_law, pitch_direct_law, roll_direct_law)
+        node.derive(direct_law, pitch_direct_law, roll_direct_law, airborne)
         self.assertEqual(node, expected)
 
 

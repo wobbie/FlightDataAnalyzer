@@ -7478,19 +7478,21 @@ class AlternateLawDuration(KeyPointValueNode):
             'Alternate Law',
             'Pitch Alternate Law',
             'Roll Alternate Law',
-        ), available)
+        ), available) and 'Airborne' in available
 
     def derive(self,
                alternate_law=M('Alternate Law'),
                pitch_alternate_law=M('Pitch Alternate Law'),
-               roll_alternate_law=M('Roll Alternate Law')):
+               roll_alternate_law=M('Roll Alternate Law'),
+               airborne=S('Airborne')):
 
         combined = vstack_params_where_state(
             (alternate_law, 'Engaged'),
             (pitch_alternate_law, 'Engaged'),
             (roll_alternate_law, 'Engaged'),
         ).any(axis=0)
-        self.create_kpvs_from_slice_durations(runs_of_ones(combined), self.hz)
+        comb_air = mask_outside_slices(combined, airborne.get_slices())
+        self.create_kpvs_from_slice_durations(runs_of_ones(comb_air), self.hz)
 
 
 class DirectLawDuration(KeyPointValueNode):
@@ -7502,19 +7504,21 @@ class DirectLawDuration(KeyPointValueNode):
             'Direct Law',
             'Pitch Direct Law',
             'Roll Direct Law',
-        ), available)
+        ), available) and 'Airborne' in available
 
     def derive(self,
                direct_law=M('Direct Law'),
                pitch_direct_law=M('Pitch Direct Law'),
-               roll_direct_law=M('Roll Direct Law')):
+               roll_direct_law=M('Roll Direct Law'),
+               airborne=S('Airborne')):
 
         combined = vstack_params_where_state(
             (direct_law, 'Engaged'),
             (pitch_direct_law, 'Engaged'),
             (roll_direct_law, 'Engaged'),
         ).any(axis=0)
-        self.create_kpvs_from_slice_durations(runs_of_ones(combined), self.hz)
+        comb_air = mask_outside_slices(combined, airborne.get_slices())
+        self.create_kpvs_from_slice_durations(runs_of_ones(comb_air), self.hz)
 
 
 ##############################################################################
