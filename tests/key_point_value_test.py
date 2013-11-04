@@ -165,6 +165,8 @@ from analysis_engine.key_point_values import (
     DelayedBrakingAfterTouchdown,
     DirectLawDuration,
     DualInputDuration,
+    DualInputAbove200FtDuration,
+    DualInputBelow200FtDuration,
     DualInputByCaptDuration,
     DualInputByFODuration,
     ElevatorDuringLandingMin,
@@ -505,6 +507,7 @@ class NodeTest(object):
         import shutil
         import tempfile
         from hdfaccess.file import hdf_file
+        from analysis_engine.node import derived_param_from_hdf
 
         params = []
         phase = None
@@ -514,7 +517,10 @@ class NodeTest(object):
 
             with hdf_file(hdf_path) as hdf:
                 for param_name in param_names:
-                    params.append(hdf.get(param_name))
+                    p = hdf.get(param_name)
+                    if p is not None:
+                        p = derived_param_from_hdf(p)
+                    params.append(p)
 
         if _slice:
             phase = S(name=phase_name, frequency=1)
@@ -8892,60 +8898,158 @@ class TestGrossWeightDelta60SecondsInFlightMax(unittest.TestCase):
         self.assertEqual(gwd[0].index, 176)
         self.assertEqual(gwd[0].value, 6)
 
+
 ##############################################################################
 # Dual Input
 
 
 class TestDualInputDuration(unittest.TestCase, NodeTest):
+
     def setUp(self):
         self.node_class = DualInputDuration
         self.operational_combinations = [
-            ('Dual Input Warning', 'Takeoff Roll', 'Landing Roll')]
+            ('Dual Input Warning', 'Takeoff Roll', 'Landing Roll'),
+        ]
 
     def test_derive(self):
         mapping = {0: '-', 1: 'Dual'}
         dual = M('Dual Input Warning', np.ma.zeros(50), values_mapping=mapping)
         dual.array[3:10] = 'Dual'
 
-        takeoff_roll = S(items=[Section('Takeoff Roll', slice(0, 5), 0, 5)])
-        landing_roll = S(items=[
-            Section('Landing Roll', slice(44, 50), 44, 50)])
+        takeoff_roll = buildsection('Takeoff Roll', 0, 5)
+        landing_roll = buildsection('Landing Roll', 44, 50)
 
         node = self.node_class()
         node.derive(dual, takeoff_roll, landing_roll)
 
-        expected = [KeyPointValue(
-            name='Dual Input Duration', index=3, value=7.0)]
+        name = self.node_class.get_name()
+        expected = KPV(name=name, items=[
+            KeyPointValue(name=name, index=3, value=7.0),
+        ])
+
         self.assertEqual(node, expected)
 
     def test_derive_from_hdf(self):
-        [dual], phase = self.get_params_from_hdf(
-            os.path.join(test_data_path, 'dual_input.hdf5'),
-            ['Dual Input Warning'])
+        path = os.path.join(test_data_path, 'dual_input.hdf5')
+        [dual], phase = self.get_params_from_hdf(path, ['Dual Input Warning'])
 
-        takeoff_roll = S(items=[
-            Section('Takeoff Roll', slice(0, 100), 0, 100)])
-        landing_roll = S(items=[
-            Section('Landing Roll', slice(320, 420), 320, 420)])
+        takeoff_roll = buildsection('Takeoff Roll', 0, 100)
+        landing_roll = buildsection('Landing Roll', 320, 420)
 
         node = self.node_class()
         node.derive(dual, takeoff_roll, landing_roll)
 
-        expected = [
-            KeyPointValue(name='Dual Input Duration', index=91,
-                          value=31.0),
-            KeyPointValue(name='Dual Input Duration', index=213,
-                          value=59.0),
+        name = self.node_class.get_name()
+        expected = KPV(name=name, items=[
+            KeyPointValue(name=name, index=91, value=31.0),
+            KeyPointValue(name=name, index=213, value=59.0),
+        ])
+
+        self.assertEqual(node, expected)
+
+
+class TestDualInputAbove200FtDuration(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = DualInputAbove200FtDuration
+        self.operational_combinations = [
+            ('Dual Input Warning', 'Altitude AAL', 'Takeoff Roll', 'Landing Roll'),
         ]
+
+    def test_derive(self):
+        mapping = {0: '-', 1: 'Dual'}
+        dual = M('Dual Input Warning', np.ma.zeros(50), values_mapping=mapping)
+        dual.array[3:10] = 'Dual'
+
+        alt_aal = P('Altitude AAL', np.ma.arange(50) * 35)
+
+        takeoff_roll = buildsection('Takeoff Roll', 0, 5)
+        landing_roll = buildsection('Landing Roll', 44, 50)
+
+        node = self.node_class()
+        node.derive(dual, alt_aal, takeoff_roll, landing_roll)
+
+        name = self.node_class.get_name()
+        expected = KPV(name=name, items=[
+            KeyPointValue(name=name, index=6, value=4.0),
+        ])
+
+        self.assertEqual(node, expected)
+
+    def test_derive_from_hdf(self):
+        path = os.path.join(test_data_path, 'dual_input.hdf5')
+        [dual, alt_aal], phase = self.get_params_from_hdf(path,
+            ['Dual Input Warning', 'Altitude AAL'])
+
+        takeoff_roll = buildsection('Takeoff Roll', 0, 100)
+        landing_roll = buildsection('Landing Roll', 320, 420)
+
+        node = self.node_class()
+        node.derive(dual, alt_aal, takeoff_roll, landing_roll)
+
+        name = self.node_class.get_name()
+        expected = KPV(name=name, items=[
+            KeyPointValue(name=name, index=256, value=16.0),
+        ])
+
+        self.assertEqual(node, expected)
+
+
+class TestDualInputBelow200FtDuration(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = DualInputBelow200FtDuration
+        self.operational_combinations = [
+            ('Dual Input Warning', 'Altitude AAL', 'Takeoff Roll', 'Landing Roll'),
+        ]
+
+    def test_derive(self):
+        mapping = {0: '-', 1: 'Dual'}
+        dual = M('Dual Input Warning', np.ma.zeros(50), values_mapping=mapping)
+        dual.array[3:10] = 'Dual'
+
+        alt_aal = P('Altitude AAL', np.ma.arange(50)[::-1] * 5)
+
+        takeoff_roll = buildsection('Takeoff Roll', 0, 5)
+        landing_roll = buildsection('Landing Roll', 44, 50)
+
+        node = self.node_class()
+        node.derive(dual, alt_aal, takeoff_roll, landing_roll)
+
+        name = self.node_class.get_name()
+        expected = KPV(name=name, items=[
+            KeyPointValue(name=name, index=9, value=1.0),
+        ])
+
+        self.assertEqual(node, expected)
+
+    def test_derive_from_hdf(self):
+        path = os.path.join(test_data_path, 'dual_input.hdf5')
+        [dual, alt_aal], phase = self.get_params_from_hdf(path,
+            ['Dual Input Warning', 'Altitude AAL'])
+
+        takeoff_roll = buildsection('Takeoff Roll', 0, 100)
+        landing_roll = buildsection('Landing Roll', 320, 420)
+
+        node = self.node_class()
+        node.derive(dual, alt_aal, takeoff_roll, landing_roll)
+
+        name = self.node_class.get_name()
+        expected = KPV(name=name, items=[
+            KeyPointValue(name=name, index=91, value=31.0),
+            KeyPointValue(name=name, index=213, value=43.0),
+        ])
+
         self.assertEqual(node, expected)
 
 
 class TestDualInputByCaptDuration(unittest.TestCase, NodeTest):
+
     def setUp(self):
         self.node_class = DualInputByCaptDuration
         self.operational_combinations = [
-            ('Dual Input Warning', 'Pilot Flying', 'Takeoff Roll',
-             'Landing Roll')]
+            ('Dual Input Warning', 'Pilot Flying', 'Takeoff Roll', 'Landing Roll'),
+        ]
 
     def test_derive(self):
         mapping = {0: '-', 1: 'Dual'}
@@ -8956,24 +9060,31 @@ class TestDualInputByCaptDuration(unittest.TestCase, NodeTest):
         pilot = M('Pilot Flying', np.ma.zeros(50), values_mapping=mapping)
         pilot.array[0:20] = 'FO'
 
-        takeoff_roll = S(items=[Section('Takeoff Roll', slice(0, 5), 0, 5)])
-        landing_roll = S(items=[
-            Section('Landing Roll', slice(44, 50), 44, 50)])
+        takeoff_roll = buildsection('Takeoff Roll', 0, 5)
+        landing_roll = buildsection('Landing Roll', 44, 50)
 
         node = self.node_class()
         node.derive(dual, pilot, takeoff_roll, landing_roll)
 
-        expected = [KeyPointValue(
-            name='Dual Input By Capt Duration', index=3, value=7.0)]
+        name = self.node_class.get_name()
+        expected = KPV(name=name, items=[
+            KeyPointValue(name=name, index=3, value=7.0),
+        ])
+
         self.assertEqual(node, expected)
+
+    @unittest.skip('No data available in the relevant HDF for this test case.')
+    def test_derive_from_hdf(self):
+        pass
 
 
 class TestDualInputByFODuration(unittest.TestCase, NodeTest):
+
     def setUp(self):
         self.node_class = DualInputByFODuration
         self.operational_combinations = [
-            ('Dual Input Warning', 'Pilot Flying', 'Takeoff Roll',
-             'Landing Roll')]
+            ('Dual Input Warning', 'Pilot Flying', 'Takeoff Roll', 'Landing Roll'),
+        ]
 
     def test_derive(self):
         mapping = {0: '-', 1: 'Dual'}
@@ -8984,40 +9095,41 @@ class TestDualInputByFODuration(unittest.TestCase, NodeTest):
         pilot = M('Pilot Flying', np.ma.zeros(50), values_mapping=mapping)
         pilot.array[0:20] = 'Capt'
 
-        takeoff_roll = S(items=[Section('Takeoff Roll', slice(0, 5), 0, 5)])
-        landing_roll = S(items=[
-            Section('Landing Roll', slice(44, 50), 44, 50)])
+        takeoff_roll = buildsection('Takeoff Roll', 0, 5)
+        landing_roll = buildsection('Landing Roll', 44, 50)
 
         node = self.node_class()
         node.derive(dual, pilot, takeoff_roll, landing_roll)
 
-        expected = [KeyPointValue(
-            name='Dual Input By FO Duration', index=3, value=7.0)]
+        name = self.node_class.get_name()
+        expected = KPV(name=name, items=[
+            KeyPointValue(name=name, index=3, value=7.0),
+        ])
+
         self.assertEqual(node, expected)
 
     def test_derive_from_hdf(self):
-        [dual, pilot], phase = self.get_params_from_hdf(
-            os.path.join(test_data_path, 'dual_input.hdf5'),
+        path = os.path.join(test_data_path, 'dual_input.hdf5')
+        [dual, pilot], phase = self.get_params_from_hdf(path,
             ['Dual Input Warning', 'Pilot Flying'])
 
-        takeoff_roll = S(items=[
-            Section('Takeoff Roll', slice(0, 100), 0, 100)])
-        landing_roll = S(items=[
-            Section('Landing Roll', slice(320, 420), 320, 420)])
+        takeoff_roll = buildsection('Takeoff Roll', 0, 100)
+        landing_roll = buildsection('Landing Roll', 320, 420)
 
         node = self.node_class()
         node.derive(dual, pilot, takeoff_roll, landing_roll)
 
-        expected = [
-            KeyPointValue(name='Dual Input By FO Duration', index=91,
-                          value=31.0),
-            KeyPointValue(name='Dual Input By FO Duration', index=213,
-                          value=59.0),
-        ]
+        name = self.node_class.get_name()
+        expected = KPV(name=name, items=[
+            KeyPointValue(name=name, index=91, value=31.0),
+            KeyPointValue(name=name, index=213, value=59.0),
+        ])
+
         self.assertEqual(node, expected)
 
 
 ##############################################################################
+
 
 class TestZeroFuelWeight(unittest.TestCase, NodeTest):
 
