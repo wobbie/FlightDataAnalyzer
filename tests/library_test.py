@@ -5125,6 +5125,33 @@ class TestVstackParams(unittest.TestCase):
         self.assertRaises(ValueError, vstack_params, None, None, None)
 
 
+class TestVstackParamsWhereState(unittest.TestCase):
+    def test_vstack_only_one_param(self):
+        # typical test
+        m1 = M(array=MappedArray(
+            np.ma.array([2]*8 + [3]*2), values_mapping={1:'one', 2:'two'}))
+        m2 = M(array=MappedArray(
+            np.ma.array([0]*5 + [1]*5), values_mapping={1:'one', 2:'two'}))
+        m3 = None
+        res = vstack_params_where_state((m1, 'two'),  # first 8
+                                        (m2, 'one'),  # last 5
+                                        (m3, 'one'))  # ignored as None
+        self.assertTrue(np.all(
+            res == [[1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 1, 1, 1, 1, 1]]))
+        self.assertTrue(np.all(
+            res.all(axis=0) == [0, 0, 0, 0, 0, 1, 1, 1, 0, 0]))
+        
+        # only one array with data
+        res = vstack_params_where_state((m1, 'two'),  # has data
+                                        (m3, 'one'))  # has no data
+        self.assertTrue(np.all(
+            res == [1, 1, 1, 1, 1, 1, 1, 1, 0, 0]))
+        
+        # no arrays
+        self.assertRaises(ValueError, vstack_params_where_state,
+                          (None, 'blah'), (None, 'blah'))
+        
 #-----------------------------------------------------------------------------
 #Tests for Atmospheric and air speed calculations derived from AeroCalc test
 #suite. Changes relate to simplification of units and translation to Numpy.
