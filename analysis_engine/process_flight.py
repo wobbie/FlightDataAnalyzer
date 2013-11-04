@@ -120,6 +120,10 @@ def derive_parameters(hdf, node_mgr, process_order):
 
         # initialise node
         node = node_class()
+        # shhh, secret accessors for developing nodes in debug mode
+        node.__p = params
+        node.__h = hdf
+        node.__n = node_mgr
         logger.info("Processing parameter %s", param_name)
         # Derive the resulting value
 
