@@ -5552,6 +5552,7 @@ class EngGasTempDuringMaximumContinuousPowerForXMinMax(KeyPointValueNode):
     NAME_FORMAT = 'Eng Gas Temp During Maximum Continuous Power For %(minutes)d Min Max'
     NAME_VALUES = {'minutes': [3, 5]}
     units = 'C'
+    align_frequency = 1
 
     def derive(self,
                eng_egt_max=P('Eng (*) Gas Temp Max'),
@@ -6479,9 +6480,9 @@ class EngOilTempForXMinMax(KeyPointValueNode):
     NAME_FORMAT = 'Eng Oil Temp For %(minutes)d Min Max'
     NAME_VALUES = {'minutes': [15, 20, 45]}
     units = 'C'
-
-    def derive(self,
-               oil_temp=P('Eng (*) Oil Temp Max')):
+    align_frequency = 1
+    
+    def derive(self, oil_temp=P('Eng (*) Oil Temp Max')):
 
         # Some aircraft don't have oil temperature sensors fitted. This trap
         # may be superceded by masking the Eng (*) Oil Temp Max parameter in
