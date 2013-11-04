@@ -1706,6 +1706,8 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         family_name = family.value if family else ''
 
         if deployed:
+            # Families include: A340, ...
+            
             # We have a speedbrake deployed discrete. Set initial state to
             # stowed, then set armed states if available, and finally set
             # deployed state:
@@ -1746,16 +1748,13 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
                 'temporarily using speedbrake handle.', family_name)
             self.array = np_ma_masked_zeros_like(handle.array)
 
-        elif family_name == 'A340':
-            # We don't have the "Armed" state
-            self.array = handle.array * 2
-        
         elif family_name == 'BD-100':
             self.array = self.bd100_speedbrake(handle.array,
                                                spoiler_gnd_armed.array)
 
         else:
-            raise NotImplementedError
+            raise NotImplementedError("No Speedbrake mapping for '%s'" % \
+                                      family_name)
 
 
 class StableApproach(MultistateDerivedParameterNode):
