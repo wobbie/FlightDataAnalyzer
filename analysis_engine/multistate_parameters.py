@@ -636,8 +636,9 @@ class Flap(MultistateDerivedParameterNode):
         try:
             at.get_flap_map(model.value, series.value, family.value)
         except KeyError:
-            cls.warning("No flap mapping available for '%s', '%s', '%s'.",
-                        model.value, series.value, family.value)
+            #Q: Everyone should have a flap map - so raise error?
+            cls.exception("No flap mapping available for '%s', '%s', '%s'.",
+                          model.value, series.value, family.value)
             return False
 
         return True
@@ -693,8 +694,8 @@ class FlapExcludingTransition(MultistateDerivedParameterNode):
         try:
             at.get_flap_map(model.value, series.value, family.value)
         except KeyError:
-            cls.warning("No flap mapping available for '%s', '%s', '%s'.",
-                        model.value, series.value, family.value)
+            cls.debug("No flap mapping available for '%s', '%s', '%s'.",
+                      model.value, series.value, family.value)
             return False
 
         return True
@@ -729,8 +730,8 @@ class FlapIncludingTransition(MultistateDerivedParameterNode):
         try:
             at.get_flap_map(model.value, series.value, family.value)
         except KeyError:
-            cls.warning("No flap mapping available for '%s', '%s', '%s'.",
-                        model.value, series.value, family.value)
+            cls.debug("No flap mapping available for '%s', '%s', '%s'.",
+                      model.value, series.value, family.value)
             return False
 
         return True
@@ -766,8 +767,8 @@ class FlapLever(MultistateDerivedParameterNode):
         try:
             at.get_lever_map(model.value, series.value, family.value)
         except KeyError:
-            cls.warning("No lever mapping available for '%s', '%s', '%s'.",
-                        model.value, series.value, family.value)
+            cls.debug("No lever mapping available for '%s', '%s', '%s'.",
+                      model.value, series.value, family.value)
             return False
 
         return True
@@ -798,8 +799,8 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
         try:
             at.get_lever_map(model.value, series.value, family.value)
         except KeyError:
-            cls.warning("No lever mapping available for '%s', '%s', '%s'.",
-                        model.value, series.value, family.value)
+            cls.debug("No lever mapping available for '%s', '%s', '%s'.",
+                      model.value, series.value, family.value)
             return False
 
         try:
@@ -871,8 +872,8 @@ class Flaperon(MultistateDerivedParameterNode):
         try:
             at.get_aileron_map(model.value, series.value, family.value)
         except KeyError:
-            cls.warning("No aileron mapping available for '%s', '%s', '%s'.",
-                        model.value, series.value, family.value)
+            cls.debug("No aileron mapping available for '%s', '%s', '%s'.",
+                      model.value, series.value, family.value)
             return False
 
         return True
@@ -1347,8 +1348,8 @@ class Slat(MultistateDerivedParameterNode):
         try:
             at.get_slat_map(model.value, series.value, family.value)
         except KeyError:
-            cls.warning("No slat mapping available for '%s', '%s', '%s'.",
-                        model.value, series.value, family.value)
+            cls.debug("No slat mapping available for '%s', '%s', '%s'.",
+                      model.value, series.value, family.value)
             return False
 
         return True
@@ -1381,8 +1382,8 @@ class SlatExcludingTransition(MultistateDerivedParameterNode):
         try:
             at.get_slat_map(model.value, series.value, family.value)
         except KeyError:
-            cls.warning("No slat mapping available for '%s', '%s', '%s'.",
-                        model.value, series.value, family.value)
+            cls.debug("No slat mapping available for '%s', '%s', '%s'.",
+                      model.value, series.value, family.value)
             return False
 
         return True
@@ -1417,8 +1418,8 @@ class SlatIncludingTransition(MultistateDerivedParameterNode):
         try:
             at.get_slat_map(model.value, series.value, family.value)
         except KeyError:
-            cls.warning("No slat mapping available for '%s', '%s', '%s'.",
-                        model.value, series.value, family.value)
+            cls.debug("No slat mapping available for '%s', '%s', '%s'.",
+                      model.value, series.value, family.value)
             return False
 
         return True
