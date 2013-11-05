@@ -2578,8 +2578,9 @@ def integrate(array, frequency, initial_value=0.0, scale=1.0,
     
     Normal integration over n points will result in n-1 trapezoidal intervals
     being summed. This can be extended to provide n intervals by extending
-    the first and last values by half an integration step if required.
-
+    the first values by an integration step if required. The effect is to
+    make the initial value the preceding value to the integral.
+    
     :returns integral: Result of integration by time
     :type integral: Numpy masked array.
     """
@@ -2638,10 +2639,15 @@ def integrate(array, frequency, initial_value=0.0, scale=1.0,
     
     result[::d] = np.ma.cumsum(to_int[::d] * s)
 
+
+    # Original version used this half sample shifted result; never used.
+    ##if extend:
+        ##result += integrand[0]*s*k
+        ##result[-1] += integrand[-1]*s*k
+
     if extend:
-        result += integrand[0]*s*k
-        result[-1] += integrand[-1]*s*k
-        
+        result += integrand[0]*2.0*s*k
+
     return result
 
 def integ_value(array, 
