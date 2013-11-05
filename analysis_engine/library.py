@@ -1267,6 +1267,11 @@ def unique_values(array):
     '''
     Count the number of unique values found within an array.
     
+    Hint: If you get "TypeError: array cannot be safely cast to required type"
+    and your data is integer type, try casting it to int type:
+    
+    unique_values(flap.array.data.astype(int))
+    
     :param array: Array to count occurrences of values within
     :type array: np.array
     :returns: [(val, count), (val2, count2)]

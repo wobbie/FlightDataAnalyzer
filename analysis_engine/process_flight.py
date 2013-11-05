@@ -120,10 +120,17 @@ def derive_parameters(hdf, node_mgr, process_order):
 
         # initialise node
         node = node_class()
+        # shhh, secret accessors for developing nodes in debug mode
+        node.__p = params
+        node.__h = hdf
+        node.__n = node_mgr
         logger.info("Processing parameter %s", param_name)
         # Derive the resulting value
 
         result = node.get_derived(deps)
+        del node.__p
+        del node.__h
+        del node.__n
 
         if node.node_type is KeyPointValueNode:
             #Q: track node instead of result here??
@@ -542,6 +549,8 @@ def main():
     parser.add_argument('-tail', dest='tail_number',
                         default='G-FDSL', # as per flightdatacommunity file
                         help='Aircraft tail number.')
+    parser.add_argument('--strip', default=False, action='store_true',
+                        help='Strip the HDF5 file to only the LFL parameters')
     
     # Aircraft info
     parser.add_argument('-aircraft-family', dest='aircraft_family', type=str,
@@ -626,6 +635,9 @@ def main():
     
     # Derive parameters to new HDF
     hdf_copy = copy_file(args.file, postfix='_process')
+    if args.strip:
+        with hdf_file(hdf_copy) as hdf:
+            hdf.delete_params(hdf.derived_keys())
     res = process_flight(
         hdf_copy, args.tail_number, aircraft_info=aircraft_info,
         requested=args.requested, required=args.required)
