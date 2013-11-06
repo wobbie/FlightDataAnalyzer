@@ -6505,7 +6505,7 @@ class EngOilQtyMax(KeyPointValueNode):
     '''
     '''
 
-    units = ut.KG
+    units = ut.QUART
 
     def derive(self,
                oil_qty=P('Eng (*) Oil Qty Max'),
@@ -6518,7 +6518,7 @@ class EngOilQtyMin(KeyPointValueNode):
     '''
     '''
 
-    units = ut.KG
+    units = ut.QUART
 
     def derive(self,
                oil_qty=P('Eng (*) Oil Qty Min'),
@@ -6533,8 +6533,7 @@ class EngOilQtyDuringTaxiInMax(KeyPointValueNode):
 
     NAME_FORMAT = "Eng (%(number)s) Oil Qty During Taxi In Max"
     NAME_VALUES = NAME_VALUES_ENGINE
-
-    units = ut.KG
+    units = ut.QUART
 
     @classmethod
     def can_operate(cls, available):
@@ -6566,7 +6565,7 @@ class EngOilQtyDuringTaxiOutMax(KeyPointValueNode):
 
     NAME_FORMAT = "Eng (%(number)s) Oil Qty During Taxi Out Max"
     NAME_VALUES = NAME_VALUES_ENGINE
-    units = ut.KG
+    units = ut.QUART
 
     @classmethod
     def can_operate(cls, available):
