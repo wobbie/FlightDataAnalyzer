@@ -218,22 +218,9 @@ class Configuration(MultistateDerivedParameterNode):
     actual configuration state of the aircraft rather than the intended state
     represented by the selected lever position.
 
-    Note: Values that do not map directly to a required state are masked with
-    the data being random (memory alocated)
+    Note: Values that do not map directly to a required state are masked
     '''
-
-    values_mapping = {
-        0: '0',
-        1: '1',
-        2: '1+F',
-        3: '1*',
-        4: '2',
-        5: '2*',
-        6: '3',
-        7: '4',
-        8: '5',
-        9: 'Full',
-    }
+    values_mapping = at.constants.AVAILABLE_CONF_STATES
 
     @classmethod
     def can_operate(cls, available, manufacturer=A('Manufacturer'),
@@ -257,34 +244,25 @@ class Configuration(MultistateDerivedParameterNode):
 
         return True
 
+    
     def derive(self, slat=P('Slat'), flap=M('Flap'), flaperon=P('Flaperon'),
                model=A('Model'), series=A('Series'), family=A('Family')):
-
-        mapping = at.get_conf_angles(model.value, series.value, family.value)
-        qty_param = len(mapping.itervalues().next())
-        if qty_param == 3 and not flaperon:
-            # potential problem here!
-            self.warning("Flaperon not available, so will calculate "
-                         "Configuration using only slat and flap")
-            qty_param = 2
-        elif qty_param == 2 and flaperon:
-            # only two items in values tuple
-            self.debug("Flaperon available but not required for "
-                       "Configuration calculation")
-            pass
-
-        #TODO: Scale each parameter individually to ensure uniqueness.
         
-        # Sum the required parameters (creates a unique state value at present)
-        summed = vstack_params(*(slat, flap, flaperon)[:qty_param]).sum(axis=0)
+        angles = at.get_conf_angles(model.value, series.value, family.value)
+        self.array = MappedArray(np_ma_masked_zeros_like(flap.array),
+                                 values_mapping=self.values_mapping)        
+        for (state, (s, f, a)) in angles.iteritems():
+            condition = (flap.array == f)
+            if s is not None:
+                condition &= (slat.array == s)
+            if a is not None:
+                condition &= (flaperon.array == a)
+            self.array[condition] = state
 
-        # create a placeholder array fully masked
-        self.array = MappedArray(np_ma_masked_zeros_like(flap.array), 
-                                 self.values_mapping)
-        for state, values in mapping.iteritems():
-            s = np.ma.sum(values[:qty_param])
-            # unmask bits we know about
-            self.array[summed == s] = state
+        # Repair the mask to smooth out transitions:
+        nearest_neighbour_mask_repair(self.array, copy=False,
+                                      repair_gap_size=(30 * self.hz),
+                                      direction='backward')    
 
 
 class Daylight(MultistateDerivedParameterNode):
@@ -796,14 +774,10 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
         if not all_of(('Flap', 'Model', 'Series', 'Family'), available):
             return False
         
-        #Q: Check "Conf" here as a separate step rather than merging into lever?
-
         try:
-            at.get_lever_map(model.value, series.value, family.value)
+            at.get_conf_angles(model.value, series.value, family.value)
         except KeyError:
-            cls.debug("No lever mapping available for '%s', '%s', '%s'.",
-                      model.value, series.value, family.value)
-            return False
+            pass  # try lever map
 
         try:
             at.get_lever_angles(model.value, series.value, family.value)
@@ -816,19 +790,16 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
 
     def derive(self, flap=M('Flap'), slat=M('Slat'), flaperon=M('Flaperon'),
                model=A('Model'), series=A('Series'), family=A('Family')):
-
-        lever_angles = at.get_lever_angles(model.value, series.value, family.value)
-        #Q: Better to get CONF settings separately and if present, use them
-        #rather than merged into appraoch above?
+        try:
+            angles = at.get_conf_angles(model.value, series.value, family.value)
+            use_conf = True
+        except KeyError:
+            angles = at.get_lever_angles(model.value, series.value, family.value)
+            use_conf = False
         
         # Get the values mapping, airbus requires some hacking:
-        new_airbus = family.value == 'Falcon' or \
-            (family.value.startswith('A3') and family.value >= 'A320')
-        if new_airbus:
-            # fix up the lever mapping to merge the * and +F states together
-            lever_fix = lambda x: 'Lever %s' % x.rstrip('*').rstrip('+F')
-            from flightdatautilities.aircrafttables.constants import AVAILABLE_CONF_STATES
-            self.values_mapping = dict((k, lever_fix(v)) for k, v in AVAILABLE_CONF_STATES.iteritems() if '*' not in v and '+F' not in v)
+        if use_conf:
+            self.values_mapping = at.constants.LEVER_STATES
         else:
             self.values_mapping = at.get_lever_map(model.value, series.value, family.value)
 
@@ -837,15 +808,14 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
                                  values_mapping=self.values_mapping)
 
         # Update the destination array according to the mappings:
-        for (state, (s, f, a)) in lever_angles.iteritems():
+        for (state, (s, f, a)) in angles.iteritems():
             condition = (flap.array == f)
             if s is not None:
                 condition &= (slat.array == s)
             if a is not None:
                 condition &= (flaperon.array == a)
-            if new_airbus:  # new Airbus
-                #XXX: Tacky approach to avoiding to have duplicate mappings:
-                state = lever_fix(state)
+            if use_conf:
+                state = at.constants.CONF_TO_LEVER[state]
             self.array[condition] = state
 
         # Repair the mask to smooth out transitions:

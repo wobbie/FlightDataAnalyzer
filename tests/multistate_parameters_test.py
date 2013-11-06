@@ -284,10 +284,12 @@ class TestConfiguration(unittest.TestCase, NodeTest):
         s = [0] * 2 + [16] * 4 + [20] * 4 + [23] * 6 + [16]
         f = [0] * 4 + [8] * 4 + [14] * 4 + [22] * 2 + [32] * 2 + [14]
         a = [0] * 4 + [5] * 2 + [10] * 10 + [10]
-        self.slat = P('Slat', np.tile(np.ma.array(s), 10000))
+        self.slat = M('Slat', np.tile(np.ma.array(s), 10000),
+                      values_mapping={x: str(x) for x in np.ma.unique(f)})
         self.flap = M('Flap', np.tile(np.ma.array(f), 10000),
                       values_mapping={x: str(x) for x in np.ma.unique(f)})
-        self.ails = P('Flaperon', np.tile(np.ma.array(a), 10000))
+        self.ails = M('Flaperon', np.tile(np.ma.array(a), 10000),
+                      values_mapping={x: str(x) for x in np.ma.unique(f)})
     
     def test_can_operate(self):
         # Non-airbus aircraft should not be able to create configuration:
@@ -329,7 +331,7 @@ class TestConfiguration(unittest.TestCase, NodeTest):
         # Note: The last state is invalid...
         expected = ['0', '1', '1+F', '1*', '2', '2*', '3', 'Full']
         expected = list(reduce(operator.add, zip(expected, expected)))
-        expected += [np.ma.masked]
+        expected += ['0']
         model = A('Model', 'A330-301')
         series = A('Series', 'A330-300')
         family = A('Family', 'A330')
@@ -887,7 +889,7 @@ class TestFlapLeverSynthetic(unittest.TestCase):
         flap_array =     [0, 0,  8,  8, 0,  0,  8, 14, 14, 22, 32, 0]
         flaperon_array = [0, 0,  5,  0, 0,  0, 10, 10, 10, 10, 10, 0]
         expected = ['Lever 0', 'Lever 0', 'Lever 1', 'Lever 0', 'Lever 0',
-                    'Lever 1', 'Lever 1', 'Lever 2', 'Lever 2', 'Lever 3',
+                    'Lever 1', 'Lever 2', 'Lever 2', 'Lever 3', 'Lever 3',
                     'Lever Full', 'Lever 0']
         repeat = 1
         flap_array = MappedArray(np.repeat(flap_array, repeat), 
@@ -907,10 +909,7 @@ class TestFlapLeverSynthetic(unittest.TestCase):
         node = FlapLeverSynthetic()
         node.derive(flap, slat, flaperon, model, series, family)
 
-        
         mapping = {x: str(x) for x in sorted(set(expected))}
-        ##array = MappedArray(np.repeat(expected, 10), values_mapping=mapping)
-        ##array = []
         self.assertTrue(np.all(node.array == np.repeat(expected, repeat)))
 
 
