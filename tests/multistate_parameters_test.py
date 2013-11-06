@@ -572,6 +572,7 @@ class TestEng_AllRunning(unittest.TestCase, NodeTest):
 
         self.node_class = Eng_AllRunning
         self.operational_combinations = [
+            ('Eng (*) N1 Min',),
             ('Eng (*) N2 Min',), ('Eng (*) Fuel Flow Min',),
             ('Eng (*) N2 Min', 'Eng (*) Fuel Flow Min'),
         ]
@@ -581,7 +582,7 @@ class TestEng_AllRunning(unittest.TestCase, NodeTest):
         n2 = P('Eng (*) N2 Min', array=n2_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(n2, None)
+        node.derive(None, n2, None)
         self.assertEqual(node.array.raw.tolist(), expected)
 
     def test_derive_ff_only(self):
@@ -589,7 +590,7 @@ class TestEng_AllRunning(unittest.TestCase, NodeTest):
         ff = P('Eng (*) Fuel Flow Min', array=ff_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(None, ff)
+        node.derive(None, None, ff)
         self.assertEqual(node.array.raw.tolist(), expected)
 
     def test_derive_n2_ff(self):
@@ -599,8 +600,18 @@ class TestEng_AllRunning(unittest.TestCase, NodeTest):
         ff = P('Eng (*) Fuel Flow Min', array=ff_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(n2, ff)
+        node.derive(None, n2, ff)
         self.assertEqual(node.array.raw.tolist(), expected)
+        
+    def test_derive_n1_only(self):
+        # fallback to N1 if no N2 and FF
+        n1_array = np.ma.array([0, 5, 10, 15, 11, 5, 0])
+        n1 = P('Eng (*) N2 Min', array=n1_array)
+        expected = [False, False, False, True, True, False, False]
+        node = self.node_class()
+        node.derive(None, n1, None)
+        self.assertEqual(node.array.raw.tolist(), expected)
+    
 
 
 class TestEng_AnyRunning(unittest.TestCase, NodeTest):
@@ -609,6 +620,7 @@ class TestEng_AnyRunning(unittest.TestCase, NodeTest):
 
         self.node_class = Eng_AnyRunning
         self.operational_combinations = [
+            ('Eng (*) N1 Max',),
             ('Eng (*) N2 Max',), ('Eng (*) Fuel Flow Max',),
             ('Eng (*) N2 Max', 'Eng (*) Fuel Flow Max'),
         ]
@@ -618,7 +630,7 @@ class TestEng_AnyRunning(unittest.TestCase, NodeTest):
         n2 = P('Eng (*) N2 Max', array=n2_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(n2, None)
+        node.derive(None, n2, None)
         self.assertEqual(node.array.raw.tolist(), expected)
 
     def test_derive_ff_only(self):
@@ -626,7 +638,7 @@ class TestEng_AnyRunning(unittest.TestCase, NodeTest):
         ff = P('Eng (*) Fuel Flow Max', array=ff_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(None, ff)
+        node.derive(None, None, ff)
         self.assertEqual(node.array.raw.tolist(), expected)
 
     def test_derive_n2_ff(self):
@@ -636,8 +648,17 @@ class TestEng_AnyRunning(unittest.TestCase, NodeTest):
         ff = P('Eng (*) Fuel Flow Max', array=ff_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(n2, ff)
+        node.derive(None, n2, ff)
         self.assertEqual(node.array.raw.tolist(), expected)
+        
+    def test_derive_n1_only(self):
+        # fallback to N1
+        n1_array = np.ma.array([0, 5, 10, 15, 11, 5, 0])
+        n1 = P('Eng (*) N1 Max', array=n1_array)
+        expected = [False, False, False, True, True, False, False]
+        node = self.node_class()
+        node.derive(n1, None, None)
+        self.assertEqual(node.array.raw.tolist(), expected)    
 
 
 class TestEngThrustModeRequired(unittest.TestCase):
@@ -1623,10 +1644,10 @@ class TestStickPusher(unittest.TestCase):
         np.testing.assert_equal(sp.array, expected)
 
     def test_single_source(self):
-        left=M('Stick Pusher (L)',np.ma.array([0,1,0,0,0,0]),
-               offset=0.7, frequency=2.0,
-               values_mapping = {0: '-',1: 'Shake',})
-        sp=StickPusher()
+        left = M('Stick Pusher (L)',np.ma.array([0,1,0,0,0,0]),
+                 offset=0.7, frequency=2.0,
+                 values_mapping = {0: '-',1: 'Push',})
+        sp = StickPusher()
         sp.derive(None, left) # Just for variety
         expected = np.ma.array([0,1,0,0,0,0])
         np.testing.assert_equal(sp.array, expected)
