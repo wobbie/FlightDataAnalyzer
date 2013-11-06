@@ -6932,7 +6932,7 @@ class HeadingVariationTouchdownPlus4SecTo60KtsAirspeed(KeyPointValueNode):
 
         for tdwn in tdwns:
             begin = tdwn.index + 4.0 * head.frequency
-            end = index_at_value(airspeed.array, 60.0, slice(begin, None))
+            end = index_at_value(airspeed.array, 60.0, slice(begin, None), endpoint='nearest')
             if end:
                 # We found a suitable endpoint, so create a KPV...
                 dev = np.ma.ptp(head.array[begin:end + 1])

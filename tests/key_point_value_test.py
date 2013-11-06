@@ -6293,9 +6293,22 @@ class TestHeadingVariationTouchdownPlus4SecTo60KtsAirspeed(unittest.TestCase, No
         self.node_class = HeadingVariationTouchdownPlus4SecTo60KtsAirspeed
         self.operational_combinations = [('Heading Continuous', 'Airspeed', 'Touchdown')]
 
-    @unittest.skip('Test Not Implemented')
     def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+
+        heading = P('Heading Continuous', np.ma.array([10]*25))
+        heading.array[15] = 15
+        heading.array[-5] = 20
+        airspeed = P('Airspeed', np.ma.arange(99, 50, -2))
+        airspeed.array[-5:] = np.ma.masked
+        tdwns = KTI(name='Touchdown', items=[
+            KeyTimeInstance(index=10, name='Touchdown'),
+        ])
+
+        node = self.node_class()
+        node.derive(heading, airspeed, tdwns)
+        self.assertEqual(len(node), 1, msg="Expected one KPV got %s" % len(node))
+        self.assertEqual(node[0].value, 5)
+        self.assertEqual(node[0].index, 19)
 
 
 class TestHeadingVacatingRunway(unittest.TestCase, NodeTest):
