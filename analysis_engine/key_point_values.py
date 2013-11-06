@@ -139,7 +139,7 @@ class FlapOrConfigurationMaxOrMin(object):
 
             if np.ma.is_masked(detent):
                 continue
-            if detent == '0' and include_zero == False:
+            if detent in ('0', 'Lever 0') and include_zero == False:
                 continue
 
             array = np.ma.copy(parameter.array)
