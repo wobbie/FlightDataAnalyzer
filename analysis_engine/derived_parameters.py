@@ -3385,7 +3385,7 @@ class FlapAngle(DerivedParameterNode):
         slat_interp_y = []
         flap_interp_x = []
         flap_interp_y = []
-        for index, (current_value, (current_slat, current_flap)) in enumerate(sorted(lever_angles.items())):
+        for index, (current_value, (current_slat, current_flap, _)) in enumerate(sorted(lever_angles.items())):
             if index == 0:
                 previous_value = current_value
             state_difference = current_value - previous_value

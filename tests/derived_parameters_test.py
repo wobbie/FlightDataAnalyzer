@@ -534,8 +534,8 @@ class TestAirspeedReference(unittest.TestCase, NodeTest):
         self.operational_combinations = [
             ('Vapp',),
             ('Vref',),
-            ('Airspeed', 'AFR Vapp'),
-            ('Airspeed', 'AFR Vref'),
+            #('Airspeed', 'AFR Vapp'),
+            #('Airspeed', 'AFR Vref'),
         ]
 
         self.air_spd = P('Airspeed', np.ma.array([200] * 128))
