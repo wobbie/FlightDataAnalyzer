@@ -10,6 +10,7 @@ import unittest
 from mock import Mock, call, patch
 
 from hdfaccess.file import hdf_file
+from flightdatautilities import units as ut
 from flightdatautilities import masked_array_testutils as ma_test
 from flightdatautilities.filesystem_tools import copy_file
 
@@ -1605,7 +1606,7 @@ class TestCabinAltitude(unittest.TestCase):
     def test_basic(self):
         cp = P(name='Cabin Press', 
                array=np.ma.array([14.696, 10.108, 4.3727, 2.1490]), 
-               units='psi')
+               units=ut.PSI)
         ca = CabinAltitude()
         ca.derive(cp)
         expected = np.ma.array([0.0, 10000, 30000, 45000])

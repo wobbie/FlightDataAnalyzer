@@ -5,7 +5,7 @@ import logging
 
 import numpy as np
 
-from flightdatautilities import aircrafttables as at
+from flightdatautilities import aircrafttables as at, units as ut
 
 from hdfaccess.parameter import MappedArray
 
@@ -612,7 +612,7 @@ class Flap(MultistateDerivedParameterNode):
     Steps raw Flap angle from surface into detents.
     '''
 
-    units = 'deg'
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available, frame=A('Frame'),
@@ -645,7 +645,7 @@ class Flap(MultistateDerivedParameterNode):
         if frame_name == 'L382-Hercules':
             self.values_mapping = {0: '0', 50: '50', 100: '100'}
 
-            self.units = '%' # Hercules flaps are unique in this regard !
+            self.units = ut.PERCENT  # Hercules flaps are unique in this regard!
 
             # Flap is not recorded, so invent one of the correct length.
             flap_herc = np_ma_zeros_like(alt_aal.array)
@@ -675,7 +675,7 @@ class FlapExcludingTransition(MultistateDerivedParameterNode):
     apply. This minimises the chance of needing a flap overspeed inspection.
     '''
 
-    units = 'deg'
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available,
@@ -711,7 +711,7 @@ class FlapIncludingTransition(MultistateDerivedParameterNode):
     requirements.
     '''
 
-    units = 'deg'
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available,
@@ -748,7 +748,7 @@ class FlapLever(MultistateDerivedParameterNode):
     if Flap Lever is not available.
     '''
 
-    units = 'deg'
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available,
@@ -780,7 +780,7 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
     '''
 
     name = 'Flap Lever (Synthetic)'
-    units = 'deg'
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available,
@@ -1338,7 +1338,7 @@ class Slat(MultistateDerivedParameterNode):
     Steps raw slat angle into detents.
     '''
 
-    units = 'deg'
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available,
@@ -1372,7 +1372,7 @@ class SlatExcludingTransition(MultistateDerivedParameterNode):
     apply. This minimises the chance of needing a slat overspeed inspection.
     '''
 
-    units = 'deg'
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available,
@@ -1408,7 +1408,7 @@ class SlatIncludingTransition(MultistateDerivedParameterNode):
     requirements.
     '''
 
-    units = 'deg'
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available,
