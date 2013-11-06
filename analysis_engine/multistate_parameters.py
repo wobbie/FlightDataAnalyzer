@@ -1726,7 +1726,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         elif family_name == 'B787':
             self.array = self.b787_speedbrake(handle)
 
-        elif family_name == 'A320':
+        elif family_name in ('A319', 'A320', 'A321'):
             self.array = self.a320_speedbrake(armed, spdbrk)
 
         elif family_name == 'Learjet':
