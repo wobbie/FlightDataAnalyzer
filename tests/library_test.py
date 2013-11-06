@@ -2536,13 +2536,10 @@ class TestIntegrate (unittest.TestCase):
         ma_test.assert_array_equal(np.ma.array(data=[0,1,2.5,3.5], mask=[0,0,0,0]),
                                    result)
 
-
     def test_integration_extended(self):
-        data = np.ma.array([1,2,5,4.0])
-        result = integrate(data, 2.0)
-        np.testing.assert_array_equal(result.data, [0.0, 0.75, 2.5, 4.75])
-        result = integrate(data, 2.0, extend=True)
-        np.testing.assert_array_equal(result.data, [0.25, 1, 2.75, 6])
+        data = np.ma.array([1,3,5,7.0])
+        result = integrate(data, 1.0, extend=True)
+        np.testing.assert_array_equal(result.data, [1.0, 3.0, 7.0, 13.0])
 
     #TODO: test for mask repair
 

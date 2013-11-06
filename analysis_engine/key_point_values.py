@@ -5574,7 +5574,7 @@ class EngGasTempDuringMaximumContinuousPowerForXMinMax(KeyPointValueNode):
                 seconds += 1
             self.create_kpvs_within_slices(
                 ##clip(eng_egt_max.array, minutes * 60, eng_egt_max.hz),
-                second_window(eng_egt_max.array, eng_egt_max.hz, seconds),
+                second_window(eng_egt_max.array.astype(int), eng_egt_max.hz, seconds),
                 max_cont_rating,
                 max_value,
                 minutes=minutes,
@@ -5659,7 +5659,7 @@ class EngGasTempDuringEngStartForXSecMax(KeyPointValueNode):
                 dur = seconds + 1
             else:
                 dur = seconds
-            array = second_window(eng_egt_max.array, eng_egt_max.hz, dur)
+            array = second_window(eng_egt_max.array.astype(int), eng_egt_max.hz, dur)
             self.create_kpvs_within_slices(array, slices, max_value, seconds=seconds)
 
 
@@ -6496,7 +6496,7 @@ class EngOilTempForXMinMax(KeyPointValueNode):
             if seconds % 2 and oil_temp.hz % 2:
                 # shh... we'll add one so that second_window will work!
                 seconds += 1
-            oil_sustained = second_window(oil_temp.array, oil_temp.hz, seconds)
+            oil_sustained = second_window(oil_temp.array.astype(int), oil_temp.hz, seconds)
             
             ####oil_sustained = clip(oil_temp.array, minutes * 60, oil_temp.hz)
             # There have been cases where there were no valid oil temperature
@@ -6932,7 +6932,7 @@ class HeadingVariationTouchdownPlus4SecTo60KtsAirspeed(KeyPointValueNode):
 
         for tdwn in tdwns:
             begin = tdwn.index + 4.0 * head.frequency
-            end = index_at_value(airspeed.array, 60.0, slice(begin, None))
+            end = index_at_value(airspeed.array, 60.0, slice(begin, None), endpoint='nearest')
             if end:
                 # We found a suitable endpoint, so create a KPV...
                 dev = np.ma.ptp(head.array[begin:end + 1])

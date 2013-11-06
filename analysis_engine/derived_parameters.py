@@ -611,6 +611,7 @@ class AirspeedTrue(DerivedParameterNode):
 
     def derive(self, cas_p=P('Airspeed'), alt_std_p=P('Altitude STD'),
                sat_p=P('SAT'), toffs=S('Takeoff'), lands=S('Landing'),
+               rtos=S('Rejected Takeoff'),
                gspd=P('Groundspeed'), acc_fwd=P('Acceleration Forwards')):
 
         cas = cas_p.array
@@ -632,7 +633,7 @@ class AirspeedTrue(DerivedParameterNode):
             np.ma.array(data=tas, mask=combined_mask), 50)
         tas_valids = np.ma.clump_unmasked(tas_from_airspeed)
 
-        if all([gspd, toffs, lands]):
+        if toffs:
             # Now see if we can extend this during the takeoff phase, using
             # either recorded groundspeed or failing that integrating
             # acceleration:
@@ -641,9 +642,9 @@ class AirspeedTrue(DerivedParameterNode):
                     tix = tas_valid.start
                     if is_index_within_slice(tix, toff.slice):
                         tas_0 = tas_from_airspeed[tix]
-                        wind = tas_0 - gspd.array[tix]
                         scope = slice(toff.slice.start, tix)
                         if gspd:
+                            wind = tas_0 - gspd.array[tix]
                             tas_from_airspeed[scope] = gspd.array[scope] + wind
                         else:
                             tas_from_airspeed[scope] = \
@@ -651,24 +652,53 @@ class AirspeedTrue(DerivedParameterNode):
                                           acc_fwd.frequency,
                                           initial_value=tas_0,
                                           scale=GRAVITY_IMPERIAL / KTS_TO_FPS,
+                                          extend=True,
                                           direction='backwards')
 
+        if lands:
             # Then see if we can do the same for the landing phase:
             for land in lands:
                 for tas_valid in tas_valids:
                     tix = tas_valid.stop - 1
                     if is_index_within_slice(tix, land.slice):
                         tas_0 = tas_from_airspeed[tix]
-                        wind = tas_0 - gspd.array[tix]
                         scope = slice(tix + 1, land.slice.stop)
                         if gspd:
+                            wind = tas_0 - gspd.array[tix]
                             tas_from_airspeed[scope] = gspd.array[scope] + wind
                         else:
                             tas_from_airspeed[scope] = \
                                 integrate(acc_fwd.array[scope],
                                           acc_fwd.frequency,
                                           initial_value=tas_0,
+                                          extend=True,
                                           scale=GRAVITY_IMPERIAL / KTS_TO_FPS)
+
+
+        if rtos:
+            for rto in rtos:
+                for tas_valid in tas_valids:
+                    tix = tas_valid.start
+                    if is_index_within_slice(tix, rto.slice):
+                        tas_0 = tas_from_airspeed[tix]
+                        scope = slice(rto.slice.start, tix)
+                        tas_from_airspeed[scope] = \
+                            integrate(acc_fwd.array[scope],
+                                      acc_fwd.frequency,
+                                      initial_value=tas_0,
+                                      scale=GRAVITY_IMPERIAL / KTS_TO_FPS,
+                                      extend=True,
+                                      direction='backwards')
+                    tix = tas_valid.stop - 1
+                    if is_index_within_slice(tix, rto.slice):
+                        tas_0 = tas_from_airspeed[tix]
+                        scope = slice(tix + 1, rto.slice.stop)
+                        tas_from_airspeed[scope] = \
+                            integrate(acc_fwd.array[scope],
+                                      acc_fwd.frequency,
+                                      initial_value=tas_0,
+                                      extend=True,
+                                      scale=GRAVITY_IMPERIAL / KTS_TO_FPS)
 
         self.array = tas_from_airspeed
 
@@ -3927,6 +3957,7 @@ class CoordinatesSmoothed(object):
             rwy_dist = np.ma.array(
                 data = integrate(speed[toff_slice], freq,
                                  initial_value=initial_displacement,
+                                 extend=True,
                                  scale=KTS_TO_MPS),
                 mask = np.ma.getmaskarray(speed[toff_slice]))
 
@@ -5466,7 +5497,7 @@ class Speedbrake(DerivedParameterNode):
                 'Spoiler (4)' in available and
                 'Spoiler (9)' in available
             ) or
-            family_name in ['B737-Classic', 'A320'] and (
+            family_name in ['B737-Classic', 'A319', 'A320', 'A321'] and (
                 'Spoiler (2)' in available and
                 'Spoiler (7)' in available
             ) or
@@ -5526,7 +5557,7 @@ class Speedbrake(DerivedParameterNode):
         if family_name == 'B737-Classic':
             self.merge_spoiler(spoiler_4, spoiler_9)
             
-        elif family_name in ['B737-NG', 'A320']:
+        elif family_name in ['B737-NG', 'A319', 'A320', 'A321']:
             self.merge_spoiler(spoiler_2, spoiler_7)
 
         elif family_name == 'B787':
@@ -5664,6 +5695,7 @@ class ApproachRange(DerivedParameterNode):
                                        extrapolate=True)
             app_range[this_app_slice] = integrate(spd_repaired, freq,
                                                   scale=KTS_TO_MPS,
+                                                  extend=True,
                                                   direction='reverse')
            
             _, app_slices = slices_between(alt_aal.array[this_app_slice],

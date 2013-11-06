@@ -701,53 +701,11 @@ class TestAirspeedRelative(unittest.TestCase, NodeTest):
 
 class TestAirspeedTrue(unittest.TestCase):
     def test_can_operate(self):
-        self.assertEqual(AirspeedTrue.get_operational_combinations(), [
-            ('Airspeed', 'Altitude STD'),
-            ('Airspeed', 'Altitude STD', 'SAT'),
-            ('Airspeed', 'Altitude STD', 'Takeoff'),
-            ('Airspeed', 'Altitude STD', 'Landing'),
-            ('Airspeed', 'Altitude STD', 'Groundspeed'),
-            ('Airspeed', 'Altitude STD', 'Acceleration Forwards'),
-            ('Airspeed', 'Altitude STD', 'SAT', 'Takeoff'),
-            ('Airspeed', 'Altitude STD', 'SAT', 'Landing'),
-            ('Airspeed', 'Altitude STD', 'SAT', 'Groundspeed'),
-            ('Airspeed', 'Altitude STD', 'SAT', 'Acceleration Forwards'),
-            ('Airspeed', 'Altitude STD', 'Takeoff', 'Landing'),
-            ('Airspeed', 'Altitude STD', 'Takeoff', 'Groundspeed'),
-            ('Airspeed', 'Altitude STD', 'Takeoff', 'Acceleration Forwards'),
-            ('Airspeed', 'Altitude STD', 'Landing', 'Groundspeed'),
-            ('Airspeed', 'Altitude STD', 'Landing', 'Acceleration Forwards'),
-            ('Airspeed', 'Altitude STD', 'Groundspeed', 
-             'Acceleration Forwards'),
-            ('Airspeed', 'Altitude STD', 'SAT', 'Takeoff', 'Landing'),
-            ('Airspeed', 'Altitude STD', 'SAT', 'Takeoff', 'Groundspeed'),
-            ('Airspeed', 'Altitude STD', 'SAT', 'Takeoff', 
-             'Acceleration Forwards'),
-            ('Airspeed', 'Altitude STD', 'SAT', 'Landing', 'Groundspeed'),
-            ('Airspeed', 'Altitude STD', 'SAT', 'Landing', 
-             'Acceleration Forwards'),
-            ('Airspeed', 'Altitude STD', 'SAT', 'Groundspeed', 
-             'Acceleration Forwards'),
-            ('Airspeed', 'Altitude STD', 'Takeoff', 'Landing', 'Groundspeed'),
-            ('Airspeed', 'Altitude STD', 'Takeoff', 'Landing', 
-             'Acceleration Forwards'),
-            ('Airspeed', 'Altitude STD', 'Takeoff', 'Groundspeed', 
-             'Acceleration Forwards'),
-            ('Airspeed', 'Altitude STD', 'Landing', 'Groundspeed', 
-             'Acceleration Forwards'),
-            ('Airspeed', 'Altitude STD', 'SAT', 'Takeoff', 'Landing', 
-             'Groundspeed'),
-            ('Airspeed', 'Altitude STD', 'SAT', 'Takeoff', 'Landing', 
-             'Acceleration Forwards'),
-            ('Airspeed', 'Altitude STD', 'SAT', 'Takeoff', 'Groundspeed', 
-             'Acceleration Forwards'),
-            ('Airspeed', 'Altitude STD', 'SAT', 'Landing', 'Groundspeed', 
-             'Acceleration Forwards'),
-            ('Airspeed', 'Altitude STD', 'Takeoff', 'Landing', 'Groundspeed', 
-             'Acceleration Forwards'),
-            ('Airspeed', 'Altitude STD', 'SAT', 'Takeoff', 'Landing', 
-             'Groundspeed', 'Acceleration Forwards')
-        ])
+        self.assertIn(('Airspeed', 'Altitude STD'), AirspeedTrue.get_operational_combinations())
+        self.assertIn(('Airspeed', 'Altitude STD', 'SAT', 
+                       'Takeoff', 'Landing', 'Rejected Takeoff', 
+                       'Groundspeed', 'Acceleration Forwards'), 
+                      AirspeedTrue.get_operational_combinations())
         
     def test_tas_basic(self):
         cas = P('Airspeed', np.ma.array([100, 200, 300]))
@@ -781,6 +739,61 @@ class TestAirspeedTrue(unittest.TestCase):
         self.assertLess(abs(tas.array.data[1] - result[1]), 0.01)
         self.assertLess(abs(tas.array.data[2] - result[2]), 0.01)
         
+    def test_tas_with_gs_extensions(self):
+        # With zero wind, the tas and gs will be identical at the ends of the data.
+        accel = [0.0, 4.7, 9.5, 14.3, 19.0, 23.8, 28.6, 33.3, 38.1, 42.9, 
+                 47.6, 52.4, 57.1, 61.9, 66.7, 71.4, 76.2, 81.0, 85.7, 90.5]
+        cas = P('Airspeed', np.ma.array([0]*9+accel[9:]+accel[-1:8:-1]+[0]*9))
+        gspd = P('Groundspeed', np.ma.array(accel+accel[::-1]))
+        gspd.array[0:3] = [12.0, 12.0, 12.0]
+        gspd.array[-4:] = [14.0, 14.0, 14.0, 14.0]
+        alt = P('Altitude STD', np.ma.array([0]*40))
+        acc = P('Acceleration Forwards', np.ma.array([0.25]*20+[-0.25]*20))
+        toffs = buildsection('Takeoff', 0, 18)
+        lands = buildsection('Landing', 21, None)
+        tas = AirspeedTrue()
+        tas.derive(cas, alt, None, toffs, lands, None, gspd, acc)
+        expected = accel+accel[::-1]
+        ma_test.assert_array_almost_equal(tas.array[3:-4], expected[3:-4], decimal=1)
+        ma_test.assert_array_almost_equal(tas.array[:3], [12.0]*3, decimal=1)
+        ma_test.assert_array_almost_equal(tas.array[-4:], [14.0]*4, decimal=1)
+        # Curiously, the test above only checks the valid samples, so no
+        # extrapolation is needed to pass, hence a check on validity is
+        # essential !
+        self.assertEqual(np.ma.count(tas.array), 40)
+
+    def test_tas_no_gs_extensions(self):
+        # With no groundspeed available, the true airspeed is an integration
+        # of acceleration from the ends of the available data. The array
+        # "speed" corresponds to a 0.25g acceleration and deceleration.
+        speed = [0.0, 4.7, 9.5, 14.3, 19.0, 23.8, 28.6, 33.3, 38.1, 42.9, 
+                 47.6, 52.4, 57.1, 61.9, 66.7, 71.4, 76.2, 81.0, 85.7, 90.5]
+        cas = P('Airspeed', np.ma.array([0]*9+speed[9:]+speed[-1:8:-1]+[0]*9))
+        alt = P('Altitude STD', np.ma.array([0]*40))
+        acc = P('Acceleration Forwards', np.ma.array([0.25]*20+[-0.25]*20))
+        toffs = buildsection('Takeoff', 0, 18)
+        lands = buildsection('Landing', 21, None)
+        tas = AirspeedTrue()
+        tas.derive(cas, alt, None, toffs, lands, None, None, acc)
+        expected = speed+speed[::-1]
+        ma_test.assert_array_almost_equal(tas.array, expected, decimal=1)
+        # Curiously, the test above only checks the valid samples, so no
+        # extrapolation is needed to pass, hence a check on validity is
+        # essential !
+        self.assertEqual(np.ma.count(tas.array), 40)
+
+    def test_tas_rto(self):
+        speed = [0.0, 4.7, 9.5, 14.3, 19.0, 23.8, 28.6, 33.3, 38.1, 42.9, 
+                 47.6, 52.4, 57.1, 61.9, 66.7, 71.4, 76.2, 81.0, 85.7, 90.5]
+        cas = P('Airspeed', np.ma.array([0]*9+speed[9:]+speed[-1:8:-1]+[0]*9))
+        alt = P('Altitude STD', np.ma.array([0]*40))
+        acc = P('Acceleration Forwards', np.ma.array([0.25]*20+[-0.25]*20))
+        rtos = buildsection('Rejected Takeoff', 1, 38)
+        tas = AirspeedTrue()
+        tas.derive(cas, alt, None, None, None, rtos, None, acc)
+        expected = speed+speed[::-1]
+        ma_test.assert_array_almost_equal(tas.array, expected, decimal=1)
+
 
 class TestAltitudeAAL(unittest.TestCase):
     def test_can_operate(self):
