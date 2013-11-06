@@ -795,48 +795,57 @@ class TestFlapLeverSynthetic(unittest.TestCase):
     def test_can_operate(self):
         # Test we can operate for something in the lever mapping.
         self.assertTrue(FlapLeverSynthetic.can_operate(
-            ('Flap Angle', 'Slat Angle', 'Model', 'Series', 'Family'),
+            ('Flap', 'Slat', 'Model', 'Series', 'Family'),
             model=Attribute('Model', 'CRJ900 (CL-600-2D24)'),
             series=Attribute('Series', 'CRJ900'),
             family=Attribute('Family', 'CL-600')))
         # Test we can operate for the above even though slat missing.
         self.assertTrue(FlapLeverSynthetic.can_operate(
-            ('Flap Angle', 'Model', 'Series', 'Family'),
+            ('Flap', 'Model', 'Series', 'Family'),
             model=Attribute('Model', 'CRJ900 (CL-600-2D24)'),
             series=Attribute('Series', 'CRJ900'),
             family=Attribute('Family', 'CL-600')))
         # Test we can operate for something not in the lever mapping.
         self.assertTrue(FlapLeverSynthetic.can_operate(
-            ('Flap Angle', 'Model', 'Series', 'Family'),
+            ('Flap', 'Model', 'Series', 'Family'),
             model=Attribute('Model', 'B737-333'),
             series=Attribute('Series', 'B737-300'),
             family=Attribute('Family', 'B737 Classic')))
         # Test we can operate even though the above *has* a slat.
         self.assertTrue(FlapLeverSynthetic.can_operate(
-            ('Flap Angle', 'Slat Angle', 'Model', 'Series', 'Family'),
+            ('Flap', 'Slat', 'Model', 'Series', 'Family'),
             model=Attribute('Model', 'B737-333'),
             series=Attribute('Series', 'B737-300'),
             family=Attribute('Family', 'B737 Classic')))
+        # Test we can operate with Flaperons
+        self.assertTrue(FlapLeverSynthetic.can_operate(
+            ('Flap', 'Slat', 'Flaperon', 'Model', 'Series', 'Family'),
+            model=Attribute('Model', None),
+            series=Attribute('Series', None),
+            family=Attribute('Family', 'A330')))
 
     def test_derive__crj900(self):
         # Prepare our generated flap and slat arrays:
         flap_array = [0.0, 0, 8, 8, 0, 0, 0, 8, 20, 30, 45, 8, 0, 0, 0]
         slat_array = [0.0, 0, 20, 20, 20, 0, 0, 20, 20, 25, 25, 20, 20, 0, 0]
-        flap_array = np.repeat(flap_array, 10)
-        slat_array = np.repeat(slat_array, 10)
+        flap_array = MappedArray(np.repeat(flap_array, 10), 
+                    values_mapping={0:'0', 8:'8', 20:'20', 30:'30', 45:'45'})
+        slat_array = MappedArray(np.repeat(slat_array, 10),
+                    values_mapping={0:'0', 20:'20', 25:'25'})
 
-        # Add some noise to make our flap and slat angles more realistic:
-        flap_array += np.ma.sin(range(len(flap_array))) * 0.1
-        slat_array -= np.ma.sin(range(len(slat_array))) * 0.1
+        ### Add some noise to make our flap and slat angles more realistic:
+        ##flap_array += np.ma.sin(range(len(flap_array))) * 0.1
+        ##slat_array -= np.ma.sin(range(len(slat_array))) * 0.1
 
         # Derive the synthetic flap lever:
-        flap = P('Flap Angle', flap_array)
-        slat = P('Slat Angle', slat_array)
+        flap = M('Flap', flap_array)
+        slat = M('Slat', slat_array)
+        flaperon = None
         model = A('Model', 'CRJ900 (CL-600-2D24)')
         series = A('Series', 'CRJ900')
         family = A('Family', 'CL-600')
         node = FlapLeverSynthetic()
-        node.derive(flap, slat, model, series, family)
+        node.derive(flap, slat, flaperon, model, series, family)
 
         # Check against an expected array of lever detents:
         expected = [0, 0, 8, 8, 1, 0, 0, 8, 20, 30, 45, 8, 1, 0, 0]
@@ -847,25 +856,62 @@ class TestFlapLeverSynthetic(unittest.TestCase):
     def test_derive__b737ng(self):
         # Prepare our generated flap array:
         flap_array = [0.0, 0, 5, 2, 1, 0, 0, 10, 15, 25, 30, 40, 0, 0, 0]
-        flap_array = np.repeat(flap_array, 10)
+        flap_array = MappedArray(np.repeat(flap_array, 10),
+            values_mapping={0:'0', 1:'1', 2:'2', 5:'5', 10:'10', 15:'15', 
+                             25:'25', 30:'30', 40:'40'})
 
-        # Add some noise to make our flap angles more realistic:
-        flap_array += np.ma.sin(range(len(flap_array))) * 0.05
+        ### Add some noise to make our flap angles more realistic:
+        ##flap_array += np.ma.sin(range(len(flap_array))) * 0.05
 
         # Derive the synthetic flap lever:
-        flap = P('Flap Angle', flap_array)
+        flap = M('Flap', flap_array)
         slat = None
+        flaperon = None
         model = A('Model', 'B737-333')
         series = A('Series', 'B737-300')
         family = A('Family', 'B737 Classic')
         node = FlapLeverSynthetic()
-        node.derive(flap, slat, model, series, family)
+        node.derive(flap, slat, flaperon, model, series, family)
 
         # Check against an expected array of lever detents:
         expected = [0, 0, 5, 2, 1, 0, 0, 10, 15, 25, 30, 40, 0, 0, 0]
         mapping = {x: str(x) for x in sorted(set(expected))}
         array = MappedArray(np.repeat(expected, 10), values_mapping=mapping)
         np.testing.assert_array_equal(node.array, array)
+        
+    def test_derive__a330(self):
+        # A330 uses Configuration conditions.
+        # Prepare our generated flap and slat arrays:
+        #                 -  - 1+F   -  -  1   1*  2   2*  3  Full -
+        slat_array =     [0, 0, 16, 16, 0, 16, 20, 20, 23, 23, 23, 0]
+        flap_array =     [0, 0,  8,  8, 0,  0,  8, 14, 14, 22, 32, 0]
+        flaperon_array = [0, 0,  5,  0, 0,  0, 10, 10, 10, 10, 10, 0]
+        expected = ['Lever 0', 'Lever 0', 'Lever 1', 'Lever 0', 'Lever 0',
+                    'Lever 1', 'Lever 1', 'Lever 2', 'Lever 2', 'Lever 3',
+                    'Lever Full', 'Lever 0']
+        repeat = 1
+        flap_array = MappedArray(np.repeat(flap_array, repeat), 
+                    values_mapping={0:'0', 8:'8', 14:'14', 22:'22', 32:'32'})
+        slat_array = MappedArray(np.repeat(slat_array, repeat),
+                    values_mapping={0:'0', 16:'16', 20:'20', 23:'23'})
+        flaperon_array = MappedArray(np.repeat(flaperon_array, repeat),
+                    values_mapping={0:'0', 5:'5', 10:'10'})        
+
+        # Derive the synthetic flap lever:
+        flap = M('Flap', flap_array)
+        slat = M('Slat', slat_array)
+        flaperon = M('Flaperon', flaperon_array)
+        model = A('Model', None)
+        series = A('Series', None)
+        family = A('Family', 'A330')
+        node = FlapLeverSynthetic()
+        node.derive(flap, slat, flaperon, model, series, family)
+
+        
+        mapping = {x: str(x) for x in sorted(set(expected))}
+        ##array = MappedArray(np.repeat(expected, 10), values_mapping=mapping)
+        ##array = []
+        self.assertTrue(np.all(node.array == np.repeat(expected, repeat)))
 
 
 class TestFlaperon(unittest.TestCase):

@@ -793,8 +793,10 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
     def can_operate(cls, available,
                     model=A('Model'), series=A('Series'), family=A('Family')):
 
-        if not all_of(('Flap Angle', 'Model', 'Series', 'Family'), available):
+        if not all_of(('Flap', 'Model', 'Series', 'Family'), available):
             return False
+        
+        #Q: Check "Conf" here as a separate step rather than merging into lever?
 
         try:
             at.get_lever_map(model.value, series.value, family.value)
@@ -812,32 +814,38 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
 
         return True
 
-    def derive(self, flap=P('Flap Angle'), slat=P('Slat Angle'),
+    def derive(self, flap=M('Flap'), slat=M('Slat'), flaperon=M('Flaperon'),
                model=A('Model'), series=A('Series'), family=A('Family')):
 
         lever_angles = at.get_lever_angles(model.value, series.value, family.value)
-        slat_angles, flap_angles = map(set, zip(*lever_angles.itervalues()))
-
-        # Check whether slat angle is available and mapping has slat angles:
-        use_slat = (slat is not None and list(slat_angles)[0] is not None)
-
-        flap_array = step_values(repair_mask(flap.array), flap_angles,
-                                 flap.hz, step_at='move_start')
-
-        if use_slat:
-            slat_array = step_values(repair_mask(slat.array), slat_angles,
-                                     slat.hz, step_at='move_start')
+        #Q: Better to get CONF settings separately and if present, use them
+        #rather than merged into appraoch above?
+        
+        # Get the values mapping, airbus requires some hacking:
+        new_airbus = family.value == 'Falcon' or \
+            (family.value.startswith('A3') and family.value >= 'A320')
+        if new_airbus:
+            # fix up the lever mapping to merge the * and +F states together
+            lever_fix = lambda x: 'Lever %s' % x.rstrip('*').rstrip('+F')
+            from flightdatautilities.aircrafttables.constants import AVAILABLE_CONF_STATES
+            self.values_mapping = dict((k, lever_fix(v)) for k, v in AVAILABLE_CONF_STATES.iteritems() if '*' not in v and '+F' not in v)
+        else:
+            self.values_mapping = at.get_lever_map(model.value, series.value, family.value)
 
         # Prepare the destination array:
-        self.values_mapping = at.get_lever_map(model.value, series.value, family.value)
-        self.array = MappedArray(np_ma_masked_zeros_like(flap_array),
+        self.array = MappedArray(np_ma_masked_zeros_like(flap.array),
                                  values_mapping=self.values_mapping)
 
         # Update the destination array according to the mappings:
-        for (state, (s, f)) in lever_angles.iteritems():
-            condition = (flap_array == f)
-            if use_slat:
-                condition &= (slat_array == s)
+        for (state, (s, f, a)) in lever_angles.iteritems():
+            condition = (flap.array == f)
+            if s is not None:
+                condition &= (slat.array == s)
+            if a is not None:
+                condition &= (flaperon.array == a)
+            if new_airbus:  # new Airbus
+                #XXX: Tacky approach to avoiding to have duplicate mappings:
+                state = lever_fix(state)
             self.array[condition] = state
 
         # Repair the mask to smooth out transitions:
