@@ -1169,6 +1169,7 @@ class AltitudeRadio(DerivedParameterNode):
                source_efis = P('Altitude Radio (EFIS)'),
                source_efis_L = P('Altitude Radio (EFIS) (L)'),
                source_efis_R = P('Altitude Radio (EFIS) (R)'),
+               pitch=P('Pitch'),
                family=A('Family')):
 
         # Reminder: If you add parameters here, they need limits adding in the
@@ -1188,6 +1189,14 @@ class AltitudeRadio(DerivedParameterNode):
                                       offset=self.offset,
                                       frequency=self.frequency)
 
+        # For aircraft which do not compensate for radio altimeter variation
+        # with pitch, and where the antennae are placed well away from the
+        # main gear, compensation is necessary.
+        if family and family.value in ['CL-600']:
+            pitch_rad = pitch.array * deg2rad
+            # Scaling taken from measurement of takeoff rad alt and pitch data.
+            self.array += 30.0 * np.ma.sin(pitch_rad) - 1.2
+            
 
 class AltitudeSTDSmoothed(DerivedParameterNode):
     """
