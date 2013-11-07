@@ -3350,34 +3350,76 @@ class TestOffsetSelect(unittest.TestCase):
 
 class TestOverflowCorrection(unittest.TestCase):
     def test_with_a320(self):
-        
+        fast = S(items=[Section('Fast', slice(336, 5397), 336, 5397),
+                        Section('Fast', slice(5859, 11520), 5859, 11520)])
         radioA = load(os.path.join(
             test_data_path, 'A320_Altitude_Radio_A_overflow.nod'))
-        resA = overflow_correction(radioA.array, radioA.hz)
+        resA = overflow_correction(radioA, fast)
         sects = np.ma.clump_unmasked(resA)
+        self.assertEqual(len(sects), 4)
         for sect in sects[0::2]:
             # takeoffs
-            self.assertAlmostEqual(resA[sect.start], 0)
+            self.assertAlmostEqual(resA[sect.start] / 10., 0, 0)
         for sect in sects[1::2]:
             # landings
-            self.assertAlmostEqual(resA[sect.stop], 0)
-            
-            
+            self.assertAlmostEqual(resA[sect.stop - 1] / 10., 0, 0)
+
         radioB = load(os.path.join(
-            test_data_path, 'A320_Altitude_Radio_B_overflow.nod'))            
-        resB = overflow_correction(radioB.array, radioB.hz)
-        sects = np.ma.clump_unmasked(resA)
+            test_data_path, 'A320_Altitude_Radio_B_overflow.nod'))
+        resB = overflow_correction(radioB, fast)
+        sects = np.ma.clump_unmasked(resB)
+        self.assertEqual(len(sects), 4)
         for sect in sects[0::2]:
             # takeoffs
-            self.assertAlmostEqual(resB[sect.start], 0)
+            self.assertAlmostEqual(resB[sect.start] / 10., 0, 0)
         for sect in sects[1::2]:
             # landings
-            self.assertAlmostEqual(resB[sect.stop], 0)
+            self.assertAlmostEqual(resB[sect.stop - 1] / 10., 0, 0)
+
+        from matplotlib import pyplot as plt
+
+        plt.plot(resA)
+        plt.plot(resB)
+        plt.savefig('000.png')
+        plt.close()
 
     def test_with_a340(self):
-        pass
-    
-    
+        fast = S(items=[Section('Fast', slice(2000, 6500), 2000, 6500)])
+        radioA = load(os.path.join(
+            test_data_path, 'A340_Altitude_Radio_A_overflow.nod'))
+        resA = overflow_correction(radioA, fast)
+        sects = np.ma.clump_unmasked(resA)
+        # 1 section for climb, one for descent
+        self.assertEqual(len(sects), 2)
+        for sect in sects[0::2]:
+            # takeoffs
+            self.assertAlmostEqual(resA[sect.start] / 10., 0, 0)
+        for sect in sects[1::2]:
+            # landings
+            self.assertAlmostEqual(resA[sect.stop - 1] / 10., 0, 0)
+
+        radioB = load(os.path.join(
+            test_data_path, 'A340_Altitude_Radio_B_overflow.nod'))
+        resB = overflow_correction(radioB, fast)
+        sects = np.ma.clump_unmasked(resB)
+        # 1 section for climb, one for descent
+        self.assertEqual(len(sects), 2)
+        for sect in sects[0::2]:
+            # takeoffs
+            self.assertAlmostEqual(resB[sect.start] / 10., 0, 0)
+        for sect in sects[1::2]:
+            # landings
+            self.assertAlmostEqual(resB[sect.stop - 1] / 10., 0, 0)
+
+        from matplotlib import pyplot as plt
+
+        plt.plot(resA)
+        plt.plot(resB)
+        plt.savefig('001.png')
+        plt.close()
+        self.assertEqual(len(sects), 2)
+
+
 class TestPeakCurvature(unittest.TestCase):
     # Also known as the "Truck and Trailer" algorithm, this detects the peak
     # curvature point in an array.
