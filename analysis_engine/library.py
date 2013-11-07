@@ -6227,7 +6227,7 @@ def second_window(array, frequency, seconds):
     samples = (seconds * frequency) + 1
     # TODO: Fix for frequency..
     arrays = [array]
-    for roll_value in range((samples / 2) + 1):  # 0 roll?
+    for roll_value in range(int((samples / 2) + 1)):  # 0 roll?
         positive_roll = np.roll(array, roll_value)
         positive_roll[:roll_value] = np.ma.masked
         negative_roll = np.roll(array, -roll_value)
