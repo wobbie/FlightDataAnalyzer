@@ -106,6 +106,9 @@ AIRBORNE_THRESHOLD_TIME = 60  # secs
 # An airspeed below which you just can't possibly be flying.
 AIRSPEED_THRESHOLD = 80  # kts
 
+# The minimum sensible duration for being declaring a START_AND_STOP
+AIRSPEED_THRESHOLD_TIME = 3 * 60  # secs
+
 # Min number of samples to use when creating hash of airspeed
 # 64 samples is enough to exceed arinc and short enough to not affect flights
 AIRSPEED_HASH_MIN_SAMPLES = 64
@@ -177,6 +180,11 @@ GROUNDSPEED_LAG_TC = 6.0  # seconds
 
 # Threshold for start and end of Mobile phase when groundspeed is available.
 GROUNDSPEED_FOR_MOBILE = 5.0  # kts
+
+# The minimum amount of heading change in degrees that would satisfy movement
+# on the ground representative of taxiing. Any flight / taxi will normally
+# exceed this value massively.
+HEADING_CHANGE_TAXI_THRESHOLD = 60  # deg
 
 # Threshold for start and end of Mobile phase
 HEADING_RATE_FOR_MOBILE = 2.0  # deg/sec

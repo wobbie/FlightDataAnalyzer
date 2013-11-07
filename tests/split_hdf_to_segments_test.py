@@ -29,7 +29,7 @@ class TestSplitSegments(unittest.TestCase):
         airspeed_frequency = 2
         airspeed_secs = len(airspeed_array) / airspeed_frequency
         
-        heading_array = np.ma.zeros(len(airspeed_array) / 2)
+        heading_array = np.ma.arange(len(airspeed_array) / 2) % 360
         heading_frequency = 1
         heading_array.mask = False
         
@@ -194,6 +194,25 @@ class TestSplitSegments(unittest.TestCase):
         self.assertEqual(segment_type, 'START_AND_STOP')
         self.assertEqual(segment_slice.start, 395)
         self.assertEqual(segment_slice.stop, airspeed_secs)
+        
+        # Test that no heading change returns "NO_MOVEMENT"
+        heading_array = np.ones_like(airspeed_array) * 20
+        # add a bit of erroneous movement
+        heading_array[5] += 2
+        heading_array[5] += 12
+        heading_array[5] += 9
+        heading_array[5] += 4
+        segment_tuples = split_segments(hdf)
+        self.assertEqual(len(segment_tuples), 2)
+        segment_type, segment_slice = segment_tuples[0]
+        self.assertEqual(segment_type, 'GROUND_ONLY')  #TODO: Change to "NO_MOVEMENT
+        self.assertEqual(segment_slice.start, 0)
+        self.assertEqual(segment_slice.stop, 400)        
+        segment_type, segment_slice = segment_tuples[1]
+        self.assertEqual(segment_type, 'GROUND_ONLY')  #TODO: Change to "NO_MOVEMENT
+        self.assertEqual(segment_slice.start, 400)
+        self.assertEqual(segment_slice.stop, airspeed_secs)        
+                
         
         # TODO: Test engine parameters.
     
