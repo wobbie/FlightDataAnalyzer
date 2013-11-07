@@ -6479,7 +6479,7 @@ class EngOilTempForXMinMax(KeyPointValueNode):
     NAME_FORMAT = 'Eng Oil Temp For %(minutes)d Min Max'
     NAME_VALUES = {'minutes': [15, 20, 45]}
     units = 'C'
-    ##align_frequency = 1.0 / 60  # once per minute
+    align_frequency = 1
     
     def derive(self, oil_temp=P('Eng (*) Oil Temp Max')):
 
