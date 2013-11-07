@@ -1547,19 +1547,18 @@ class AirspeedWithFlapAndSlatExtendedMax(KeyPointValueNode, FlapOrConfigurationM
     '''
     '''
 
-    NAME_FORMAT = 'Airspeed With %(parameter)s 0 And Slat Extended Max'
-    NAME_VALUES = NAME_VALUES_FLAP.copy()
-    NAME_VALUES.update({
+    NAME_FORMAT = 'Airspeed With %(parameter)s %(flap)s And Slat Extended Max'
+    NAME_VALUES = {
         'parameter': [
             'Flap Including Transition',
             'Flap Excluding Transition',
         ],
-    })
+        'flap': ['0'],
+    }
     units = 'kt'
 
     @classmethod
     def can_operate(cls, available):
-
         exc = all_of((
             'Flap Excluding Transition',
             'Slat Excluding Transition',
@@ -1594,7 +1593,7 @@ class AirspeedWithFlapAndSlatExtendedMax(KeyPointValueNode, FlapOrConfigurationM
             for index, value, detent in data:
                 if not detent == '0':
                     continue  # skip as only interested when flap is retracted.
-                self.create_kpv(index, value, parameter=flap.name)
+                self.create_kpv(index, value, parameter=flap.name, flap=detent)
 
 
 class AirspeedWithFlapDuringClimbMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
