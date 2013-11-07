@@ -8478,9 +8478,11 @@ class TestTCASRAWarningDuration(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = TCASRAWarningDuration
-        self.operational_combinations = [('TCAS Combined Control', 'Airborne')]
+        self.operational_combinations = [('TCAS RA', 'Airborne'),
+                                         ('TCAS Combined Control', 'Airborne'),
+                                         ('TCAS RA', 'TCAS Combined Control', 'Airborne')]
 
-    def test_derive(self):
+    def test_derive_cc_only(self):
         values_mapping = {
             0: 'A',
             1: 'B',
@@ -8495,8 +8497,39 @@ class TestTCASRAWarningDuration(unittest.TestCase, NodeTest):
             values_mapping=values_mapping)
         airborne = buildsection('Airborne', 2, 7)
         node = self.node_class()
-        node.derive(tcas, airborne)
+        node.derive(None, tcas, airborne)
         self.assertEqual([KeyPointValue(2, 5.0, 'TCAS RA Warning Duration')],
+                         node)
+
+    def test_derive_ra_only(self):
+        values_mapping = {0: '-', 1: 'RA'}
+        ra = M('TCAS RA', array=np.ma.array([0,0,1,1,1,1,0,0,0]),
+               values_mapping=values_mapping)
+        airborne = buildsection('Airborne', 2, 7)
+        node = self.node_class()
+        node.derive(ra, None, airborne)
+        self.assertEqual([KeyPointValue(2, 4.0, 'TCAS RA Warning Duration')],
+                         node)
+
+    def test_derive_ra_takes_precedence(self):
+        values_mapping_cc = {
+            0: 'A',
+            1: 'B',
+            2: 'Drop Track',
+            3: 'Altitude Lost',
+            4: 'Up Advisory Corrective',
+            5: 'Down Advisory Corrective',
+            6: 'G',
+        }
+        tcas_cc = M('TCAS Combined Control', array=np.ma.array([0,1,2,3,4,5,4,5,6]),
+                    values_mapping=values_mapping_cc)
+        values_mapping_ra = {0: '-', 1: 'RA'}
+        ra = M('TCAS RA', array=np.ma.array([0,0,0,1,1,1,0,0,0]),
+               values_mapping=values_mapping_ra)
+        airborne = buildsection('Airborne', 2, 7)
+        node = self.node_class()
+        node.derive(ra, tcas_cc, airborne)
+        self.assertEqual([KeyPointValue(3, 3.0, 'TCAS RA Warning Duration')],
                          node)
 
 

@@ -9386,14 +9386,24 @@ class TCASRAWarningDuration(KeyPointValueNode):
     name = 'TCAS RA Warning Duration'
     units = 'sec'
 
-    def derive(self, tcas=M('TCAS Combined Control'), airs=S('Airborne')):
+    @classmethod
+    def can_operate(cls, available):
+        return 'TCAS RA' in available or 'TCAS Combined Control' in available
+
+    def derive(self, tcas_ra=M('TCAS RA'),
+               tcas=M('TCAS Combined Control'), 
+               airs=S('Airborne')):
         
         for air in airs:
-            ras_local = tcas.array[air.slice].any_of('Drop Track',
-                                                     'Altitude Lost',
-                                                     'Up Advisory Corrective',
-                                                     'Down Advisory Corrective',
-                                                     ignore_missing=True)
+            if tcas_ra:
+                ras_local = tcas_ra.array[air.slice] == 'RA'
+            else:
+                # If the RA is not recorded separately:
+                ras_local = tcas.array[air.slice].any_of('Drop Track',
+                                                         'Altitude Lost',
+                                                         'Up Advisory Corrective',
+                                                         'Down Advisory Corrective',
+                                                         ignore_missing=True)
             
             ras_slices = shift_slices(runs_of_ones(ras_local), air.slice.start)
             self.create_kpvs_from_slice_durations(ras_slices, self.frequency,
