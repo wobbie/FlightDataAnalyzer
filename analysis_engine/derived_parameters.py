@@ -53,6 +53,7 @@ from analysis_engine.library import (actuator_mismatch,
                                      np_ma_masked_zeros_like,
                                      np_ma_zeros_like,
                                      offset_select,
+                                     overflow_correction,
                                      peak_curvature,
                                      press2alt,
                                      rate_of_change,
@@ -1128,40 +1129,6 @@ class AltitudeRadio(DerivedParameterNode):
         return any_of([name for name in cls.get_dependency_names() \
                        if name.startswith('Altitude Radio')], available)
 
-    def _overflow_correction(self, param, max_val=4095):
-        '''
-        Overflow Correction postprocessing procedure.
-
-        This function fixes the wrong values resulting from too narrow bit
-        range. The value range is extended using an algorithm similar to binary
-        overflow: we detect value changes bigger than 75% and modify the result
-        ranges.
-        '''
-        delta = max_val * 0.75
-
-        # We are removing small masks (up to 10 samples) related to the
-        # overflow.
-        slices = slices_remove_small_gaps(
-            np.ma.clump_unmasked(param.array), time_limit=10.0 / param.hz,
-            hz=param.hz)
-        for sl in slices:
-            param.array.mask[sl] = False
-            jump = np.ma.ediff1d(param.array[sl], to_begin=0.0)
-            abs_jump = np.ma.abs(jump)
-            jump_sign = -jump / abs_jump
-            steps = np.ma.where(abs_jump > delta, max_val * jump_sign, 0)
-
-            correction = np.ma.cumsum(steps)
-
-            param.array[sl] += correction
-
-            if np.ma.min(param.array[sl]) < -delta:
-                # FIXME: compensate for the descent starting at the overflown
-                # value
-                param.array[sl] += max_val
-
-        return param
-
     def derive(self,
                source_A = P('Altitude Radio (A)'),
                source_B = P('Altitude Radio (B)'),
@@ -1182,10 +1149,15 @@ class AltitudeRadio(DerivedParameterNode):
         self.offset = 0.0
         self.frequency = 4.0
 
-        if family and family.value == 'A340':
-            sources = [self._overflow_correction(p)
-                       for p in sources if p is not None]
-
+        if family and family.value in ('A319', 'A320', 'A321', 'A340'):
+            osources = []
+            for source in sources:
+                if source is None:
+                    continue
+                source.array = overflow_correction(source.array, source.hz)
+                osources.append(source)
+            sources = osources
+            
         self.array = blend_parameters(sources,
                                       offset=self.offset,
                                       frequency=self.frequency)

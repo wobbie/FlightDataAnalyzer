@@ -3348,6 +3348,36 @@ class TestOffsetSelect(unittest.TestCase):
         self.assertEqual(off, 0.3)
 
 
+class TestOverflowCorrection(unittest.TestCase):
+    def test_with_a320(self):
+        
+        radioA = load(os.path.join(
+            test_data_path, 'A320_Altitude_Radio_A_overflow.nod'))
+        resA = overflow_correction(radioA.array, radioA.hz)
+        sects = np.ma.clump_unmasked(resA)
+        for sect in sects[0::2]:
+            # takeoffs
+            self.assertAlmostEqual(resA[sect.start], 0)
+        for sect in sects[1::2]:
+            # landings
+            self.assertAlmostEqual(resA[sect.stop], 0)
+            
+            
+        radioB = load(os.path.join(
+            test_data_path, 'A320_Altitude_Radio_B_overflow.nod'))            
+        resB = overflow_correction(radioB.array, radioB.hz)
+        sects = np.ma.clump_unmasked(resA)
+        for sect in sects[0::2]:
+            # takeoffs
+            self.assertAlmostEqual(resB[sect.start], 0)
+        for sect in sects[1::2]:
+            # landings
+            self.assertAlmostEqual(resB[sect.stop], 0)
+
+    def test_with_a340(self):
+        pass
+    
+    
 class TestPeakCurvature(unittest.TestCase):
     # Also known as the "Truck and Trailer" algorithm, this detects the peak
     # curvature point in an array.
