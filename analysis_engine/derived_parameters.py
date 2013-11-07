@@ -1155,7 +1155,9 @@ class AltitudeRadio(DerivedParameterNode):
             for source in sources:
                 if source is None:
                     continue
-                source.array = overflow_correction(source, fast)
+                # correct for overflow, aligning the fast slice to each source
+                source.array = overflow_correction(
+                    source, fast.get_aligned(source))
                 osources.append(source)
             sources = osources
 

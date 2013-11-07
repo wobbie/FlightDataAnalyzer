@@ -4445,8 +4445,7 @@ def overflow_correction(param, fast=None, max_val=4095):
             array[sl] += max_val
 
     if fast:
-        fast_slices = [x.slice for x in fast]
-        pin_to_ground(array, good_slices, fast_slices)
+        pin_to_ground(array, good_slices, fast.get_slices())
 
     return array
 
