@@ -4359,7 +4359,7 @@ def offset_select(mode, param_list):
     raise ValueError ("offset_select called with unrecognised mode")
 
 
-def overflow_correction(array, hz, max_val=4095):
+def overflow_correction(param, fast=None, max_val=4095):
     '''
     Overflow Correction postprocessing procedure. Tested on Altitude Radio
     signals where only 12 bits are used for a signal that can reach over 8000.
@@ -4368,22 +4368,67 @@ def overflow_correction(array, hz, max_val=4095):
     range. The value range is extended using an algorithm similar to binary
     overflow: we detect value changes bigger than 75% and modify the result
     ranges.
-    
-    :param array: Masked array with overflow wrapping
-    :type array: np.ma.array
+
+    :param param: Parameter object
+    :type param: Node
     :param hz: Frequency of array (used for repairing gaps)
     :type hz: float
-    :param max_val: Saturation value of parameter (hint: expects Unsigned params)
+    :param fast: flight phases to be used to indicate points in time where the
+        value should be zero. Should be used only with altitude radio
+        parameters.
+    :type fast: Section
+    :param max_val: Saturation value of parameter (hint: expects Unsigned
+        params)
     :type max_val: integer
     '''
+    array = param.array
+    hz = param.hz
     delta = max_val * 0.75
+
+    def pin_to_ground(array, good_slices, fast_slices):
+        '''
+        Fix the altitude within given the slice based on takeoff and landing
+        information.
+
+        We assume that at takeoff and landing the altitude radio is zero, so we
+        can postprocess the array accordingly.
+        '''
+        corrections = [{'slice': sl, 'correction': None} for sl in good_slices]
+
+        # pass 1: detect the corrections based on fast slices
+        for d in corrections:
+            sl = d['slice']
+            for f in fast_slices:
+                if is_index_within_slice(f.start, sl):
+                    # go_fast starts in the slice
+                    d['correction'] = array[f.start]
+                    break
+                elif is_index_within_slice(f.stop, sl):
+                    # go_fast stops in the slice
+                    d['correction'] = array[f.stop]
+                    break
+
+        # pass 2: apply the corrections using known values and masking the ones
+        # which have no correction
+        # FIXME: we probably should reuse the corrections from previous valid
+        # ones, as the range should not have changed between masked segments.
+        for d in corrections:
+            sl = d['slice']
+            correction = d['correction']
+            if correction:
+                array[sl] -= correction
+            else:
+                array.mask[sl] = True
+
+        return array
 
     # We are removing small masks (up to 10 samples) related to the
     # overflow.
-    slices = slices_remove_small_gaps(
+    good_slices = slices_remove_small_gaps(
         np.ma.clump_unmasked(array), time_limit=10.0 / hz,
         hz=hz)
-    for sl in slices:
+
+    for sl in good_slices:
         array.mask[sl] = False
         jump = np.ma.ediff1d(array[sl], to_begin=0.0)
         abs_jump = np.ma.abs(jump)
@@ -4394,10 +4439,14 @@ def overflow_correction(array, hz, max_val=4095):
 
         array[sl] += correction
 
-        if np.ma.min(array[sl]) < -delta:
-            # FIXME: compensate for the descent starting at the overflown
-            # value
+        if not fast and np.ma.min(array[sl]) < -delta:
+            # FIXME: fallback postprocessing: compensate for the descent
+            # starting at the overflown value
             array[sl] += max_val
+
+    if fast:
+        fast_slices = [x.slice for x in fast]
+        pin_to_ground(array, good_slices, fast_slices)
 
     return array
 
