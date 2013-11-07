@@ -4415,10 +4415,12 @@ def overflow_correction(param, fast=None, max_val=4095):
         for d in corrections:
             sl = d['slice']
             correction = d['correction']
-            if correction:
-                array[sl] -= correction
-            else:
+            if correction == 0:
+                continue
+            elif correction is None:
                 array.mask[sl] = True
+            else:
+                array[sl] -= correction
 
         return array
 
