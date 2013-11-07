@@ -139,7 +139,7 @@ class FlapOrConfigurationMaxOrMin(object):
 
             if np.ma.is_masked(detent):
                 continue
-            if detent == '0' and include_zero == False:
+            if detent in ('0', 'Lever 0') and include_zero == False:
                 continue
 
             array = np.ma.copy(parameter.array)
@@ -6476,11 +6476,11 @@ class EngOilTempForXMinMax(KeyPointValueNode):
     '''
     Maximum oil temperature sustained for X minutes.
     '''
-
+    name = 'Eng Oil Temp For X Min Max'  # name of node, not the KPVs created
     NAME_FORMAT = 'Eng Oil Temp For %(minutes)d Min Max'
     NAME_VALUES = {'minutes': [15, 20, 45]}
     units = 'C'
-    align_frequency = 1
+    ##align_frequency = 1.0 / 60  # once per minute
     
     def derive(self, oil_temp=P('Eng (*) Oil Temp Max')):
 
@@ -6491,7 +6491,7 @@ class EngOilTempForXMinMax(KeyPointValueNode):
             return
 
         for minutes in self.NAME_VALUES['minutes']:
-            seconds = minutes * 60
+            seconds = minutes * 60 * self.frequency
             # second_window is more accurate than clip and much faster
             if seconds % 2 and oil_temp.hz % 2:
                 # shh... we'll add one so that second_window will work!
@@ -6932,7 +6932,7 @@ class HeadingVariationTouchdownPlus4SecTo60KtsAirspeed(KeyPointValueNode):
 
         for tdwn in tdwns:
             begin = tdwn.index + 4.0 * head.frequency
-            end = index_at_value(airspeed.array, 60.0, slice(begin, None))
+            end = index_at_value(airspeed.array, 60.0, slice(begin, None), endpoint='nearest')
             if end:
                 # We found a suitable endpoint, so create a KPV...
                 dev = np.ma.ptp(head.array[begin:end + 1])
@@ -6990,85 +6990,45 @@ class HeightMinsToTouchdown(KeyPointValueNode):
 
 class FlapAtLiftoff(KeyPointValueNode):
     '''
+    Flap angle (note, not Flap Lever) measured at Liftoff.
     '''
 
     units = 'deg'
 
-    @classmethod
-    def can_operate(cls, available):
-
-        return any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available) \
-            and 'Liftoff' in available
-
-    def derive(self,
-               flap_lever=M('Flap Lever'),
-               flap_synth=M('Flap Lever (Synthetic)'),
-               liftoffs=KTI('Liftoff')):
-
-        flap = flap_lever or flap_synth
+    def derive(self, flap=M('Flap'), liftoffs=KTI('Liftoff')):
         self.create_kpvs_at_ktis(flap.array, liftoffs, interpolate=False)
 
 
 class FlapAtTouchdown(KeyPointValueNode):
     '''
+    Flap angle (note, not Flap Lever) measured at Touchdown.
     '''
 
     units = 'deg'
 
-    @classmethod
-    def can_operate(cls, available):
-
-        return any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available) \
-            and 'Touchdown' in available
-
-    def derive(self,
-               flap_lever=M('Flap Lever'),
-               flap_synth=M('Flap Lever (Synthetic)'),
-               touchdowns=KTI('Touchdown')):
-
-        flap = flap_lever or flap_synth
+    def derive(self, flap=M('Flap'), touchdowns=KTI('Touchdown')):
         self.create_kpvs_at_ktis(flap.array, touchdowns, interpolate=False)
 
 
 class FlapAtGearDownSelection(KeyPointValueNode):
     '''
+    Flap (note, not Flap Lever) angle at gear down selection.
     '''
 
     units = 'deg'
 
-    @classmethod
-    def can_operate(cls, available):
-
-        return any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available) \
-            and 'Gear Down Selection' in available
-
-    def derive(self,
-               flap_lever=M('Flap Lever'),
-               flap_synth=M('Flap Lever (Synthetic)'),
-               gear_dn_sel=KTI('Gear Down Selection')):
-
-        flap = flap_lever or flap_synth
+    def derive(self, flap=M('Flap'), gear_dn_sel=KTI('Gear Down Selection')):
         self.create_kpvs_at_ktis(flap.array, gear_dn_sel, interpolate=False)
 
 
 class FlapWithGearUpMax(KeyPointValueNode):
     '''
+    Maximum Flap angle (note, not Flap Lever) while Gear Up.
     '''
 
     units = 'deg'
 
-    @classmethod
-    def can_operate(cls, available):
-
-        return any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available) \
-            and 'Gear Down' in available
-
-    def derive(self,
-               flap_lever=M('Flap Lever'),
-               flap_synth=M('Flap Lever (Synthetic)'),
-               gear=M('Gear Down')):
-
-        flap = flap_lever or flap_synth
+    def derive(self, flap=M('Flap'), gear=M('Gear Down')):
         gear_up = np.ma.masked_equal(gear.array.raw, gear.array.state['Down'])
         gear_up_slices = np.ma.clump_unmasked(gear_up)
         self.create_kpvs_within_slices(flap.array, gear_up_slices, max_value)
@@ -7076,24 +7036,15 @@ class FlapWithGearUpMax(KeyPointValueNode):
 
 class FlapWithSpeedbrakeDeployedMax(KeyPointValueNode):
     '''
+    Maximum Flap angle (note, not Flap Lever) while speedbrake deployed.
     '''
 
     units = 'deg'
 
-    @classmethod
-    def can_operate(cls, available):
-
-        return any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available) \
-            and all_of(('Speedbrake Selected', 'Airborne', 'Landing'), available)
-
-    def derive(self,
-               flap_lever=M('Flap Lever'),
-               flap_synth=M('Flap Lever (Synthetic)'),
+    def derive(self, flap=M('Flap'),
                spd_brk=M('Speedbrake Selected'),
                airborne=S('Airborne'),
                landings=S('Landing')):
-
-        flap = flap_lever or flap_synth
         deployed = spd_brk.array == 'Deployed/Cmd Up'
         deployed = mask_outside_slices(deployed, airborne.get_slices())
         deployed = mask_inside_slices(deployed, landings.get_slices())

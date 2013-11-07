@@ -218,22 +218,9 @@ class Configuration(MultistateDerivedParameterNode):
     actual configuration state of the aircraft rather than the intended state
     represented by the selected lever position.
 
-    Note: Values that do not map directly to a required state are masked with
-    the data being random (memory alocated)
+    Note: Values that do not map directly to a required state are masked
     '''
-
-    values_mapping = {
-        0: '0',
-        1: '1',
-        2: '1+F',
-        3: '1*',
-        4: '2',
-        5: '2*',
-        6: '3',
-        7: '4',
-        8: '5',
-        9: 'Full',
-    }
+    values_mapping = at.constants.AVAILABLE_CONF_STATES
 
     @classmethod
     def can_operate(cls, available, manufacturer=A('Manufacturer'),
@@ -257,34 +244,25 @@ class Configuration(MultistateDerivedParameterNode):
 
         return True
 
+    
     def derive(self, slat=P('Slat'), flap=M('Flap'), flaperon=P('Flaperon'),
                model=A('Model'), series=A('Series'), family=A('Family')):
-
-        mapping = at.get_conf_angles(model.value, series.value, family.value)
-        qty_param = len(mapping.itervalues().next())
-        if qty_param == 3 and not flaperon:
-            # potential problem here!
-            self.warning("Flaperon not available, so will calculate "
-                         "Configuration using only slat and flap")
-            qty_param = 2
-        elif qty_param == 2 and flaperon:
-            # only two items in values tuple
-            self.debug("Flaperon available but not required for "
-                       "Configuration calculation")
-            pass
-
-        #TODO: Scale each parameter individually to ensure uniqueness.
         
-        # Sum the required parameters (creates a unique state value at present)
-        summed = vstack_params(*(slat, flap, flaperon)[:qty_param]).sum(axis=0)
+        angles = at.get_conf_angles(model.value, series.value, family.value)
+        self.array = MappedArray(np_ma_masked_zeros_like(flap.array),
+                                 values_mapping=self.values_mapping)        
+        for (state, (s, f, a)) in angles.iteritems():
+            condition = (flap.array == f)
+            if s is not None:
+                condition &= (slat.array == s)
+            if a is not None:
+                condition &= (flaperon.array == a)
+            self.array[condition] = state
 
-        # create a placeholder array fully masked
-        self.array = MappedArray(np_ma_masked_zeros_like(flap.array), 
-                                 self.values_mapping)
-        for state, values in mapping.iteritems():
-            s = np.ma.sum(values[:qty_param])
-            # unmask bits we know about
-            self.array[summed == s] = state
+        # Repair the mask to smooth out transitions:
+        nearest_neighbour_mask_repair(self.array, copy=False,
+                                      repair_gap_size=(30 * self.hz),
+                                      direction='backward')    
 
 
 class Daylight(MultistateDerivedParameterNode):
@@ -636,8 +614,9 @@ class Flap(MultistateDerivedParameterNode):
         try:
             at.get_flap_map(model.value, series.value, family.value)
         except KeyError:
-            cls.warning("No flap mapping available for '%s', '%s', '%s'.",
-                        model.value, series.value, family.value)
+            #Q: Everyone should have a flap map - so raise error?
+            cls.exception("No flap mapping available for '%s', '%s', '%s'.",
+                          model.value, series.value, family.value)
             return False
 
         return True
@@ -693,8 +672,8 @@ class FlapExcludingTransition(MultistateDerivedParameterNode):
         try:
             at.get_flap_map(model.value, series.value, family.value)
         except KeyError:
-            cls.warning("No flap mapping available for '%s', '%s', '%s'.",
-                        model.value, series.value, family.value)
+            cls.debug("No flap mapping available for '%s', '%s', '%s'.",
+                      model.value, series.value, family.value)
             return False
 
         return True
@@ -729,8 +708,8 @@ class FlapIncludingTransition(MultistateDerivedParameterNode):
         try:
             at.get_flap_map(model.value, series.value, family.value)
         except KeyError:
-            cls.warning("No flap mapping available for '%s', '%s', '%s'.",
-                        model.value, series.value, family.value)
+            cls.debug("No flap mapping available for '%s', '%s', '%s'.",
+                      model.value, series.value, family.value)
             return False
 
         return True
@@ -766,8 +745,8 @@ class FlapLever(MultistateDerivedParameterNode):
         try:
             at.get_lever_map(model.value, series.value, family.value)
         except KeyError:
-            cls.warning("No lever mapping available for '%s', '%s', '%s'.",
-                        model.value, series.value, family.value)
+            cls.debug("No lever mapping available for '%s', '%s', '%s'.",
+                      model.value, series.value, family.value)
             return False
 
         return True
@@ -792,15 +771,13 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
     def can_operate(cls, available,
                     model=A('Model'), series=A('Series'), family=A('Family')):
 
-        if not all_of(('Flap Angle', 'Model', 'Series', 'Family'), available):
+        if not all_of(('Flap', 'Model', 'Series', 'Family'), available):
             return False
-
+        
         try:
-            at.get_lever_map(model.value, series.value, family.value)
+            at.get_conf_angles(model.value, series.value, family.value)
         except KeyError:
-            cls.warning("No lever mapping available for '%s', '%s', '%s'.",
-                        model.value, series.value, family.value)
-            return False
+            pass  # try lever map
 
         try:
             at.get_lever_angles(model.value, series.value, family.value)
@@ -811,32 +788,34 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
 
         return True
 
-    def derive(self, flap=P('Flap Angle'), slat=P('Slat Angle'),
+    def derive(self, flap=M('Flap'), slat=M('Slat'), flaperon=M('Flaperon'),
                model=A('Model'), series=A('Series'), family=A('Family')):
-
-        lever_angles = at.get_lever_angles(model.value, series.value, family.value)
-        slat_angles, flap_angles = map(set, zip(*lever_angles.itervalues()))
-
-        # Check whether slat angle is available and mapping has slat angles:
-        use_slat = (slat is not None and list(slat_angles)[0] is not None)
-
-        flap_array = step_values(repair_mask(flap.array), flap_angles,
-                                 flap.hz, step_at='move_start')
-
-        if use_slat:
-            slat_array = step_values(repair_mask(slat.array), slat_angles,
-                                     slat.hz, step_at='move_start')
+        try:
+            angles = at.get_conf_angles(model.value, series.value, family.value)
+            use_conf = True
+        except KeyError:
+            angles = at.get_lever_angles(model.value, series.value, family.value)
+            use_conf = False
+        
+        # Get the values mapping, airbus requires some hacking:
+        if use_conf:
+            self.values_mapping = at.constants.LEVER_STATES
+        else:
+            self.values_mapping = at.get_lever_map(model.value, series.value, family.value)
 
         # Prepare the destination array:
-        self.values_mapping = at.get_lever_map(model.value, series.value, family.value)
-        self.array = MappedArray(np_ma_masked_zeros_like(flap_array),
+        self.array = MappedArray(np_ma_masked_zeros_like(flap.array),
                                  values_mapping=self.values_mapping)
 
         # Update the destination array according to the mappings:
-        for (state, (s, f)) in lever_angles.iteritems():
-            condition = (flap_array == f)
-            if use_slat:
-                condition &= (slat_array == s)
+        for (state, (s, f, a)) in angles.iteritems():
+            condition = (flap.array == f)
+            if s is not None:
+                condition &= (slat.array == s)
+            if a is not None:
+                condition &= (flaperon.array == a)
+            if use_conf:
+                state = at.constants.CONF_TO_LEVER[state]
             self.array[condition] = state
 
         # Repair the mask to smooth out transitions:
@@ -871,8 +850,8 @@ class Flaperon(MultistateDerivedParameterNode):
         try:
             at.get_aileron_map(model.value, series.value, family.value)
         except KeyError:
-            cls.warning("No aileron mapping available for '%s', '%s', '%s'.",
-                        model.value, series.value, family.value)
+            cls.debug("No aileron mapping available for '%s', '%s', '%s'.",
+                      model.value, series.value, family.value)
             return False
 
         return True
@@ -1347,8 +1326,8 @@ class Slat(MultistateDerivedParameterNode):
         try:
             at.get_slat_map(model.value, series.value, family.value)
         except KeyError:
-            cls.warning("No slat mapping available for '%s', '%s', '%s'.",
-                        model.value, series.value, family.value)
+            cls.debug("No slat mapping available for '%s', '%s', '%s'.",
+                      model.value, series.value, family.value)
             return False
 
         return True
@@ -1381,8 +1360,8 @@ class SlatExcludingTransition(MultistateDerivedParameterNode):
         try:
             at.get_slat_map(model.value, series.value, family.value)
         except KeyError:
-            cls.warning("No slat mapping available for '%s', '%s', '%s'.",
-                        model.value, series.value, family.value)
+            cls.debug("No slat mapping available for '%s', '%s', '%s'.",
+                      model.value, series.value, family.value)
             return False
 
         return True
@@ -1417,8 +1396,8 @@ class SlatIncludingTransition(MultistateDerivedParameterNode):
         try:
             at.get_slat_map(model.value, series.value, family.value)
         except KeyError:
-            cls.warning("No slat mapping available for '%s', '%s', '%s'.",
-                        model.value, series.value, family.value)
+            cls.debug("No slat mapping available for '%s', '%s', '%s'.",
+                      model.value, series.value, family.value)
             return False
 
         return True
@@ -1726,7 +1705,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         elif family_name == 'B787':
             self.array = self.b787_speedbrake(handle)
 
-        elif family_name == 'A320':
+        elif family_name in ('A319', 'A320', 'A321'):
             self.array = self.a320_speedbrake(armed, spdbrk)
 
         elif family_name == 'Learjet':

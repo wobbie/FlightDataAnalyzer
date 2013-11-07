@@ -4359,6 +4359,49 @@ def offset_select(mode, param_list):
     raise ValueError ("offset_select called with unrecognised mode")
 
 
+def overflow_correction(array, hz, max_val=4095):
+    '''
+    Overflow Correction postprocessing procedure. Tested on Altitude Radio
+    signals where only 12 bits are used for a signal that can reach over 8000.
+
+    This function fixes the wrong values resulting from too narrow bit
+    range. The value range is extended using an algorithm similar to binary
+    overflow: we detect value changes bigger than 75% and modify the result
+    ranges.
+    
+    :param array: Masked array with overflow wrapping
+    :type array: np.ma.array
+    :param hz: Frequency of array (used for repairing gaps)
+    :type hz: float
+    :param max_val: Saturation value of parameter (hint: expects Unsigned params)
+    :type max_val: integer
+    '''
+    delta = max_val * 0.75
+
+    # We are removing small masks (up to 10 samples) related to the
+    # overflow.
+    slices = slices_remove_small_gaps(
+        np.ma.clump_unmasked(array), time_limit=10.0 / hz,
+        hz=hz)
+    for sl in slices:
+        array.mask[sl] = False
+        jump = np.ma.ediff1d(array[sl], to_begin=0.0)
+        abs_jump = np.ma.abs(jump)
+        jump_sign = -jump / abs_jump
+        steps = np.ma.where(abs_jump > delta, max_val * jump_sign, 0)
+
+        correction = np.ma.cumsum(steps)
+
+        array[sl] += correction
+
+        if np.ma.min(array[sl]) < -delta:
+            # FIXME: compensate for the descent starting at the overflown
+            # value
+            array[sl] += max_val
+
+    return array
+
+
 def peak_curvature(array, _slice=slice(None), curve_sense='Concave',
                    gap = TRUCK_OR_TRAILER_INTERVAL,
                    ttp = TRUCK_OR_TRAILER_PERIOD):

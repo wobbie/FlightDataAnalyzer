@@ -6293,9 +6293,22 @@ class TestHeadingVariationTouchdownPlus4SecTo60KtsAirspeed(unittest.TestCase, No
         self.node_class = HeadingVariationTouchdownPlus4SecTo60KtsAirspeed
         self.operational_combinations = [('Heading Continuous', 'Airspeed', 'Touchdown')]
 
-    @unittest.skip('Test Not Implemented')
     def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+
+        heading = P('Heading Continuous', np.ma.array([10]*25))
+        heading.array[15] = 15
+        heading.array[-5] = 20
+        airspeed = P('Airspeed', np.ma.arange(99, 50, -2))
+        airspeed.array[-5:] = np.ma.masked
+        tdwns = KTI(name='Touchdown', items=[
+            KeyTimeInstance(index=10, name='Touchdown'),
+        ])
+
+        node = self.node_class()
+        node.derive(heading, airspeed, tdwns)
+        self.assertEqual(len(node), 1, msg="Expected one KPV got %s" % len(node))
+        self.assertEqual(node[0].value, 5)
+        self.assertEqual(node[0].index, 19)
 
 
 class TestHeadingVacatingRunway(unittest.TestCase, NodeTest):
@@ -6327,76 +6340,65 @@ class TestHeightMinsToTouchdown(unittest.TestCase, NodeTest):
 # Flap
 
 
-class TestFlapAtLiftoff(unittest.TestCase, NodeTest):
+class TestFlapAtLiftoff(unittest.TestCase):
 
-    def setUp(self):
-        self.node_class = FlapAtLiftoff
-        self.operational_combinations = [
-            ('Flap Lever', 'Liftoff'),
-            ('Flap Lever (Synthetic)', 'Liftoff'),
-            ('Flap Lever', 'Flap Lever (Synthetic)', 'Liftoff'),
-        ]
-        self.interpolate = False
+    def test_can_operate(self):
+        opts = FlapAtLiftoff.get_operational_combinations()
+        self.assertEqual(opts, [
+            ('Flap', 'Liftoff'),])
 
     def test_derive(self):
-        flap_lever = P(
-            name='Flap Lever',
+        flap = P(
+            name='Flap',
             array=np.ma.repeat([0, 1, 5, 15, 5, 1, 0], 5),
         )
         for index, value in (14.25, 5), (14.75, 15), (15.00, 15), (15.25, 15):
             liftoffs = KTI(name='Liftoff', items=[
                 KeyTimeInstance(index=index, name='Liftoff'),
             ])
-            node = self.node_class()
-            node.derive(flap_lever, None, liftoffs)
+            node = FlapAtLiftoff()
+            node.derive(flap, liftoffs)
             self.assertEqual(node, KPV(name='Flap At Liftoff', items=[
                 KeyPointValue(index=index, value=value, name='Flap At Liftoff'),
             ]))
 
 
-class TestFlapAtTouchdown(unittest.TestCase, NodeTest):
+class TestFlapAtTouchdown(unittest.TestCase):
 
-    def setUp(self):
-        self.node_class = FlapAtTouchdown
-        self.operational_combinations = [
-            ('Flap Lever', 'Touchdown'),
-            ('Flap Lever (Synthetic)', 'Touchdown'),
-            ('Flap Lever', 'Flap Lever (Synthetic)', 'Touchdown'),
-        ]
-        self.interpolate = False
+    def test_can_operate(self):
+        opts = FlapAtTouchdown.get_operational_combinations()
+        self.assertEqual(opts, [
+            ('Flap', 'Touchdown'),])
 
     def test_derive(self):
-        flap_lever = P(
-            name='Flap Lever',
+        flap = P(
+            name='Flap',
             array=np.ma.repeat([0, 1, 5, 15, 20, 25, 30], 5),
         )
         for index, value in (29.25, 25), (29.75, 30), (30.00, 30), (30.25, 30):
             touchdowns = KTI(name='Touchdown', items=[
                 KeyTimeInstance(index=index, name='Touchdown'),
             ])
-            node = self.node_class()
-            node.derive(flap_lever, None, touchdowns)
+            node = FlapAtTouchdown()
+            node.derive(flap, touchdowns)
             self.assertEqual(node, KPV(name='Flap At Touchdown', items=[
                 KeyPointValue(index=index, value=value, name='Flap At Touchdown'),
             ]))
 
 
-class TestFlapAtGearDownSelection(unittest.TestCase, NodeTest):
+class TestFlapAtGearDownSelection(unittest.TestCase):
 
-    def setUp(self):
-        self.node_class = FlapAtGearDownSelection
-        self.operational_combinations = [
-            ('Flap Lever', 'Gear Down Selection'),
-            ('Flap Lever (Synthetic)', 'Gear Down Selection'),
-            ('Flap Lever', 'Flap Lever (Synthetic)', 'Gear Down Selection'),
-        ]
+    def test_can_operate(self):
+        opts = FlapAtGearDownSelection.get_operational_combinations()
+        self.assertEqual(opts, [
+            ('Flap', 'Gear Down Selection'),])
 
     def test_derive(self):
-        flap_lever = P(
-            name='Flap Lever',
+        flap = P(
+            name='Flap',
             array=np.ma.repeat([0, 1, 5, 15, 20, 25, 30], 5),
         )
-        flap_lever.array[29] = np.ma.masked
+        flap.array[29] = np.ma.masked
         gear = KTI(name='Gear Down Selection', items=[
             KeyTimeInstance(index=19.25, name='Gear Down Selection'),
             KeyTimeInstance(index=19.75, name='Gear Down Selection'),
@@ -6407,8 +6409,8 @@ class TestFlapAtGearDownSelection(unittest.TestCase, NodeTest):
             KeyTimeInstance(index=30.00, name='Gear Down Selection'),
             KeyTimeInstance(index=30.25, name='Gear Down Selection'),
         ])
-        node = self.node_class()
-        node.derive(flap_lever, None, gear)
+        node = FlapAtGearDownSelection()
+        node.derive(flap, gear)
         self.assertEqual(node, KPV(name='Flap At Gear Down Selection', items=[
             KeyPointValue(index=19.25, value=15, name='Flap At Gear Down Selection'),
             KeyPointValue(index=19.75, value=20, name='Flap At Gear Down Selection'),
@@ -6422,34 +6424,29 @@ class TestFlapAtGearDownSelection(unittest.TestCase, NodeTest):
         ]))
 
 
-class TestFlapWithGearUpMax(unittest.TestCase, NodeTest):
+class TestFlapWithGearUpMax(unittest.TestCase):
 
-    def setUp(self):
-        self.node_class = FlapWithGearUpMax
-        self.operational_combinations = [
-            ('Flap Lever', 'Gear Down'),
-            ('Flap Lever (Synthetic)', 'Gear Down'),
-            ('Flap Lever', 'Flap Lever (Synthetic)', 'Gear Down'),
-        ]
-
+    def test_can_operate(self):
+        opts = FlapWithGearUpMax.get_operational_combinations()
+        self.assertEqual(opts, [
+            ('Flap', 'Gear Down'),])
+        
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
 
 
-class TestFlapWithSpeedbrakeDeployedMax(unittest.TestCase, NodeTest):
-
-    def setUp(self):
-        self.node_class = FlapWithSpeedbrakeDeployedMax
-        self.operational_combinations = [
-            ('Flap Lever', 'Speedbrake Selected', 'Airborne', 'Landing'),
-            ('Flap Lever (Synthetic)', 'Speedbrake Selected', 'Airborne', 'Landing'),
-            ('Flap Lever', 'Flap Lever (Synthetic)', 'Speedbrake Selected', 'Airborne', 'Landing'),
-        ]
+class TestFlapWithSpeedbrakeDeployedMax(unittest.TestCase):
+    
+    def test_can_operate(self):
+        opts = FlapWithSpeedbrakeDeployedMax.get_operational_combinations()
+        self.assertEqual(opts, [
+            ('Flap', 'Speedbrake Selected', 'Airborne', 'Landing'),
+        ])
 
     def test_derive(self):
-        flap_lever = P(
-            name='Flap Lever',
+        flap = P(
+            name='Flap',
             array=np.arange(15),
         )
         spd_brk = M(
@@ -6463,8 +6460,8 @@ class TestFlapWithSpeedbrakeDeployedMax(unittest.TestCase, NodeTest):
         )
         airborne = buildsection('Airborne', 5, 15)
         landings = buildsection('Landing', 10, 15)
-        node = self.node_class()
-        node.derive(flap_lever, None, spd_brk, airborne, landings)
+        node = FlapWithSpeedbrakeDeployedMax()
+        node.derive(flap, spd_brk, airborne, landings)
         self.assertEqual(node, [
             KeyPointValue(7, 7, 'Flap With Speedbrake Deployed Max'),
         ])
