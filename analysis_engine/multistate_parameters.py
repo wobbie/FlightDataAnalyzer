@@ -192,7 +192,9 @@ class APURunning(MultistateDerivedParameterNode):
     
 class Configuration(MultistateDerivedParameterNode):
     '''
-    Parameter for aircraft that use configuration.
+    Parameter for aircraft that use configuration. Reflects the actual state
+    of the aircraft. See "Flap Lever" or "Flap Lever (Synthetic)" which show
+    the physical lever detents selectable by the crew.
 
     Multi-state with the following mapping::
 

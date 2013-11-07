@@ -1126,19 +1126,19 @@ class AltitudeRadio(DerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available):
-        return any_of([name for name in cls.get_dependency_names() \
+        return any_of([name for name in cls.get_dependency_names()
                        if name.startswith('Altitude Radio')], available)
 
     def derive(self,
-               source_A = P('Altitude Radio (A)'),
-               source_B = P('Altitude Radio (B)'),
-               source_C = P('Altitude Radio (C)'),
-               source_L = P('Altitude Radio (L)'),
-               source_R = P('Altitude Radio (R)'),
-               source_efis = P('Altitude Radio (EFIS)'),
-               source_efis_L = P('Altitude Radio (EFIS) (L)'),
-               source_efis_R = P('Altitude Radio (EFIS) (R)'),
-               pitch=P('Pitch'),
+               source_A=P('Altitude Radio (A)'),
+               source_B=P('Altitude Radio (B)'),
+               source_C=P('Altitude Radio (C)'),
+               source_L=P('Altitude Radio (L)'),
+               source_R=P('Altitude Radio (R)'),
+               source_efis=P('Altitude Radio (EFIS)'),
+               source_efis_L=P('Altitude Radio (EFIS) (L)'),
+               source_efis_R=P('Altitude Radio (EFIS) (R)'),
+               fast=A('Fast'),
                family=A('Family')):
 
         # Reminder: If you add parameters here, they need limits adding in the
@@ -1155,10 +1155,10 @@ class AltitudeRadio(DerivedParameterNode):
             for source in sources:
                 if source is None:
                     continue
-                source.array = overflow_correction(source.array, source.hz)
+                source.array = overflow_correction(source, fast)
                 osources.append(source)
             sources = osources
-            
+
         self.array = blend_parameters(sources,
                                       offset=self.offset,
                                       frequency=self.frequency)
