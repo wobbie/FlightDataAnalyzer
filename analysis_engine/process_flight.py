@@ -651,9 +651,10 @@ def main():
     # Write KML file
     if args.write_kml.lower() == 'true':
         kml_dest = os.path.splitext(hdf_copy)[0] + '.kml'
-        track_to_kml(hdf_copy, res['kti'], res['kpv'], res['approach'], 
+        dest = track_to_kml(hdf_copy, res['kti'], res['kpv'], res['approach'], 
                      plot_altitude='Altitude QNH', dest_path=kml_dest)
-        logger.info("Flight Track with attributes writen to kml: %s", kml_dest)
+        if dest:
+            logger.info("Flight Track with attributes writen to kml: %s", dest)
     
     # - END -
 

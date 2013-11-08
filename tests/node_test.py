@@ -69,7 +69,22 @@ class TestCalculateOffset(unittest.TestCase):
             self.assertAlmostEqual(offset, test[1][1], places=3)
 
 class TestNode(unittest.TestCase):
-
+    
+    def test_node_attributes(self):
+        NewNode = type('NodeAttrs', (Node,), dict(derive=lambda x:x))
+        node = NewNode(frequency=0.25)
+        self.assertEqual(node.frequency, 0.25)
+        self.assertEqual(node.hz, 0.25)
+        self.assertEqual(node.sample_rate, 0.25)
+        node.hz = 0.5
+        self.assertEqual(node.frequency, 0.5)
+        self.assertEqual(node.hz, 0.5)
+        self.assertEqual(node.sample_rate, 0.5)
+        node.sample_rate = 1.5
+        self.assertEqual(node.frequency, 1.5)
+        self.assertEqual(node.hz, 1.5)
+        self.assertEqual(node.sample_rate, 1.5)
+        
     def test_name(self):
         """ Splits on CamelCase and title cases
         """

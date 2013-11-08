@@ -1585,16 +1585,25 @@ class AOA(DerivedParameterNode):
     name = 'AOA'
     units = 'deg'
     align = False
+    
+    @classmethod
+    def can_operate(cls, available):
+        return 'AOA (L)' in available or 'AOA (R)' in available
 
     def derive(self, aoa_l=P('AOA (L)'), aoa_r=P('AOA (R)')):
-        # double the max freq
-        self.frequency = max((aoa_l.frequency, aoa_r.frequency)) * 2
-        self.offset = 0.0
-        self.array = blend_parameters([aoa_l, aoa_r],
-                                      frequency=self.frequency, 
-                                      offset=self.offset)
-        ##self.array, self.frequency, self.offset = \
-            ##blend_two_parameters(aoa_l, aoa_r)
+        if aoa_l and aoa_r:
+            # double the max freq
+            self.frequency = max((aoa_l.frequency, aoa_r.frequency)) * 2
+            self.offset = 0.0
+            self.array = blend_parameters([aoa_l, aoa_r],
+                                          frequency=self.frequency, 
+                                          offset=self.offset)
+        else:
+            # only one available
+            aoa = aoa_l or aoa_r
+            self.frequency = aoa.frequency
+            self.offset = aoa.offset
+            self.array = aoa.array
 
 
 class ControlColumn(DerivedParameterNode):
@@ -1727,8 +1736,8 @@ class SidestickAngleCapt(DerivedParameterNode):
     units = 'deg'
 
     def derive(self,
-               pitch_capt=M('Pitch Command (Capt)'),
-               roll_capt=M('Roll Command (Capt)')):
+               pitch_capt=M('Sidestick Pitch (Capt)'),
+               roll_capt=M('Sidestick Roll (Capt)')):
 
         self.array = np.ma.sqrt(pitch_capt.array ** 2 + roll_capt.array ** 2)
 
@@ -1741,8 +1750,8 @@ class SidestickAngleFO(DerivedParameterNode):
     units = 'deg'
 
     def derive(self,
-               pitch_fo=M('Pitch Command (FO)'),
-               roll_fo=M('Roll Command (FO)')):
+               pitch_fo=M('Sidestick Pitch (FO)'),
+               roll_fo=M('Sidestick Roll (FO)')):
 
         self.array = np.ma.sqrt(pitch_fo.array ** 2 + roll_fo.array ** 2)
 

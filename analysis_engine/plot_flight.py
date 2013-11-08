@@ -152,6 +152,7 @@ def track_to_kml(hdf_path, kti_list, kpv_list, approach_list,
     kml = simplekml.Kml()
     with hdf_file(hdf_path) as hdf:
         if 'Latitude Smoothed' not in hdf:
+            logger.error("Cannot write track as Latitude Smoothed not in hdf")
             return False
         if plot_altitude not in hdf:
             logger.warning("Disabling altitude on KML plot as it is unavailable.")
@@ -238,7 +239,7 @@ def track_to_kml(hdf_path, kti_list, kpv_list, approach_list,
     if not dest_path:
         dest_path = hdf_path + ".kml"
     kml.save(dest_path)
-    return
+    return dest_path
 
 
 def plot_parameter(array, show=True, label='', marker=None):
