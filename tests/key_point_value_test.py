@@ -5533,11 +5533,29 @@ class TestHeightLoss1000To2000Ft(unittest.TestCase, NodeTest):
         self.operational_combinations = [(
             'Descend For Flight Phases',
             'Altitude AAL For Flight Phases',
+            'Climb',
         )]
 
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+    def test_basic(self):
+        vs = P(
+            name='Descend For Flight Phases',
+            array=np.ma.array([0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0,
+                               0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            frequency=2.0,
+            offset=0.0,
+        )
+        alt = P(
+            name='Altitude AAL For Flight Phases',
+            array=np.ma.array([0, 4, 1000, 1600, 1900, 2100, 1900, 1950, 2100, 1600, 1150, 0]),
+            frequency=1.0,
+            offset=0.5,
+        )
+        climb = buildsection('Climb', 2, 6)
+        ht_loss = self.node_class()
+        ht_loss.get_derived((vs, alt, climb))
+        self.assertEqual(len(ht_loss), 1)
+        self.assertEqual(ht_loss[0].value, 1)
+        self.assertEqual(ht_loss[0].index, 6)
 
 
 class TestHeightLoss35To1000Ft(unittest.TestCase, NodeTest):
@@ -5547,11 +5565,29 @@ class TestHeightLoss35To1000Ft(unittest.TestCase, NodeTest):
         self.operational_combinations = [(
             'Descend For Flight Phases',
             'Altitude AAL For Flight Phases',
+            'Initial Climb',
         )]
 
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+    def test_basic(self):
+        vs = P(
+            name='Descend For Flight Phases',
+            array=np.ma.array([0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0,
+                               0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            frequency=2.0,
+            offset=0.0,
+        )
+        alt = P(
+            name='Altitude AAL For Flight Phases',
+            array=np.ma.array([0, 4, 40, 150, 600, 1100, 900, 950, 1100, 600, 150, 0]),
+            frequency=1.0,
+            offset=0.5,
+        )
+        climb = buildsection('Initial Climb', 1.8, 5)
+        ht_loss = self.node_class()
+        ht_loss.get_derived((vs, alt, climb))
+        self.assertEqual(len(ht_loss), 1)
+        self.assertEqual(ht_loss[0].value, 1)
+        self.assertEqual(ht_loss[0].index, 6)
 
 
 class TestHeightLossLiftoffTo35Ft(unittest.TestCase, NodeTest):
