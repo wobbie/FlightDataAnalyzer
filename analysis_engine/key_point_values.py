@@ -4175,9 +4175,13 @@ class HeightLoss35To1000Ft(KeyPointValueNode):
 
     def derive(self,
                ht_loss=P('Descend For Flight Phases'),
-               alt_aal=P('Altitude AAL For Flight Phases')):
+               alt_aal=P('Altitude AAL For Flight Phases'),
+               init_climb=S('Initial Climb')):
 
-        for climb in alt_aal.slices_from_to(35, 1000):
+        alt_band = np.ma.masked_outside(alt_aal.array, 35, 1000)
+        alt_climb_sections = valid_slices_within_array(alt_band, init_climb)
+
+        for climb in alt_climb_sections:
             index, value = min_value(ht_loss.array, climb)
             # Only report a positive value where height is lost:
             if index and value < 0:
@@ -4190,9 +4194,13 @@ class HeightLoss1000To2000Ft(KeyPointValueNode):
 
     def derive(self,
                ht_loss=P('Descend For Flight Phases'),
-               alt_aal=P('Altitude AAL For Flight Phases')):
+               alt_aal=P('Altitude AAL For Flight Phases'),
+               climbs=S('Climb')):
 
-        for climb in alt_aal.slices_from_to(1000, 2000):
+        alt_band = np.ma.masked_outside(alt_aal.array, 1000, 2000)
+        alt_climb_sections = valid_slices_within_array(alt_band, climbs)
+
+        for climb in alt_climb_sections:
             index, value = min_value(ht_loss.array, climb)
             # Only report a positive value where height is lost:
             if index and value < 0:
