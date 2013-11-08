@@ -189,7 +189,7 @@ class Node(object):
         else:
             self.name = self.get_name() # usual option
         # cast frequency as a float to avoid integer division
-        self.frequency = self.sample_rate = self.hz = float(frequency) # Hz
+        self.frequency = float(frequency) # Hz
         self.offset = offset # secs
 
     def __repr__(self):
@@ -210,6 +210,22 @@ class Node(object):
         # XXX: May break if we adopt multi-inheritance or a different class
         # hierarchy.
         return self.__class__.__base__
+    
+    @property
+    def hz(self):
+        return self.frequency
+    
+    @hz.setter
+    def hz(self, value):
+        self.frequency = value
+        
+    @property
+    def sample_rate(self):
+        return self.frequency
+    
+    @sample_rate.setter
+    def sample_rate(self, value):
+        self.frequency = value
     
     @classmethod
     def get_name(cls):
@@ -785,6 +801,7 @@ class MultistateDerivedParameterNode(DerivedParameterNode):
         elif isinstance(value, Iterable):
             # assume a list of mapped values
             reversed_mapping = {v: k for k, v in self.values_mapping.items()}
+            #Q: change "int" to "float"
             data = [int(reversed_mapping[v]) for v in value]
             value = MappedArray(data, values_mapping=self.values_mapping)
         else:
