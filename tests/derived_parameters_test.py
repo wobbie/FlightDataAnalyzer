@@ -1704,14 +1704,14 @@ class TestSidestickAngleCapt(NodeTest, unittest.TestCase):
     def setUp(self):
         self.node_class = SidestickAngleCapt
         self.operational_combinations = [
-            ('Pitch Command (Capt)', 'Roll Command (Capt)'),
+            ('Sidestick Pitch (Capt)', 'Sidestick Roll (Capt)'),
         ]
 
     def test_derive(self):
         pitch_array = np.ma.arange(20)
         roll_array = pitch_array[::-1]
-        pitch = P('Pitch Command (Capt)', pitch_array)
-        roll = P('Pitch Command (Capt)', roll_array)
+        pitch = P('Sidestick Pitch (Capt)', pitch_array)
+        roll = P('Sidestick Roll (Capt)', roll_array)
         node = self.node_class()
         node.derive(pitch, roll)
 
@@ -1721,7 +1721,7 @@ class TestSidestickAngleCapt(NodeTest, unittest.TestCase):
     def test_derive_from_hdf(self):
         [pitch, roll, sidestick], phase = self.get_params_from_hdf(
             os.path.join(test_data_path, 'dual_input.hdf5'),
-            ['Pitch Command (Capt)', 'Roll Command (Capt)',
+            ['Pitch Command (Capt)', 'Roll Command (Capt)', # old names
              self.node_class.get_name()])
 
         roll.array = align(roll, pitch)
@@ -1738,14 +1738,14 @@ class TestSidestickAngleFO(NodeTest, unittest.TestCase):
     def setUp(self):
         self.node_class = SidestickAngleFO
         self.operational_combinations = [
-            ('Pitch Command (FO)', 'Roll Command (FO)'),
+            ('Sidestick Pitch (FO)', 'Sidestick Roll (FO)'),
         ]
 
     def test_derive(self):
         pitch_array = np.ma.arange(20)
         roll_array = pitch_array[::-1]
-        pitch = P('Pitch Command (FO)', pitch_array)
-        roll = P('Pitch Command (FO)', roll_array)
+        pitch = P('Sidestick Pitch (FO)', pitch_array)
+        roll = P('Sidestick Roll (FO)', roll_array)
         node = self.node_class()
         node.derive(pitch, roll)
 
@@ -1755,7 +1755,7 @@ class TestSidestickAngleFO(NodeTest, unittest.TestCase):
     def test_derive_from_hdf(self):
         [pitch, roll, sidestick], phase = self.get_params_from_hdf(
             os.path.join(test_data_path, 'dual_input.hdf5'),
-            ['Pitch Command (FO)', 'Roll Command (FO)',
+            ['Pitch Command (FO)', 'Roll Command (FO)',  # old names
              self.node_class.get_name()])
 
         roll.array = align(roll, pitch)
@@ -1765,7 +1765,7 @@ class TestSidestickAngleFO(NodeTest, unittest.TestCase):
         expected_array = np.ma.sqrt(pitch.array ** 2 + roll.array ** 2)
         np.testing.assert_array_equal(node.array, expected_array)
 
-        np.testing.assert_array_equal(node.array, sidestick.array)
+        np.testing.assert_array_almost_equal(node.array, sidestick.array)
 
 
 class TestDistanceToLanding(unittest.TestCase):

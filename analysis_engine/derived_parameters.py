@@ -1728,8 +1728,8 @@ class SidestickAngleCapt(DerivedParameterNode):
     units = 'deg'
 
     def derive(self,
-               pitch_capt=M('Pitch Command (Capt)'),
-               roll_capt=M('Roll Command (Capt)')):
+               pitch_capt=M('Sidestick Pitch (Capt)'),
+               roll_capt=M('Sidestick Roll (Capt)')):
 
         self.array = np.ma.sqrt(pitch_capt.array ** 2 + roll_capt.array ** 2)
 
@@ -1742,8 +1742,8 @@ class SidestickAngleFO(DerivedParameterNode):
     units = 'deg'
 
     def derive(self,
-               pitch_fo=M('Pitch Command (FO)'),
-               roll_fo=M('Roll Command (FO)')):
+               pitch_fo=M('Sidestick Pitch (FO)'),
+               roll_fo=M('Sidestick Roll (FO)')):
 
         self.array = np.ma.sqrt(pitch_fo.array ** 2 + roll_fo.array ** 2)
 
