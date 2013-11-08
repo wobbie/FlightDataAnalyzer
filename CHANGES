@@ -2,7 +2,34 @@ Changes
 =======
 
 The highlighted changes are shown for the following production releases. Each
-release will have included many additional new features and improvements.
+ release will have included many additional new features and improvements.
+
+
+0.4.1
+-----
+
+Design:
+ - Moved aircraft tables (vspeeds, flap/slat/flaperon settings etc.) out of repository for copyright reasons 
+ - Split segments type identification uses lack of Heading change to determine no movement and therefore a GROUND ONLY state. Prevents ground tests with valid Airspeed/Altitude triggering Start/Stop segments.
+ - Flap and Flap Lever etc. are now string states, max_value and others now support these.
+ - Support for A319, A320 and A320 families; e.g. Flap Lever (Synthetic) establishes lever position (0, 1, 2, 3, Full) from flap, slat and flaperon.
+ - Nodes support setting of .sample_rate and .hz attributes which are properties to .frequency
+
+Parameter and algorithms:
+ - New parameter Dual Input above 200ft and Dual Input below 200ft (based on Sidestick)
+ - Altitude Radio (A) and (B) overflow correction when merging into Altitude Radio (for Airbus)
+ - Altitude Radio supports CRJ radio altimeter which reads positive on ground and rotates negative during  rotation
+ - AOA supports just one source parameter or both
+ - "Flap At..." KPVs all use "Flap" as the raw angle rather than Flap Lever.
+ - Airspeed True extended for ground operations.
+ - ILS Established enhanced to makes sure aircraft path converges onto the beam
+ - thrust_reversers_working now returns the correct indexes to improve validity of related measurements
+ - heightless kpvs nolonger triggered in descent
+ - TCAS RA operates on warning parameter in preference to TCAS Combined Control
+ - Second_window calls for large arrays are cast to integer type to save memory
+ - Alternate Law no only measures while airborne
+ - Master warning only measures while engines running
+
 
 0.3.1
 -----
