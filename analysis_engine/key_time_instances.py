@@ -366,9 +366,9 @@ class ExitHold(KeyTimeInstanceNode):
             self.create_kti(hold.slice.stop)
 
 
-class EngFireExtinguishSwitchPulled(KeyTimeInstanceNode):
-    def derive(self, e1f = P('Eng (1) Fire Extinguish Switch'),
-               e2f = P('Eng (2) Fire Extinguish Switch'),
+class EngFireExtinguisher(KeyTimeInstanceNode):
+    def derive(self, e1f = P('Eng (1) Fire Extinguisher'),
+               e2f = P('Eng (2) Fire Extinguisher'),
                airborne = S('Airborne')):
         ef = np.ma.logical_or(e1f.array, e2f.array)
         
