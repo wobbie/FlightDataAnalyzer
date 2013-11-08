@@ -66,6 +66,7 @@ from analysis_engine.derived_parameters import (
     #AltitudeRadioForFlightPhases,
     #AltitudeSTD,
     AltitudeTail,
+    AOA,
     ApproachRange,
     BrakePressure,
     CabinAltitude,
@@ -3185,14 +3186,35 @@ class TestWindAcrossLandingRunway(unittest.TestCase):
 
 
 class TestAOA(unittest.TestCase):
-    @unittest.skip('Test Not Implemented')
     def test_can_operate(self):
-        self.assertTrue(False, msg='Test not implemented.')
+        opts = AOA.get_operational_combinations()
+        self.assertEqual(opts, [
+            ('AOA (L)',),
+            ('AOA (R)',),
+            ('AOA (L)', 'AOA (R)')])
         
-    @unittest.skip('Test Not Implemented')
     def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
-
+        aoa_l = P('AOA (L)', [4.921875, 4.5703125, 4.5703125, 4.5703125,
+                              4.570315, 4.5703125, 4.5703125, 4.9213875],
+                  frequency=1.0, offset=0.1484375)
+        
+        aoa_r = P('AOA (R)', [4.881875, 4.5703125, 4.5712125, 4.544125],
+                          frequency=0.5, offset=0.6484375)
+        aoa = AOA()
+        res = aoa.derive(aoa_l, aoa_r)
+        self.assertEqual(aoa.hz, 2)
+        self.assertEqual(aoa.offset, 0)
+        
+    def test_Derive_only_left(self):
+        aoa_l = P('AOA (L)', [4.921875, 4.5703125, 4.5703125, 4.5703125,
+                              4.570315, 4.5703125, 4.5703125, 4.9213875],
+                  frequency=1.0, offset=0.1484375)
+        
+        aoa = AOA()
+        res = aoa.derive(aoa_l, None)
+        self.assertEqual(aoa.hz, 1)
+        self.assertEqual(aoa.offset, 0.1484375)
+        
 
 class TestAccelerationNormalOffsetRemoved(unittest.TestCase):
     @unittest.skip('Test Not Implemented')
