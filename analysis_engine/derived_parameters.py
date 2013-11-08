@@ -649,7 +649,7 @@ class AirspeedTrue(DerivedParameterNode):
                         if gspd:
                             wind = tas_0 - gspd.array[tix]
                             tas_from_airspeed[scope] = gspd.array[scope] + wind
-                        else:
+                        elif acc_fwd:
                             tas_from_airspeed[scope] = \
                                 integrate(acc_fwd.array[scope],
                                           acc_fwd.frequency,
@@ -669,7 +669,7 @@ class AirspeedTrue(DerivedParameterNode):
                         if gspd:
                             wind = tas_0 - gspd.array[tix]
                             tas_from_airspeed[scope] = gspd.array[scope] + wind
-                        else:
+                        elif acc_fwd:
                             tas_from_airspeed[scope] = \
                                 integrate(acc_fwd.array[scope],
                                           acc_fwd.frequency,
@@ -677,8 +677,7 @@ class AirspeedTrue(DerivedParameterNode):
                                           extend=True,
                                           scale=GRAVITY_IMPERIAL / KTS_TO_FPS)
 
-
-        if rtos:
+        if rtos and acc_fwd:
             for rto in rtos:
                 for tas_valid in tas_valids:
                     tix = tas_valid.start
