@@ -3376,12 +3376,6 @@ class TestOverflowCorrection(unittest.TestCase):
             # landings
             self.assertAlmostEqual(resB[sect.stop - 1] / 10., 0, 0)
 
-        from matplotlib import pyplot as plt
-
-        plt.plot(resA)
-        plt.plot(resB)
-        plt.savefig('000.png')
-        plt.close()
 
     def test_with_a340(self):
         fast = S(items=[Section('Fast', slice(2000, 6500), 2000, 6500)])
@@ -3410,14 +3404,6 @@ class TestOverflowCorrection(unittest.TestCase):
         for sect in sects[1::2]:
             # landings
             self.assertAlmostEqual(resB[sect.stop - 1] / 10., 0, 0)
-
-        from matplotlib import pyplot as plt
-
-        plt.plot(resA)
-        plt.plot(resB)
-        plt.savefig('001.png')
-        plt.close()
-        self.assertEqual(len(sects), 2)
 
 
 class TestPeakCurvature(unittest.TestCase):

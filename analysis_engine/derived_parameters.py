@@ -1137,6 +1137,7 @@ class AltitudeRadio(DerivedParameterNode):
                source_efis=P('Altitude Radio (EFIS)'),
                source_efis_L=P('Altitude Radio (EFIS) (L)'),
                source_efis_R=P('Altitude Radio (EFIS) (R)'),
+               pitch=P('Pitch'),
                fast=A('Fast'),
                family=A('Family')):
 

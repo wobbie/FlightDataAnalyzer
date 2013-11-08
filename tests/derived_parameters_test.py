@@ -1407,7 +1407,34 @@ class TestAltitudeRadio(unittest.TestCase):
         ma_test.assert_array_almost_equal(alt_rad.array, answer, decimal=1)
         self.assertEqual(alt_rad.offset, 0.0)
         self.assertEqual(alt_rad.frequency, 4.0)
+        
+    def test_altitude_radio_A320(self):
+        # strictly these are two flights, but that should not matter
+        fast = S(frequency=0.5,
+                 items=[Section('Fast', slice(336, 5397), 336, 5397),
+                        Section('Fast', slice(5859, 11520), 5859, 11520)])
+        radioA = load(os.path.join(
+            test_data_path, 'A320_Altitude_Radio_A_overflow.nod'))
+        radioB = load(os.path.join(
+            test_data_path, 'A320_Altitude_Radio_B_overflow.nod'))
+        
+        rad = AltitudeRadio()
+        rad.derive(radioA, radioB, None, None, None, None, None, None, None, 
+                   fast=fast, family=A('Family', 'A320'))
+        
+        sects = np.ma.clump_unmasked(rad.array)
+        self.assertEqual(len(sects), 4)
+        for sect in sects[0::2]:
+            # takeoffs
+            self.assertAlmostEqual(rad.array[sect.start] / 10., 0, 0)
+        for sect in sects[1::2]:
+            # landings
+            self.assertAlmostEqual(rad.array[sect.stop - 1] / 10., 0, 0)
+     
 
+    def test_altitude_radio_cl600(self):
+        pass
+    
 '''
 class TestAltitudeRadioForFlightPhases(unittest.TestCase):
     def test_can_operate(self):
