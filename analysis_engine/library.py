@@ -6230,85 +6230,31 @@ def second_window(array, frequency, seconds):
     window_array = np_ma_masked_zeros_like(array)
     
     from numpy.lib.stride_tricks import as_strided
+    # Make a view of a sliding window using a different stride.
+    # For 3 samples, the array [1, 2, 3, 4, 5, 6, 7, 8, 9] will become
+    # [[1, 2, 3],
+    #  [2, 3, 4],
+    #  [3, 4, 5],
+    #  [4, 5, 6],
+    #  [5, 6, 7],
+    #  [6, 7, 8],
+    #  [7, 8, 9]]
+       
     sliding_window = as_strided(array, 
                                 shape=( len(array)-sample_idx, samples),
                                 strides=array.strides * 2)
+    
+    # Calculate min and max over the last axis (for each sliding window)
     min_ = np.ma.min(sliding_window, axis=-1)
     max_ = np.ma.max(sliding_window, axis=-1)
 
-    start, stop = 0, len(array)
-    last_value = array[start]
-    for i in xrange( stop - start - sample_idx ):
-        min_value, max_value = min_[start+i], max_[start+i]
+    last_value = array[0]
+    for i in xrange( len(array) - sample_idx ):
         # Clip the last value between sliding window min and max
-        last_value = min( max(last_value, min_value), max_value)
-        window_array[start + i] = last_value
+        last_value = min( max(last_value, min_[i]), max_[i])
+        window_array[i] = last_value
             
     return np.ma.array(window_array)
-    
-    ## TODO: Fix for frequency..
-    #arrays = [array]
-    #for roll_value in range((samples / 2) + 1):
-        #positive_roll = np.roll(array, roll_value)
-        #positive_roll[:roll_value] = np.ma.masked
-        #negative_roll = np.roll(array, -roll_value)
-        #negative_roll[-roll_value:] = np.ma.masked
-        #arrays.append(positive_roll)
-        #arrays.append(negative_roll)
-    #combined_array = np.ma.array(arrays)
-    #min_array = np.ma.min(combined_array, axis=0)
-    #max_array = np.ma.max(combined_array, axis=0)
-    #window_array = np_ma_masked_zeros_like(array)
-    #unmasked_slices = np.ma.clump_unmasked(array)
-    #for unmasked_slice in unmasked_slices:
-        #last_value = array[unmasked_slice.start]
-        #algo_slice = slice(unmasked_slice.start + (samples / 2),
-                           #unmasked_slice.stop)
-        #zipped_arrays = zip(array[algo_slice],
-                            #min_array[algo_slice],
-                            #max_array[algo_slice])
-        #for index, (array_value,
-                    #min_window,
-                    #max_window) in enumerate(zipped_arrays,
-                                             #start=unmasked_slice.start):
-            #if array_value is np.ma.masked:
-                #continue
-            #if min_window < last_value < max_window:
-                ## Mixed
-                #window_array[index] = last_value
-            #elif max_window > last_value:
-                ## All greater than.
-                #window_array[index] = last_value = min_window
-            #elif min_window < last_value:
-                ## All less than
-                #window_array[index] = last_value = max_window
-            #else:
-                #window_array[index] = last_value
-        #try:
-            #first_index = np.ma.clump_unmasked(array)[0].start
-        #except IndexError:
-            ## array is entirely masked?
-            #return window_array
-        ##np.ma.array([array, max_array, min_array])
-        
-        #window_array[first_index] = last_value = array[first_index]
-        
-        #for index, (array_value,
-                    #min_window,
-                    #max_window) in enumerate(zip(array[first_index + 1:],
-                                                 #min_array[first_index + 1:],
-                                                 #max_array[first_index + 1:]),
-                                             #start=first_index):
-        ##stacked_array = np.ma.array([array, max_array, min_array])
-        ###for index, values in enumerate(tacked_array[], start=first_index):
-        ##for index in xrange(first_index, stacked_array.shape[1]):
-        ##values = stacked_array[...,index]
-        ##array_value, max_window, min_window = values.tolist()
-    ##from analysis_engine.plot_flight import plot_parameter
-    ##plot_parameter(window_array)
-    ##plot_parameter(array)
-    return np.ma.array(window_array)
-
 
 #---------------------------------------------------------------------------
 # Air data calculations adapted from AeroCalc V0.11 to suit POLARIS Numpy
