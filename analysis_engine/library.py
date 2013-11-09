@@ -1,7 +1,7 @@
 import logging
 import numpy as np
 
-from collections import OrderedDict, namedtuple, deque
+from collections import OrderedDict, namedtuple
 from datetime import datetime, timedelta
 from hashlib import sha256
 from itertools import izip, izip_longest
@@ -6225,6 +6225,7 @@ def second_window(array, frequency, seconds):
     
     frequency = int(frequency)  # only integer frequencies supported
     samples = (seconds * frequency) + 1
+
     sample_idx = samples - 1
     
     window_array = np_ma_masked_zeros_like(array)
