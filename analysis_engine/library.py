@@ -6241,6 +6241,7 @@ def second_window(array, frequency, seconds):
             # Get the next value in sliding window. The first value in
             # gets discarded automatically.
             sliding_window.append(array.item(start + i + samples))
+    return np.ma.array(window_array)
     
     ## TODO: Fix for frequency..
     #arrays = [array]
