@@ -6225,22 +6225,25 @@ def second_window(array, frequency, seconds):
     
     frequency = int(frequency)  # only integer frequencies supported
     samples = (seconds * frequency) + 1
-
+    sample_idx = samples - 1
+    
     window_array = np_ma_masked_zeros_like(array)
-    unmasked_slices = np.ma.clump_unmasked(array)
-    for unmasked_slice in unmasked_slices:
-        start, stop = unmasked_slice.start, unmasked_slice.stop
-        last_value = array.item(start)
-        # Sliding window is a deque of length 'samples'.
-        sliding_window = deque(array[start : start+samples], samples)
-        for i in xrange(stop - start - samples ):
-            min_value, max_value = min(sliding_window), max(sliding_window)
-            # Clip the last value between sliding window min and max
-            last_value = min( max(last_value, min_value), max_value)
-            window_array.put(start + i, last_value)
-            # Get the next value in sliding window. The first value in
-            # gets discarded automatically.
-            sliding_window.append(array.item(start + i + samples))
+    
+    from numpy.lib.stride_tricks import as_strided
+    sliding_window = as_strided(array, 
+                                shape=( len(array)-sample_idx, samples),
+                                strides=array.strides * 2)
+    min_ = np.ma.min(sliding_window, axis=-1)
+    max_ = np.ma.max(sliding_window, axis=-1)
+
+    start, stop = 0, len(array)
+    last_value = array[start]
+    for i in xrange( stop - start - sample_idx ):
+        min_value, max_value = min_[start+i], max_[start+i]
+        # Clip the last value between sliding window min and max
+        last_value = min( max(last_value, min_value), max_value)
+        window_array[start + i] = last_value
+            
     return np.ma.array(window_array)
     
     ## TODO: Fix for frequency..
