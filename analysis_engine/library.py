@@ -6249,11 +6249,14 @@ def second_window(array, frequency, seconds):
     min_ = np.ma.min(sliding_window, axis=-1)
     max_ = np.ma.max(sliding_window, axis=-1)
 
-    last_value = array[0]
-    for i in xrange( len(array) - sample_idx ):
-        # Clip the last value between sliding window min and max
-        last_value = min( max(last_value, min_[i]), max_[i])
-        window_array[i] = last_value
+    unmasked_slices = np.ma.clump_unmasked(array)
+    for unmasked_slice in unmasked_slices:
+        start, stop = unmasked_slice.start, unmasked_slice.stop
+        last_value = array[start]
+        for i in xrange( stop - start - sample_idx ):
+            # Clip the last value between sliding window min and max
+            last_value = min( max(last_value, min_[start+i]), max_[start+i])
+            window_array[start+i] = last_value
             
     return np.ma.array(window_array)
 
