@@ -6253,10 +6253,17 @@ def second_window(array, frequency, seconds):
     for unmasked_slice in unmasked_slices:
         start, stop = unmasked_slice.start, unmasked_slice.stop
         last_value = array[start]
+        # We set already the mask to False where we are going to insert
+        # values. That is from start up to stop-sample_idx
+        # Much faster than setting the value in the masked array item by item
+        window_array.mask[start : stop-sample_idx] = False
+        
         for i in xrange( stop - start - sample_idx ):
             # Clip the last value between sliding window min and max
-            last_value = min( max(last_value, min_[start+i]), max_[start+i])
-            window_array[start+i] = last_value
+            last_value = min( max(last_value, min_.data[start+i]), max_.data[start+i] )
+            # Set this value in the data object of the masked array.
+            # Much faster than using window_array[start+i] = last_value
+            window_array.data[start+i] = last_value
             
     return np.ma.array(window_array)
 
