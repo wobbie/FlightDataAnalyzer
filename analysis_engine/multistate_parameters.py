@@ -320,6 +320,19 @@ class Daylight(MultistateDerivedParameterNode):
 
 class DualInputWarning(MultistateDerivedParameterNode):
     '''
+    Determines whether input by both of the pilots has occurred.
+
+    This parameter uses the 'Pilot Flying' derived multi-state parameter to
+    determine who is considered to be the pilot flying the aircraft and then
+    inspects whether the other pilot has made any significant sustained input.
+
+    For Airbus aircraft, this requires us to check the angle of the sidestick.
+
+    Reference was made to the following documentation to assist with the
+    development of this algorithm:
+
+    - A320 Flight Profile Specification
+    - A321 Flight Profile Specification
     '''
     values_mapping = {0: '-', 1: 'Dual'}
 
@@ -1258,7 +1271,16 @@ class PackValvesOpen(MultistateDerivedParameterNode):
 
 class PilotFlying(MultistateDerivedParameterNode):
     '''
-    Determines the pilot flying for Airbus aircraft.
+    Determines the pilot flying the aircraft.
+
+    For Airbus aircraft we use the captain and first officer sidestick angles
+    to determine who is providing input to the aircraft.
+
+    Reference was made to the following documentation to assist with the
+    development of this algorithm:
+
+    - A320 Flight Profile Specification
+    - A321 Flight Profile Specification
     '''
     values_mapping = {0: '-', 1: 'Capt', 2: 'FO'}
 

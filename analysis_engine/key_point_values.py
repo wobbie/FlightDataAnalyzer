@@ -10081,6 +10081,16 @@ class GrossWeightDelta60SecondsInFlightMax(KeyPointValueNode):
 class DualInputDuration(KeyPointValueNode):
     '''
     Duration of dual input.
+
+    We only look for dual input from the start of the first takeoff roll until
+    the end of the last landing roll. This KPV is used to detect occurrences of
+    dual input by either pilot irrespective of who was flying.
+
+    Reference was made to the following documentation to assist with the
+    development of this algorithm:
+
+    - A320 Flight Profile Specification
+    - A321 Flight Profile Specification
     '''
     unit = 's'
 
@@ -10099,6 +10109,16 @@ class DualInputDuration(KeyPointValueNode):
 class DualInputAbove200FtDuration(KeyPointValueNode):
     '''
     Duration of dual input above 200 ft AAL.
+
+    We only look for dual input from the start of the first takeoff roll until
+    the end of the last landing roll. This KPV is used to detect occurrences of
+    dual input above 200 ft AAL by either pilot irrespective of who was flying.
+
+    Reference was made to the following documentation to assist with the
+    development of this algorithm:
+
+    - A320 Flight Profile Specification
+    - A321 Flight Profile Specification
     '''
     unit = 's'
 
@@ -10118,6 +10138,16 @@ class DualInputAbove200FtDuration(KeyPointValueNode):
 class DualInputBelow200FtDuration(KeyPointValueNode):
     '''
     Duration of dual input below 200 ft AAL.
+
+    We only look for dual input from the start of the first takeoff roll until
+    the end of the last landing roll. This KPV is used to detect occurrences of
+    dual input below 200 ft AAL by either pilot irrespective of who was flying.
+
+    Reference was made to the following documentation to assist with the
+    development of this algorithm:
+
+    - A320 Flight Profile Specification
+    - A321 Flight Profile Specification
     '''
     unit = 's'
 
@@ -10137,6 +10167,16 @@ class DualInputBelow200FtDuration(KeyPointValueNode):
 class DualInputByCaptDuration(KeyPointValueNode):
     '''
     Duration of dual input by the captain with first officer flying.
+
+    We only look for dual input from the start of the first takeoff roll until
+    the end of the last landing roll. This KPV is used to detect occurrences of
+    dual input by the captain when the first officer was the pilot flying.
+
+    Reference was made to the following documentation to assist with the
+    development of this algorithm:
+
+    - A320 Flight Profile Specification
+    - A321 Flight Profile Specification
     '''
     unit = 's'
 
@@ -10156,6 +10196,16 @@ class DualInputByCaptDuration(KeyPointValueNode):
 class DualInputByFODuration(KeyPointValueNode):
     '''
     Duration of dual input by the first officer with captain flying.
+
+    We only look for dual input from the start of the first takeoff roll until
+    the end of the last landing roll. This KPV is used to detect occurrences of
+    dual input by the first officer when the captain was the pilot flying.
+
+    Reference was made to the following documentation to assist with the
+    development of this algorithm:
+
+    - A320 Flight Profile Specification
+    - A321 Flight Profile Specification
     '''
     name = 'Dual Input By FO Duration'
     unit = 's'

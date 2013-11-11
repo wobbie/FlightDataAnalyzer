@@ -1732,6 +1732,15 @@ class ControlWheelForce(DerivedParameterNode):
 class SidestickAngleCapt(DerivedParameterNode):
     '''
     Angle of the captain's side stick.
+
+    This parameter calcuates the combined angle from the separate pitch and
+    roll component angles of the sidestick for the captain.
+
+    Reference was made to the following documentation to assist with the
+    development of this algorithm:
+
+    - A320 Flight Profile Specification
+    - A321 Flight Profile Specification
     '''
     name = 'Sidestick Angle (Capt)'
     units = 'deg'
@@ -1746,6 +1755,15 @@ class SidestickAngleCapt(DerivedParameterNode):
 class SidestickAngleFO(DerivedParameterNode):
     '''
     Angle of the first officer's side stick.
+
+    This parameter calcuates the combined angle from the separate pitch and
+    roll component angles of the sidestick for the first officer.
+
+    Reference was made to the following documentation to assist with the
+    development of this algorithm:
+
+    - A320 Flight Profile Specification
+    - A321 Flight Profile Specification
     '''
     name = 'Sidestick Angle (FO)'
     units = 'deg'
