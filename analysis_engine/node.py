@@ -351,7 +351,7 @@ def can_operate(cls, available):
 
         try:
             res = self.derive(*args)
-        except:
+        except Exception as err:
             self.exception('Failed to derive node `%s`.\n'
                            'Nodes used to derive:\n  %s',
                            self.name, '\n  '.join(repr(n) for n in args))
