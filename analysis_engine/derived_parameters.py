@@ -1165,13 +1165,13 @@ class AltitudeRadio(DerivedParameterNode):
                                       offset=self.offset,
                                       frequency=self.frequency)
 
-        # For aircraft which do not compensate for radio altimeter variation
-        # with pitch, and where the antennae are placed well away from the
-        # main gear, compensation is necessary.
+        # For aircraft where the antennae are placed well away from the main
+        # gear, and especially where it is aft of the main gear, compensation
+        # is necessary.
         if family and family.value in ['CL-600']:
             pitch_rad = pitch.array * deg2rad
             # Scaling taken from measurement of takeoff rad alt and pitch data.
-            self.array += 30.0 * np.ma.sin(pitch_rad) - 1.2
+            self.array += 21.0 * np.ma.sin(pitch_rad) - 1.5
             
 
 class AltitudeSTDSmoothed(DerivedParameterNode):
@@ -1219,7 +1219,8 @@ class AltitudeSTDSmoothed(DerivedParameterNode):
             # The fine recording is used to compute altitude, and here we
             # match the fine part to the coarse part to get the altitudes
             # right.
-            self.array = match_altitudes(fine.array, alt.array)
+            altitude = align(alt, fine)
+            self.array = match_altitudes(fine.array, altitude)
 
         elif alt_capt and alt_fo:
             # Merge alternate sources if they are available from the LFL
