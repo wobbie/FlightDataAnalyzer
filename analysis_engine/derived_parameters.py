@@ -6,7 +6,7 @@ import geomag
 from math import ceil, radians
 from scipy.interpolate import interp1d
 
-from flightdatautilities import aircrafttables as at
+from flightdatautilities import aircrafttables as at, units as ut
 
 from analysis_engine.exceptions import DataFrameError
 from analysis_engine.node import (
@@ -93,18 +93,23 @@ from settings import (AZ_WASHOUT_TC,
 # There is no numpy masked array function for radians, so we just multiply thus:
 deg2rad = radians(1.0)
 
+
 class AccelerationLateralOffsetRemoved(DerivedParameterNode):
-    """
+    '''
     This process attempts to remove datum errors in the lateral accelerometer.
-    """
+    '''
+
+    units = ut.G
+
     @classmethod
     def can_operate(cls, available):
+
         return 'Acceleration Lateral' in available
 
-    units = 'g'
-
-    def derive(self, acc=P('Acceleration Lateral'),
+    def derive(self,
+               acc=P('Acceleration Lateral'),
                offset=KPV('Acceleration Lateral Offset')):
+
         if offset:
             self.array = acc.array - offset[0].value
         else:
@@ -116,25 +121,32 @@ class AccelerationLateralSmoothed(DerivedParameterNode):
     Apply a moving average for two seconds (9 samples) to smooth out spikes
     caused by uneven surfaces - especially noticable during cornering.
     '''
-    units = 'g'
+
+    units = ut.G
     
     def derive(self, acc=P('Acceleration Lateral Offset Removed')):
+
         self.window = acc.hz * 2 + 1  # store for ease of testing
         self.array = moving_average(acc.array, window=self.window)
     
 
 class AccelerationLongitudinalOffsetRemoved(DerivedParameterNode):
-    """
-    This process attempts to remove datum errors in the longitudinal accelerometer.
-    """
+    '''
+    This process attempts to remove datum errors in the longitudinal
+    accelerometer.
+    '''
+
+    units = ut.G
+
     @classmethod
     def can_operate(cls, available):
+
         return 'Acceleration Longitudinal' in available
 
-    units = 'g'
-
-    def derive(self, acc=P('Acceleration Longitudinal'),
+    def derive(self,
+               acc=P('Acceleration Longitudinal'),
                offset=KPV('Acceleration Longitudinal Offset')):
+
         if offset:
             self.array = acc.array - offset[0].value
         else:
@@ -142,19 +154,24 @@ class AccelerationLongitudinalOffsetRemoved(DerivedParameterNode):
 
 
 class AccelerationNormalOffsetRemoved(DerivedParameterNode):
-    """
+    '''
     This process attempts to remove datum errors in the normal accelerometer.
-    """
+    '''
+
+    units = ut.G
+
     @classmethod
     def can_operate(cls, available):
+
         return 'Acceleration Normal' in available
 
-    units = 'g'
-
-    def derive(self, acc=P('Acceleration Normal'),
+    def derive(self,
+               acc=P('Acceleration Normal'),
                offset=KPV('Acceleration Normal Offset')):
+
         if offset:
-            self.array = acc.array - offset[0].value + 1.0 # 1.0 to reset datum.
+            # 1.0 to reset datum.
+            self.array = acc.array - offset[0].value + 1.0
         else:
             self.array = acc.array
 
@@ -166,7 +183,7 @@ class AccelerationVertical(DerivedParameterNode):
     retaining the 1.0 datum and positive upwards.
     """
 
-    units = 'g'
+    units = ut.G
 
     def derive(self, acc_norm=P('Acceleration Normal Offset Removed'),
                acc_lat=P('Acceleration Lateral Offset Removed'),
@@ -190,7 +207,7 @@ class AccelerationForwards(DerivedParameterNode):
     Forwards = +ve, Constant sensor errors not washed out.
     """
 
-    units = 'g'
+    units = ut.G
 
     def derive(self, acc_norm=P('Acceleration Normal Offset Removed'),
                acc_long=P('Acceleration Longitudinal'),
@@ -207,7 +224,7 @@ class AccelerationAcrossTrack(DerivedParameterNode):
     groundspeed computations.
     """
 
-    units = 'g'
+    units = ut.G
 
     def derive(self, acc_fwd=P('Acceleration Forwards'),
                acc_side=P('Acceleration Sideways'),
@@ -224,7 +241,7 @@ class AccelerationAlongTrack(DerivedParameterNode):
     groundspeed computations.
     """
 
-    units = 'g'
+    units = ut.G
 
     def derive(self, acc_fwd=P('Acceleration Forwards'),
                acc_side=P('Acceleration Sideways'),
@@ -241,7 +258,7 @@ class AccelerationSideways(DerivedParameterNode):
     centreline when projected onto the earth's surface. Right = +ve.
     """
 
-    units = 'g'
+    units = ut.G
 
     def derive(self, acc_norm=P('Acceleration Normal Offset Removed'),
                acc_lat=P('Acceleration Lateral Offset Removed'),
@@ -257,10 +274,13 @@ class AccelerationSideways(DerivedParameterNode):
 
 
 class AirspeedForFlightPhases(DerivedParameterNode):
+    '''
+    '''
 
-    units = 'kts'
+    units = ut.KT
 
     def derive(self, airspeed=P('Airspeed')):
+
         self.array = hysteresis(
             repair_mask(airspeed.array, repair_duration=None,
                         zero_if_masked=True), HYSTERESIS_FPIAS)
@@ -281,11 +301,14 @@ class AirspeedMinusV2(DerivedParameterNode):
     A fixed value will most likely be zero making this relative airspeed
     derived parameter the same as the original absolute airspeed parameter.
     '''
+
+    units = ut.KT
+
     @classmethod
     def can_operate(cls, available):
-        return ('Airspeed' in available and ('V2' in available or 'V2 Lookup' in available))
 
-    units = 'kts'
+        return 'Airspeed' in available \
+            and any_of(('V2', 'V2 Lookup'), available)
 
     def derive(self, airspeed=P('Airspeed'),
                v2_recorded=P('V2'),
@@ -329,14 +352,12 @@ class AirspeedMinusV2For3Sec(DerivedParameterNode):
     See the derived parameter 'Airspeed Minus V2'.
     '''
 
-    units = 'kts'
-    
     align_frequency = 2
     align_offset = 0
+    units = ut.KT
 
     def derive(self, spd_v2=P('Airspeed Minus V2')):
-        '''
-        '''
+
         self.array = second_window(spd_v2.array, self.frequency, 3)
         #self.array = clip(spd_v2.array, 3.0, spd_v2.frequency)
 
@@ -344,17 +365,18 @@ class AirspeedMinusV2For3Sec(DerivedParameterNode):
 ################################################################################
 # Airspeed Minus Min Manoeuver
 
+
 class AirspeedMinusMinManeouvringSpeed(DerivedParameterNode):
     '''
     Airspeed compared with Airspeed Manoeuver Minimum.
     '''
 
-    units = 'kts'
+    units = ut.KT
 
-    def derive(self, airspeed=P('Airspeed'),
+    def derive(self,
+               airspeed=P('Airspeed'),
                manoeuver_min=P('Min Maneouvring Speed')):
-        '''
-        '''
+
         self.array = airspeed.array - manoeuver_min.array
 
 
@@ -378,7 +400,7 @@ class AirspeedReference(DerivedParameterNode):
     derived parameter the same as the original absolute airspeed parameter.
     '''
 
-    units = 'kts'
+    units = ut.KT
 
     @classmethod
     def can_operate(cls, available, 
@@ -425,7 +447,7 @@ class AirspeedReferenceLookup(DerivedParameterNode):
     if flap/conf not in lookup table use max flaps setting
     '''
 
-    units = 'kts'
+    units = ut.KT
 
     @classmethod
     def can_operate(cls, available,
@@ -543,22 +565,21 @@ class AirspeedRelative(DerivedParameterNode):
     back to lookup tables if these do not exist.
     '''
 
-    units = 'kts'
+    units = ut.KT
 
     @classmethod
     def can_operate(cls, available):
-        return 'Airspeed' in available and \
-               any_of(('Airspeed Reference','Airspeed Reference Lookup'), available)
+
+        return 'Airspeed' in available and any_of((
+            'Airspeed Reference',
+            'Airspeed Reference Lookup',
+        ), available)
 
     def derive(self, airspeed=P('Airspeed'),
                vref_recorded=P('Airspeed Reference'),
                vref_lookup=P('Airspeed Reference Lookup')):
 
-        if vref_recorded:
-            vref = vref_recorded
-        else:
-            vref = vref_lookup
-
+        vref = vref_recorded or vref_lookup
         self.array = airspeed.array - vref.array
 
 
@@ -569,9 +590,9 @@ class AirspeedRelativeFor3Sec(DerivedParameterNode):
     See the derived parameter 'Airspeed Relative'.
     '''
 
-    units = 'kts'
     align_frequency = 2
     align_offset = 0
+    units = ut.KT
 
     def derive(self, spd_vref=P('Airspeed Relative')):
         '''
@@ -606,7 +627,7 @@ class AirspeedTrue(DerivedParameterNode):
     -------------------------------------------------------------------------
     """
 
-    units = 'kts'
+    units = ut.KT
 
     @classmethod
     def can_operate(cls, available):
@@ -706,7 +727,7 @@ class AirspeedTrue(DerivedParameterNode):
 
 
 class AltitudeAAL(DerivedParameterNode):
-    """
+    '''
     This is the main altitude measure used during flight analysis.
 
     Where radio altimeter data is available, this is used for altitudes up to
@@ -720,11 +741,12 @@ class AltitudeAAL(DerivedParameterNode):
 
     This parameter includes a rejection of bounced landings of less than 35ft
     height.
-    """
-    name = "Altitude AAL"
-    units = 'ft'
+    '''
+
+    name = 'Altitude AAL'
     align_frequency = 2 
     align_offset = 0
+    units = ut.FT
 
     @classmethod
     def can_operate(cls, available):
@@ -1094,15 +1116,18 @@ def link_baro_rad_rev(baro_section, ralt_section, alt_rad, alt_std, alt_result):
 
 
 class AltitudeAALForFlightPhases(DerivedParameterNode):
-    name = 'Altitude AAL For Flight Phases'
-    units = 'ft'
+    '''
+    This parameter repairs short periods of masked data, making it suitable for
+    detecting altitude bands on the climb and descent. The parameter should not
+    be used to compute KPV values themselves, to avoid using interpolated
+    values in an event.
+    '''
 
-    # This parameter repairs short periods of masked data, making it suitable
-    # for detecting altitude bands on the climb and descent. The parameter
-    # should not be used to compute KPV values themselves, to avoid using
-    # interpolated values in an event.
+    name = 'Altitude AAL For Flight Phases'
+    units = ut.FT
 
     def derive(self, alt_aal=P('Altitude AAL')):
+
         self.array = repair_mask(alt_aal.array, repair_duration=None)
 
 
@@ -1120,8 +1145,8 @@ class AltitudeRadio(DerivedParameterNode):
     :type parameter object.
     """
 
-    units = 'ft'
     align = False
+    units = ut.FT
 
     @classmethod
     def can_operate(cls, available):
@@ -1175,20 +1200,21 @@ class AltitudeRadio(DerivedParameterNode):
             
 
 class AltitudeSTDSmoothed(DerivedParameterNode):
-    """
+    '''
     :param frame: The frame attribute, e.g. '737-i'
     :type frame: An attribute
 
     :returns Altitude STD Smoothed as a local average where the original source is unacceptable, but unchanged otherwise.
     :type parameter object.
-    """
+    '''
 
-    name = "Altitude STD Smoothed"
-    units = 'ft'
+    name = 'Altitude STD Smoothed'
     align = False
+    units = ut.FT
 
     @classmethod
     def can_operate(cls, available):
+
         return 'Altitude STD' in available
 
     def derive(self, fine = P('Altitude STD (Fine)'), 
@@ -1231,6 +1257,7 @@ class AltitudeSTDSmoothed(DerivedParameterNode):
         else:
             self.array = alt.array
 
+
 # TODO: Account for 'Touch & Go' - need to adjust QNH for additional airfields!
 class AltitudeQNH(DerivedParameterNode):
     '''
@@ -1255,10 +1282,11 @@ class AltitudeQNH(DerivedParameterNode):
     '''
 
     name = 'Altitude QNH'
-    units = 'ft'
+    units = ut.FT
 
     @classmethod
     def can_operate(cls, available):
+
         return 'Altitude AAL' in available and 'Altitude Peak' in available
 
     def derive(self, alt_aal=P('Altitude AAL'), alt_std=P('Altitude STD'),
@@ -1405,7 +1433,7 @@ class AltitudeSTD(DerivedParameterNode):
     correction have been developed to cater for these cases.
     """
     name = 'Altitude STD'
-    units = 'ft'
+    units = ut.FT
     @classmethod
     def can_operate(cls, available):
         high_and_low = 'Altitude STD (Coarse)' in available and \
@@ -1503,7 +1531,7 @@ class AltitudeTail(DerivedParameterNode):
     the main gear to the point on the tail most likely to scrape the runway.
     """
 
-    units = 'ft'
+    units = ut.FT
 
     #TODO: Review availability of Attribute "Dist Gear To Tail"
 
@@ -1525,9 +1553,8 @@ class AltitudeTail(DerivedParameterNode):
 # Automated Systems
 
 
-
 class CabinAltitude(DerivedParameterNode):
-    """
+    '''
     Some aircraft record the cabin altitude in feet, while others record the
     cabin pressure (normally in psi). This function converts the pressure
     reading to altitude equivalent, so that the KPVs can operate only in
@@ -1535,23 +1562,26 @@ class CabinAltitude(DerivedParameterNode):
     pressure.
     
     Typically aircraft also have the 'Cabin Altitude Warning' discrete parameter.
-    """
-    units = 'ft'
+    '''
+
+    units = ut.FT
     
     def derive(self, cp=P('Cabin Press')):
+
         # assert cp.units=='psi' # Would like to assert units as 'psi'
         self.array = press2alt(cp.array)
     
 
 class ClimbForFlightPhases(DerivedParameterNode):
-    """
+    '''
     This computes climb segments, and resets to zero as soon as the aircraft
     descends. Very useful for measuring climb after an aborted approach etc.
-    """
+    '''
 
-    units = 'ft'
+    units = ut.FT
 
     def derive(self, alt_std=P('Altitude STD Smoothed'), airs=S('Fast')):
+
         self.array = np.ma.zeros(len(alt_std.array))
         repair_mask(alt_std.array) # Remove small sections of corrupt data
         for air in airs:
@@ -1562,14 +1592,15 @@ class ClimbForFlightPhases(DerivedParameterNode):
 
 
 class DescendForFlightPhases(DerivedParameterNode):
-    """
+    '''
     This computes descent segments, and resets to zero as soon as the aircraft
     climbs Used for measuring descents, e.g. following a suspected level bust.
-    """
+    '''
 
-    units = 'ft'
+    units = ut.FT
 
     def derive(self, alt_std=P('Altitude STD Smoothed'), airs=S('Fast')):
+
         self.array = np.ma.zeros(len(alt_std.array))
         repair_mask(alt_std.array) # Remove small sections of corrupt data
         for air in airs:
@@ -1584,15 +1615,18 @@ class AOA(DerivedParameterNode):
     Angle of Attack - merges Left and Right signals and increases the
     frequency to twice that of the highest frequency of the dependancies.
     '''
+
     name = 'AOA'
-    units = 'deg'
     align = False
+    units = ut.DEGREE
     
     @classmethod
     def can_operate(cls, available):
-        return 'AOA (L)' in available or 'AOA (R)' in available
+
+        return any_of(('AOA (L)', 'AOA (R)'), available)
 
     def derive(self, aoa_l=P('AOA (L)'), aoa_r=P('AOA (R)')):
+
         if aoa_l and aoa_r:
             # double the max freq
             self.frequency = max((aoa_l.frequency, aoa_r.frequency)) * 2
@@ -1613,26 +1647,37 @@ class ControlColumn(DerivedParameterNode):
     The position of the control column blended from the position of the captain
     and first officer's control columns.
     '''
+
     align = False
-    units = 'deg'
+    units = ut.DEGREE  # FIXME: Or should this be ut.PERCENT?
 
     def derive(self,
                posn_capt=P('Control Column (Capt)'),
                posn_fo=P('Control Column (FO)')):
+
         self.array, self.frequency, self.offset = \
             blend_two_parameters(posn_capt, posn_fo)
 
 
 class ControlColumnCapt(DerivedParameterNode):
-    # See ElevatorLeft for explanation
+    '''
+    '''
+
     name = 'Control Column (Capt)'
+    units = ut.DEGREE  # FIXME: Or should this be ut.PERCENT?
+
     @classmethod
     def can_operate(cls, available):
-        return any_of(('Control Column (Capt) Potentiometer', 
-                       'Control Column (Capt) Synchro'), available)
+
+        return any_of((
+            'Control Column (Capt) Potentiometer', 
+            'Control Column (Capt) Synchro',
+        ), available)
     
-    def derive(self, pot=P('Control Column (Capt) Potentiometer'),
+    def derive(self,
+               pot=P('Control Column (Capt) Potentiometer'),
                synchro=P('Control Column (Capt) Synchro')):
+
         synchro_samples = 0
         if synchro:
             synchro_samples = np.ma.count(synchro.array)
@@ -1643,15 +1688,24 @@ class ControlColumnCapt(DerivedParameterNode):
                 self.array = pot.array
 
 class ControlColumnFO(DerivedParameterNode):
-    # See ElevatorLeft for explanation
+    '''
+    '''
+
     name = 'Control Column (FO)'
+    units = ut.DEGREE  # FIXME: Or should this be ut.PERCENT?
+
     @classmethod
     def can_operate(cls, available):
-        return any_of(('Control Column (FO) Potentiometer', 
-                       'Control Column (FO) Synchro'), available)
+
+        return any_of((
+            'Control Column (FO) Potentiometer', 
+            'Control Column (FO) Synchro',
+        ), available)
     
-    def derive(self, pot=P('Control Column (FO) Potentiometer'),
+    def derive(self,
+               pot=P('Control Column (FO) Potentiometer'),
                synchro=P('Control Column (FO) Synchro')):
+
         synchro_samples = 0
         if synchro:
             synchro_samples = np.ma.count(synchro.array)
@@ -1667,11 +1721,12 @@ class ControlColumnForce(DerivedParameterNode):
     The combined force from the captain and the first officer.
     '''
 
-    units = 'lbf'
+    units = ut.LBF
 
     def derive(self,
                force_capt=P('Control Column Force (Capt)'),
                force_fo=P('Control Column Force (FO)')):
+
         self.array = force_capt.array + force_fo.array
         # TODO: Check this summation is correct in amplitude and phase.
         # Compare with Boeing charts for the 737NG.
@@ -1684,14 +1739,20 @@ class ControlWheel(DerivedParameterNode):
     
     On the ATR42 there is the option of potentiometer or synchro input.
     '''
+
     align = False
-    units = 'deg'
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available):
-        return all_of(('Control Wheel (Capt)','Control Wheel (FO)'), available)\
-               or\
-               any_of(('Control Wheel Synchro','Control Wheel Potentiometer'), available)
+
+        return all_of((
+            'Control Wheel (Capt)',
+            'Control Wheel (FO)',
+        ), available) or any_of((
+            'Control Wheel Synchro',
+            'Control Wheel Potentiometer',
+        ), available)
 
     def derive(self,
                posn_capt=P('Control Wheel (Capt)'),
@@ -1720,11 +1781,12 @@ class ControlWheelForce(DerivedParameterNode):
     The combined force from the captain and the first officer.
     '''
 
-    units = 'lbf'
+    units = ut.LBF
 
     def derive(self,
                force_capt=P('Control Wheel Force (Capt)'),
                force_fo=P('Control Wheel Force (FO)')):
+
         self.array = force_capt.array + force_fo.array
         # TODO: Check this summation is correct in amplitude and phase.
         # Compare with Boeing charts for the 737NG.
@@ -1733,9 +1795,19 @@ class ControlWheelForce(DerivedParameterNode):
 class SidestickAngleCapt(DerivedParameterNode):
     '''
     Angle of the captain's side stick.
+
+    This parameter calcuates the combined angle from the separate pitch and
+    roll component angles of the sidestick for the captain.
+
+    Reference was made to the following documentation to assist with the
+    development of this algorithm:
+
+    - A320 Flight Profile Specification
+    - A321 Flight Profile Specification
     '''
+
     name = 'Sidestick Angle (Capt)'
-    units = 'deg'
+    units = ut.DEGREE
 
     def derive(self,
                pitch_capt=M('Sidestick Pitch (Capt)'),
@@ -1747,9 +1819,19 @@ class SidestickAngleCapt(DerivedParameterNode):
 class SidestickAngleFO(DerivedParameterNode):
     '''
     Angle of the first officer's side stick.
+
+    This parameter calcuates the combined angle from the separate pitch and
+    roll component angles of the sidestick for the first officer.
+
+    Reference was made to the following documentation to assist with the
+    development of this algorithm:
+
+    - A320 Flight Profile Specification
+    - A321 Flight Profile Specification
     '''
+
     name = 'Sidestick Angle (FO)'
-    units = 'deg'
+    units = ut.DEGREE
 
     def derive(self,
                pitch_fo=M('Sidestick Pitch (FO)'),
@@ -1759,14 +1841,14 @@ class SidestickAngleFO(DerivedParameterNode):
 
 
 class DistanceToLanding(DerivedParameterNode):
-    """
+    '''
     Ground distance to cover before touchdown.
 
     Note: This parameter gets closer to zero approaching the final touchdown,
     but then increases as the aircraft decelerates on the runway.
-    """
+    '''
 
-    units = 'nm'
+    units = ut.NM
 
     # Q: Is this distance to final landing, or distance to each approach
     # destination (i.e. resets once reaches point of go-around)
@@ -1786,24 +1868,32 @@ class DistanceTravelled(DerivedParameterNode):
     Groundspeed.
     '''
 
-    units = 'nm'
+    units = ut.NM
 
     def derive(self, gspd=P('Groundspeed')):
+
         self.array = integrate(gspd.array, gspd.frequency, scale=1.0 / 3600.0)
 
 
 class Drift(DerivedParameterNode):
+    '''
+    '''
 
     align = False
-    units = 'deg'
+    units = ut.DEGREE
     
     @classmethod
     def can_operate(cls, available):
-        return (('Drift (1)' in available or 'Drift (2)' in available) or
-                ('Track' in available and 'Heading' in available))
 
-    def derive(self, drift_1=P('Drift (1)'), drift_2=P('Drift (2)'),
-               track=P('Track'), heading=P('Heading')):
+        return any_of(('Drift (1)', 'Drift (2)'), available) \
+            or all_of(('Heading', 'Track'), available)
+
+    def derive(self,
+               drift_1=P('Drift (1)'),
+               drift_2=P('Drift (2)'),
+               track=P('Track'),
+               heading=P('Heading')):
+
         if drift_1 or drift_2:
             self.array, self.frequency, self.offset = \
                 blend_two_parameters(drift_1, drift_2)
@@ -1816,45 +1906,49 @@ class Drift(DerivedParameterNode):
 ################################################################################
 # Brakes
 
+
 class BrakePressure(DerivedParameterNode):
-    """
+    '''
     Gather the recorded brake parameters and convert into a single analogue.
 
     This node allows for expansion for different types, and possibly
     operation in primary and standby modes.
-    """
+    '''
 
     align = False
+    units = ut.PSI
 
     @classmethod
     def can_operate(cls, available):
-        return ('Brake (L) Press' in available and \
-                'Brake (R) Press' in available) \
-               or \
-               ('Brake (L) Inboard Press' in available and \
-                'Brake (L) Outboard Press' in available and \
-                'Brake (R) Inboard Press' in available and \
-                'Brake (R) Outboard Press' in available)
-                
+
+        return all_of((
+            'Brake (L) Press',
+            'Brake (R) Press',
+        ), available) or all_of((
+            'Brake (L) Inboard Press',
+            'Brake (L) Outboard Press',
+            'Brake (R) Inboard Press',
+            'Brake (R) Outboard Press',
+        ), available)
 
     def derive(self, 
                brake_L=P('Brake (L) Press'), 
                brake_R=P('Brake (R) Press'),
-               brake_L_in = P('Brake (L) Inboard Press'),
-               brake_L_out = P('Brake (L) Outboard Press'),
-               brake_R_In = P('Brake (R) Inboard Press'),
-               brake_R_Out = P('Brake (R) Outboard Press'),
-               ):
+               brake_L_ib=P('Brake (L) Inboard Press'),
+               brake_L_ob=P('Brake (L) Outboard Press'),
+               brake_R_ib=P('Brake (R) Inboard Press'),
+               brake_R_ob=P('Brake (R) Outboard Press')):
         
         if brake_L and brake_R:
-            self.array, self.frequency, self.offset = blend_two_parameters(brake_L, brake_R)
+            self.array, self.frequency, self.offset = \
+                blend_two_parameters(brake_L, brake_R)
         else:
-            sources = [brake_L_in, brake_L_out, brake_R_In, brake_R_Out]
+            sources = [brake_L_ib, brake_L_ob, brake_R_ib, brake_R_ob]
             self.offset = 0.0
-            self.frequency = brake_L_in.frequency * 4.0
-            self.array = blend_parameters(sources, 
-                                          offset=self.offset, 
+            self.frequency = brake_L_ib.frequency * 4.0
+            self.array = blend_parameters(sources, offset=self.offset, 
                                           frequency=self.frequency)
+
 
 ################################################################################
 # Engine EPR
@@ -1866,6 +1960,7 @@ class Eng_EPRAvg(DerivedParameterNode):
 
     name = 'Eng (*) EPR Avg'
     align = False
+    units = None
 
     @classmethod
     def can_operate(cls, available):
@@ -1889,6 +1984,7 @@ class Eng_EPRMax(DerivedParameterNode):
 
     name = 'Eng (*) EPR Max'
     align = False
+    units = None
 
     @classmethod
     def can_operate(cls, available):
@@ -1912,6 +2008,7 @@ class Eng_EPRMin(DerivedParameterNode):
 
     name = 'Eng (*) EPR Min'
     align = False
+    units = None
 
     @classmethod
     def can_operate(cls, available):
@@ -1935,9 +2032,9 @@ class Eng_EPRMinFor5Sec(DerivedParameterNode):
     '''
 
     name = 'Eng (*) EPR Min For 5 Sec'
-    units = '%'
     align_frequency = 2
     align_offset = 0
+    units = None
 
     def derive(self,
                eng_epr_min=P('Eng (*) EPR Min')):
@@ -1951,6 +2048,7 @@ class EngTPRLimitDifference(DerivedParameterNode):
     '''
 
     name = 'Eng TPR Limit Difference'
+    units = None
 
     def derive(self,
                eng_tpr_max=P('Eng (*) TPR Max'),
@@ -1965,6 +2063,7 @@ class Eng_TPRMax(DerivedParameterNode):
 
     name = 'Eng (*) TPR Max'
     align = False
+    units = None
 
     @classmethod
     def can_operate(cls, available):
@@ -1988,6 +2087,7 @@ class Eng_TPRMin(DerivedParameterNode):
 
     name = 'Eng (*) TPR Min'
     align = False
+    units = None
 
     @classmethod
     def can_operate(cls, available):
@@ -2014,8 +2114,8 @@ class Eng_FuelFlow(DerivedParameterNode):
     '''
 
     name = 'Eng (*) Fuel Flow'
-    units = 'kg/h'
     align = False
+    units = ut.KG_H
 
     @classmethod
     def can_operate(cls, available):
@@ -2027,6 +2127,7 @@ class Eng_FuelFlow(DerivedParameterNode):
                eng2=P('Eng (2) Fuel Flow'),
                eng3=P('Eng (3) Fuel Flow'),
                eng4=P('Eng (4) Fuel Flow')):
+
         # assume all engines Fuel Flow are record at the same frequency
         engines = vstack_params(eng1, eng2, eng3, eng4)
         self.array = np.ma.sum(engines, axis=0)
@@ -2042,12 +2143,13 @@ class Eng_FuelFlowMin(DerivedParameterNode):
     '''
 
     name = 'Eng (*) Fuel Flow Min'
-    units = 'kg/h'
     align_frequency = 4
     align_offset = 0
+    units = ut.KG_H
 
     @classmethod
     def can_operate(cls, available):
+
         return any_of(cls.get_dependency_names(), available)
 
     def derive(self,
@@ -2055,6 +2157,7 @@ class Eng_FuelFlowMin(DerivedParameterNode):
                eng2=P('Eng (2) Fuel Flow'),
                eng3=P('Eng (3) Fuel Flow'),
                eng4=P('Eng (4) Fuel Flow')):
+
         engines = vstack_params(eng1, eng2, eng3, eng4)
         self.array = np.ma.min(engines, axis=0)
 
@@ -2069,7 +2172,7 @@ class Eng_1_FuelBurn(DerivedParameterNode):
     '''
 
     name = 'Eng (1) Fuel Burn'
-    units = 'kg'
+    units = ut.KG
 
     def derive(self,
                ff=P('Eng (1) Fuel Flow')):
@@ -2085,7 +2188,7 @@ class Eng_2_FuelBurn(DerivedParameterNode):
     '''
 
     name = 'Eng (2) Fuel Burn'
-    units = 'kg'
+    units = ut.KG
 
     def derive(self,
                ff=P('Eng (2) Fuel Flow')):
@@ -2101,7 +2204,7 @@ class Eng_3_FuelBurn(DerivedParameterNode):
     '''
 
     name = 'Eng (3) Fuel Burn'
-    units = 'kg'
+    units = ut.KG
 
     def derive(self,
                ff=P('Eng (3) Fuel Flow')):
@@ -2117,7 +2220,7 @@ class Eng_4_FuelBurn(DerivedParameterNode):
     '''
 
     name = 'Eng (4) Fuel Burn'
-    units = 'kg'
+    units = ut.KG
 
     def derive(self,
                ff=P('Eng (4) Fuel Flow')):
@@ -2126,13 +2229,14 @@ class Eng_4_FuelBurn(DerivedParameterNode):
         flow = np.ma.where(flow.mask==True, 0.0, flow)
         self.array = np.ma.array(integrate(flow / 3600.0, ff.frequency))
 
+
 class Eng_FuelBurn(DerivedParameterNode):
     '''
     '''
 
     name = 'Eng (*) Fuel Burn'
-    units = 'kg'
     align = False
+    units = ut.KG
 
     @classmethod
     def can_operate(cls, available):
@@ -2159,8 +2263,8 @@ class Eng_GasTempAvg(DerivedParameterNode):
     '''
 
     name = 'Eng (*) Gas Temp Avg'
-    units = 'C'
     align = False
+    units = ut.CELSIUS
 
     @classmethod
     def can_operate(cls, available):
@@ -2183,8 +2287,8 @@ class Eng_GasTempMax(DerivedParameterNode):
     '''
 
     name = 'Eng (*) Gas Temp Max'
-    units = 'C'
     align = False
+    units = ut.CELSIUS
 
     @classmethod
     def can_operate(cls, available):
@@ -2207,8 +2311,8 @@ class Eng_GasTempMin(DerivedParameterNode):
     '''
 
     name = 'Eng (*) Gas Temp Min'
-    units = 'C'
     align = False
+    units = ut.CELSIUS
 
     @classmethod
     def can_operate(cls, available):
@@ -2239,9 +2343,9 @@ class Eng_N1Avg(DerivedParameterNode):
     '''
 
     name = 'Eng (*) N1 Avg'
-    units = '%'
     align_frequency = 4
     align_offset = 0
+    units = ut.PERCENT
 
     @classmethod
     def can_operate(cls, available):
@@ -2267,9 +2371,9 @@ class Eng_N1Max(DerivedParameterNode):
     '''
 
     name = 'Eng (*) N1 Max'
-    units = '%'
     align_frequency = 4
     align_offset = 0
+    units = ut.PERCENT
 
     @classmethod
     def can_operate(cls, available):
@@ -2295,9 +2399,9 @@ class Eng_N1Min(DerivedParameterNode):
     '''
 
     name = 'Eng (*) N1 Min'
-    units = '%'
     align_frequency = 4
     align_offset = 0
+    units = ut.PERCENT
 
     @classmethod
     def can_operate(cls, available):
@@ -2320,9 +2424,9 @@ class Eng_N1MinFor5Sec(DerivedParameterNode):
     '''
 
     name = 'Eng (*) N1 Min For 5 Sec'
-    units = '%'
     align_frequency = 2
     align_offset = 0
+    units = ut.PERCENT
 
     def derive(self,
                eng_n1_min=P('Eng (*) N1 Min')):
@@ -2344,9 +2448,9 @@ class Eng_N2Avg(DerivedParameterNode):
     '''
 
     name = 'Eng (*) N2 Avg'
-    units = '%'
     align_frequency = 4
     align_offset = 0
+    units = ut.PERCENT
 
     @classmethod
     def can_operate(cls, available):
@@ -2372,9 +2476,9 @@ class Eng_N2Max(DerivedParameterNode):
     '''
 
     name = 'Eng (*) N2 Max'
-    units = '%'
     align_frequency = 4
     align_offset = 0
+    units = ut.PERCENT
 
     @classmethod
     def can_operate(cls, available):
@@ -2400,9 +2504,9 @@ class Eng_N2Min(DerivedParameterNode):
     '''
 
     name = 'Eng (*) N2 Min'
-    units = '%'
     align_frequency = 4
     align_offset = 0
+    units = ut.PERCENT
 
     @classmethod
     def can_operate(cls, available):
@@ -2432,9 +2536,9 @@ class Eng_N3Avg(DerivedParameterNode):
     '''
 
     name = 'Eng (*) N3 Avg'
-    units = '%'
     align_frequency = 4
     align_offset = 0
+    units = ut.PERCENT
 
     @classmethod
     def can_operate(cls, available):
@@ -2460,9 +2564,9 @@ class Eng_N3Max(DerivedParameterNode):
     '''
 
     name = 'Eng (*) N3 Max'
-    units = '%'
     align_frequency = 4
     align_offset = 0
+    units = ut.PERCENT
 
     @classmethod
     def can_operate(cls, available):
@@ -2488,9 +2592,9 @@ class Eng_N3Min(DerivedParameterNode):
     '''
 
     name = 'Eng (*) N3 Min'
-    units = '%'
     align_frequency = 4
     align_offset = 0
+    units = ut.PERCENT
 
     @classmethod
     def can_operate(cls, available):
@@ -2520,9 +2624,9 @@ class Eng_NpAvg(DerivedParameterNode):
     '''
 
     name = 'Eng (*) Np Avg'
-    units = '%'
     align_frequency = 4
     align_offset = 0
+    units = ut.PERCENT
 
     @classmethod
     def can_operate(cls, available):
@@ -2548,9 +2652,9 @@ class Eng_NpMax(DerivedParameterNode):
     '''
 
     name = 'Eng (*) Np Max'
-    units = '%'
     align_frequency = 4
     align_offset = 0
+    units = ut.PERCENT
 
     @classmethod
     def can_operate(cls, available):
@@ -2576,9 +2680,9 @@ class Eng_NpMin(DerivedParameterNode):
     '''
 
     name = 'Eng (*) Np Min'
-    units = '%'
     align_frequency = 4
     align_offset = 0
+    units = ut.PERCENT
 
     @classmethod
     def can_operate(cls, available):
@@ -2604,8 +2708,8 @@ class Eng_OilPressAvg(DerivedParameterNode):
     '''
 
     name = 'Eng (*) Oil Press Avg'
-    units = 'psi'
     align = False
+    units = ut.PSI
 
     @classmethod
     def can_operate(cls, available):
@@ -2628,8 +2732,8 @@ class Eng_OilPressMax(DerivedParameterNode):
     '''
 
     name = 'Eng (*) Oil Press Max'
-    units = 'psi'
     align = False
+    units = ut.PSI
 
     @classmethod
     def can_operate(cls, available):
@@ -2652,8 +2756,8 @@ class Eng_OilPressMin(DerivedParameterNode):
     '''
 
     name = 'Eng (*) Oil Press Min'
-    units = 'psi'
     align = False
+    units = ut.PSI
 
     @classmethod
     def can_operate(cls, available):
@@ -2681,6 +2785,7 @@ class Eng_OilQtyAvg(DerivedParameterNode):
 
     name = 'Eng (*) Oil Qty Avg'
     align = False
+    units = ut.QUART
 
     @classmethod
     def can_operate(cls, available):
@@ -2704,6 +2809,7 @@ class Eng_OilQtyMax(DerivedParameterNode):
 
     name = 'Eng (*) Oil Qty Max'
     align = False
+    units = ut.QUART
 
     @classmethod
     def can_operate(cls, available):
@@ -2727,6 +2833,7 @@ class Eng_OilQtyMin(DerivedParameterNode):
 
     name = 'Eng (*) Oil Qty Min'
     align = False
+    units = ut.QUART
 
     @classmethod
     def can_operate(cls, available):
@@ -2753,8 +2860,8 @@ class Eng_OilTempAvg(DerivedParameterNode):
     '''
 
     name = 'Eng (*) Oil Temp Avg'
-    units = 'C'
     align = False
+    units = ut.CELSIUS
 
     @classmethod
     def can_operate(cls, available):
@@ -2783,8 +2890,8 @@ class Eng_OilTempMax(DerivedParameterNode):
     '''
 
     name = 'Eng (*) Oil Temp Max'
-    units = 'C'
     align = False
+    units = ut.CELSIUS
 
     @classmethod
     def can_operate(cls, available):
@@ -2813,8 +2920,8 @@ class Eng_OilTempMin(DerivedParameterNode):
     '''
 
     name = 'Eng (*) Oil Temp Min'
-    units = 'C'
     align = False
+    units = ut.CELSIUS
 
     @classmethod
     def can_operate(cls, available):
@@ -2847,8 +2954,8 @@ class Eng_TorqueAvg(DerivedParameterNode):
     '''
 
     name = 'Eng (*) Torque Avg'
-    units = 'ft.lb'
     align = False
+    units = ut.FT_LB
 
     @classmethod
     def can_operate(cls, available):
@@ -2871,8 +2978,8 @@ class Eng_TorqueMax(DerivedParameterNode):
     '''
 
     name = 'Eng (*) Torque Max'
-    units = 'ft.lb'
     align = False
+    units = ut.FT_LB
 
     @classmethod
     def can_operate(cls, available):
@@ -2895,8 +3002,8 @@ class Eng_TorqueMin(DerivedParameterNode):
     '''
 
     name = 'Eng (*) Torque Min'
-    units = 'ft.lb'
     align = False
+    units = ut.FT_LB
 
     @classmethod
     def can_operate(cls, available):
@@ -2926,6 +3033,7 @@ class Eng_VibN1Max(DerivedParameterNode):
 
     name = 'Eng (*) Vib N1 Max'
     align = False
+    units = None
 
     @classmethod
     def can_operate(cls, available):
@@ -2959,6 +3067,7 @@ class Eng_VibN2Max(DerivedParameterNode):
 
     name = 'Eng (*) Vib N2 Max'
     align = False
+    units = None
 
     @classmethod
     def can_operate(cls, available):
@@ -2992,6 +3101,7 @@ class Eng_VibN3Max(DerivedParameterNode):
 
     name = 'Eng (*) Vib N3 Max'
     align = False
+    units = None
 
     @classmethod
     def can_operate(cls, available):
@@ -3021,6 +3131,7 @@ class Eng_VibBroadbandMax(DerivedParameterNode):
 
     name = 'Eng (*) Vib Broadband Max'
     align = False
+    units = None
 
     @classmethod
     def can_operate(cls, available):
@@ -3062,6 +3173,7 @@ class Eng_VibAMax(DerivedParameterNode):
 
     name = 'Eng (*) Vib A Max'
     align = False
+    units = None
 
     @classmethod
     def can_operate(cls, available):
@@ -3091,6 +3203,7 @@ class Eng_VibBMax(DerivedParameterNode):
 
     name = 'Eng (*) Vib B Max'
     align = False
+    units = None
 
     @classmethod
     def can_operate(cls, available):
@@ -3120,6 +3233,7 @@ class Eng_VibCMax(DerivedParameterNode):
 
     name = 'Eng (*) Vib C Max'
     align = False
+    units = None
 
     @classmethod
     def can_operate(cls, available):
@@ -3146,8 +3260,9 @@ class FuelQty(DerivedParameterNode):
 
     Sum of fuel in left, right and middle tanks where available.
     '''
-    unit = 'kg'
+
     align = False
+    units = ut.KG
 
     @classmethod
     def can_operate(cls, available):
@@ -3197,7 +3312,7 @@ class FuelQty(DerivedParameterNode):
     ##'''
     ##Merges alternate gross weight measurements. 757-DHK frame applies.
     ##'''
-    ##units = 'kg'
+    ##units = ut.KG
     ##align = False
 
     ##def derive(self,
@@ -3232,7 +3347,8 @@ class GrossWeightSmoothed(DerivedParameterNode):
     We avoid using the recorded fuel weight in this calculation, however it
     is used in the Zero Fuel Weight calculation.
     '''
-    units = 'kgs'
+
+    units = ut.KG
 
     def derive(self, ff=P('Eng (*) Fuel Flow'),
                gw=P('Gross Weight'),
@@ -3278,16 +3394,17 @@ class GrossWeightSmoothed(DerivedParameterNode):
 
 
 class Groundspeed(DerivedParameterNode):
-    """
+    '''
     This caters for cases where some preprocessing is required.
     
     :param frame: The frame attribute, e.g. '737-i'
     :type frame: An attribute
     :returns groundspeed as the mean between two valid sensors.
     :type parameter object.
-    """
-    units = 'kts'
+    '''
+
     align = False
+    units = ut.KT
 
     @classmethod
     def can_operate(cls, available):
@@ -3326,7 +3443,7 @@ class FlapAngle(DerivedParameterNode):
     '''
 
     align = False
-    units = 'deg'
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available, family=A('Family')):
@@ -3474,7 +3591,7 @@ class SlatAngle(DerivedParameterNode):
     '''
 
     align = False
-    units = 'deg'
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available):
@@ -3488,14 +3605,18 @@ class SlatAngle(DerivedParameterNode):
 
 
 class SlopeToLanding(DerivedParameterNode):
-    """
+    '''
     This parameter was developed as part of the Artificical Intelligence
     analysis of approach profiles, 'Identifying Abnormalities in Aircraft
     Flight Data and Ranking their Impact on the Flight' by Dr Edward Smart,
     Institute of Industrial Research, University of Portsmouth.
     http://eprints.port.ac.uk/4141/
-    """
+    '''
+
+    units = ut.FT
+
     def derive(self, alt_aal=P('Altitude AAL'), dist=P('Distance To Landing')):
+
         self.array = alt_aal.array / (dist.array * FEET_PER_NM)
 
 
@@ -3545,7 +3666,7 @@ class GroundspeedAlongTrack(DerivedParameterNode):
 '''
 
 class HeadingContinuous(DerivedParameterNode):
-    """
+    '''
     For all internal computing purposes we use this parameter which does not
     jump as it passes through North. To recover the compass display, modulus
     (val % 360 in Python) returns the value to display to the user.
@@ -3554,9 +3675,10 @@ class HeadingContinuous(DerivedParameterNode):
     signals, in which case we supply both parameters and merge here. A single
     "Heading" parameter is also required to allow initial data validation
     processes to recognise flight phases. (CRJ-100-200 is an example).
-    """
-    units = 'deg'
+    '''
+
     align = False
+    units = ut.DEGREE
     
     @classmethod
     def can_operate(cls, available):
@@ -3574,15 +3696,17 @@ class HeadingContinuous(DerivedParameterNode):
             self.array = repair_mask(straighten_headings(head_mag.array))
 
 
-# TODO: Absorb this derived parameter into the 'Holding' flight phase.
 class HeadingIncreasing(DerivedParameterNode):
-    """
+    '''
     This parameter is computed to allow holding patterns to be identified. As
     the aircraft can enter a hold turning in one direction, then do a
     teardrop and continue with turns in the opposite direction, we are
     interested in the total angular changes, not the sign of these changes.
-    """
-    units = 'deg'
+    '''
+
+    # TODO: Absorb this derived parameter into the 'Holding' flight phase.
+
+    units = ut.DEGREE
     
     def derive(self, head=P('Heading Continuous')):
         rot = np.ma.ediff1d(head.array, to_begin = 0.0)
@@ -3595,18 +3719,20 @@ class HeadingTrueContinuous(DerivedParameterNode):
     jump as it passes through North. To recover the compass display, modulus
     (val % 360 in Python) returns the value to display to the user.
     '''
-    units = 'deg'
+
+    units = ut.DEGREE
     
     def derive(self, hdg=P('Heading True')):
         self.array = repair_mask(straighten_headings(hdg.array))
 
 
 class Heading(DerivedParameterNode):
-    """
+    '''
     Compensates for magnetic variation, which will have been computed
     previously based on the magnetic declanation at the aircraft's location.
-    """
-    units = 'deg'
+    '''
+
+    units = ut.DEGREE
     
     def derive(self, head_true=P('Heading True Continuous'),
                mag_var=P('Magnetic Variation')):
@@ -3614,7 +3740,7 @@ class Heading(DerivedParameterNode):
 
 
 class HeadingTrue(DerivedParameterNode):
-    """
+    '''
     Compensates for magnetic variation, which will have been computed
     previously.
     
@@ -3622,8 +3748,9 @@ class HeadingTrue(DerivedParameterNode):
     taken in preference to that calculated based on geographical latitude and
     longitude in order to account for any compass drift or out of date
     magnetic variation databases on the aircraft.
-    """
-    units = 'deg'
+    '''
+
+    units = ut.DEGREE
     
     @classmethod
     def can_operate(cls, available):
@@ -3643,7 +3770,7 @@ class HeadingTrue(DerivedParameterNode):
 
 
 class ILSFrequency(DerivedParameterNode):
-    """
+    '''
     This code is based upon the normal operation of an Instrument Landing
     System whereby the left and right receivers are tuned to the same runway
     ILS frequency. This allows independent monitoring of the approach by the
@@ -3652,11 +3779,11 @@ class ILSFrequency(DerivedParameterNode):
     If there is a problem with the system, users can inspect the (1) and (2)
     signals separately, although the normal use will show valid ILS data when
     both are tuned to the same frequency.
-    """
+    '''
 
-    name = "ILS Frequency"
-    units='MHz'
+    name = 'ILS Frequency'
     align = False
+    units = ut.MHZ
 
     @classmethod
     def can_operate(cls, available):
@@ -3701,93 +3828,78 @@ class ILSFrequency(DerivedParameterNode):
 
 
 class ILSLocalizer(DerivedParameterNode):
-
-    """
+    '''
     This derived parameter merges the available sources into a single
     consolidated parameter. The more complex form of parameter blending is
     used to allow for many permutations.
-    """
+    '''
 
-    # List the minimum acceptable parameters here
+    name = 'ILS Localizer'
+    align = False
+    units = ut.DOTS
+
     @classmethod
     def can_operate(cls, available):
+
         return any_of(cls.get_dependency_names(), available)
 
-    name = "ILS Localizer"
-    units = 'dots'
-    align = False
-
     def derive(self,
-               source_A=P('ILS (1) Localizer'),
-               source_B=P('ILS (2) Localizer'),
-               source_C=P('ILS (3) Localizer'),
-               
-               source_E=P('ILS (L) Localizer'),
-               source_F=P('ILS (R) Localizer'),
-               source_G=P('ILS (C) Localizer'),
-               
-               source_J=P('ILS (EFIS) Localizer'),
-               ):
-        sources = [source_A, source_B, source_C,
-                   source_E, source_F, source_G,
-                   source_J,
-                   ]
+               src_A=P('ILS (1) Localizer'),
+               src_B=P('ILS (2) Localizer'),
+               src_C=P('ILS (3) Localizer'),
+               src_E=P('ILS (L) Localizer'),
+               src_F=P('ILS (R) Localizer'),
+               src_G=P('ILS (C) Localizer'),
+               src_J=P('ILS (EFIS) Localizer')):
+
+        sources = [src_A, src_B, src_C, src_E, src_F, src_G, src_J]
         self.offset = 0.0
         self.frequency = 2.0
-        self.array = blend_parameters(sources, 
-                                      offset=self.offset, 
-                                      frequency=self.frequency,
-                                      )
+        self.array = blend_parameters(sources, offset=self.offset, 
+                                      frequency=self.frequency)
 
 
 class ILSGlideslope(DerivedParameterNode):
-
-    """
+    '''
     This derived parameter merges the available sources into a single
     consolidated parameter. The more complex form of parameter blending is
     used to allow for many permutations.
-    """
+    '''
 
-    name = "ILS Glideslope"
-    units = 'dots'
+    name = 'ILS Glideslope'
     align = False
+    units = ut.DOTS
 
     @classmethod
     def can_operate(cls, available):
+
         return any_of(cls.get_dependency_names(), available)
     
     def derive(self,
-               source_A=P('ILS (1) Glideslope'),
-               source_B=P('ILS (2) Glideslope'),
-               source_C=P('ILS (3) Glideslope'),
-               
-               source_E=P('ILS (L) Glideslope'),
-               source_F=P('ILS (R) Glideslope'),
-               source_G=P('ILS (C) Glideslope'),
-               
-               source_J=P('ILS (EFIS) Glideslope'),
-               ):
-        sources = [source_A, source_B, source_C,
-                   source_E, source_F, source_G,
-                   source_J,
-                   ]
+               src_A=P('ILS (1) Glideslope'),
+               src_B=P('ILS (2) Glideslope'),
+               src_C=P('ILS (3) Glideslope'),
+               src_E=P('ILS (L) Glideslope'),
+               src_F=P('ILS (R) Glideslope'),
+               src_G=P('ILS (C) Glideslope'),
+               src_J=P('ILS (EFIS) Glideslope')):
+
+        sources = [src_A, src_B, src_C, src_E, src_F, src_G, src_J]
         self.offset = 0.0
         self.frequency = 2.0
-        self.array = blend_parameters(sources, 
-                                      offset=self.offset, 
-                                      frequency=self.frequency,
-                                      )
+        self.array = blend_parameters(sources, offset=self.offset, 
+                                      frequency=self.frequency)
 
 
 class AimingPointRange(DerivedParameterNode):
-    """
+    '''
     Aiming Point Range is derived from the Approach Range. The units are
     converted to nautical miles ready for plotting and the datum is offset to
     either the ILS Glideslope Antenna position where an ILS is installed or
     the nominal threshold position where there is no ILS installation.
-    """
+    '''
 
-    units = 'nm'
+    units = ut.NM
 
     def derive(self, app_rng=P('Approach Range'),
                approaches=App('Approach Information'),
@@ -4187,6 +4299,8 @@ class LatitudeSmoothed(DerivedParameterNode, CoordinatesSmoothed):
     sample rate.
     """
 
+    units = ut.DEGREE
+
     # List the minimum acceptable parameters here
     @classmethod
     def can_operate(cls, available):
@@ -4203,8 +4317,6 @@ class LatitudeSmoothed(DerivedParameterNode, CoordinatesSmoothed):
             'Mobile'), available) \
                and any_of(('Heading True Continuous',
                            'Heading Continuous'), available)
-
-    units = 'deg'
 
     def derive(self, lat=P('Latitude Prepared'),
                lon=P('Longitude Prepared'),
@@ -4239,7 +4351,7 @@ class LongitudeSmoothed(DerivedParameterNode, CoordinatesSmoothed):
     See Latitude Smoothed for notes.
     """
 
-    units = 'deg'
+    units = ut.DEGREE
     ##align_frequency = 1.0
     ##align_offset = 0.0
 
@@ -4293,7 +4405,7 @@ class Mach(DerivedParameterNode):
     data is recorded.
     '''
 
-    units = 'Mach'
+    units = ut.MACH
 
     def derive(self, cas = P('Airspeed'), alt = P('Altitude STD')):
         dp = cas2dp(cas.array)
@@ -4302,17 +4414,16 @@ class Mach(DerivedParameterNode):
 
 
 class MagneticVariation(DerivedParameterNode):
-    """
+    '''
     This computes magnetic declination values from latitude, longitude,
     altitude and date. Uses Latitude/Longitude or
     Latitude (Coarse)/Longitude (Coarse) parameters instead of Prepared or
     Smoothed to avoid cyclical dependencies.
-    """
+    '''
 
-    units = 'deg'
-    
-    align_frequency = 1/4.0
+    align_frequency = 1 / 4.0
     align_offset = 0.0
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available):
@@ -4365,7 +4476,7 @@ class MagneticVariation(DerivedParameterNode):
 
 
 class MagneticVariationFromRunway(DerivedParameterNode):
-    """
+    '''
     This computes local magnetic variation values on the runways and
     interpolates between one airport and the next. The values at each airport
     are kept constant.
@@ -4381,12 +4492,13 @@ class MagneticVariationFromRunway(DerivedParameterNode):
     upon magnetic variation from out of date databases. Also, by using the
     aircraft compass values to work out the variation, we inherently
     accommodate compass drift for that day.
-    
-    TODO: Instead of linear interpolation, perhaps base it on distance flown.
-    """
-    units = 'deg'
+    '''
+
+    # TODO: Instead of linear interpolation, perhaps base it on distance flown.
+
     align_frequency = 1/4.0
     align_offset = 0.0
+    units = ut.DEGREE
 
     def derive(self, duration=A('HDF Duration'),
                head_toff = KPV('Heading During Takeoff'),
@@ -4453,7 +4565,7 @@ class VerticalSpeedInertial(DerivedParameterNode):
     See also http://www.flightdatacommunity.com/inertial-smoothing.
     '''
 
-    units = 'fpm'
+    units = ut.FPM
 
     def derive(self,
                az = P('Acceleration Vertical'),
@@ -4590,7 +4702,7 @@ class VerticalSpeed(DerivedParameterNode):
     the future altitudes!).
     '''
 
-    units = 'fpm'
+    units = ut.FPM
 
     @classmethod
     def can_operate(cls, available):
@@ -4615,7 +4727,7 @@ class VerticalSpeedForFlightPhases(DerivedParameterNode):
     flight phases. DO NOT use this for event detection.
     """
 
-    units = 'fpm'
+    units = ut.FPM
 
     def derive(self, alt_std = P('Altitude STD Smoothed')):
         # This uses a scaled hysteresis parameter. See settings for more detail.
@@ -4632,7 +4744,7 @@ class Relief(DerivedParameterNode):
     operational range, so will be masked from view.
     """
 
-    units = 'ft'
+    units = ut.FT
 
     def derive(self, alt_aal = P('Altitude AAL'),
                alt_rad = P('Altitude Radio')):
@@ -4681,7 +4793,7 @@ class LongitudePrepared(DerivedParameterNode, CoordinatesStraighten):
     See Latitude Smoothed for notes.
     """
 
-    units = 'deg'
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available):
@@ -4722,12 +4834,13 @@ class LongitudePrepared(DerivedParameterNode, CoordinatesStraighten):
                 tas.array, hdg.array, tas.frequency)
             self.array = lon_array
 
+
 class LatitudePrepared(DerivedParameterNode, CoordinatesStraighten):
     """
     See Latitude Smoothed for notes.
     """
 
-    units = 'deg'
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available):
@@ -4766,15 +4879,15 @@ class LatitudePrepared(DerivedParameterNode, CoordinatesStraighten):
 
 
 class RateOfTurn(DerivedParameterNode):
-    """
+    '''
     Simple rate of change of heading.
-    """
+    '''
 
-    units = 'deg/sec'
+    units = ut.DEGREE_S
 
     def derive(self, head=P('Heading Continuous')):
-        # add a little hysteresis to the rate of change to smooth out minor
-        # changes
+
+        # add a little hysteresis to rate of change to smooth out minor changes
         roc = rate_of_change(head, 4)
         self.array = hysteresis(roc, 0.1)
         # trouble is that we're loosing the nice 0 values, so force include!
@@ -4782,42 +4895,48 @@ class RateOfTurn(DerivedParameterNode):
 
 
 class Pitch(DerivedParameterNode):
-    """
+    '''
     Combination of pitch signals from two sources where required.
-    """
-    units = 'deg'
+    '''
+
     align = False
+    units = ut.DEGREE
+
     def derive(self, p1=P('Pitch (1)'), p2=P('Pitch (2)')):
+
         self.array, self.frequency, self.offset = \
             blend_two_parameters(p1, p2)
 
 
 class PitchRate(DerivedParameterNode):
-    """
+    '''
     Computes rate of change of pitch attitude over a two second period.
 
     Comment: A two second period is used to remove excessive short period
     transients which the pilot could not realistically be asked to control.
-    It also means that low sample rate data (some aircraft have 
+    It also means that low sample rate data (some aircraft have
     pitch sampled at 1Hz) will still give comparable results. The drawback is
     that very brief transients, for example due to rough handling or
     turbulence, will not be detected.
-    
+
     The rate_of_change algorithm was extended to allow regression
     calculation. This provides a best fit slope over the two second period,
     and so reduces the sensitivity to single samples, but tends to increase
     the peak values. As this also makes the resulting computation suffer more
     from masked values, and increases the computing load, it was decided not
     to implement this for pitch and roll rates.
-    
+
     http://www.flightdatacommunity.com/calculating-pitch-rate/
-    """
+    '''
 
-    units = 'deg/sec'
+    units = ut.DEGREE_S
 
-    def derive(self, pitch=P('Pitch'), frame=A('Frame')):
+    def derive(self,
+               pitch=P('Pitch'),
+               frame=A('Frame')):
+
         frame_name = frame.value if frame else ''
-        
+
         if frame_name in ['L382-Hercules']:
             self.array = rate_of_change(pitch, 8.0, method='regression')
         else:
@@ -4826,26 +4945,35 @@ class PitchRate(DerivedParameterNode):
 
 
 class Roll(DerivedParameterNode):
-    """
+    '''
     Combination of roll signals from two sources where required.
-    """
+    '''
+
+    align = False
+    units = ut.DEGREE
+
     @classmethod
     def can_operate(cls, available):
-        return 'Heading Continuous' in available and \
-               'Altitude AAL' in available
-    
-    units = 'deg'
-    align = False
-    
-    def derive(self, r1=P('Roll (1)'), r2=P('Roll (2)'), 
-               hdg=P('Heading Continuous'), alt_aal=P('Altitude AAL'), frame=A('Frame')):
+
+        return all_of((
+            'Altitude AAL',
+            'Heading Continuous',
+        ), available)
+
+    def derive(self,
+               r1=P('Roll (1)'),
+               r2=P('Roll (2)'),
+               hdg=P('Heading Continuous'),
+               alt_aal=P('Altitude AAL'),
+               frame=A('Frame')):
+
         frame_name = frame.value if frame else ''
-        
+
         if r1 and r2:
             # Merge data from two sources.
             self.array, self.frequency, self.offset = \
                 blend_two_parameters(r1, r2)
-        
+
         elif frame_name in ['L382-Hercules', '1900D-SS542A']:
             # Added Beechcraft as had inoperable Roll.
             # Many Hercules aircraft do not have roll recorded. This is a
@@ -4854,14 +4982,15 @@ class Roll(DerivedParameterNode):
             hdg_in_air = repair_mask(
                 np.ma.where(align(alt_aal, hdg)==0.0, np.ma.masked, hdg.array),
                 repair_duration=None, extrapolate=True)
-            self.array = 8.0 * rate_of_change_array(hdg_in_air, 
-                                                    hdg.hz, 
-                                                    width=30.0, 
+            self.array = 8.0 * rate_of_change_array(hdg_in_air,
+                                                    hdg.hz,
+                                                    width=30.0,
                                                     method='regression')
             #roll = np.ma.fix_invalid(roll, mask=False, copy=False, fill_value=0.0)
             #self.array = repair_mask(roll, repair_duration=None)
             self.frequency = hdg.frequency
             self.offset = hdg.offset
+
             '''
             import matplotlib.pyplot as plt
             plt.plot(align(alt_aal, hdg),'r')
@@ -4874,31 +5003,33 @@ class Roll(DerivedParameterNode):
 
 
 class RollRate(DerivedParameterNode):
-    # TODO: Tests.
-
     '''
-    The computational principles here are similar to Pitch Rate; see
-    commentary for that parameter.
+    The computational principles here are similar to Pitch Rate; see commentary
+    for that parameter.
     '''
     
-    units = 'deg/sec'
+    units = ut.DEGREE_S
 
     def derive(self, roll=P('Roll')):
+
         self.array = rate_of_change(roll, 2.0)
 
 
 class RudderPedal(DerivedParameterNode):
     '''
-    See Elevator Left for description
     '''
+
+    units = ut.DEGREE  # FIXME: Or should this be ut.PERCENT?
+
     @classmethod
     def can_operate(cls, available):
+
         return any_of((
             'Rudder Pedal (L)',
             'Rudder Pedal (R)',
             'Rudder Pedal Potentiometer', 
             'Rudder Pedal Synchro',
-            ), available)
+        ), available)
     
     def derive(self, rudder_pedal_l=P('Rudder Pedal (L)'),
                rudder_pedal_r=P('Rudder Pedal (R)'),
@@ -4924,6 +5055,7 @@ class RudderPedal(DerivedParameterNode):
                 self.offset = pot.offset
                 self.array = pot.array
         
+
 class RudderPedalForce(DerivedParameterNode):
     '''
     Introduced for the CRJ fleet, where left and right pedal forces for each
@@ -4932,6 +5064,9 @@ class RudderPedalForce(DerivedParameterNode):
     both. If you just rest your feet on the footrests, the resultant should
     be zero.
     '''
+
+    units = ut.LBF  # FIXME: Or should this be ut.LB?
+
     def derive(self,
                fcl=P('Rudder Pedal Force (Capt) (L)'),
                fcr=P('Rudder Pedal Force (Capt) (R)'),
@@ -4944,22 +5079,25 @@ class RudderPedalForce(DerivedParameterNode):
 
 
 class ThrottleLevers(DerivedParameterNode):
-    """
+    '''
     A synthetic throttle lever angle, based on the average of the two. Allows
     for simple identification of changes in power etc.
-    """
+    '''
 
     align = False
-    units = 'deg'
-    
+    units = ut.DEGREE
+
     @classmethod
     def can_operate(self, available):
-        return ('Eng (1) Throttle Lever' in available or
-                'Eng (2) Throttle Lever' in available)
+        return any_of((
+            'Eng (1) Throttle Lever',
+            'Eng (2) Throttle Lever',
+        ), available)
 
     def derive(self,
                tla1=P('Eng (1) Throttle Lever'),
                tla2=P('Eng (2) Throttle Lever')):
+
         self.array, self.frequency, self.offset = \
             blend_two_parameters(tla1, tla2)
 
@@ -4984,22 +5122,24 @@ class ThrustAsymmetry(DerivedParameterNode):
     used to provide a similar single asymmetry value.
     '''
 
-    units = '%'
+    units = ut.PERCENT
 
     def derive(self, max_n1=P('Eng (*) N1 Max'), min_n1=P('Eng (*) N1 Min')):
+
         window = 5 * self.frequency # 5 second window
         self.array = moving_average(max_n1.array - min_n1.array, window=window)
 
 
 class TurbulenceRMSG(DerivedParameterNode):
-    """
+    '''
     Simple RMS g measurement of turbulence over a 5-second period.
-    """
+    '''
 
     name = 'Turbulence RMS g'
-    units = 'RMS g'
+    units = ut.RMS_G
 
     def derive(self, acc=P('Acceleration Vertical')):
+
         width=int(acc.frequency*5+1)
         mean = moving_average(acc.array, window=width)
         acc_sq = (acc.array)**2.0
@@ -5009,38 +5149,51 @@ class TurbulenceRMSG(DerivedParameterNode):
         core = (n__sum_sq - mean**2.0)*width/(width-1.0)
         self.array = np.ma.sqrt(core)
 
+
 #------------------------------------------------------------------
 # WIND RELATED PARAMETERS
 #------------------------------------------------------------------
+
+
 class WindDirectionContinuous(DerivedParameterNode):
-    """
+    '''
     Like the aircraft heading, this does not jump as it passes through North.
-    """
-    units = 'deg'
+    '''
+
+    units = ut.DEGREE
+
     def derive(self, wind_head=P('Wind Direction')):
+
         self.array = straighten_headings(wind_head.array)
+
 
 class WindDirectionTrueContinuous(DerivedParameterNode):
-    """
+    '''
     Like the aircraft heading, this does not jump as it passes through North.
-    """
-    units = 'deg'
+    '''
+
+    units = ut.DEGREE
+
     def derive(self, wind_head=P('Wind Direction True')):
+
         self.array = straighten_headings(wind_head.array)
 
-class Headwind(DerivedParameterNode):
-    """
-    This is the headwind, negative values are tailwind.
-    """
 
-    units = 'kts'
+class Headwind(DerivedParameterNode):
+    '''
+    This is the headwind, negative values are tailwind.
+    '''
+
+    units = ut.KT
 
     @classmethod
     def can_operate(cls, available):
-        if all_of(('Wind Speed',
-                   'Wind Direction Continuous',
-                   'Heading True Continuous'), available):
-            return True
+
+        return all_of((
+            'Wind Speed',
+            'Wind Direction Continuous',
+            'Heading True Continuous',
+        ), available)
 
     def derive(self, windspeed=P('Wind Speed'),
                wind_dir=P('Wind Direction Continuous'),
@@ -5067,50 +5220,54 @@ class Headwind(DerivedParameterNode):
 
 
 class Tailwind(DerivedParameterNode):
-    """
+    '''
     This is the tailwind component.
-    """
+    '''
 
-    units = 'kts'
+    units = ut.KT
 
     def derive(self, hwd=P('Headwind')):
+
         self.array = -hwd.array
 
 
 class SAT(DerivedParameterNode):
-    """
+    '''
     Computes Static Air Temperature (temperature of the outside air) from the
     Total Air Temperature, allowing for compressibility effects, or if this
     is not available, the standard atmosphere and lapse rate.
-    
-    Q: Support transforming SAT from OAT (as they are equal).
-    
-    TODO: Review naming convention - rename to "Static Air Temperature"?
-    """
-    @classmethod
-    def can_operate(cls, available):
-        return True # As Altitude STD must always be available
+    '''
+
+    # Q: Support transforming SAT from OAT (as they are equal).
+    # TODO: Review naming convention - rename to "Static Air Temperature"?
 
     name = 'SAT'
-    units = 'C'
+    units = ut.CELSIUS
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return 'Altitude STD' in available
 
     def derive(self, tat=P('TAT'), mach=P('Mach'), alt=P('Altitude STD')):
+
         if tat and mach:
             self.array = machtat2sat(mach.array, tat.array)
         else:
             self.array = alt2sat(alt.array)
-    
-    
+
+
 class TAT(DerivedParameterNode):
-    """
+    '''
     Blends data from two air temperature sources.
-    
-    TODO: Support generation from SAT, Mach and Altitude STD    
-    TODO: Review naming convention - rename to "Total Air Temperature"?
-    """
-    name = "TAT"
-    units = 'C'
+    '''
+
+    # TODO: Support generation from SAT, Mach and Altitude STD    
+    # TODO: Review naming convention - rename to "Total Air Temperature"?
+
+    name = 'TAT'
     align = False
+    units = ut.CELSIUS
 
     def derive(self,
                source_1 = P('TAT (1)'),
@@ -5130,7 +5287,7 @@ class V2(DerivedParameterNode):
     value from other available parameters.
     '''
 
-    units = 'kts'
+    units = ut.KT
 
     @classmethod
     def can_operate(cls, available):
@@ -5166,7 +5323,7 @@ class V2Lookup(DerivedParameterNode):
     when flap is recorded at a lower frequency than airspeed.
     '''
 
-    units = 'kts'
+    units = ut.KT
 
     @classmethod
     def can_operate(cls, available,
@@ -5244,10 +5401,12 @@ class V2Lookup(DerivedParameterNode):
 
 
 class WindAcrossLandingRunway(DerivedParameterNode):
-    """
-    This is the windspeed across the final landing runway, positive wind from left to right.
-    """
-    units = 'kts'
+    '''
+    This is the windspeed across the final landing runway, positive wind from
+    left to right.
+    '''
+
+    units = ut.KT
     
     @classmethod
     def can_operate(cls, available):
@@ -5293,8 +5452,9 @@ class Aileron(DerivedParameterNode):
     
     Note: This is NOT a multistate parameter - see Flaperon.
     '''
+
     align = True
-    units = 'deg'
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available):
@@ -5313,9 +5473,12 @@ class Aileron(DerivedParameterNode):
 
             
 class AileronLeft(DerivedParameterNode):
-    # See ElevatorLeft for explanation
+    '''
+    '''
+
     name = 'Aileron (L)'
-    
+    units = ut.DEGREE
+
     @classmethod
     def can_operate(cls, available):
         return any_of(('Aileron (L) Potentiometer', 
@@ -5343,8 +5506,11 @@ class AileronLeft(DerivedParameterNode):
 
 
 class AileronRight(DerivedParameterNode):
-    # See ElevatorLeft for explanation
+    '''
+    '''
+
     name = 'Aileron (R)'
+    units = ut.DEGREE
     
     @classmethod
     def can_operate(cls, available):
@@ -5373,17 +5539,20 @@ class AileronRight(DerivedParameterNode):
             self.array = aro.array        
 
 
-class AileronTrim(DerivedParameterNode): # RollTrim
+class AileronTrim(DerivedParameterNode):  # FIXME: RollTrim
     '''
     '''
+
     # TODO: TEST
+
+    name = 'Aileron Trim'  # FIXME: Roll Trim
     align = False
-    name = 'Aileron Trim' # Roll Trim
-    units = 'deg'
+    units = ut.DEGREE
 
     def derive(self,
                atl=P('Aileron Trim (L)'),
                atr=P('Aileron Trim (R)')):
+
         self.array, self.frequency, self.offset = blend_two_parameters(atl, atr)
 
 
@@ -5394,7 +5563,7 @@ class Elevator(DerivedParameterNode):
     '''
 
     align = False
-    units = 'deg'
+    units = ut.DEGREE
     
     @classmethod
     def can_operate(cls,available):
@@ -5419,7 +5588,9 @@ class ElevatorLeft(DerivedParameterNode):
     whole parameters invalid, or if both are valid, we want to pick the best
     option.
     '''
+
     name = 'Elevator (L)'
+    units = ut.DEGREE
     
     @classmethod
     def can_operate(cls, available):
@@ -5442,8 +5613,12 @@ class ElevatorLeft(DerivedParameterNode):
 
 
 class ElevatorRight(DerivedParameterNode):
-    # See ElevatorLeft for explanation
+    '''
+    '''
+
     name = 'Elevator (R)'
+    units = ut.DEGREE
+
     @classmethod
     def can_operate(cls, available):
         return any_of(('Elevator (R) Potentiometer', 
@@ -5473,8 +5648,8 @@ class Speedbrake(DerivedParameterNode):
     hence the frame specific sections in this class.
     '''
 
-    units = 'deg'
     align = False
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available, family=A('Family')):
@@ -5545,8 +5720,7 @@ class Speedbrake(DerivedParameterNode):
                spoiler_RO=P('Spoiler (R) Outboard'),
                family=A('Family'),
                ):
-        '''
-        '''
+
         family_name = family.value
 
         if family_name == 'B737-Classic':
@@ -5574,6 +5748,11 @@ class Speedbrake(DerivedParameterNode):
 
 
 class SpeedbrakeHandle(DerivedParameterNode):
+    '''
+    '''
+
+    units = ut.DEGREE
+
     @classmethod
     def can_operate(cls, available):
         return any_of((
@@ -5583,9 +5762,9 @@ class SpeedbrakeHandle(DerivedParameterNode):
         ), available)
 
     def derive(self,
-               sbh_l=M('Speedbrake Handle (L)'),
-               sbh_r=M('Speedbrake Handle (R)'),
-               sbh_c=M('Speedbrake Handle (C)')):
+               sbh_l=P('Speedbrake Handle (L)'),
+               sbh_r=P('Speedbrake Handle (R)'),
+               sbh_c=P('Speedbrake Handle (C)')):
 
         available = [par for par in [sbh_l, sbh_r, sbh_c] if par]
         if len(available) > 1:
@@ -5596,7 +5775,7 @@ class SpeedbrakeHandle(DerivedParameterNode):
 
 
 class ApproachRange(DerivedParameterNode):
-    """
+    '''
     This is the range to the touchdown point for both ILS and visual
     approaches including go-arounds. The reference point is the ILS Localizer
     antenna where the runway is so equipped, or the end of the runway where
@@ -5605,9 +5784,9 @@ class ApproachRange(DerivedParameterNode):
     The array is masked where no data has been computed, and provides
     measurements in metres from the reference point where the aircraft is on
     an approach.
-    """
+    '''
 
-    units = 'm'
+    units = ut.METER
 
     @classmethod
     def can_operate(cls, available):
@@ -5763,28 +5942,29 @@ class ApproachRange(DerivedParameterNode):
 
         self.array = app_range
 
+
 ################################################################################
 
 
 class VOR1Frequency(DerivedParameterNode):
-    """
+    '''
     Extraction of VOR tuned frequencies from receiver (1).
-    """
+    '''
 
-    name = "VOR (1) Frequency"
-    units = 'MHz'
+    name = 'VOR (1) Frequency'
+    units = ut.MHZ
 
     def derive(self, f=P('ILS-VOR (1) Frequency')):
         self.array = filter_vor_ils_frequencies(f.array, 'VOR')
 
 
 class VOR2Frequency(DerivedParameterNode):
-    """
+    '''
     Extraction of VOR tuned frequencies from receiver (1).
-    """
+    '''
 
-    name = "VOR (2) Frequency"
-    units = 'MHz'
+    name = 'VOR (2) Frequency'
+    units = ut.MHZ
 
     def derive(self, f=P('ILS-VOR (2) Frequency')):
         self.array = filter_vor_ils_frequencies(f.array, 'VOR')
@@ -5795,7 +5975,7 @@ class WindSpeed(DerivedParameterNode):
     '''
 
     align = False
-    units = 'kts'
+    units = ut.KT
 
     def derive(self, wind_1=P('Wind Speed (1)'), wind_2=P('Wind Speed (2)')):
         self.array, self.frequency, self.offset = \
@@ -5803,11 +5983,12 @@ class WindSpeed(DerivedParameterNode):
 
 
 class WindDirectionTrue(DerivedParameterNode):
-    """
+    '''
     Compensates for magnetic variation, which will have been computed
     previously.
-    """
-    units = 'deg'
+    '''
+
+    units = ut.DEGREE
     
     @classmethod
     def can_operate(cls, available):
@@ -5833,7 +6014,7 @@ class WindDirection(DerivedParameterNode):
     '''
     
     align = False
-    units = 'deg'
+    units = ut.DEGREE
     
     @classmethod
     def can_operate(cls, available):
@@ -5860,8 +6041,10 @@ class WheelSpeedLeft(DerivedParameterNode):
     '''
     Merge the various recorded wheel speed signals from the left hand bogie.
     '''
+
     name = 'Wheel Speed (L)'
     align = False
+    units = ut.METER_S
 
     @classmethod
     def can_operate(cls, available):
@@ -5879,8 +6062,10 @@ class WheelSpeedRight(DerivedParameterNode):
     '''
     Merge the various recorded wheel speed signals from the right hand bogie.
     '''
+
     name = 'Wheel Speed (R)'
     align = False
+    units = ut.METER_S
     
     @classmethod
     def can_operate(cls, available):
@@ -5900,7 +6085,9 @@ class WheelSpeed(DerivedParameterNode):
     
     Q: Should wheel speed Centre (C) be merged too?
     '''
+
     align = False
+    units = ut.METER_S
     
     def derive(self, ws_l=P('Wheel Speed (L)'), ws_r=P('Wheel Speed (R)')):
         self.array, self.frequency, self.offset = \
@@ -5912,7 +6099,8 @@ class TrackContinuous(DerivedParameterNode):
     Magnetic Track Heading Continuous of the Aircraft by adding Drift from track
     to the aircraft Heading.
     '''
-    units = 'deg'
+
+    units = ut.DEGREE
     
     def derive(self, heading=P('Heading Continuous'), drift=P('Drift')):
         #Note: drift is to the right of heading, so: Track = Heading + Drift
@@ -5926,7 +6114,8 @@ class Track(DerivedParameterNode):
 
     Range 0 to 360
     '''
-    units = 'deg'
+
+    units = ut.DEGREE
 
     def derive(self, track=P('Track Continuous')):
         self.array = track.array % 360
@@ -5937,7 +6126,8 @@ class TrackTrueContinuous(DerivedParameterNode):
     True Track Heading Continuous of the Aircraft by adding Drift from track to
     the aircraft Heading.
     '''
-    units = 'deg'
+
+    units = ut.DEGREE
     
     def derive(self, heading=P('Heading True Continuous'), drift=P('Drift')):
         #Note: drift is to the right of heading, so: Track = Heading + Drift
@@ -5951,7 +6141,8 @@ class TrackTrue(DerivedParameterNode):
 
     Range 0 to 360
     '''
-    units = 'deg'
+
+    units = ut.DEGREE
 
     def derive(self, track_true=P('Track True Continuous')):
         self.array = track_true.array % 360
@@ -5967,9 +6158,11 @@ class TrackDeviationFromRunway(DerivedParameterNode):
     line would be the same whether the calculation is based on Magnetic or
     True measurements.
     '''
-    # forse offset for approach slice start consistency
+
+    # force offset for approach slice start consistency
     align_frequency = 1
     align_offset = 0
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available):
@@ -6031,6 +6224,9 @@ class ElevatorActuatorMismatch(DerivedParameterNode):
     should never be large, and from which we may be able to predict actuator
     malfunctions.
     '''
+
+    units = ut.DEGREE
+
     def derive(self, elevator=P('Elevator'), 
                ap=M('AP Engaged'), 
                fcc=M('FCC Local Limited Master'),
@@ -6058,8 +6254,9 @@ class VMOLookup(DerivedParameterNode):
     '''
     Maximum operating limit speed.
     '''
+
     name = 'VMO Lookup'
-    units = 'kts'
+    units = ut.KT
 
     @classmethod
     def can_operate(cls, available, model=A('Model'), series=A('Series'), family=A('Family')):
@@ -6087,8 +6284,9 @@ class MMOLookup(DerivedParameterNode):
     '''
     Maximum operating limit Mach.
     '''
+
     name = 'MMO Lookup'
-    units = 'Mach'
+    units = ut.MACH
 
     @classmethod
     def can_operate(cls, available, model=A('Model'), series=A('Series'), family=A('Family')):
