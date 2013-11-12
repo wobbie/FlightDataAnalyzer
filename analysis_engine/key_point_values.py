@@ -10193,7 +10193,7 @@ class WindDirectionAtAltitudeDuringDescent(KeyPointValueNode):
 
     NAME_FORMAT = 'Wind Direction At %(altitude)d Ft During Descent'
     NAME_VALUES = {'altitude': [2000, 1500, 1000, 500, 100, 50]}
-    units = ut.KT
+    units = ut.DEGREE
 
     def derive(self,
                alt_aal=P('Altitude AAL For Flight Phases'),
