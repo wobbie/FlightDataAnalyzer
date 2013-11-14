@@ -1200,6 +1200,27 @@ class KeyVHFFO(MultistateDerivedParameterNode):
         ).any(axis=0)
 
 
+
+class MasterCaution(MultistateDerivedParameterNode):
+    '''
+    Combine Master Caution for captain and first officer.
+    '''
+    values_mapping = {0: '-', 1: 'Warning'}
+
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self, 
+               capt=M('Master Caution (Capt)'),
+               fo=M('Master Caution (FO)')):
+
+        self.array = vstack_params_where_state(
+            (capt, 'Warning'),
+            (fo, 'Warning'),
+        ).any(axis=0)
+        
+        
 class MasterWarning(MultistateDerivedParameterNode):
     '''
     Combine master warning for captain and first officer.
