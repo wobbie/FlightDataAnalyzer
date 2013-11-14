@@ -223,6 +223,7 @@ class Configuration(MultistateDerivedParameterNode):
     Note: Values that do not map directly to a required state are masked
     '''
     values_mapping = at.constants.AVAILABLE_CONF_STATES
+    align_frequency = 2
 
     @classmethod
     def can_operate(cls, available, manufacturer=A('Manufacturer'),
@@ -768,6 +769,7 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
 
     name = 'Flap Lever (Synthetic)'
     units = 'deg'
+    align_frequency = 2  # force higher than most Flap frequencies
 
     @classmethod
     def can_operate(cls, available,
