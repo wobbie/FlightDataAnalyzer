@@ -7568,6 +7568,17 @@ class PitchAt35FtDuringClimb(KeyPointValueNode):
             self.create_kpv(climb.start_edge, value)
 
 
+class PitchAbove1000ftMin(KeyPointValueNode):
+    '''
+    Minimum Pitch above 1000ft AAL in flight.
+    '''
+    units = 'deg'
+
+    def derive(self, pitch=P('Pitch'), alt=P('Altitude AAL')):
+        self.create_kpvs_within_slices(pitch.array, 
+                                       alt.slices_above(1000), min_value)
+        
+
 class PitchTakeoffMax(KeyPointValueNode):
     '''
     '''

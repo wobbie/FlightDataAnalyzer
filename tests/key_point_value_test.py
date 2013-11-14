@@ -347,6 +347,7 @@ from analysis_engine.key_point_values import (
     Pitch50FtToTouchdownMax,
     Pitch7FtToTouchdownMin,
     Pitch7FtToTouchdownMax,
+    PitchAbove1000ftMin,
     PitchAfterFlapRetractionMax,
     PitchAt35FtDuringClimb,
     PitchAtLiftoff,
@@ -6936,6 +6937,24 @@ class TestPitchTakeoffMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
+
+
+
+class TestPitchAbove1000ftMin(unittest.TestCase):
+
+    def can_operate(self):
+        opts = PitchAbove1000ftMin.get_operational_combinations()
+        self.assertEqual(opts, [('Pitch', 'Altitude AAL')])
+
+    def test_derive(self):
+        pitch = P('Pitch', array=[10, 10, 10, 12, 13, 8, 14, 6])
+        aal = P('Altitude AAL', 
+                array=[100, 200, 700, 1010, 4000, 1200, 1100, 900, 800])
+        node = PitchAbove1000ftMin()
+        node.derive(pitch, aal)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].value, 8)
+
 
 
 class TestPitch35To400FtMax(unittest.TestCase):
