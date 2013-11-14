@@ -5,7 +5,7 @@ import logging
 
 import numpy as np
 
-from flightdatautilities import aircrafttables as at
+from flightdatautilities import aircrafttables as at, units as ut
 
 from hdfaccess.parameter import MappedArray
 
@@ -321,6 +321,19 @@ class Daylight(MultistateDerivedParameterNode):
 
 class DualInputWarning(MultistateDerivedParameterNode):
     '''
+    Determines whether input by both of the pilots has occurred.
+
+    This parameter uses the 'Pilot Flying' derived multi-state parameter to
+    determine who is considered to be the pilot flying the aircraft and then
+    inspects whether the other pilot has made any significant sustained input.
+
+    For Airbus aircraft, this requires us to check the angle of the sidestick.
+
+    Reference was made to the following documentation to assist with the
+    development of this algorithm:
+
+    - A320 Flight Profile Specification
+    - A321 Flight Profile Specification
     '''
     values_mapping = {0: '-', 1: 'Dual'}
 
@@ -600,7 +613,7 @@ class Flap(MultistateDerivedParameterNode):
     Steps raw Flap angle from surface into detents.
     '''
 
-    units = 'deg'
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available, frame=A('Frame'),
@@ -633,7 +646,7 @@ class Flap(MultistateDerivedParameterNode):
         if frame_name == 'L382-Hercules':
             self.values_mapping = {0: '0', 50: '50', 100: '100'}
 
-            self.units = '%' # Hercules flaps are unique in this regard !
+            self.units = ut.PERCENT  # Hercules flaps are unique in this regard!
 
             # Flap is not recorded, so invent one of the correct length.
             flap_herc = np_ma_zeros_like(alt_aal.array)
@@ -663,7 +676,7 @@ class FlapExcludingTransition(MultistateDerivedParameterNode):
     apply. This minimises the chance of needing a flap overspeed inspection.
     '''
 
-    units = 'deg'
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available,
@@ -699,7 +712,7 @@ class FlapIncludingTransition(MultistateDerivedParameterNode):
     requirements.
     '''
 
-    units = 'deg'
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available,
@@ -736,7 +749,7 @@ class FlapLever(MultistateDerivedParameterNode):
     if Flap Lever is not available.
     '''
 
-    units = 'deg'
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available,
@@ -768,7 +781,7 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
     '''
 
     name = 'Flap Lever (Synthetic)'
-    units = 'deg'
+    units = ut.DEGREE
     align_frequency = 2  # force higher than most Flap frequencies
 
     @classmethod
@@ -1281,7 +1294,16 @@ class PackValvesOpen(MultistateDerivedParameterNode):
 
 class PilotFlying(MultistateDerivedParameterNode):
     '''
-    Determines the pilot flying for Airbus aircraft.
+    Determines the pilot flying the aircraft.
+
+    For Airbus aircraft we use the captain and first officer sidestick angles
+    to determine who is providing input to the aircraft.
+
+    Reference was made to the following documentation to assist with the
+    development of this algorithm:
+
+    - A320 Flight Profile Specification
+    - A321 Flight Profile Specification
     '''
     values_mapping = {0: '-', 1: 'Capt', 2: 'FO'}
 
@@ -1339,7 +1361,7 @@ class Slat(MultistateDerivedParameterNode):
     Steps raw slat angle into detents.
     '''
 
-    units = 'deg'
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available,
@@ -1373,7 +1395,7 @@ class SlatExcludingTransition(MultistateDerivedParameterNode):
     apply. This minimises the chance of needing a slat overspeed inspection.
     '''
 
-    units = 'deg'
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available,
@@ -1409,7 +1431,7 @@ class SlatIncludingTransition(MultistateDerivedParameterNode):
     requirements.
     '''
 
-    units = 'deg'
+    units = ut.DEGREE
 
     @classmethod
     def can_operate(cls, available,

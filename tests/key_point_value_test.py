@@ -2606,13 +2606,34 @@ class TestBrakePressureInTakeoffRollMax(unittest.TestCase,
 
 
 class TestDelayedBrakingAfterTouchdown(unittest.TestCase, NodeTest):
+
     def setUp(self):
         self.node_class = DelayedBrakingAfterTouchdown
         self.operational_combinations = [('Landing', 'Groundspeed', 'Touchdown')]
 
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+    def test_derive_basic(self):
+        array = np.ma.arange(10, 0, -0.05) ** 3 / 10
+        groundspeed = P('Groundspeed', np.ma.concatenate((array, array)))
+        landing = buildsections('Landing', (10, 100), (210, 400))
+        touchdown = KTI(name='Touchdown', items=[
+            KeyTimeInstance(name='Touchdown', index=15),
+            KeyTimeInstance(name='Touchdown', index=210),
+        ])
+
+        node = self.node_class()
+        node.derive(landing, groundspeed, touchdown)
+
+        name = self.node_class.get_name()
+        expected = KPV(name=name, items=[
+            KeyPointValue(name=name, index=84.7, value=61.6),
+            KeyPointValue(name=name, index=272.8, value=55.1),
+        ])
+
+        self.assertEqual(node.name, expected.name)
+        self.assertEqual(len(node), len(expected))
+        for a, b in zip(node, expected):
+            self.assertAlmostEqual(a.index, b.index, delta=0.1)
+            self.assertAlmostEqual(a.value, b.value, delta=0.1)
 
 
 class TestAutobrakeRejectedTakeoffNotSetDuringTakeoff(unittest.TestCase,

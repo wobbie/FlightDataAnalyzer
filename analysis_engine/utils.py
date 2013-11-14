@@ -153,6 +153,7 @@ if __name__ == '__main__':
     else:
         parser.error("'%s' is not a known command." % args.command)
 
+
 def _get_names(module_locations, fetch_names=True, fetch_dependencies=False):
     '''
     Get the names of Nodes and dependencies.
@@ -180,32 +181,38 @@ def _get_names(module_locations, fetch_names=True, fetch_dependencies=False):
     
 def list_parameters():
     '''
-    Return an ordered list of 
+    Return an ordered list of parameters.
     '''
-    # exclude all KPV and KTIs and Phases?
-    exclude = _get_names(['analysis_engine.key_point_values',
-                         'analysis_engine.key_time_instances',
-                         'analysis_engine.flight_attribute',
-                         'analysis_engine.flight_phase'],
-                        fetch_names=True, fetch_dependencies=False)
-    # remove names of kpvs etc from parameters
+    # Exclude all KPV, KTI, Section, Attribute, etc:
+    exclude = _get_names([
+        'analysis_engine.approaches',
+        'analysis_engine.flight_attribute',
+        'analysis_engine.flight_phase',
+        'analysis_engine.key_point_values',
+        'analysis_engine.key_time_instances',
+    ], fetch_names=True, fetch_dependencies=False)
+    # Remove excluded names leaving parameters:
     parameters = set(list_everything()) - set(exclude)
     return sorted(parameters)
 
 
 def list_derived_parameters():
     '''
-    Return an ordered list of the Derived Parameters which have been coded.
+    Return an ordered list of the derived parameters which have been coded.
     '''
-    return _get_names(['analysis_engine.derived_parameters'])
+    return _get_names([
+        'analysis_engine.derived_parameters',
+        'analysis_engine.multistate_parameters',
+    ])
 
 
 def list_lfl_parameter_dependencies():
     '''
-    Return a list of the Parameters without Derived ones, therefore should be
-    mostly LFL parameters!
+    Return an ordered list of the non-derived parameters.
     
-    Note: a few Attributes will be in here too!
+    This should be mostly LFL parameters.
+    
+    Note: A few Attributes will be in here too!
     '''
     parameters = set(list_parameters()) - set(list_derived_parameters())
     return sorted(parameters)
@@ -220,27 +227,27 @@ def list_everything():
 
 def list_kpvs():
     '''
-    Return an ordered list of the Key Point Values which have been coded.
+    Return an ordered list of the key point values which have been coded.
     '''
     return _get_names(['analysis_engine.key_point_values'])
 
 
 def list_ktis():
     '''
-    Return an ordered list of the Key Time Instances which have been coded.
+    Return an ordered list of the key time instances which have been coded.
     '''
     return _get_names(['analysis_engine.key_time_instances'])
 
 
 def list_flight_attributes():
     '''
-    Return an ordered list of the Flight Attributes which have been coded.
+    Return an ordered list of the flight attributes which have been coded.
     '''
     return _get_names(['analysis_engine.flight_attribute'])
 
 
 def list_flight_phases():
     '''
-    Return an ordered list of the Flight Phases which have been coded.
+    Return an ordered list of the flight phases which have been coded.
     '''
     return _get_names(['analysis_engine.flight_phase'])
