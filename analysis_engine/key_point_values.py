@@ -5704,6 +5704,8 @@ class EngGasTempDuringFlightMin(KeyPointValueNode):
 
 class EngN1DuringTaxiMax(KeyPointValueNode):
     '''
+    Maximum N1 of all Engines while taxiing; and indication of excessive use
+    of engine thrust during taxi.
     '''
 
     name = 'Eng N1 During Taxi Max'
