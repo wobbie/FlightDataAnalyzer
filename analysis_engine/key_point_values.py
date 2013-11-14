@@ -717,6 +717,9 @@ class AirspeedGustsDuringFinalApproach(KeyPointValueNode):
                 continue
 
             new_app = shift_slice(descent, -scope.start)
+            if new_app is None:
+                continue  # not enough data worthy of a slice
+            
             peak = max_value(headwind, new_app,
                     start_edge=idx_start - scope.start,
                     stop_edge=idx_stop - scope.start)
