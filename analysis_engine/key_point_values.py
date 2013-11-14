@@ -2546,11 +2546,25 @@ class BrakePressureInTakeoffRollMax(KeyPointValueNode):
         self.create_kpvs_within_slices(bp.array, rolls, max_value)
 
 
-# XXX: Can minus_60 fall outside end of landing slice? Fix if needed.
+# TODO: Consider renaming this as 'delayed' implies it is already late!
 class DelayedBrakingAfterTouchdown(KeyPointValueNode):
     '''
-    This parameter was requested by one customer, who asked us to adopt the
-    Airbus AFPS implementation.
+    Duration of braking after the aircraft has touched down.
+
+    An event using this KPV can be used for detecting delayed braking. The KPV
+    measures the time of deceleration between V-10 kt and V-60 kt where V is
+    the ground speed at touchdown.
+
+    Reverse thrust is usually applied after the main gear touches down,
+    possibly along with the autobrake, to reduce the speed of the aircraft. If
+    the deceleration of the aircraft is slow, it is a possible indication of
+    delay in use of reverse thrust.
+
+    Reference was made to the following documentation to assist with the
+    development of this algorithm:
+
+    - A320 Flight Profile Specification
+    - A321 Flight Profile Specification
     '''
 
     units = ut.SECOND
@@ -2561,9 +2575,7 @@ class DelayedBrakingAfterTouchdown(KeyPointValueNode):
                tdwns=KTI('Touchdown')):
 
         for land in lands:
-            for tdwn in tdwns:
-                if not is_index_within_slice(tdwn.index, land.slice):
-                    continue
+            for tdwn in tdwns.get(within_slice=land.slice):
                 gs_td = value_at_index(gs.array, tdwn.index)
                 if gs_td is None:
                     continue
@@ -2571,8 +2583,7 @@ class DelayedBrakingAfterTouchdown(KeyPointValueNode):
                 minus_60 = index_at_value(gs.array, gs_td - 60.0, land.slice)
                 if minus_10 is None or minus_60 is None:
                     continue
-                dt = (minus_60 - minus_10) / gs.frequency
-                self.create_kpv((minus_10 + minus_60) / 2.0, dt)
+                self.create_kpv(minus_60, (minus_60 - minus_10) / gs.hz)
 
 
 class AutobrakeRejectedTakeoffNotSetDuringTakeoff(KeyPointValueNode):
