@@ -277,7 +277,7 @@ LANDING_THRESHOLD_HEIGHT = 50  # (Radio, where available)
 LEVEL_FLIGHT_MIN_DURATION = 60  # sec
 
 # Maximum age of a Segment's timebase in days. A value of None allows any age.
-MAX_TIMEBASE_AGE = 365 * 5  # days
+MAX_TIMEBASE_AGE = 365 * 10  # days
 
 # Conversion from degrees of latitude to metres. I know it's approximate, but
 # good enough for the uses we have here. To convert deg longitude, allow for

@@ -923,7 +923,7 @@ class TestBump(unittest.TestCase):
         # and did we find the right peak and miss the traps?
         self.assertEqual(bump(accel, instant[0])[1],1.0)
 
-
+last_year = datetime.now().year - 1
 class TestCalculateTimebase(unittest.TestCase):
     def test_calculate_timebase_zero_year(self):
         # 6th second is the first valid datetime(2020,12,25,23,59,0)
@@ -939,9 +939,9 @@ class TestCalculateTimebase(unittest.TestCase):
         #datetime.datetime(2020, 12, 25, 0, 0, 50)
         self.assertEqual(start_dt, datetime(2000, 12, 25, 0, 0, 54))
 
-    def test_calculate_timebase(self):
-        # 6th second is the first valid datetime(2020,12,25,23,59,0)
-        years = [None] * 6 + [2020] * 19  # 6 sec offset
+    def test_calculate_timebase_future_year(self):
+        # a few valid years followed by many invalid
+        years = [last_year] * 15 + [2999] * 10
         months = [None] * 5 + [12] * 20
         days = [None] * 4 + [24] * 5 + [25] * 16
         hours = [None] * 3 + [23] * 7 + [00] * 15
@@ -951,7 +951,21 @@ class TestCalculateTimebase(unittest.TestCase):
 
         #>>> datetime(2020,12,25,00,01,19) - timedelta(seconds=25)
         #datetime.datetime(2020, 12, 25, 0, 0, 50)
-        self.assertEqual(start_dt, datetime(2020, 12, 25, 0, 0, 54))
+        self.assertEqual(start_dt, datetime(last_year, 12, 24, 23, 58, 54))
+        
+    def test_calculate_timebase(self):
+        # 6th second is the first valid datetime(2020,12,25,23,59,0)
+        years = [None] * 6 + [last_year] * 19  # 6 sec offset
+        months = [None] * 5 + [12] * 20
+        days = [None] * 4 + [24] * 5 + [25] * 16
+        hours = [None] * 3 + [23] * 7 + [00] * 15
+        mins = [None] * 2 + [59] * 10 + [01] * 13
+        secs = [None] * 1 + range(55, 60) + range(19)  # 6th second in next hr
+        start_dt = calculate_timebase(years, months, days, hours, mins, secs)
+
+        #>>> datetime(2020,12,25,00,01,19) - timedelta(seconds=25)
+        #datetime.datetime(2020, 12, 25, 0, 0, 50)
+        self.assertEqual(start_dt, datetime(last_year, 12, 25, 0, 0, 54))
 
     def test_no_valid_datetimes_raises_valueerror(self):
         years = [None] * 25
@@ -976,14 +990,14 @@ class TestCalculateTimebase(unittest.TestCase):
 
     def test_no_change_in_dt_picks_it_as_start(self):
         # also tests using numpy masked arrays
-        years = np.ma.array([2020] * 20)  # 6 sec offset
+        years = np.ma.array([last_year] * 20)  # 6 sec offset
         months = np.ma.array([12] * 20)
         days = np.ma.array([25] * 20)
         hours = np.ma.array([23] * 20)
         mins = np.ma.array([0] * 20)
         secs = np.ma.array([0] * 20) # 6th second in next hr
         start_dt = calculate_timebase(years, months, days, hours, mins, secs)
-        self.assertEqual(start_dt, datetime(2020,12,25,23,0,0))
+        self.assertEqual(start_dt, datetime(last_year,12,25,23,0,0))
 
     def test_real_data_params_2_digit_year(self):
         years = np.load(os.path.join(test_data_path, 'year.npy'))
