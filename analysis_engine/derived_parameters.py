@@ -1193,10 +1193,25 @@ class AltitudeRadio(DerivedParameterNode):
         # For aircraft where the antennae are placed well away from the main
         # gear, and especially where it is aft of the main gear, compensation
         # is necessary.
+
+        #TODO: Implement this type of correction on other types and embed
+        #coefficients in a database table.
+            
         if family and family.value in ['CL-600']:
-            pitch_rad = pitch.array * deg2rad
-            # Scaling taken from measurement of takeoff rad alt and pitch data.
-            self.array += 21.0 * np.ma.sin(pitch_rad) - 1.5
+
+            assert pitch.frequency == 4.0 
+            # There is no alignment process for this small correction term,
+            # but it relies upon pitch being sampled at 4Hz and the blended
+            # radio altimeter signal also being fixed at 4Hz.
+
+            # These figures are derived from analysis of 14 sectors of
+            # different CRJ 900 aircraft. They are equivalent to the antennae
+            # being 21ft aft of the main wheels, which is a little more than
+            # the 16ft indicated by the operator.
+
+            scaling = 0.365 #ft/deg, +ve for altimeters aft of the main wheels.
+            offset = -1.5 #ft at pitch=0
+            self.array = self.array + (scaling * pitch.array) + offset
             
 
 class AltitudeSTDSmoothed(DerivedParameterNode):

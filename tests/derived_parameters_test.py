@@ -1433,9 +1433,22 @@ class TestAltitudeRadio(unittest.TestCase):
             self.assertAlmostEqual(rad.array[sect.stop - 1] / 10., 0, 0)
      
 
-    def test_altitude_radio_cl600(self):
-        pass
-    
+    def test_altitude_radio_CL_600(self):
+        alt_rad = AltitudeRadio()
+        fast = buildsection('Fast', 0, 6)
+        alt_rad.derive(None, None, None,
+                       Parameter('Altitude Radio (L)', 
+                                 np.ma.array(range(5,-5,-1)+range(-5,15)), 1.0, 0.0),
+                       None, None, None, None,
+                       Parameter('Pitch',
+                                 np.ma.array([0.0]*30+[5.0]*30+[10.0]*30+[20.0]*30), 4.0, 0.0),
+                       fast=fast, 
+                       family=A('Family', 'CL-600'))
+        self.assertAlmostEqual(alt_rad.array.data[4], 2.5) # -1.5ft offset
+        self.assertEqual(alt_rad.array.data[36], -3.675) # -1.5ft & 5deg
+        self.assertEqual(alt_rad.array.data[76], 6.15) # -1.5ft & 10 deg
+        
+        
 '''
 class TestAltitudeRadioForFlightPhases(unittest.TestCase):
     def test_can_operate(self):
