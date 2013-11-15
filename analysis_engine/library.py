@@ -175,7 +175,7 @@ def air_track(lat_start, lon_start, lat_end, lon_end, spd, hdg, frequency):
     # (N-1) sample intervals.
     closest_north = closest_unmasked_value(north, -1)
     closest_east = closest_unmasked_value(east, -1)
-    
+    # calculate error per sample (in knots)
     dun = (north_final - closest_north.value) / ((closest_north.index-1) * KTS_TO_MPS)
     due = (east_final - closest_east.value) / ((closest_east.index-1) * KTS_TO_MPS)
 

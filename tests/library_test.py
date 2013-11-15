@@ -797,7 +797,22 @@ class TestBearingsAndDistances(unittest.TestCase):
         ma_test.assert_masked_array_approx_equal(brg, compass)
         self.assertEqual(dist[0].mask,True)
         self.assertEqual(dist[2].mask,True)
-
+        
+    def test_bearings_and_back_again(self):
+        # One should be able to go back and forth between bearings and
+        # distances and latitudes and longitudes without any loss of
+        # prescision.
+        latitude = np.ma.array([49.0128, 53.6304])
+        longitude = np.ma.array([2.55, 9.98823])
+        reference = {'latitude':49.0128, 'longitude':2.55}
+        brgs, dists = bearings_and_distances(latitude, longitude, reference)
+        b, d = bearing_and_distance(49.0128, 2.55, 53.61, 9.9)
+        end_lats, end_lons = latitudes_and_longitudes(brgs, dists, reference)
+        self.assertAlmostEqual(end_lats[0], 49.0128)
+        self.assertAlmostEqual(end_lons[0], 2.55)
+        self.assertAlmostEqual(end_lats[1], 53.6304)
+        self.assertAlmostEqual(end_lons[1], 9.98823)
+                                        
 
 class TestLatitudesAndLongitudes(unittest.TestCase):
     def test_known_distance(self):
