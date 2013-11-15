@@ -1361,8 +1361,8 @@ class TestRejectedTakeoff(unittest.TestCase):
         node.frequency = 1/64.0
         node.derive(accel_lon, grounded)
         self.assertEqual(len(node), 1)
-        self.assertAlmostEqual(node[0].slice.start, 12, 0)
-        self.assertAlmostEqual(node[0].slice.stop, 28, 0)
+        self.assertAlmostEqual(node[0].slice.start, 15, 0)
+        self.assertAlmostEqual(node[0].slice.stop, 21, 0)
     
     def test_derive_flight_with_rejected_takeoff_1(self):
         accel_lon = load(os.path.join(
@@ -1373,8 +1373,8 @@ class TestRejectedTakeoff(unittest.TestCase):
         node = RejectedTakeoff()
         node.derive(accel_lon, grounded)
         self.assertEqual(len(node), 1)
-        self.assertAlmostEqual(node[0].slice.start, 3616, 0)
-        self.assertAlmostEqual(node[0].slice.stop, 3665, 0)
+        self.assertAlmostEqual(node[0].slice.start, 3612, 0)
+        self.assertAlmostEqual(node[0].slice.stop, 3682, 0)
     
     def test_derive_flight_with_rejected_takeoff_2(self):
         accel_lon = load(os.path.join(
@@ -1385,8 +1385,8 @@ class TestRejectedTakeoff(unittest.TestCase):
         node = RejectedTakeoff()
         node.derive(accel_lon, grounded)
         self.assertEqual(len(node), 1)
-        self.assertAlmostEqual(node[0].slice.start, 2377, 0)
-        self.assertAlmostEqual(node[0].slice.stop, 2421, 0)
+        self.assertAlmostEqual(node[0].slice.start, 2373, 0)
+        self.assertAlmostEqual(node[0].slice.stop, 2435, 0)
     
     def test_derive_flight_without_rejected_takeoff_3(self):
         accel_lon = load(os.path.join(

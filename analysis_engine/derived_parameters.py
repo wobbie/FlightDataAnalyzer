@@ -3423,33 +3423,32 @@ class Groundspeed(DerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available):
-        return all_of(('Altitude STD','Groundspeed (1)','Groundspeed (2)'),
-                      available)
+        return all_of(('Groundspeed (1)','Groundspeed (2)'),
+                      available) \
+               or \
+               all_of(('Acceleration Longitudinal Offset Removed', 'Rejected Takeoff'),
+                      available)               
 
     def derive(self,
-               alt = P('Altitude STD'),
                source_A = P('Groundspeed (1)'),
                source_B = P('Groundspeed (2)'),
-               frame = A('Frame')):
+               accel = P ('Acceleration Longitudinal Offset Removed'),
+               rto = S('Rejected Takeoff')):
 
-        frame_name = frame.value if frame else ''
-
-        if frame_name in ['757-DHL']:
-            # The coding in this frame is unique as it only uses two bits for
-            # the first digit of the BCD-encoded groundspeed, limiting the
-            # recorded value range to 399 kts. At altitude the aircraft can
-            # exceed this so a fiddle is required to sort this out.
-            altitude = align(alt, source_A) # Caters for different sample rates.
-            adjust_A = np.logical_and(source_A.array<200, altitude>8000).data*400
-            source_A.array += adjust_A
-            adjust_B = np.logical_and(source_B.array<200, altitude>8000).data*400
-            source_B.array += adjust_B
+        if source_A or source_B:
             self.array, self.frequency, self.offset = \
                 blend_two_parameters(source_A, source_B)
-
+            
         else:
-            self.array, self.frequency, self.offset = \
-                blend_two_parameters(source_A, source_B)
+            # Without groundspeed, we only calculate an estimated value for RTOs.
+            rto = rto.get_aligned(accel)
+            self.frequency = accel.frequency
+            self.offset = accel.offset
+            scale = GRAVITY_IMPERIAL / KTS_TO_FPS
+            self.array = np_ma_masked_zeros_like(accel.array)
+            for rto_slice in rto.get_slices():
+                self.array[rto_slice] = integrate(accel.array[rto_slice], 
+                                                  accel.frequency, scale=scale)
 
 
 class FlapAngle(DerivedParameterNode):
