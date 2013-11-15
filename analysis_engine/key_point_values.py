@@ -717,6 +717,9 @@ class AirspeedGustsDuringFinalApproach(KeyPointValueNode):
                 continue
 
             new_app = shift_slice(descent, -scope.start)
+            if new_app is None:
+                continue  # not enough data worthy of a slice
+            
             peak = max_value(headwind, new_app,
                     start_edge=idx_start - scope.start,
                     stop_edge=idx_stop - scope.start)
@@ -2546,11 +2549,25 @@ class BrakePressureInTakeoffRollMax(KeyPointValueNode):
         self.create_kpvs_within_slices(bp.array, rolls, max_value)
 
 
-# XXX: Can minus_60 fall outside end of landing slice? Fix if needed.
+# TODO: Consider renaming this as 'delayed' implies it is already late!
 class DelayedBrakingAfterTouchdown(KeyPointValueNode):
     '''
-    This parameter was requested by one customer, who asked us to adopt the
-    Airbus AFPS implementation.
+    Duration of braking after the aircraft has touched down.
+
+    An event using this KPV can be used for detecting delayed braking. The KPV
+    measures the time of deceleration between V-10 kt and V-60 kt where V is
+    the ground speed at touchdown.
+
+    Reverse thrust is usually applied after the main gear touches down,
+    possibly along with the autobrake, to reduce the speed of the aircraft. If
+    the deceleration of the aircraft is slow, it is a possible indication of
+    delay in use of reverse thrust.
+
+    Reference was made to the following documentation to assist with the
+    development of this algorithm:
+
+    - A320 Flight Profile Specification
+    - A321 Flight Profile Specification
     '''
 
     units = ut.SECOND
@@ -2561,9 +2578,7 @@ class DelayedBrakingAfterTouchdown(KeyPointValueNode):
                tdwns=KTI('Touchdown')):
 
         for land in lands:
-            for tdwn in tdwns:
-                if not is_index_within_slice(tdwn.index, land.slice):
-                    continue
+            for tdwn in tdwns.get(within_slice=land.slice):
                 gs_td = value_at_index(gs.array, tdwn.index)
                 if gs_td is None:
                     continue
@@ -2571,8 +2586,7 @@ class DelayedBrakingAfterTouchdown(KeyPointValueNode):
                 minus_60 = index_at_value(gs.array, gs_td - 60.0, land.slice)
                 if minus_10 is None or minus_60 is None:
                     continue
-                dt = (minus_60 - minus_10) / gs.frequency
-                self.create_kpv((minus_10 + minus_60) / 2.0, dt)
+                self.create_kpv(minus_60, (minus_60 - minus_10) / gs.hz)
 
 
 class AutobrakeRejectedTakeoffNotSetDuringTakeoff(KeyPointValueNode):
@@ -5871,6 +5885,8 @@ class EngGasTempDuringFlightMin(KeyPointValueNode):
 
 class EngN1DuringTaxiMax(KeyPointValueNode):
     '''
+    Maximum N1 of all Engines while taxiing; and indication of excessive use
+    of engine thrust during taxi.
     '''
 
     name = 'Eng N1 During Taxi Max'
@@ -7793,6 +7809,27 @@ class PitchAt35FtDuringClimb(KeyPointValueNode):
         for climb in climbs:
             value = value_at_index(pitch.array, climb.start_edge)
             self.create_kpv(climb.start_edge, value)
+
+
+class PitchAbove1000FtMin(KeyPointValueNode):
+    '''
+    Minimum Pitch above 1000ft AAL in flight.
+    '''
+    units = 'deg'
+
+    def derive(self, pitch=P('Pitch'), alt=P('Altitude AAL')):
+        self.create_kpvs_within_slices(pitch.array, 
+                                       alt.slices_above(1000), min_value)
+        
+class PitchAbove1000FtMax(KeyPointValueNode):
+    '''
+    Maximum Pitch above 1000ft AAL in flight.
+    '''
+    units = 'deg'
+
+    def derive(self, pitch=P('Pitch'), alt=P('Altitude AAL')):
+        self.create_kpvs_within_slices(pitch.array, 
+                                       alt.slices_above(1000), max_value)
 
 
 class PitchTakeoffMax(KeyPointValueNode):

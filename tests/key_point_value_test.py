@@ -347,6 +347,8 @@ from analysis_engine.key_point_values import (
     Pitch50FtToTouchdownMax,
     Pitch7FtToTouchdownMin,
     Pitch7FtToTouchdownMax,
+    PitchAbove1000FtMin,
+    PitchAbove1000FtMax,
     PitchAfterFlapRetractionMax,
     PitchAt35FtDuringClimb,
     PitchAtLiftoff,
@@ -2605,13 +2607,34 @@ class TestBrakePressureInTakeoffRollMax(unittest.TestCase,
 
 
 class TestDelayedBrakingAfterTouchdown(unittest.TestCase, NodeTest):
+
     def setUp(self):
         self.node_class = DelayedBrakingAfterTouchdown
         self.operational_combinations = [('Landing', 'Groundspeed', 'Touchdown')]
 
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+    def test_derive_basic(self):
+        array = np.ma.arange(10, 0, -0.05) ** 3 / 10
+        groundspeed = P('Groundspeed', np.ma.concatenate((array, array)))
+        landing = buildsections('Landing', (10, 100), (210, 400))
+        touchdown = KTI(name='Touchdown', items=[
+            KeyTimeInstance(name='Touchdown', index=15),
+            KeyTimeInstance(name='Touchdown', index=210),
+        ])
+
+        node = self.node_class()
+        node.derive(landing, groundspeed, touchdown)
+
+        name = self.node_class.get_name()
+        expected = KPV(name=name, items=[
+            KeyPointValue(name=name, index=84.7, value=61.6),
+            KeyPointValue(name=name, index=272.8, value=55.1),
+        ])
+
+        self.assertEqual(node.name, expected.name)
+        self.assertEqual(len(node), len(expected))
+        for a, b in zip(node, expected):
+            self.assertAlmostEqual(a.index, b.index, delta=0.1)
+            self.assertAlmostEqual(a.value, b.value, delta=0.1)
 
 
 class TestAutobrakeRejectedTakeoffNotSetDuringTakeoff(unittest.TestCase,
@@ -6936,6 +6959,39 @@ class TestPitchTakeoffMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
+
+
+
+class TestPitchAbove1000FtMin(unittest.TestCase):
+
+    def can_operate(self):
+        opts = PitchAbove1000FtMin.get_operational_combinations()
+        self.assertEqual(opts, [('Pitch', 'Altitude AAL')])
+
+    def test_derive(self):
+        pitch = P('Pitch', array=[10, 10, 10, 12, 13, 8, 14, 6])
+        aal = P('Altitude AAL', 
+                array=[100, 200, 700, 1010, 4000, 1200, 1100, 900, 800])
+        node = PitchAbove1000FtMin()
+        node.derive(pitch, aal)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].value, 8)
+
+
+class TestPitchAbove1000FtMax(unittest.TestCase):
+
+    def can_operate(self):
+        opts = PitchAbove1000FtMax.get_operational_combinations()
+        self.assertEqual(opts, [('Pitch', 'Altitude AAL')])
+
+    def test_derive(self):
+        pitch = P('Pitch', array=[10, 10, 10, 12, 13, 8, 14, 6, 20])
+        aal = P('Altitude AAL', 
+                array=[100, 200, 700, 1010, 4000, 1200, 1100, 900, 800])
+        node = PitchAbove1000FtMax()
+        node.derive(pitch, aal)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].value, 14)
 
 
 class TestPitch35To400FtMax(unittest.TestCase):

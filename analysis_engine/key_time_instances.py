@@ -55,9 +55,9 @@ class BottomOfDescent(KeyTimeInstanceNode):
         while index<len(ends)-1:
             delta = ends[index+1] - ends[index]
             # The differences should be less than a second, arising from
-            # different ways of identifying the touchdown point. Ten seconds
+            # different ways of identifying the touchdown point. 30 seconds
             # is a generous tolerance.
-            if delta < 10.0:
+            if delta < 30.0 * self.frequency:
                 ends.pop(index+1)
             else:
                 self.create_kti(ends[index])

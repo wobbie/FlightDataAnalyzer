@@ -223,6 +223,7 @@ class Configuration(MultistateDerivedParameterNode):
     Note: Values that do not map directly to a required state are masked
     '''
     values_mapping = at.constants.AVAILABLE_CONF_STATES
+    align_frequency = 2
 
     @classmethod
     def can_operate(cls, available, manufacturer=A('Manufacturer'),
@@ -781,6 +782,7 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
 
     name = 'Flap Lever (Synthetic)'
     units = ut.DEGREE
+    align_frequency = 2  # force higher than most Flap frequencies
 
     @classmethod
     def can_operate(cls, available,
@@ -1211,6 +1213,27 @@ class KeyVHFFO(MultistateDerivedParameterNode):
         ).any(axis=0)
 
 
+
+class MasterCaution(MultistateDerivedParameterNode):
+    '''
+    Combine Master Caution for captain and first officer.
+    '''
+    values_mapping = {0: '-', 1: 'Warning'}
+
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self, 
+               capt=M('Master Caution (Capt)'),
+               fo=M('Master Caution (FO)')):
+
+        self.array = vstack_params_where_state(
+            (capt, 'Warning'),
+            (fo, 'Warning'),
+        ).any(axis=0)
+        
+        
 class MasterWarning(MultistateDerivedParameterNode):
     '''
     Combine master warning for captain and first officer.
