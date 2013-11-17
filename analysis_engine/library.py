@@ -459,20 +459,19 @@ def bearings_and_distances(latitudes, longitudes, reference):
     lat_ref = radians(reference['latitude'])
     lon_ref = radians(reference['longitude'])
 
-    dlat = lat_ref - lat_array
-    dlon = lon_ref - lon_array
+    dlat = lat_array - lat_ref
+    dlon = lon_array - lon_ref
 
-    a = np.ma.sin(dlat/2) * np.ma.sin(dlat/2) + \
-        np.ma.cos(lat_array) * np.ma.cos(lat_ref) * \
-        np.ma.sin(dlon/2) * np.ma.sin(dlon/2)
+    a = np.ma.sin(dlat/2)**2 + \
+        np.ma.cos(lat_array) * np.ma.cos(lat_ref) * np.ma.sin(dlon/2)**2
     dists = 2 * np.ma.arctan2(np.ma.sqrt(a), np.ma.sqrt(1.0 - a))
     dists *= 6371000 # Earth radius in metres
 
 
-    y = np.ma.sin(dlon) * np.ma.cos(lat_ref)
-    x = np.ma.cos(lat_array) * np.ma.sin(lat_ref) \
-        - np.ma.sin(lat_array) * np.ma.cos(lat_ref) * np.ma.cos(dlon)
-    brgs = np.ma.arctan2(-y,-x)
+    y = np.ma.sin(dlon) * np.ma.cos(lat_array)
+    x = np.ma.cos(lat_ref) * np.ma.sin(lat_array) \
+        - np.ma.sin(lat_ref) * np.ma.cos(lat_array) * np.ma.cos(dlon)
+    brgs = np.ma.arctan2(y,x)
 
     joined_mask = np.logical_or(latitudes.mask, longitudes.mask)
     brg_array = np.ma.array(data=np.rad2deg(brgs) % 360,

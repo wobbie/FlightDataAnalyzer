@@ -745,12 +745,13 @@ class TestAmbiguousRunway(unittest.TestCase):
 
 
 class TestBearingsAndDistances(unittest.TestCase):
-    def test_known_distance(self):
+    def test_known_bearing_and_distance(self):
         fareham = {'latitude':50.856146,'longitude':-1.183182}
-        goodyear_lon = np.ma.array([-112.358214])
-        goodyear_lat = np.ma.array([33.449806])
+        goodyear_lon = np.ma.array([-112.359])
+        goodyear_lat = np.ma.array([33.459])
         brg,dist = bearings_and_distances(goodyear_lat, goodyear_lon, fareham)
-        self.assertEqual(dist,[8481553.935041398])
+        self.assertAlmostEqual(dist[0],8482000, delta=2000)
+        self.assertAlmostEqual(brg[0],306.78, delta=0.02)
 
     # With an atan(x/y) formula giving the bearings, it's easy to get this
     # wrong, as I did originally, hence the three tests for bearings ! The
@@ -815,13 +816,14 @@ class TestBearingsAndDistances(unittest.TestCase):
                                         
 
 class TestLatitudesAndLongitudes(unittest.TestCase):
-    def test_known_distance(self):
-        fareham = {'latitude': 50.852731,'longitude': -1.185608}
-        pompey_dist = np.ma.array([10662.0])
-        pompey_brg = np.ma.array([126.45])
-        lat,lon = latitudes_and_longitudes(pompey_brg, pompey_dist, fareham)
-        self.assertAlmostEqual(lat,[50.79569963])
-        self.assertAlmostEqual(lon,[-1.06358672])
+    def test_known_bearing_and_distance(self):
+        # Amended Nov 2013 to greatly increase distance and hence improve quality of test.
+        fareham = {'latitude': 50.856146,'longitude': -1.183182}
+        goodyear_dist = np.ma.array([8482000.0])
+        goodyear_brg = np.ma.array([306.78])
+        lat,lon = latitudes_and_longitudes(goodyear_brg, goodyear_dist, fareham)
+        self.assertAlmostEqual(lat[0],33.44929,delta=0.001)
+        self.assertAlmostEqual(lon,-112.359,delta=0.001)
         # TODO - Test with array and masks (for Brg/Dist also?)
 
 
