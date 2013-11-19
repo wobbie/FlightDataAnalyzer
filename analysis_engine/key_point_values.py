@@ -21,7 +21,8 @@ from analysis_engine.settings import (ACCEL_LAT_OFFSET_LIMIT,
                                       NAME_VALUES_FLAP,
                                       NAME_VALUES_LEVER,
                                       REVERSE_THRUST_EFFECTIVE,
-                                      SPOILER_DEPLOYED)
+                                      SPOILER_DEPLOYED,
+                                      VERTICAL_SPEED_FOR_LEVEL_FLIGHT)
 
 from analysis_engine.flight_phase import scan_ils
 
@@ -858,6 +859,8 @@ class Airspeed8000To10000FtMax(KeyPointValueNode):
 
 class Airspeed10000To8000FtMax(KeyPointValueNode):
     '''
+    Maximum airspeed while descending from 10,000ft pressure altitude to
+    8,000ft pressure altitude.
     '''
 
     units = ut.KT
@@ -878,9 +881,8 @@ class Airspeed10000To8000FtMax(KeyPointValueNode):
 
 class Airspeed8000To5000FtMax(KeyPointValueNode):
     '''
-    Airspeed from 8000ft pressure altitude to 5000ft above the airfield.
-    As we are only interested in the descending phase, this is used as the
-    normal slices_from_to will not work with two parameters.
+    Maximum airspeed while descending from 8,000ft pressure altitude to 
+    5,000ft above the airfield.
     '''
     units = ut.KT
      
@@ -889,7 +891,8 @@ class Airspeed8000To5000FtMax(KeyPointValueNode):
                alt_aal=P('Altitude AAL For Flight Phases'),
                alt_std=P('Altitude STD Smoothed'),
                descends=S('Descent')):
-    
+        # As we are only interested in the descending phase, this is used as
+        # the normal slices_from_to will not work with two parameters.
         for descend in descends:
             std=np.ma.clump_unmasked(np.ma.masked_greater(alt_std.array[descend.slice], 8000.0))
             aal=np.ma.clump_unmasked(np.ma.masked_less(alt_aal.array[descend.slice], 5000.0))
@@ -903,6 +906,8 @@ class Airspeed8000To5000FtMax(KeyPointValueNode):
 
 class Airspeed5000To3000FtMax(KeyPointValueNode):
     '''
+    Maximum airspeed while descending from 5,000ft above the airfield to 
+    3,000ft above the airfield.
     '''
 
     units = ut.KT
@@ -923,6 +928,8 @@ class Airspeed5000To3000FtMax(KeyPointValueNode):
 
 class Airspeed3000To1000FtMax(KeyPointValueNode):
     '''
+    Maximum airspeed during the Initial Approach from 3,000ft above the
+    airfield to 1,000ft above the airfield.
     '''
 
     units = ut.KT
@@ -943,6 +950,8 @@ class Airspeed3000To1000FtMax(KeyPointValueNode):
 
 class Airspeed3000FtToTopOfClimbMax(KeyPointValueNode):
     '''
+    Maximum airspeed while climbing from 3,000ft above the airfield to the
+    Top of Climb.
     '''
 
     units = ut.KT
@@ -969,6 +978,8 @@ class Airspeed3000FtToTopOfClimbMax(KeyPointValueNode):
 
 class Airspeed1000To500FtMax(KeyPointValueNode):
     '''
+    Maximum airspeed during the Final Approach from 1,000ft above the
+    airfield to 500ft above the airfield.
     '''
 
     units = ut.KT
@@ -989,6 +1000,8 @@ class Airspeed1000To500FtMax(KeyPointValueNode):
 
 class Airspeed1000To500FtMin(KeyPointValueNode):
     '''
+    Minimum airspeed during the Final Approach from 1,000ft above the
+    airfield to 500ft above the airfield.
     '''
 
     units = ut.KT
@@ -1009,6 +1022,8 @@ class Airspeed1000To500FtMin(KeyPointValueNode):
 
 class Airspeed500To20FtMax(KeyPointValueNode):
     '''
+    Maximum airspeed from 500ft above the airfield to 20ft above the
+    airfield.
     '''
 
     units = ut.KT
@@ -1026,6 +1041,8 @@ class Airspeed500To20FtMax(KeyPointValueNode):
 
 class Airspeed500To20FtMin(KeyPointValueNode):
     '''
+    Minimum airspeed from 500ft above the airfield to 20ft above the
+    airfield.
     '''
 
     units = ut.KT
@@ -1043,6 +1060,7 @@ class Airspeed500To20FtMin(KeyPointValueNode):
 
 class AirspeedAtTouchdown(KeyPointValueNode):
     '''
+    Airspeed measurement at the point of Touchdown.
     '''
 
     units = ut.KT
@@ -1056,6 +1074,8 @@ class AirspeedAtTouchdown(KeyPointValueNode):
 
 class AirspeedTrueAtTouchdown(KeyPointValueNode):
     '''
+    Airspeed True at the point of Touchdown.
+    
     This KPV relates to groundspeed at touchdown to illustrate headwinds and
     tailwinds. We also have 'Tailwind 100 Ft To Touchdown Max' to cater for
     safety event triggers.
@@ -1072,7 +1092,11 @@ class AirspeedTrueAtTouchdown(KeyPointValueNode):
 
 class AirspeedReferenceVariationMax(KeyPointValueNode):
     '''
-    Maximum difference between recorded/afr values and lookup values.
+    Maximum difference between the Airspeed Reference which is in the AFR or
+    recorded on the aircraft and that of the Airspeed Reference Lookup
+    calculated from tables.
+    
+    Useful for establishing errors in the recorded values input by crew.
     '''
 
     units = ut.KT
@@ -1091,7 +1115,10 @@ class AirspeedReferenceVariationMax(KeyPointValueNode):
 
 class V2VariationMax(KeyPointValueNode):
     '''
-    Maximum difference between recorded/afr values and lookup values.
+    Maximum difference between the V2 which is in the AFR or recorded on the
+    aircraft and that of the V2 Lookup calculated from tables.
+    
+    Useful for establishing errors in the recorded values input by crew.
     '''
 
     units = ut.KT
@@ -1113,6 +1140,8 @@ class V2VariationMax(KeyPointValueNode):
 
 class AirspeedMinusV2AtLiftoff(KeyPointValueNode):
     '''
+    Airspeed difference from V2 at the point of Liftoff. A positive value
+    measured ensures a save speed margin above V2.
     '''
 
     name = 'Airspeed Minus V2 At Liftoff'
@@ -1127,6 +1156,8 @@ class AirspeedMinusV2AtLiftoff(KeyPointValueNode):
 
 class AirspeedMinusV2At35FtDuringTakeoff(KeyPointValueNode):
     '''
+    Airspeed difference from V2 at the 35ft (end of Takeoff phase). A
+    positive value measured ensures a save speed margin above V2.
     '''
 
     name = 'Airspeed Minus V2 At 35 Ft During Takeoff'
@@ -1144,6 +1175,7 @@ class AirspeedMinusV2At35FtDuringTakeoff(KeyPointValueNode):
 
 class AirspeedMinusV235To1000FtMax(KeyPointValueNode):
     '''
+    Maximum airspeed difference from V2 from 35ft to 1,000ft.
     '''
 
     name = 'Airspeed Minus V2 35 To 1000 Ft Max'
@@ -1162,6 +1194,8 @@ class AirspeedMinusV235To1000FtMax(KeyPointValueNode):
 
 class AirspeedMinusV235To1000FtMin(KeyPointValueNode):
     '''
+    Minimum airspeed difference from V2 from 35ft to 1,000ft. A positive
+    value measured ensures a save speed margin above V2.
     '''
 
     name = 'Airspeed Minus V2 35 To 1000 Ft Min'
@@ -1180,6 +1214,8 @@ class AirspeedMinusV235To1000FtMin(KeyPointValueNode):
 
 class AirspeedMinusV2For3Sec35To1000FtMax(KeyPointValueNode):
     '''
+    Maximum airspeed difference from V2 (for at least 3 seconds) from 35ft to
+    1,000ft.
     '''
 
     name = 'Airspeed Minus V2 For 3 Sec 35 To 1000 Ft Max'
@@ -1200,6 +1236,8 @@ class AirspeedMinusV2For3Sec35To1000FtMax(KeyPointValueNode):
 
 class AirspeedMinusV2For3Sec35To1000FtMin(KeyPointValueNode):
     '''
+    Minimum airspeed difference from V2 (for at least 3 seconds) from 35ft to
+    1,000ft. A positive value measured ensures a save speed margin above V2.
     '''
 
     name = 'Airspeed Minus V2 For 3 Sec 35 To 1000 Ft Min'
@@ -1473,6 +1511,19 @@ class AirspeedMinusMinManeouvringSpeedMin(KeyPointValueNode):
 
 class AirspeedWithFlapMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
+    Maximum airspeed recorded with each Flap setting.
+    
+    The KPV name includes the source parameter used for the flap measurement
+    taken:
+    
+    - 'Flap': based on the Flap Lever as recorded or a Flap Lever (Sythetic)
+      generated from other available sources (for safety investigations).
+    - 'Flap Including Transition': Flap setting includes the transition periods 
+      into and out of the flap detented position (for maintenance 
+      investigations on the more cautious side).
+    - 'Flap Excluding Transition': Flap only where the detented flap position 
+      has been reached, excluding the transition periods (for maintenance 
+      investigations).
     '''
 
     NAME_FORMAT = 'Airspeed With %(parameter)s %(flap)s Max'
@@ -1522,6 +1573,13 @@ class AirspeedWithFlapMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
 
 class AirspeedWithFlapMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
+    Minimum airspeed recorded with each Flap Lever setting.
+    
+    Based on Flap Lever for safety based investigations which primarily
+    depend upon the pilot actions, rather than maintenance investigations
+    which depend upon the actual flap surface position. Uses Flap Lever if
+    available otherwise falls back to Flap Lever (Synthetic) which is
+    established from other sources.
     '''
 
     NAME_FORMAT = 'Airspeed With Flap %(flap)s Min'
@@ -1551,6 +1609,22 @@ class AirspeedWithFlapMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
 
 class AirspeedWithFlapAndSlatExtendedMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
+    Maximum airspeed recorded with Slat Extended and without Flap extended.
+    
+    Based upon Flap and Slat surface positions for maintenance based
+    investigations where the results may be compared to Slat limiting speeds.
+    Measurements which include Flap transitions can be found in other
+    measurements.
+    
+    The KPV name includes the source parameter used for the flap measurement
+    taken:
+    
+    - 'Flap Including Transition': Flap (and Slat) setting includes the 
+      transition periods  into and out of the flap detented position 
+      (for maintenance investigations on the more cautious side).
+    - 'Flap Excluding Transition': Flap (and Slat) taken only where the 
+      detented flap position has been reached, excluding the transition 
+      periods (for maintenance investigations).
     '''
 
     NAME_FORMAT = 'Airspeed With %(parameter)s %(flap)s And Slat Extended Max'
@@ -1604,6 +1678,19 @@ class AirspeedWithFlapAndSlatExtendedMax(KeyPointValueNode, FlapOrConfigurationM
 
 class AirspeedWithFlapDuringClimbMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
+    Maximum airspeed recorded during the Climb phase with each Flap setting.
+    
+    The KPV name includes the source parameter used for the flap measurement
+    taken:
+    
+    - 'Flap': based on the Flap Lever as recorded or a Flap Lever (Sythetic)
+      generated from other available sources (for safety investigations).
+    - 'Flap Including Transition': Flap setting includes the transition periods 
+      into and out of the flap detented position (for maintenance 
+      investigations on the more cautious side).
+    - 'Flap Excluding Transition': Flap only where the detented flap position 
+      has been reached, excluding the transition periods (for maintenance 
+      investigations).
     '''
 
     NAME_FORMAT = 'Airspeed With %(parameter)s %(flap)s During Climb Max'
@@ -1653,6 +1740,13 @@ class AirspeedWithFlapDuringClimbMax(KeyPointValueNode, FlapOrConfigurationMaxOr
 
 class AirspeedWithFlapDuringClimbMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
+    Minimum airspeed recorded during the Climb phase with each Flap setting.
+    
+    Based on Flap Lever for safety based investigations which primarily
+    depend upon the pilot actions, rather than maintenance investigations
+    which depend upon the actual flap surface position. Uses Flap Lever if
+    available otherwise falls back to Flap Lever (Synthetic) which is
+    established from other sources.
     '''
 
     NAME_FORMAT = 'Airspeed With Flap %(flap)s During Climb Min'
@@ -1680,6 +1774,20 @@ class AirspeedWithFlapDuringClimbMin(KeyPointValueNode, FlapOrConfigurationMaxOr
 
 class AirspeedWithFlapDuringDescentMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
+    Maximum airspeed recorded during the Descent phase (down to the start of 
+    flare) with each Flap setting.
+    
+    The KPV name includes the source parameter used for the flap measurement
+    taken:
+    
+    - 'Flap': based on the Flap Lever as recorded or a Flap Lever (Sythetic)
+      generated from other available sources (for safety investigations).
+    - 'Flap Including Transition': Flap setting includes the transition periods 
+      into and out of the flap detented position (for maintenance 
+      investigations on the more cautious side).
+    - 'Flap Excluding Transition': Flap only where the detented flap position 
+      has been reached, excluding the transition periods (for maintenance 
+      investigations).
     '''
 
     NAME_FORMAT = 'Airspeed With %(parameter)s %(flap)s During Descent Max'
@@ -1729,6 +1837,14 @@ class AirspeedWithFlapDuringDescentMax(KeyPointValueNode, FlapOrConfigurationMax
 
 class AirspeedWithFlapDuringDescentMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
+    Minimum airspeed recorded during the Descent phase (down to the start of 
+    flare) with each Flap setting.
+    
+    Based on Flap Lever for safety based investigations which primarily
+    depend upon the pilot actions, rather than maintenance investigations
+    which depend upon the actual flap surface position. Uses Flap Lever if
+    available otherwise falls back to Flap Lever (Synthetic) which is
+    established from other sources.
     '''
 
     NAME_FORMAT = 'Airspeed With Flap %(flap)s During Descent Min'
@@ -1900,7 +2016,12 @@ class MainGearOnGroundToNoseGearOnGroundDuration(KeyPointValueNode):
 
 class AirspeedWithConfigurationMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
-    '''
+    Maximum airspeed recorded while Fast for each aircraft Configuration 
+    (established from external surface positions).
+    
+    Conf settings (for all aircraft models) include:
+    %(conf)s
+    ''' % NAME_VALUES_CONF
 
     NAME_FORMAT = 'Airspeed With Configuration %(conf)s Max'
     NAME_VALUES = NAME_VALUES_CONF.copy()
@@ -1920,7 +2041,13 @@ class AirspeedWithConfigurationMax(KeyPointValueNode, FlapOrConfigurationMaxOrMi
 
 class AirspeedRelativeWithConfigurationDuringDescentMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
-    '''
+    Minimum airspeed relative to the approach speed during from Descent to 
+    start of Flare for each aircraft Configuration  (established from external 
+    surface positions).
+    
+    Conf settings (for all aircraft models) include:
+    %(conf)s
+    ''' % NAME_VALUES_CONF
 
     NAME_FORMAT = 'Airspeed Relative With Configuration %(conf)s During Descent Min'
     NAME_VALUES = NAME_VALUES_CONF.copy()
@@ -1942,7 +2069,8 @@ class AirspeedRelativeWithConfigurationDuringDescentMin(KeyPointValueNode, FlapO
 
 class AirspeedWithSpeedbrakeDeployedMax(KeyPointValueNode):
     '''
-    '''
+    Maximum airspeed measured while Speedbrake parameter is in excess of %sdeg
+    ''' % SPOILER_DEPLOYED
 
     units = ut.KT
 
@@ -1962,7 +2090,9 @@ class AirspeedWithSpeedbrakeDeployedMax(KeyPointValueNode):
 
 class AirspeedWithThrustReversersDeployedMin(KeyPointValueNode):
     '''
-    '''
+    Minimum airspeed measured with Thrust Reversers deployed and the average 
+    of Eng N1 measurements above %s%%
+    ''' % REVERSE_THRUST_EFFECTIVE
 
     units = ut.KT
 
@@ -1989,7 +2119,8 @@ class AirspeedAtThrustReversersSelection(KeyPointValueNode):
                tr=M('Thrust Reversers'),
                landings=S('Landing')):
 
-        slices = [s.slice for s in landings]
+        slices = [s.slice for s in landings]  #TODO: use landings.get_slices()
+        #TODO: Replace with positive state rather than "Not Stowed"
         to_scan = clump_multistate(tr.array, 'Stowed', slices, condition=False)
         self.create_kpv_from_slices(air_spd.array, to_scan, max_value)
 
@@ -2016,9 +2147,10 @@ class AirspeedVacatingRunway(KeyPointValueNode):
 
 
 class AirspeedDuringRejectedTakeoffMax(KeyPointValueNode):
+    #FIXME: REPLACE WITH GROUNDSPEED MEASUREMENTS
     '''
     '''
-
+    
     units = ut.KT
 
     def derive(self,
@@ -2030,6 +2162,10 @@ class AirspeedDuringRejectedTakeoffMax(KeyPointValueNode):
 
 class AirspeedBelow10000FtDuringDescentMax(KeyPointValueNode):
     '''
+    Maximum airspeed measured below 10,000ft pressure altitude (ouside of
+    USA) or below 10,000ft QNH (inside of USA where airport identified)
+    during the Descent phase of flight.
+    
     Outside the USA 10,000 ft relates to flight levels, whereas FAA regulations
     (and possibly others we don't currently know about) relate to height above
     sea level (QNH) hence the options based on landing airport location.
@@ -2061,6 +2197,10 @@ class AirspeedBelow10000FtDuringDescentMax(KeyPointValueNode):
 
 class AirspeedTopOfDescentTo10000FtMax(KeyPointValueNode):
     '''
+    Maximum airspeed measured from Top of Descent down to 10,000ft pressure
+    altitude (ouside of USA) or below 10,000ft QNH (inside of USA where
+    airport identified) during the Descent phase of flight.
+    
     Outside the USA 10,000 ft relates to flight levels, whereas FAA regulations
     (and possibly others we don't currently know about) relate to height above
     sea level (QNH) hence the options based on landing airport location.
@@ -2092,6 +2232,10 @@ class AirspeedTopOfDescentTo10000FtMax(KeyPointValueNode):
 
 class AirspeedTopOfDescentTo4000FtMax(KeyPointValueNode):
     '''
+    Maximum airspeed measured from Top of Descent down to 4,000ft pressure
+    altitude (ouside of USA) or below 10,000ft QNH (inside of USA where
+    airport identified) during the Descent phase of flight.
+    
     Outside the USA 4,000 ft relates to flight levels, whereas FAA regulations
     (and possibly others we don't currently know about) relate to height above
     sea level (QNH) hence the options based on landing airport location.
@@ -2123,6 +2267,10 @@ class AirspeedTopOfDescentTo4000FtMax(KeyPointValueNode):
 
 class AirspeedTopOfDescentTo4000FtMin(KeyPointValueNode):
     '''
+    Minimum airspeed measured from Top of Descent down to 4,000ft pressure
+    altitude (ouside of USA) or below 10,000ft QNH (inside of USA where
+    airport identified) during the Descent phase of flight.
+    
     Outside the USA 4,000 ft relates to flight levels, whereas FAA regulations
     (and possibly others we don't currently know about) relate to height above
     sea level (QNH) hence the options based on landing airport location.
@@ -2154,7 +2302,8 @@ class AirspeedTopOfDescentTo4000FtMin(KeyPointValueNode):
 
 class AirspeedDuringLevelFlightMax(KeyPointValueNode):
     '''
-    '''
+    Maximum airspeed recorded during level flight (less than %sfpm).
+    ''' % VERTICAL_SPEED_FOR_LEVEL_FLIGHT
 
     units = ut.KT
 
@@ -2168,9 +2317,7 @@ class AirspeedDuringLevelFlightMax(KeyPointValueNode):
 
 class ModeControlPanelAirspeedSelectedAt8000FtDescending(KeyPointValueNode):
     '''
-    Refactor to be a formatted name node if multiple Airspeed At Altitude
-    KPVs are required. Could depend on either Altitude When Climbing or
-    Altitude When Descending, but the assumption is that we'll have both.
+    Airspeed Selected in the Mode Control Panel (MCP) at 8000ft in descent.
     '''
 
     units = ut.KT
@@ -2178,7 +2325,11 @@ class ModeControlPanelAirspeedSelectedAt8000FtDescending(KeyPointValueNode):
     def derive(self,
                mcp=P('Mode Control Panel Airspeed Selected'),
                alt_std_desc=S('Altitude When Descending')):
-        
+        #TODO: Refactor to be a formatted name node if multiple Airspeed At
+        #  Altitude KPVs are required. Could depend on either Altitude When
+        #  Climbing or Altitude When Descending, but the assumption is that
+        #  we'll have both.
+    
         # TODO: Confirm MCP parameter name.
         self.create_kpvs_at_ktis(mcp.array,
                                  alt_std_desc.get(name='8000 Ft Descending'))
@@ -2591,6 +2742,8 @@ class DelayedBrakingAfterTouchdown(KeyPointValueNode):
 
 class AutobrakeRejectedTakeoffNotSetDuringTakeoff(KeyPointValueNode):
     '''
+    Duration where the Autobrake Selected RTO parameter is not in "Selected"
+    state during takeoff phase.
     '''
 
     units = ut.SECOND
@@ -2617,6 +2770,7 @@ class AutobrakeRejectedTakeoffNotSetDuringTakeoff(KeyPointValueNode):
 
 class AltitudeMax(KeyPointValueNode):
     '''
+    Maximum pressure altitude recorded during flight.
     '''
 
     units = ut.FT
