@@ -508,10 +508,11 @@ def _calculate_start_datetime(hdf, fallback_dt=None):
     for name in ('Year', 'Month', 'Day', 'Hour', 'Minute', 'Second'):
         param = hdf.get(name)
         if param:
+            if name == 'Year':
+                year = getattr(fallback_dt, 'year', None) or now.year
+                param.array = _mask_invalid_years(param.array, year)
             # do not interpolate date/time parameters to avoid rollover issues
             array = align(param, onehz, interpolate=False)
-            if name == 'Year':
-                array = _mask_invalid_years(array, fallback_dt.year)
             if len(array) == 0 or np.ma.count(array) == 0 or np.ma.all(array == 0):
                 # Other than the year 2000 or possibly 2100, no date values
                 # can be all 0's
@@ -578,7 +579,7 @@ def _calculate_start_datetime(hdf, fallback_dt=None):
             timebase, settings.MAX_TIMEBASE_AGE)
         raise TimebaseError(error_msg)
     
-    
+    logger.info("Valid timebase identified as %s", timebase)
     return timebase
         
 
