@@ -2782,62 +2782,6 @@ class AltitudeMax(KeyPointValueNode):
         self.create_kpvs_within_slices(alt_std.array, airborne, max_value)
 
 
-class AltitudeSTDAtLiftoff(KeyPointValueNode):
-    '''
-    '''
-
-    name = 'Altitude STD At Liftoff'
-    units = ut.FT
-
-    def derive(self,
-               alt_std=P('Altitude STD Smoothed'),
-               liftoffs=KTI('Liftoff')):
-
-        self.create_kpvs_at_ktis(alt_std.array, liftoffs)
-
-
-class AltitudeQNHAtLiftoff(KeyPointValueNode):
-    '''
-    '''
-
-    name = 'Altitude QNH At Liftoff'
-    units = ut.FT
-
-    def derive(self,
-               alt_std=P('Altitude QNH'),
-               liftoffs=KTI('Liftoff')):
-
-        self.create_kpvs_at_ktis(alt_std.array, liftoffs)
-
-
-class AltitudeSTDAtTouchdown(KeyPointValueNode):
-    '''
-    '''
-
-    name = 'Altitude STD At Touchdown'
-    units = ut.FT
-
-    def derive(self,
-               alt_std=P('Altitude STD Smoothed'),
-               touchdowns=KTI('Touchdown')):
-
-        self.create_kpvs_at_ktis(alt_std.array, touchdowns)
-
-
-class AltitudeQNHAtTouchdown(KeyPointValueNode):
-    '''
-    '''
-
-    name = 'Altitude QNH At Touchdown'
-    units = ut.FT
-
-    def derive(self,
-               alt_std=P('Altitude QNH'),
-               touchdowns=KTI('Touchdown')):
-
-        self.create_kpvs_at_ktis(alt_std.array, touchdowns)
-
-
 class AltitudeDuringGoAroundMin(KeyPointValueNode):
     '''
     The minimum altitude above the local airfield level during the go-around.
