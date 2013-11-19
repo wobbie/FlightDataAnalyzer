@@ -1190,13 +1190,28 @@ class AltitudeRadio(DerivedParameterNode):
                                       offset=self.offset,
                                       frequency=self.frequency)
 
-        # For aircraft which do not compensate for radio altimeter variation
-        # with pitch, and where the antennae are placed well away from the
-        # main gear, compensation is necessary.
+        # For aircraft where the antennae are placed well away from the main
+        # gear, and especially where it is aft of the main gear, compensation
+        # is necessary.
+
+        #TODO: Implement this type of correction on other types and embed
+        #coefficients in a database table.
+            
         if family and family.value in ['CL-600']:
-            pitch_rad = pitch.array * deg2rad
-            # Scaling taken from measurement of takeoff rad alt and pitch data.
-            self.array += 30.0 * np.ma.sin(pitch_rad) - 1.2
+
+            assert pitch.frequency == 4.0 
+            # There is no alignment process for this small correction term,
+            # but it relies upon pitch being sampled at 4Hz and the blended
+            # radio altimeter signal also being fixed at 4Hz.
+
+            # These figures are derived from analysis of 14 sectors of
+            # different CRJ 900 aircraft. They are equivalent to the antennae
+            # being 21ft aft of the main wheels, which is a little more than
+            # the 16ft indicated by the operator.
+
+            scaling = 0.365 #ft/deg, +ve for altimeters aft of the main wheels.
+            offset = -1.5 #ft at pitch=0
+            self.array = self.array + (scaling * pitch.array) + offset
             
 
 class AltitudeSTDSmoothed(DerivedParameterNode):
@@ -1245,7 +1260,8 @@ class AltitudeSTDSmoothed(DerivedParameterNode):
             # The fine recording is used to compute altitude, and here we
             # match the fine part to the coarse part to get the altitudes
             # right.
-            self.array = match_altitudes(fine.array, alt.array)
+            altitude = align(alt, fine)
+            self.array = match_altitudes(fine.array, altitude)
 
         elif alt_capt and alt_fo:
             # Merge alternate sources if they are available from the LFL
@@ -3407,33 +3423,32 @@ class Groundspeed(DerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available):
-        return all_of(('Altitude STD','Groundspeed (1)','Groundspeed (2)'),
-                      available)
+        return all_of(('Groundspeed (1)','Groundspeed (2)'),
+                      available) \
+               or \
+               all_of(('Acceleration Longitudinal Offset Removed', 'Rejected Takeoff'),
+                      available)               
 
     def derive(self,
-               alt = P('Altitude STD'),
                source_A = P('Groundspeed (1)'),
                source_B = P('Groundspeed (2)'),
-               frame = A('Frame')):
+               accel = P ('Acceleration Longitudinal Offset Removed'),
+               rto = S('Rejected Takeoff')):
 
-        frame_name = frame.value if frame else ''
-
-        if frame_name in ['757-DHL']:
-            # The coding in this frame is unique as it only uses two bits for
-            # the first digit of the BCD-encoded groundspeed, limiting the
-            # recorded value range to 399 kts. At altitude the aircraft can
-            # exceed this so a fiddle is required to sort this out.
-            altitude = align(alt, source_A) # Caters for different sample rates.
-            adjust_A = np.logical_and(source_A.array<200, altitude>8000).data*400
-            source_A.array += adjust_A
-            adjust_B = np.logical_and(source_B.array<200, altitude>8000).data*400
-            source_B.array += adjust_B
+        if source_A or source_B:
             self.array, self.frequency, self.offset = \
                 blend_two_parameters(source_A, source_B)
-
+            
         else:
-            self.array, self.frequency, self.offset = \
-                blend_two_parameters(source_A, source_B)
+            # Without groundspeed, we only calculate an estimated value for RTOs.
+            rto = rto.get_aligned(accel)
+            self.frequency = accel.frequency
+            self.offset = accel.offset
+            scale = GRAVITY_IMPERIAL / KTS_TO_FPS
+            self.array = np_ma_masked_zeros_like(accel.array)
+            for rto_slice in rto.get_slices():
+                self.array[rto_slice] = integrate(accel.array[rto_slice], 
+                                                  accel.frequency, scale=scale)
 
 
 class FlapAngle(DerivedParameterNode):

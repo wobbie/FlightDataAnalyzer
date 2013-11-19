@@ -1218,22 +1218,22 @@ class MasterCaution(MultistateDerivedParameterNode):
     '''
     Combine Master Caution for captain and first officer.
     '''
-    values_mapping = {0: '-', 1: 'Warning'}
+    values_mapping = {0: '-', 1: 'Caution'}
 
     @classmethod
     def can_operate(cls, available):
         return any_of(cls.get_dependency_names(), available)
 
-    def derive(self, 
+    def derive(self,
                capt=M('Master Caution (Capt)'),
                fo=M('Master Caution (FO)')):
 
         self.array = vstack_params_where_state(
-            (capt, 'Warning'),
-            (fo, 'Warning'),
+            (capt, 'Caution'),
+            (fo, 'Caution'),
         ).any(axis=0)
-        
-        
+
+
 class MasterWarning(MultistateDerivedParameterNode):
     '''
     Combine master warning for captain and first officer.
@@ -1758,7 +1758,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         elif family_name == 'Learjet':
             self.array = self.learjet_speedbrake(spdsw)
 
-        elif family_name == 'G-V':
+        elif family_name in ['G-V', 'CL-600'] and spdbrk:
             # On the test aircraft SE-RDY the Speedbrake stored 0 at all
             # times and Speedbrake Handle was unresponsive with small numeric
             # variation. The Speedbrake (L) & (R) responded normally so we
@@ -1767,7 +1767,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
                                      'Stowed',
                                      'Deployed/Cmd Up')
 
-        elif family_name in['Global', 'CL-600', 'CRJ 100/200', 'ERJ-135/145']:
+        elif family_name in['Global', 'CRJ 100/200', 'ERJ-135/145', 'CL-600'] and handle:
             # No valid data seen for this type to date....
             logger.warning(
                 'SpeedbrakeSelected: algorithm for family `%s` is undecided, '

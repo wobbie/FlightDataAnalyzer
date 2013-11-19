@@ -840,9 +840,36 @@ class TakeoffPeakAcceleration(KeyTimeInstanceNode):
 
 class Liftoff(KeyTimeInstanceNode):
     '''
-    This checks for the moment when the inertial rate of climb increases
-    through 200fpm, within 2 seconds of the nominal liftoff point.
+    The point of liftoff is computed by working out all the available
+    indications of liftoff and taking the second of these, on the assumption
+    that the first indication may not be valid.
+
+    The five indications used are:
+    
+    (a) the inertial vertical speed indicates a rate of climb (we cannot use
+    barometric rate of climb as the aircraft is in ground effect and
+    transient changes of pressure field as the aircraft rotates cause an
+    indicated descent just prior to lift)
+
+    (b) a normal acceleration of greater than 1.2g
+    
+    (c) radio altimeter indications greater than zero (see http://www.flightdatacommunity.com/looking-closely-at-radio-altimeters/)
+    
+    (d) altitude above airfield greater than zero. This is computed from the
+    available height sources, so will work off the pressure altitude only if no
+    radio altimeter is available.
+
+    (e) change in the gear on ground (weight oon wheels) switch status where
+    available.
+    
+    In the case where the gear on ground signal switches first, we use this.
+    However it is common for this to switch at the end of the oleo extension
+    which is why it commonly operates after other indications.
+    
+    For a more descriptive explanation of the second of many technique, refer to
+    http://www.flightdatacommunity.com/when-does-the-aircraft-land/
     '''
+    
     @classmethod
     def can_operate(cls, available):
         return 'Airborne' in available

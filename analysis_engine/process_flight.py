@@ -121,16 +121,16 @@ def derive_parameters(hdf, node_mgr, process_order):
         # initialise node
         node = node_class()
         # shhh, secret accessors for developing nodes in debug mode
-        node.__p = params
-        node.__h = hdf
-        node.__n = node_mgr
+        node._p = params
+        node._h = hdf
+        node._n = node_mgr
         logger.info("Processing parameter %s", param_name)
         # Derive the resulting value
 
         result = node.get_derived(deps)
-        del node.__p
-        del node.__h
-        del node.__n
+        del node._p
+        del node._h
+        del node._n
 
         if node.node_type is KeyPointValueNode:
             #Q: track node instead of result here??

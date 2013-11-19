@@ -1198,20 +1198,10 @@ class RejectedTakeoff(FlightPhaseNode):
                                               len(accel_lon.array) - 1),
                                           groundeds.get_slices()):
                 continue
-            
-            # Expand phase to the edges of the Acceleration period.
-            start_accel = slice(potential_rto.stop,
-                                max(potential_rto.start-(30 * self.hz), 0), -1)
-            
-            stop_accel = slice(potential_rto.start,
-                               min(potential_rto.stop+(30 * self.hz),
-                                   len(accel_lon.array)))
-            
-            start_index = peak_curvature(accel_lon_smoothed, _slice=start_accel)
-            stop_index = peak_curvature(accel_lon_smoothed, _slice=stop_accel)
-            
-            if start_index and stop_index:
-                self.create_phase(slice(start_index, stop_index))
+
+            self.create_phase(slice(max(potential_rto.start-(10 * self.hz), 0), 
+                                    min(potential_rto.stop+(30 * self.hz),
+                                        len(accel_lon.array))))
 
 
 class Takeoff(FlightPhaseNode):

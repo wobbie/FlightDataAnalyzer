@@ -2686,20 +2686,35 @@ class AltitudeQNHAtTouchdown(KeyPointValueNode):
 
 class AltitudeDuringGoAroundMin(KeyPointValueNode):
     '''
-    The altitude above the local airfield level at the minimum altitude point
-    of the go-around.
+    The minimum altitude above the local airfield level during the go-around.
 
-    Note: This may be less than the radio altimeter reading at this point if
-    there is higher ground in the area of the go-around minimum point.
+    Note: Was defined as the altitude above the local airfield level at the
+    minimum altitude point of the go-around, but this was confusing as this
+    is not the lowest altitude point if the go-around occurs over uneven
+    ground.
     '''
 
     units = ut.FT
 
     def derive(self,
                alt_aal=P('Altitude AAL'),
-               go_arounds=KTI('Go Around')):
+               go_arounds=S('Go Around And Climbout')):
 
-        self.create_kpvs_at_ktis(alt_aal.array, go_arounds)
+        self.create_kpvs_within_slices(alt_aal.array, go_arounds, max_value)
+
+
+class HeightAtGoAround(KeyPointValueNode):
+    '''
+    The altitude above the local ground level at the point of the go-around.
+    '''
+
+    units = ut.FT
+
+    def derive(self,
+               alt_rad=P('Altitude Radio'),
+               go_arounds=KTI('Go Around')):
+        
+        self.create_kpvs_at_ktis(alt_rad.array, go_arounds)
 
 
 class AltitudeOvershootAtSuspectedLevelBust(KeyPointValueNode):
@@ -3149,6 +3164,10 @@ class AltitudeAtFirstFlapRetractionDuringGoAround(KeyPointValueNode):
     Go Around Flap Retracted pinpoints the flap retraction instance within the
     500ft go-around window. Create a single KPV for the first flap retraction
     within a Go Around And Climbout phase.
+    
+    Note: Updated to provide relative altitude, in the same manner as
+    "Altitude At Gear Up Selection During Go Around" as this eases
+    identification of the KPVs in the case of multiple go-arounds.
     '''
 
     units = ut.FT
@@ -3159,9 +3178,13 @@ class AltitudeAtFirstFlapRetractionDuringGoAround(KeyPointValueNode):
                go_arounds=S('Go Around And Climbout')):
 
         for go_around in go_arounds:
-            flap_ret = flap_rets.get_first(within_slice=go_around.slice)
-            if flap_ret:
-                self.create_kpv(flap_ret.index, alt_aal.array[flap_ret.index])
+            # Find the index and height at this go-around minimum:
+            pit_index, pit_value = min_value(alt_aal.array, go_around.slice)
+            for flap_ret in flap_rets.get(within_slice=go_around.slice):
+                if flap_ret.index > pit_index:
+                    # Use height between go around minimum and gear up:
+                    flap_up_ht = alt_aal.array[flap_ret.index] - pit_value
+                self.create_kpv(flap_ret.index, flap_up_ht)
 
 
 class AltitudeAtFirstFlapRetraction(KeyPointValueNode):
@@ -3291,10 +3314,13 @@ class AltitudeAtGearUpSelectionDuringGoAround(KeyPointValueNode):
                 if gear_up.index > pit_index:
                     # Use height between go around minimum and gear up:
                     gear_up_ht = alt_aal.array[gear_up.index] - pit_value
-                else:
-                    # Use zero if gear up selected before minimum height:
-                    gear_up_ht = 0.0
-                self.create_kpv(gear_up.index, gear_up_ht)
+                    self.create_kpv(gear_up.index, gear_up_ht)
+
+                # The else condition below led to creation of a zero KPV in
+                # cases where the gear was not moved, so has been deleted.
+                #else: 
+                    ## Use zero if gear up selected before minimum height:
+                    #gear_up_ht = 0.0
 
 
 class AltitudeWithGearDownMax(KeyPointValueNode):
