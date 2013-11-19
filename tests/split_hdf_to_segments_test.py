@@ -18,7 +18,7 @@ from flightdatautilities.filesystem_tools import copy_file
 
 test_data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                               'test_data')
-
+this_year = datetime.now().year
 
 class TestInvalidYears(unittest.TestCase):
     def test_mask_invalid_years(self):
@@ -420,19 +420,20 @@ class TestSegmentInfo(unittest.TestCase):
     @mock.patch('analysis_engine.split_hdf_to_segments.sha_hash_file')
     @mock.patch('analysis_engine.split_hdf_to_segments.hdf_file',
                 new_callable=mocked_hdf)
-    def test_timestamps_in_future_use_fallback(self, hdf_file_patch, sha_hash_file_patch):
+    def test_timestamps_in_future_use_fallback_year(self, hdf_file_patch, sha_hash_file_patch):
         # Using fallback time is no longer recommended
         ### example where it goes fast
-        ##seg = append_segment_info('future timestamps', 'START_AND_STOP', 
-                                  ##slice(10,1000), 4,
-                                  ##fallback_dt=datetime(2012,12,12,0,0,0))
-        ##self.assertEqual(seg.start_dt, datetime(2012,12,12,0,0,0))
-        ##self.assertEqual(seg.go_fast_dt, datetime(2012,12,12,0,6,52))
-        ##self.assertEqual(seg.stop_dt, datetime(2012,12,12,11,29,56))
-        # Raising exception is more pythonic
-        self.assertRaises(TimebaseError, append_segment_info,
-                          'future timestamps', 'START_AND_STOP', slice(10,1000), 
-                          4, fallback_dt=datetime(2012,12,12,0,0,0))  
+        seg = append_segment_info('future timestamps', 'START_AND_STOP', 
+                                  slice(10,1000), 4,
+                                  fallback_dt=datetime(2012,12,12,0,0,0))
+        self.assertEqual(seg.start_dt, datetime(2012,12,25,0,0,0))
+        self.assertEqual(seg.go_fast_dt, datetime(2012,12,25,0,6,52))
+        self.assertEqual(seg.stop_dt, datetime(2012,12,25,11,29,56))
+        # This was true, but now we invalidate the Year component!
+        ### Raising exception is more pythonic
+        ##self.assertRaises(TimebaseError, append_segment_info,
+                          ##'future timestamps', 'START_AND_STOP', slice(10,1000), 
+                          ##4, fallback_dt=datetime(2012,12,12,0,0,0))  
         
         
     @mock.patch('analysis_engine.split_hdf_to_segments.sha_hash_file')
