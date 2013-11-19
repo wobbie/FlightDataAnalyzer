@@ -3709,23 +3709,6 @@ class APDisengagedDuringCruiseDuration(KeyPointValueNode):
 
 
 ##############################################################################
-# Configuration
-
-
-class ConfigurationAtTouchdown(KeyPointValueNode):
-    '''
-    '''
-
-    units = None
-
-    def derive(self,
-               configuration=P('Configuration'),
-               touchdowns=S('Touchdown')):
-
-        self.create_kpvs_at_ktis(configuration.array, touchdowns)
-
-
-##############################################################################
 
 
 class ControlColumnStiffness(KeyPointValueNode):

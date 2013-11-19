@@ -157,7 +157,6 @@ from analysis_engine.key_point_values import (
     AltitudeWithGearDownMax,
     AutobrakeRejectedTakeoffNotSetDuringTakeoff,
     BrakePressureInTakeoffRollMax,
-    ConfigurationAtTouchdown,
     ControlColumnForceMax,
     ControlColumnStiffness,
     ControlWheelForceMax,
@@ -3536,11 +3535,6 @@ class TestAltitudeAtMachMax(unittest.TestCase, CreateKPVsAtKPVsTest):
     def test_derive(self):
         self.assertTrue(False, msg='Test Not Implemented')
 
-
-class TestConfigurationAtTouchdown(unittest.TestCase, CreateKPVsAtKTIsTest):
-    def setUp(self):
-        self.node_class = ConfigurationAtTouchdown
-        self.operational_combinations = [('Configuration', 'Touchdown')]
 
 
 ##############################################################################
