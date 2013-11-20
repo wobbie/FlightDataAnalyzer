@@ -558,36 +558,30 @@ class FlapLoadReliefSet(KeyTimeInstanceNode):
     '''
     Indicates where flap load relief has taken place.
     '''
+
     def derive(self, flr=M('Flap Load Relief')):
-        self.create_ktis_on_state_change(
-            'Load Relief',
-            flr.array,
-            change='entering'
-            )
+
+        self.create_ktis_on_state_change('Fault', flr.array, change='entering')
 
 
 class FlapAlternateArmedSet(KeyTimeInstanceNode):
     '''
     Indicates where flap alternate system has been armed.
     '''
+
     def derive(self, faa=M('Flap Alternate Armed')):
-        self.create_ktis_on_state_change(
-            'Armed',
-            faa.array,
-            change='entering'
-            )
+
+        self.create_ktis_on_state_change('Armed', faa.array, change='entering')
 
 
 class SlatAlternateArmedSet(KeyTimeInstanceNode):
     '''
     Indicates where slat alternate system has been armed.
     '''
+
     def derive(self, saa=M('Slat Alternate Armed')):
-        self.create_ktis_on_state_change(
-            'Armed',
-            saa.array,
-            change='entering'
-            )
+
+        self.create_ktis_on_state_change('Armed', saa.array, change='entering')
 
 
 class SlatSet(KeyTimeInstanceNode):
