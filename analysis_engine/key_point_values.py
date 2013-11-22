@@ -1141,7 +1141,7 @@ class V2VariationMax(KeyPointValueNode):
 class AirspeedMinusV2AtLiftoff(KeyPointValueNode):
     '''
     Airspeed difference from V2 at the point of Liftoff. A positive value
-    measured ensures a save speed margin above V2.
+    measured ensures an operational speed margin above V2.
     '''
 
     name = 'Airspeed Minus V2 At Liftoff'
@@ -1157,7 +1157,7 @@ class AirspeedMinusV2AtLiftoff(KeyPointValueNode):
 class AirspeedMinusV2At35FtDuringTakeoff(KeyPointValueNode):
     '''
     Airspeed difference from V2 at the 35ft (end of Takeoff phase). A
-    positive value measured ensures a save speed margin above V2.
+    positive value measured ensures an operational speed margin above V2.
     '''
 
     name = 'Airspeed Minus V2 At 35 Ft During Takeoff'
@@ -1195,7 +1195,7 @@ class AirspeedMinusV235To1000FtMax(KeyPointValueNode):
 class AirspeedMinusV235To1000FtMin(KeyPointValueNode):
     '''
     Minimum airspeed difference from V2 from 35ft to 1,000ft. A positive
-    value measured ensures a save speed margin above V2.
+    value measured ensures an operational speed margin above V2.
     '''
 
     name = 'Airspeed Minus V2 35 To 1000 Ft Min'
@@ -1237,7 +1237,8 @@ class AirspeedMinusV2For3Sec35To1000FtMax(KeyPointValueNode):
 class AirspeedMinusV2For3Sec35To1000FtMin(KeyPointValueNode):
     '''
     Minimum airspeed difference from V2 (for at least 3 seconds) from 35ft to
-    1,000ft. A positive value measured ensures a save speed margin above V2.
+    1,000ft. A positive value measured ensures an operational speed margin
+    above V2.
     '''
 
     name = 'Airspeed Minus V2 For 3 Sec 35 To 1000 Ft Min'
@@ -8444,8 +8445,7 @@ class RateOfClimbDuringGoAroundMax(KeyPointValueNode):
 
 class RateOfDescentMax(KeyPointValueNode):
     '''
-    In cases where the aircraft does not leave the ground, we get a descending
-    phase that equates to an empty list, which is not iterable.
+
     '''
 
     units = ut.FPM
