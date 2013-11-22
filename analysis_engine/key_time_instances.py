@@ -561,7 +561,7 @@ class FlapLoadReliefSet(KeyTimeInstanceNode):
 
     def derive(self, flr=M('Flap Load Relief')):
 
-        self.create_ktis_on_state_change('Fault', flr.array, change='entering')
+        self.create_ktis_on_state_change('Load Relief', flr.array, change='entering')
 
 
 class FlapAlternateArmedSet(KeyTimeInstanceNode):

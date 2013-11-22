@@ -960,8 +960,8 @@ class TestFlapLoadReliefSet(unittest.TestCase, NodeTest):
         self.operational_combinations = [('Flap Load Relief',)]
 
     def test_derive(self):
-        array = ['Normal'] * 3 + ['Fault'] * 2 + ['Normal'] * 2
-        mapping = {0: 'Normal', 1: 'Fault'}
+        array = ['Normal'] * 3 + ['Load Relief'] * 2 + ['Normal'] * 2
+        mapping = {0: 'Normal', 1: 'Load Relief'}
         flr = M('Flap Load Relief', array, values_mapping=mapping)
         node = self.node_class()
         node.derive(flr)
