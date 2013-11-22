@@ -1207,6 +1207,23 @@ class TestKeyPointValueNode(unittest.TestCase):
                          [KeyPointValue(index=22, value=27, name='Kpv'),
                           KeyPointValue(index=10.7, value=15, name='Kpv')])
 
+    def test_create_kpvs_within_slices_edge_test(self):
+        knode = self.knode
+        function = min_value
+
+        test_array = np.ma.arange(2, 50, 4)
+        sections = SectionNode('Section',items=[Section('section', slice=slice(4, 10), start_edge=3.25, stop_edge=10.75)])
+
+        # When slicing our data the result may not have integer endpoints.
+
+        knode.create_kpvs_within_slices(test_array, sections, function)
+
+        # ...so the test needs to cater for start_edge & stop_edge
+        # I have modified the node.py code but this test needs fixing.
+
+        self.assertEqual(list(knode),
+                         [KeyPointValue(index=3.25, value=15, name='Kpv')])
+
     def test_create_kpv_from_slices(self):
         knode = self.knode
         slices = [slice(20, 30), slice(5, 10)]
