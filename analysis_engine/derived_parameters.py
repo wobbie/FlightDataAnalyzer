@@ -3701,13 +3701,26 @@ class HeadingContinuous(DerivedParameterNode):
     
     def derive(self, head_mag=P('Heading'),
                head_capt=P('Heading (Capt)'),
-               head_fo=P('Heading (FO)')):
-        if head_capt and head_fo and (head_capt.hz==head_fo.hz):
-            head_capt.array = repair_mask(straighten_headings(head_capt.array))
-            head_fo.array = repair_mask(straighten_headings(head_fo.array))
-            self.array, self.frequency, self.offset = blend_two_parameters(head_capt, head_fo)
+               head_fo=P('Heading (FO)'),
+               frame = A('Frame')):
+
+        frame_name = frame.value if frame else ''
+
+        if frame_name in ['L382-Hercules']:
+            self.array = straighten_headings(head_mag.array.data)
+            gauss = [0.054488683, 0.244201343, 0.402619948, 0.244201343, 0.054488683]
+            self.array = moving_average(
+                straighten_headings(head_mag.array),
+                window=5, weightings=gauss)
+            
         else:
-            self.array = repair_mask(straighten_headings(head_mag.array))
+            if head_capt and head_fo and (head_capt.hz==head_fo.hz):
+                head_capt.array = repair_mask(straighten_headings(head_capt.array))
+                head_fo.array = repair_mask(straighten_headings(head_fo.array))
+                self.array, self.frequency, self.offset = blend_two_parameters(head_capt, head_fo)
+            else:
+                self.array = repair_mask(straighten_headings(head_mag.array))
+
 
 
 class HeadingIncreasing(DerivedParameterNode):

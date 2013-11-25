@@ -2570,7 +2570,13 @@ class TestHeadingContinuous(unittest.TestCase, NodeTest):
                                          ('Heading (Capt)', 'Heading (FO)'),
                                          ('Heading', 'Heading (Capt)',),
                                          ('Heading', 'Heading (FO)'),
-                                         ('Heading', 'Heading (Capt)', 'Heading (FO)') ]
+                                         ('Heading', 'Heading (Capt)', 'Heading (FO)'),
+                                         ('Heading','Frame'),
+                                         ('Heading (Capt)', 'Heading (FO)','Frame'),
+                                         ('Heading', 'Heading (Capt)','Frame'),
+                                         ('Heading', 'Heading (FO)','Frame'),
+                                         ('Heading', 'Heading (Capt)', 'Heading (FO)','Frame')
+                                         ]
 
     def test_heading_continuous_basic(self):
         hdg = P('Heading',np.ma.remainder(np.ma.array(range(10))+355,360.0))
@@ -2612,6 +2618,21 @@ class TestHeadingContinuous(unittest.TestCase, NodeTest):
         self.assertEqual(node.offset, 0.1)
         self.assertEqual(node.frequency, 1,0)
 
+    def test_heading_continuous_not_hercules(self):
+        hdg = P('Heading',np.ma.array(data=[10]*60, mask=[0]*20+[1]*20+[0]*20))
+        con_hdg = HeadingContinuous()
+        con_hdg.derive(hdg, None, None, None)
+        # REPAIR_DURATION is limited to 10 seconds, so this should not be repaired.
+        self.assertEqual(np.ma.count(con_hdg.array), 40)
+        
+    def test_heading_continuous_hercules(self):
+        hdg = P('Heading',np.ma.array(data=[10]*60, mask=[0]*20+[1]*20+[0]*20))
+        con_hdg = HeadingContinuous()
+        herc = A('Frame', 'L382-Hercules')
+        con_hdg.derive(hdg, None, None, herc)
+        # The smoothing algorithm will leave two samples masked at the beginning and end of the array.
+        self.assertEqual(np.ma.count(con_hdg.array), 56)
+        
 
 class TestTrack(unittest.TestCase, NodeTest):
 
