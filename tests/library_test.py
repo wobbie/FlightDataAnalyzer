@@ -2,6 +2,7 @@ import csv
 import mock
 import numpy as np
 import os
+import types
 import unittest
 
 from datetime import datetime
@@ -4115,6 +4116,40 @@ class TestRunsOfOnes(unittest.TestCase):
             [0,0,1,0,1,1,1,1,1,0,0,1,1,1,0,1,1,1],
             mask=14 * [False] + 4 * [True]))
         self.assertEqual(result, [slice(2, 3), slice(4, 9), slice(11, 14)])
+
+
+class TestSlicesOfRuns(unittest.TestCase):
+
+    def test__slices_of_runs(self):
+        array = np.ma.repeat(range(0, 3), 3)
+        result = slices_of_runs(array)
+        expected = [(0, [slice(0, 3)]), (1, [slice(3, 6)]), (2, [slice(6, 9)])]
+        self.assertIsInstance(result, types.GeneratorType)
+        self.assertEqual(list(result), expected)
+
+    def test__slices_of_runs__multiple_slices(self):
+        array = np.ma.repeat((0, 1, 0), 3)
+        result = slices_of_runs(array)
+        expected = [(0, [slice(0, 3), slice(6, 9)]), (1, [slice(3, 6)])]
+        self.assertIsInstance(result, types.GeneratorType)
+        self.assertEqual(list(result), expected)
+
+    def test__slices_of_runs__exclude_masked(self):
+        array = np.ma.repeat(range(0, 2), 5)
+        array[3:7] = np.ma.masked
+        result = slices_of_runs(array)
+        expected = [(0, [slice(0, 3)]), (1, [slice(7, 10)])]
+        self.assertIsInstance(result, types.GeneratorType)
+        self.assertEqual(list(result), expected)
+
+    def test__slices_of_runs__mapped_array(self):
+        array = np.ma.repeat(range(0, 3), 3)
+        array.mask = np.ma.getmaskarray(array)  # irritating...
+        array = MappedArray(array, values_mapping={0: 'A', 1: 'B', 2: 'C'})
+        result = slices_of_runs(array)
+        expected = [('A', [slice(0, 3)]), ('B', [slice(3, 6)]), ('C', [slice(6, 9)])]
+        self.assertIsInstance(result, types.GeneratorType)
+        self.assertEqual(list(result), expected)
 
 
 class TestShiftSlice(unittest.TestCase):

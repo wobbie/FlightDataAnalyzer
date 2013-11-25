@@ -4951,6 +4951,28 @@ def runs_of_ones(bits):
     return np.ma.clump_unmasked(np.ma.masked_not_equal(bits, 1))
 
 
+def slices_of_runs(array):
+    '''
+    Provides a list of slices of runs of each value in the array.
+
+    If the provided array is a mapped array used for multi-states, we return the
+    string representation of the value. This function works as a generator which
+    yields a tuple of the value and a list of slices of each run of that value
+    in the provided array.
+
+    Note that the masked constant value is excluded from the returned data.
+
+    :param array: a numpy masked array or mapped array.
+    :type array: np.ma.array
+    '''
+    for value in np.ma.sort(np.ma.unique(array)):
+        if value is np.ma.masked:
+            continue
+        if hasattr(array, 'values_mapping'):
+            value = array.values_mapping[value]
+        yield value, runs_of_ones(array == value)
+
+
 def shift_slice(this_slice, offset):
     """
     This function shifts a slice by an offset. The need for this arises when
