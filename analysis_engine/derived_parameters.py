@@ -3,7 +3,7 @@
 import numpy as np
 import geomag
 
-from math import ceil, radians
+from math import radians
 from scipy.interpolate import interp1d
 
 from flightdatautilities import aircrafttables as at, units as ut
@@ -71,7 +71,6 @@ from analysis_engine.library import (actuator_mismatch,
                                      slices_from_to,
                                      slices_not,
                                      slices_or,
-                                     slices_remove_small_gaps,
                                      smooth_track,
                                      straighten_headings,
                                      track_linking,
