@@ -1218,22 +1218,22 @@ class MasterCaution(MultistateDerivedParameterNode):
     '''
     Combine Master Caution for captain and first officer.
     '''
-    values_mapping = {0: '-', 1: 'Warning'}
+    values_mapping = {0: '-', 1: 'Caution'}
 
     @classmethod
     def can_operate(cls, available):
         return any_of(cls.get_dependency_names(), available)
 
-    def derive(self, 
+    def derive(self,
                capt=M('Master Caution (Capt)'),
                fo=M('Master Caution (FO)')):
 
         self.array = vstack_params_where_state(
-            (capt, 'Warning'),
-            (fo, 'Warning'),
+            (capt, 'Caution'),
+            (fo, 'Caution'),
         ).any(axis=0)
-        
-        
+
+
 class MasterWarning(MultistateDerivedParameterNode):
     '''
     Combine master warning for captain and first officer.

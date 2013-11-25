@@ -572,8 +572,6 @@ def calculate_timebase(years, months, days, hours, mins, secs):
             # Q: Should we validate these parameters and switch to fallback_dt
             #    if it fails?
             continue
-        if dt > datetime.now():
-            continue
         if not base_dt:
             base_dt = dt # store reference datetime
         # calc diff from base

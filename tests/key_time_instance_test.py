@@ -952,34 +952,53 @@ class TestExitHold(unittest.TestCase):
 ##############################################################################
 # Flap & Slat
 
-class TestSlatAlternateArmedSet(unittest.TestCase):
+
+class TestFlapLoadReliefSet(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = FlapLoadReliefSet
+        self.operational_combinations = [('Flap Load Relief',)]
+
     def test_derive(self):
-        saa = M('Slat Alternate Armed', ['-', '-', 'Armed', 'Armed', 'Armed', '-', '-'],
-               values_mapping={0: '-', 1: 'Armed'})
-        armed = SlatAlternateArmedSet()
-        armed.derive(saa) # Get the pun !
-        expected = [KeyTimeInstance(index=1.5, name='Slat Alternate Armed Set')]
-        self.assertEqual(armed, expected)
+        array = ['Normal'] * 3 + ['Load Relief'] * 2 + ['Normal'] * 2
+        mapping = {0: 'Normal', 1: 'Load Relief'}
+        flr = M('Flap Load Relief', array, values_mapping=mapping)
+        node = self.node_class()
+        node.derive(flr)
+        expected = [KeyTimeInstance(index=2.5, name=self.node_class.get_name())]
+        self.assertEqual(node, expected)
 
 
-class TestFlapAlternateArmed(unittest.TestCase):
+class TestFlapAlternateArmed(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = FlapAlternateArmedSet
+        self.operational_combinations = [('Flap Alternate Armed',)]
+
     def test_derive(self):
-        faa = M('Flap Alternate Armed', ['-', '-', '-', 'Armed', 'Armed', 'Armed', '-'],
-               values_mapping={0: '-', 1: 'Armed'})
-        armed = FlapAlternateArmedSet()
-        armed.derive(faa) # Get the pun !
-        expected = [KeyTimeInstance(index=2.5, name='Flap Alternate Armed Set')]
-        self.assertEqual(armed, expected)
+        array = ['-'] * 3 + ['Armed'] * 3 + ['-'] * 1
+        mapping = {0: '-', 1: 'Armed'}
+        faa = M('Flap Alternate Armed', array, values_mapping=mapping)
+        node = self.node_class()
+        node.derive(faa)
+        expected = [KeyTimeInstance(index=2.5, name=self.node_class.get_name())]
+        self.assertEqual(node, expected)
 
 
-class TestFlapLoadReliefSet(unittest.TestCase):
+class TestSlatAlternateArmedSet(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = SlatAlternateArmedSet
+        self.operational_combinations = [('Slat Alternate Armed',)]
+
     def test_derive(self):
-        flr = M('Flap Load Relief', ['-', '-', '-', 'Load Relief', 'Load Relief', '-', '-'],
-               values_mapping={0: '-', 1: 'Load Relief'})
-        loaded = FlapLoadReliefSet()
-        loaded.derive(flr)
-        expected = [KeyTimeInstance(index=2.5, name='Flap Load Relief Set')]
-        self.assertEqual(loaded, expected)
+        array = ['-'] * 2 + ['Armed'] * 3 + ['-'] * 2
+        mapping = {0: '-', 1: 'Armed'}
+        saa = M('Slat Alternate Armed', array, values_mapping=mapping)
+        node = self.node_class()
+        node.derive(saa)
+        expected = [KeyTimeInstance(index=1.5, name=self.node_class.get_name())]
+        self.assertEqual(node, expected)
 
 
 class TestFlapSet(unittest.TestCase, NodeTest):

@@ -458,6 +458,25 @@ def split_segments(hdf):
     return segments
 
 
+def _mask_invalid_years(array, latest_year):
+    '''
+    Mask years which are in the future, not 2 or 4 digits or were made before
+    the first recording FDR was invented.
+    
+    FDR date based on the Aeronautical Research Laboratory system named the 
+    "Red Egg", made by the British firm of S. Davall & Son in 1960.
+    '''
+    # ignore 4 digit years in the future
+    array[array > latest_year] = np.ma.masked
+    # mask out 3 digits up to the date of the first real FDR
+    array[(array >= 100) & (array < 1960)] = np.ma.masked
+    # mask out any 2 digit years in future
+    two_digits = (array >= 0) & (array < 100)
+    in_future = two_digits & (array > latest_year%100)
+    array[in_future] = np.ma.masked
+    return array
+
+
 def _calculate_start_datetime(hdf, fallback_dt=None):
     """
     Calculate start datetime.
@@ -489,6 +508,9 @@ def _calculate_start_datetime(hdf, fallback_dt=None):
     for name in ('Year', 'Month', 'Day', 'Hour', 'Minute', 'Second'):
         param = hdf.get(name)
         if param:
+            if name == 'Year':
+                year = getattr(fallback_dt, 'year', None) or now.year
+                param.array = _mask_invalid_years(param.array, year)
             # do not interpolate date/time parameters to avoid rollover issues
             array = align(param, onehz, interpolate=False)
             if len(array) == 0 or np.ma.count(array) == 0 or np.ma.all(array == 0):
@@ -557,7 +579,7 @@ def _calculate_start_datetime(hdf, fallback_dt=None):
             timebase, settings.MAX_TIMEBASE_AGE)
         raise TimebaseError(error_msg)
     
-    
+    logger.info("Valid timebase identified as %s", timebase)
     return timebase
         
 

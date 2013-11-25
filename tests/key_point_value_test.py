@@ -12,13 +12,11 @@ from flightdatautilities.geometry import midpoint
 from analysis_engine.library import align
 from analysis_engine.node import (
     A, App, ApproachItem, KPV, KTI, load, M, P, KeyPointValue,
-    MappedArray, MultistateDerivedParameterNode,
+    MultistateDerivedParameterNode,
     KeyTimeInstance, Section, S
 )
 
 from analysis_engine.multistate_parameters import (
-    FlapExcludingTransition,
-    FlapIncludingTransition,
     StableApproach,
 )
 from analysis_engine.key_point_values import (
@@ -147,17 +145,12 @@ from analysis_engine.key_point_values import (
     AltitudeLastUnstableDuringLastApproach,
     AltitudeMax,
     AltitudeOvershootAtSuspectedLevelBust,
-    AltitudeQNHAtLiftoff,
-    AltitudeQNHAtTouchdown,
     AltitudeRadioCleanConfigurationMin,
-    AltitudeSTDAtLiftoff,
-    AltitudeSTDAtTouchdown,
     AltitudeWithFlapMax,
     AltitudeSTDWithGearDownMax,
     AltitudeWithGearDownMax,
     AutobrakeRejectedTakeoffNotSetDuringTakeoff,
     BrakePressureInTakeoffRollMax,
-    ConfigurationAtTouchdown,
     ControlColumnForceMax,
     ControlColumnStiffness,
     ControlWheelForceMax,
@@ -2733,50 +2726,6 @@ class TestAltitudeMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
         self.assertTrue(False, msg='Test Not Implemented')
 
 
-class TestAltitudeSTDAtLiftoff(unittest.TestCase, CreateKPVsAtKTIsTest):
-
-    def setUp(self):
-        self.node_class = AltitudeSTDAtLiftoff
-        self.operational_combinations = [('Altitude STD Smoothed', 'Liftoff')]
-
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test Not Implemented')
-
-
-class TestAltitudeSTDAtTouchdown(unittest.TestCase, CreateKPVsAtKTIsTest):
-
-    def setUp(self):
-        self.node_class = AltitudeSTDAtTouchdown
-        self.operational_combinations = [('Altitude STD Smoothed', 'Touchdown')]
-
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test Not Implemented')
-
-
-class TestAltitudeQNHAtLiftoff(unittest.TestCase, CreateKPVsAtKTIsTest):
-
-    def setUp(self):
-        self.node_class = AltitudeQNHAtLiftoff
-        self.operational_combinations = [('Altitude QNH', 'Liftoff')]
-
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test Not Implemented')
-
-
-class TestAltitudeQNHAtTouchdown(unittest.TestCase, CreateKPVsAtKTIsTest):
-
-    def setUp(self):
-        self.node_class = AltitudeQNHAtTouchdown
-        self.operational_combinations = [('Altitude QNH', 'Touchdown')]
-
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test Not Implemented')
-
-
 class TestAltitudeDuringGoAroundMin(unittest.TestCase, CreateKPVsAtKTIsTest):
 
     def setUp(self):
@@ -3536,11 +3485,6 @@ class TestAltitudeAtMachMax(unittest.TestCase, CreateKPVsAtKPVsTest):
     def test_derive(self):
         self.assertTrue(False, msg='Test Not Implemented')
 
-
-class TestConfigurationAtTouchdown(unittest.TestCase, CreateKPVsAtKTIsTest):
-    def setUp(self):
-        self.node_class = ConfigurationAtTouchdown
-        self.operational_combinations = [('Configuration', 'Touchdown')]
 
 
 ##############################################################################
@@ -7352,9 +7296,9 @@ class TestRateOfClimb35To1000FtMin(unittest.TestCase):
         self.assertEqual(opts, [('Vertical Speed', 'Initial Climb')])
 
     def test_derive(self):
-        array = np.ma.concatenate((np.ma.arange(0, 500, 25), np.ma.arange(500, 1000, 100), [1050, 950, 990], [1100]*5))
-        array = np.ma.concatenate((array, array[::-1]))
-        alt = P('Altitude AAL For Flight Phases', array)
+        ##array = np.ma.concatenate((np.ma.arange(0, 500, 25), np.ma.arange(500, 1000, 100), [1050, 950, 990], [1100]*5))
+        ##array = np.ma.concatenate((array, array[::-1]))
+        ##alt = P('Altitude AAL For Flight Phases', array)
         roc_array = np.ma.concatenate(([25]*19, [43, 62, 81, 100, 112, 62, 47, 50, 12, 37, 27, 0, 0, 0]))
         roc_array = np.ma.concatenate((roc_array, -roc_array[::-1]))
         vert_spd = P('Vertical Speed', roc_array)
