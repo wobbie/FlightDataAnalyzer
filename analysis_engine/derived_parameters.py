@@ -3707,10 +3707,9 @@ class HeadingContinuous(DerivedParameterNode):
         frame_name = frame.value if frame else ''
 
         if frame_name in ['L382-Hercules']:
-            self.array = straighten_headings(head_mag.array.data)
             gauss = [0.054488683, 0.244201343, 0.402619948, 0.244201343, 0.054488683]
             self.array = moving_average(
-                straighten_headings(head_mag.array),
+                straighten_headings(repair_mask(head_mag.array, repair_duration=None)),
                 window=5, weightings=gauss)
             
         else:
