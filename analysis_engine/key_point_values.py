@@ -1548,18 +1548,6 @@ class AirspeedRelativeFor3Sec20FtToTouchdownMin(KeyPointValueNode):
         )
 
 
-class AirspeedMinusMinManeouvringSpeedMin(KeyPointValueNode):
-    '''
-    '''
-
-    units = ut.KT
-
-    def derive(self, spd_rel=P('Airspeed Minus Min Maneouvring Speed'),
-               airborne=S('Airborne')):
-
-        self.create_kpvs_within_slices(spd_rel.array, airborne, min_value)
-
-
 ########################################
 # Airspeed: Flap
 
