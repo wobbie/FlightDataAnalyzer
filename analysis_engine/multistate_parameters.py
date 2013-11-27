@@ -2175,7 +2175,7 @@ class TAWSAlert(MultistateDerivedParameterNode):
         return any_of(['TAWS Caution Terrain',
                        'TAWS Caution',
                        'TAWS Dont Sink',
-                       'TAWS Glideslope'
+                       'TAWS Glideslope',
                        'TAWS Predictive Windshear',
                        'TAWS Pull Up',
                        'TAWS Sink Rate',
