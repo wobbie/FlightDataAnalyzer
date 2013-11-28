@@ -2467,43 +2467,20 @@ class TestGrossWeightSmoothed(unittest.TestCase):
 
 class TestGroundspeed(unittest.TestCase):
     
+    def test_can_operate(self):
+        opts = Groundspeed.get_operational_combinations()
+        self.assertEqual(opts, [('Groundspeed (1)', 'Groundspeed (2)')])
+    
     def test_basic(self):
         one = P('Groundspeed (1)', np.ma.array([100,200,300]), frequency=0.5, offset=0.0)
         two = P('Groundspeed (2)', np.ma.array([150,250,350]), frequency=0.5, offset=1.0)
         frame = A('Frame', 'Not DHL')
         gs = Groundspeed()
-        gs.derive(one, two, None, None)
+        gs.derive(one, two)
         # Note: end samples are not 100 & 350 due to method of merging. 
         np.testing.assert_array_equal(gs.array[1:-1], np.array([150, 200, 250, 300]))
         self.assertEqual(gs.frequency, 1.0)
         self.assertEqual(gs.offset, 0.0)
-    
-    def test_no_gspd(self):
-        alt = P('Altitude STD', np.zeros(125), frequency=1.0)
-        sinewave = np.ma.sin(np.arange(0, 3.14*2, 0.04))*0.4
-        testwave = [0]*150+sinewave.tolist()+[0]*193 # To match array sizes
-        accel = P('Acceleration Longitudinal Offset Removed', testwave, frequency=4.0, offset=0.2)
-        rto = RejectedTakeoff()
-        gnds = buildsection('Grounded', 0, 125)
-        rto.get_derived((accel, gnds))
-        # The data passes 0.1g on the 6th and 72nd samples of the sine wave.
-        # With the 24 sample offset and 4Hz sample rate this gives an RTO
-        # section thus:
-        ##rto = buildsection('Rejected Takeoff', (24+6)/4.0, (24+72)/4.0)
-        frame = A('Frame', '1900D')
-        gs = Groundspeed()
-        gs.derive(None, None, accel, rto)
-        # The groundspeed should match the integration. Done crudely here for plotting when developing the routine.
-        expected = np.cumsum(testwave)*32.2*0.592/4
-        '''
-        import matplotlib.pyplot as plt
-        plt.plot(gs.array)
-        plt.plot(expected)
-        plt.plot(testwave)
-        plt.show()
-        '''
-        self.assertGreater(gs.array[228], 95)
-        self.assertLess(gs.array[228], 96)
         
 
 class TestGroundspeedAlongTrack(unittest.TestCase):
@@ -3247,7 +3224,7 @@ class TestWindAcrossLandingRunway(unittest.TestCase):
         walr = WindAcrossLandingRunway()
         walr.derive(ws,wd,None,land_rwy,None)
         expected = np.ma.array([50.55619778])
-        self.assertAlmostEqual(walr.array.data, expected.data)
+        self.assertAlmostEqual(walr.array.data, expected.data, 1)
         
     def test_error_cases(self):
         ws = P('Wind Speed', np.ma.array([84.0]))

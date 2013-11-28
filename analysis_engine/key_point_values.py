@@ -13,8 +13,10 @@ from analysis_engine.settings import (ACCEL_LAT_OFFSET_LIMIT,
                                       CLIMB_OR_DESCENT_MIN_DURATION,
                                       CONTROL_FORCE_THRESHOLD,
                                       FEET_PER_NM,
+                                      GRAVITY_IMPERIAL,
                                       GRAVITY_METRIC,
                                       HYSTERESIS_FPALT,
+                                      KTS_TO_FPS,
                                       KTS_TO_MPS,
                                       NAME_VALUES_CONF,
                                       NAME_VALUES_ENGINE,
@@ -7555,15 +7557,39 @@ class GroundspeedWhileTaxiingTurnMax(KeyPointValueNode):
 
 class GroundspeedDuringRejectedTakeoffMax(KeyPointValueNode):
     '''
+    Measures the maximum Groundspeed during a rejected takeoff. If
+    Groundspeed is not recorded, we estimate it by integrating the
+    Longitudinal Acceleration.
+    
+    This is much preferred to measuring the Airspeed during RTOs as for most
+    aircraft the Airspeed sensors are not able to record accurately below 60
+    knots, meaning lower speed RTOs may be missed.
     '''
 
     units = ut.KT
+    
+    @classmethod
+    def can_operate(cls, available):
+        return 'Rejected Takeoff' in available and any_of(
+            ('Acceleration Longitudinal Offset Removed', 
+             'Groundspeed'), available)
 
     def derive(self,
+               # Accel is first dependency as maximum recoding frequency
+               accel=P('Acceleration Longitudinal Offset Removed'),
                gnd_spd=P('Groundspeed'),
                rtos=S('Rejected Takeoff')):
+        if gnd_spd:
+            self.create_kpvs_within_slices(gnd_spd.array, rtos, max_value)
+            return
+        # Without groundspeed, we only calculate an estimated Groundspeed for RTOs.
+        scale = GRAVITY_IMPERIAL / KTS_TO_FPS
+        for rto_slice in rtos.get_slices():
+            spd = integrate(accel.array[rto_slice], accel.frequency, scale=scale)
+            index, value = max_value(spd)
+            self.create_kpv(rto_slice.start + index, value)
 
-        self.create_kpvs_within_slices(gnd_spd.array, rtos, max_value)
+        
 
 
 class GroundspeedAtTouchdown(KeyPointValueNode):

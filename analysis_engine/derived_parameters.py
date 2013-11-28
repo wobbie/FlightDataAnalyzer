@@ -3431,24 +3431,12 @@ class Groundspeed(DerivedParameterNode):
 
     def derive(self,
                source_A = P('Groundspeed (1)'),
-               source_B = P('Groundspeed (2)'),
-               accel = P ('Acceleration Longitudinal Offset Removed'),
-               rto = S('Rejected Takeoff')):
+               source_B = P('Groundspeed (2)')):
 
         if source_A or source_B:
             self.array, self.frequency, self.offset = \
                 blend_two_parameters(source_A, source_B)
-            
-        else:
-            # Without groundspeed, we only calculate an estimated value for RTOs.
-            rto = rto.get_aligned(accel)
-            self.frequency = accel.frequency
-            self.offset = accel.offset
-            scale = GRAVITY_IMPERIAL / KTS_TO_FPS
-            self.array = np_ma_masked_zeros_like(accel.array)
-            for rto_slice in rto.get_slices():
-                self.array[rto_slice] = integrate(accel.array[rto_slice], 
-                                                  accel.frequency, scale=scale)
+        
 
 
 class FlapAngle(DerivedParameterNode):

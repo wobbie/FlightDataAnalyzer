@@ -467,7 +467,7 @@ from analysis_engine.key_time_instances import (
     EngStop,
 )
 from analysis_engine.library import (max_abs_value, max_value, min_value)
-from analysis_engine.flight_phase import Fast
+from analysis_engine.flight_phase import Fast, RejectedTakeoff
 from flight_phase_test import buildsection, buildsections
 
 debug = sys.gettrace() is not None
@@ -6608,16 +6608,47 @@ class TestGroundspeedWhileTaxiingTurnMax(unittest.TestCase, NodeTest):
         self.assertTrue(False, msg='Test not implemented.')
 
 
-class TestGroundspeedDuringRejectedTakeoffMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
+class TestGroundspeedDuringRejectedTakeoffMax(unittest.TestCase):
 
-    def setUp(self):
-        self.node_class = GroundspeedDuringRejectedTakeoffMax
-        self.operational_combinations = [('Groundspeed', 'Rejected Takeoff')]
-        self.function = max_value
+    def test_can_operate(self):
+        expected = [
+            ('Acceleration Longitudinal Offset Removed', 'Rejected Takeoff'),
+            ('Groundspeed', 'Rejected Takeoff'),
+            ('Acceleration Longitudinal Offset Removed', 'Groundspeed', 'Rejected Takeoff')
+        ]
+        opts = GroundspeedDuringRejectedTakeoffMax.get_operational_combinations()
+        self.assertEqual(opts, expected)
 
-    @unittest.skip('Test Not Implemented')
     def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+        gspd = P('Groundspeed', 
+                np.ma.array([0]*20 + range(20) + range(20, 1, -1) + range(80)))
+        rto = buildsection('Rejected Takeoff', 22, 40)
+        gspd_rto = GroundspeedDuringRejectedTakeoffMax()
+        gspd_rto.derive(accel=None, gnd_spd=gspd, rtos=rto)
+        self.assertEqual(len(gspd_rto), 1)
+        self.assertEqual(gspd_rto[0].index, 40)
+        self.assertEqual(gspd_rto[0].value, 20)
+    
+    def test_no_gspd(self):
+        sinewave = np.ma.sin(np.arange(0, 3.14*2, 0.04))*0.4
+        testwave = [0]*150+sinewave.tolist()+[0]*193 # To match array sizes
+        accel = P('Acceleration Longitudinal Offset Removed', 
+                  testwave, frequency=4.0, offset=0.2)
+        gnds = buildsection('Grounded', 0, 125)
+        # Create RTO here to ensure it operates as expected
+        rto = RejectedTakeoff()
+        rto.get_derived((accel, gnds))
+        # The data passes 0.1g on the 6th and 72nd samples of the sine wave.
+        # With the 24 sample offset and 4Hz sample rate this gives an RTO
+        # section thus:
+        ##rto = buildsection('Rejected Takeoff', (24+6)/4.0, (24+72)/4.0)
+        gspd_rto = GroundspeedDuringRejectedTakeoffMax()
+        gspd_rto.get_derived((accel, None, rto))
+        # The groundspeed should match the integration. Done crudely here for plotting when developing the routine.
+        #expected = np.cumsum(testwave)*32.2*0.592/4
+
+        self.assertAlmostEqual(gspd_rto[0].value, 95.4, 1)
+        self.assertEqual(gspd_rto[0].index, 229)
 
 
 class TestGroundspeedAtTouchdown(unittest.TestCase, CreateKPVsAtKTIsTest):
