@@ -2150,16 +2150,19 @@ class AirspeedVacatingRunway(KeyPointValueNode):
 
 
 class AirspeedDuringRejectedTakeoffMax(KeyPointValueNode):
-    #FIXME: REPLACE WITH GROUNDSPEED MEASUREMENTS
     '''
+    Although useful, please use Groundspeed During Rejected Takeoff Max.
+    
+    For most aircraft the Airspeed sensors are not able to record accurately
+    below 60 knots, meaning lower speed RTOs may be missed. The Groundspeed
+    version will work off the Longitudinal accelerometer if Groundspeed is
+    not recorded.
     '''
     
     units = ut.KT
 
-    def derive(self,
-               air_spd=P('Airspeed'),
-               rtos=S('Rejected Takeoff')):
-
+    def derive(self, air_spd=P('Airspeed'), rtos=S('Rejected Takeoff')):
+        #NOTE: Use 'Groundspeed During Rejected Takeoff Max' in preference
         self.create_kpvs_within_slices(air_spd.array, rtos, max_value)
 
 
