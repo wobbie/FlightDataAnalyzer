@@ -5,6 +5,7 @@ from analysis_engine import settings
 
 from analysis_engine.library import (
     all_of,
+    any_of,
     bearing_and_distance,
     closest_unmasked_value,
     cycle_finder,
@@ -1146,7 +1147,7 @@ class LandingRoll(FlightPhaseNode):
     '''
     @classmethod
     def can_operate(cls, available):
-        return all_of(['Pitch', 'Airspeed True', 'Landing'], available)
+        return 'Landing' in available and any_of(('Airspeed True', 'Groundspeed'), available)
 
     def derive(self, pitch=P('Pitch'), gspd=P('Groundspeed'),
                aspd=P('Airspeed True'), lands=S('Landing')):
@@ -1161,12 +1162,15 @@ class LandingRoll(FlightPhaseNode):
                 # due to masked values, use the land.stop rather than
                 # searching from the end of the data
                 end = land.slice.stop
-            begin = index_at_value(pitch.array, 2.0,
-                                   slice(end,land.slice.start,-1),
-                                   endpoint='nearest')
+            begin = None
+            if pitch:
+                begin = index_at_value(pitch.array, 2.0,
+                                       slice(end,land.slice.start,-1),
+                                       endpoint='nearest')
             if begin is None:
                 # due to masked values, use land.start in place
                 begin = land.slice.start
+
             self.create_phase(slice(begin, end), begin=begin, end=end)
 
 

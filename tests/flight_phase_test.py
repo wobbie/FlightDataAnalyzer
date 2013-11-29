@@ -31,6 +31,7 @@ from analysis_engine.flight_phase import (Airborne,
                                           InitialApproach,
                                           InitialCruise,
                                           Landing,
+                                          LandingRoll,
                                           LevelFlight,
                                           Mobile,
                                           RejectedTakeoff,
@@ -1230,6 +1231,18 @@ class TestLanding(unittest.TestCase):
                        phase_fast)
         expected = buildsection('Landing', 9, 24)
         self.assertEqual(list(landing), list(expected))
+
+
+class TestLandingRoll(unittest.TestCase):
+    def test_can_operate(self):
+        self.assertEqual(LandingRoll.get_operational_combinations(),
+                         [('Groundspeed', 'Landing'),
+                          ('Airspeed True', 'Landing'),
+                          ('Pitch', 'Groundspeed', 'Landing'),
+                          ('Pitch', 'Airspeed True', 'Landing'),
+                          ('Groundspeed', 'Airspeed True', 'Landing'),
+                          ('Pitch', 'Groundspeed', 'Airspeed True', 'Landing')])
+
 
 class TestMobile(unittest.TestCase, NodeTest):
 
