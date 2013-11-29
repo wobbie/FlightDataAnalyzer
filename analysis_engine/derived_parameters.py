@@ -5812,7 +5812,7 @@ class ApproachRange(DerivedParameterNode):
                     'Airspeed True',
                     'Altitude AAL',
                     'Approach Information'), available) \
-                       and any_of(('Heading True', 'Track True', 'Track'
+                       and any_of(('Heading True', 'Track True', 'Track',
                                    'Heading'), available)
 
     def derive(self, gspd=P('Groundspeed'),

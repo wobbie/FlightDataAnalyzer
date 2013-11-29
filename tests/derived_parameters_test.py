@@ -4694,6 +4694,14 @@ class TestApproachRange(TemporaryFileTest, unittest.TestCase):
             test_data_path, 'flight_with_go_around_and_landing.hdf5')
         super(TestApproachRange, self).setUp()
 
+    def test_can_operate(self):
+        operational_combinations = ApproachRange.get_operational_combinations()
+        self.assertTrue(('Heading True', 'Airspeed True', 'Altitude AAL', 'Approach Information') in operational_combinations, msg="Missing 'Heading True' combination")
+        self.assertTrue(('Track True', 'Airspeed True', 'Altitude AAL', 'Approach Information') in operational_combinations, msg="Missing 'Track True' combination")
+        self.assertTrue(('Track', 'Airspeed True', 'Altitude AAL', 'Approach Information') in operational_combinations, msg="Missing 'Track' combination")
+        self.assertTrue(('Heading', 'Airspeed True', 'Altitude AAL', 'Approach Information') in operational_combinations, msg="Missing 'Heading' combination")
+
+
     def test_range_basic(self):
         with hdf_file(self.test_file_path) as hdf:
             hdg = hdf['Heading True']
