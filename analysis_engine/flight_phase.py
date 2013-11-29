@@ -1273,7 +1273,14 @@ class TakeoffRoll(FlightPhaseNode):
     Sub-phase originally written for the correlation tests but has found use
     in the takeoff KPVs where we are interested in the movement down the
     runway, not the turnon or liftoff.
+
+    If pitch is not avaliable to detect rotation we use the end of the takeoff.
     '''
+
+    @classmethod
+    def can_operate(cls, available):
+        return all_of(('Takeoff', 'Takeoff Acceleration Start'), available)
+
     def derive(self, toffs=S('Takeoff'),
                acc_starts=KTI('Takeoff Acceleration Start'),
                pitch=P('Pitch')):
@@ -1284,14 +1291,17 @@ class TakeoffRoll(FlightPhaseNode):
                 if acc_start:
                     begin = acc_start.index
             chunk = slice(begin, toff.slice.stop)
-            pwo = first_order_washout(pitch.array[chunk], 3.0, pitch.frequency)
-            two_deg_idx = index_at_value(pwo, 2.0)
-            if two_deg_idx is None:
-                roll_end = toff.slice.stop
-                self.warning('Aircraft did not reach a pitch of 2 deg or Acceleration Start is incorrect')
+            if pitch:
+                pwo = first_order_washout(pitch.array[chunk], 3.0, pitch.frequency)
+                two_deg_idx = index_at_value(pwo, 2.0)
+                if two_deg_idx is None:
+                    roll_end = toff.slice.stop
+                    self.warning('Aircraft did not reach a pitch of 2 deg or Acceleration Start is incorrect')
+                else:
+                    roll_end = two_deg_idx + begin
+                self.create_phase(slice(begin, roll_end))
             else:
-                roll_end = two_deg_idx + begin
-            self.create_phase(slice(begin, roll_end))
+                self.create_phase(chunk)
 
 
 class TakeoffRotation(FlightPhaseNode):

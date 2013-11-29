@@ -1673,7 +1673,7 @@ class TestTakeoff5MinRating(unittest.TestCase):
 class TestTakeoffRoll(unittest.TestCase):
     def test_can_operate(self):
         self.assertEqual(TakeoffRoll.get_operational_combinations(),
-                         [('Takeoff', 'Takeoff Acceleration Start', 'Pitch',)])
+                         [('Takeoff', 'Takeoff Acceleration Start',),('Takeoff', 'Takeoff Acceleration Start', 'Pitch',)])
 
     def test_derive(self):
         accel_start = KTI('Takeoff Acceleration Start', items=[
