@@ -1323,17 +1323,12 @@ class TestAltitudeQNH(unittest.TestCase, NodeTest):
         self.assertEqual(alt_qnh.frequency, self.alt_aal.frequency)
     
     def test_new_version(self):
-        ##def derive(self, alt_aal=P('Altitude AAL'), alt_std=P('Altitude STD'),
-                   ##alt_peak=KTI('Altitude Peak'),
-                   ##l_apt=A('FDR Landing Airport'), l_rwy=A('FDR Landing Runway'),
-                   ##t_apt=A('FDR Takeoff Airport'), t_rwy=A('FDR Takeoff Runway'),
-                   ##climbs=S('Climb'), descends=S('Descent'))        
         xalt_aal=P('Altitude AAL', np.ma.array([0]*5+range(0,15000,1000)+[10000]*4+range(10000,-1000,-1000)+[0]*5))
         xalt_std=P('Altitude STD', np.ma.array([1000]*5+range(1000,16000,1000)+[15000]*4+range(15000,4000,-1000)+[4000]*5))
         xtocs=KTI('Top Of Climb', 19)
         xtods=KTI('Top Of Descent', 24)
         xclimbs=buildsection('Climb', 7, 19)
-        xdescents=buildsection('Descent', 24, 32)
+        xdescents=buildsection('Descent', 24, 34)
         alt_qnh = self.node_class()
         alt_qnh.derive(xalt_aal, xalt_std, self.alt_peak, 
                        self.land_fdr_apt, self.land_fdr_rwy, 
@@ -1343,7 +1338,20 @@ class TestAltitudeQNH(unittest.TestCase, NodeTest):
         self.assertEqual(alt_qnh.array[36], 100.0) # Landing elevation
         self.assertEqual(alt_qnh.array[22],15000.0) # Cruise at STD
         
+    def test_trap_alt_difference(self):
+        xalt_aal=P('Altitude AAL', np.ma.array([0]*5+range(0,15000,1000)+[10000]*4+range(10000,-1000,-1000)+[0]*5))
+        xalt_std=P('Altitude STD', np.ma.array([1000]*5+range(1000,16000,1000)+[15000]*4+range(15000,4000,-1000)+[4000]*5))
+        xtocs=KTI('Top Of Climb', 19)
+        xtods=KTI('Top Of Descent', 24)
+        xclimbs=buildsection('Climb', 7, 19)
+        xdescents=buildsection('Descent', 24, 32)
+        alt_qnh = self.node_class()
+        self.assertRaises(ValueError, alt_qnh.derive,
+                          xalt_aal, xalt_std, self.alt_peak, self.land_fdr_apt, 
+                          self.land_fdr_rwy, self.toff_fdr_apt, 
+                          self.toff_fdr_rwy, xclimbs, xdescents)
         
+
 class TestAltitudeRadio(unittest.TestCase):
     """
     def test_can_operate(self):
@@ -4685,6 +4693,14 @@ class TestApproachRange(TemporaryFileTest, unittest.TestCase):
         self.source_file_path = os.path.join(
             test_data_path, 'flight_with_go_around_and_landing.hdf5')
         super(TestApproachRange, self).setUp()
+
+    def test_can_operate(self):
+        operational_combinations = ApproachRange.get_operational_combinations()
+        self.assertTrue(('Heading True', 'Airspeed True', 'Altitude AAL', 'Approach Information') in operational_combinations, msg="Missing 'Heading True' combination")
+        self.assertTrue(('Track True', 'Airspeed True', 'Altitude AAL', 'Approach Information') in operational_combinations, msg="Missing 'Track True' combination")
+        self.assertTrue(('Track', 'Airspeed True', 'Altitude AAL', 'Approach Information') in operational_combinations, msg="Missing 'Track' combination")
+        self.assertTrue(('Heading', 'Airspeed True', 'Altitude AAL', 'Approach Information') in operational_combinations, msg="Missing 'Heading' combination")
+
 
     def test_range_basic(self):
         with hdf_file(self.test_file_path) as hdf:

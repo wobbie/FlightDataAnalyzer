@@ -1417,6 +1417,10 @@ class AltitudeQNH(DerivedParameterNode):
     @staticmethod
     def _qnh_adjust(aal, std, elev):
         # numpy.linspace(start, stop, num=50, endpoint=True)
+        press_offset = std[0] - elev
+        if abs(press_offset) > 4000.0:
+            raise ValueError("Excessive difference between pressure altitude (%s) and airport elevation (%s) of '%s' implies incorrect altimeter scaling.",
+                             std[0], elev, press_offset)
         return np.linspace(elev, std[-1]-aal[-1], num=len(aal))
 
     @staticmethod
@@ -5808,7 +5812,7 @@ class ApproachRange(DerivedParameterNode):
                     'Airspeed True',
                     'Altitude AAL',
                     'Approach Information'), available) \
-                       and any_of(('Heading True', 'Track True', 'Track'
+                       and any_of(('Heading True', 'Track True', 'Track',
                                    'Heading'), available)
 
     def derive(self, gspd=P('Groundspeed'),
