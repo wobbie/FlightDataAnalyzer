@@ -942,9 +942,11 @@ class GearDown(MultistateDerivedParameterNode):
                gear_sel=M('Gear Down Selected')):
         # Join all available gear parameters and use whichever are available.
         if gl or gn or gr:
-            v = vstack_params(gl, gn, gr)
-            wheels_down = v.sum(axis=0) >= (v.shape[0] / 2.0)
-            self.array = np.ma.where(wheels_down, self.state['Down'], self.state['Up'])
+            self.array = vstack_params_where_state(
+                (gl, 'Down'),
+                (gn, 'Down'),
+                (gr, 'Down'),
+            ).any(axis=0)
         else:
             self.array = gear_sel.array
 
