@@ -13,8 +13,10 @@ from analysis_engine.settings import (ACCEL_LAT_OFFSET_LIMIT,
                                       CLIMB_OR_DESCENT_MIN_DURATION,
                                       CONTROL_FORCE_THRESHOLD,
                                       FEET_PER_NM,
+                                      GRAVITY_IMPERIAL,
                                       GRAVITY_METRIC,
                                       HYSTERESIS_FPALT,
+                                      KTS_TO_FPS,
                                       KTS_TO_MPS,
                                       NAME_VALUES_CONF,
                                       NAME_VALUES_ENGINE,
@@ -1141,7 +1143,7 @@ class V2VariationMax(KeyPointValueNode):
 class AirspeedMinusV2AtLiftoff(KeyPointValueNode):
     '''
     Airspeed difference from V2 at the point of Liftoff. A positive value
-    measured ensures a save speed margin above V2.
+    measured ensures an operational speed margin above V2.
     '''
 
     name = 'Airspeed Minus V2 At Liftoff'
@@ -1157,7 +1159,7 @@ class AirspeedMinusV2AtLiftoff(KeyPointValueNode):
 class AirspeedMinusV2At35FtDuringTakeoff(KeyPointValueNode):
     '''
     Airspeed difference from V2 at the 35ft (end of Takeoff phase). A
-    positive value measured ensures a save speed margin above V2.
+    positive value measured ensures an operational speed margin above V2.
     '''
 
     name = 'Airspeed Minus V2 At 35 Ft During Takeoff'
@@ -1195,7 +1197,7 @@ class AirspeedMinusV235To1000FtMax(KeyPointValueNode):
 class AirspeedMinusV235To1000FtMin(KeyPointValueNode):
     '''
     Minimum airspeed difference from V2 from 35ft to 1,000ft. A positive
-    value measured ensures a save speed margin above V2.
+    value measured ensures an operational speed margin above V2.
     '''
 
     name = 'Airspeed Minus V2 35 To 1000 Ft Min'
@@ -1237,7 +1239,8 @@ class AirspeedMinusV2For3Sec35To1000FtMax(KeyPointValueNode):
 class AirspeedMinusV2For3Sec35To1000FtMin(KeyPointValueNode):
     '''
     Minimum airspeed difference from V2 (for at least 3 seconds) from 35ft to
-    1,000ft. A positive value measured ensures a save speed margin above V2.
+    1,000ft. A positive value measured ensures an operational speed margin
+    above V2.
     '''
 
     name = 'Airspeed Minus V2 For 3 Sec 35 To 1000 Ft Min'
@@ -2147,16 +2150,19 @@ class AirspeedVacatingRunway(KeyPointValueNode):
 
 
 class AirspeedDuringRejectedTakeoffMax(KeyPointValueNode):
-    #FIXME: REPLACE WITH GROUNDSPEED MEASUREMENTS
     '''
+    Although useful, please use Groundspeed During Rejected Takeoff Max.
+    
+    For most aircraft the Airspeed sensors are not able to record accurately
+    below 60 knots, meaning lower speed RTOs may be missed. The Groundspeed
+    version will work off the Longitudinal accelerometer if Groundspeed is
+    not recorded.
     '''
     
     units = ut.KT
 
-    def derive(self,
-               air_spd=P('Airspeed'),
-               rtos=S('Rejected Takeoff')):
-
+    def derive(self, air_spd=P('Airspeed'), rtos=S('Rejected Takeoff')):
+        #NOTE: Use 'Groundspeed During Rejected Takeoff Max' in preference
         self.create_kpvs_within_slices(air_spd.array, rtos, max_value)
 
 
@@ -7554,15 +7560,39 @@ class GroundspeedWhileTaxiingTurnMax(KeyPointValueNode):
 
 class GroundspeedDuringRejectedTakeoffMax(KeyPointValueNode):
     '''
+    Measures the maximum Groundspeed during a rejected takeoff. If
+    Groundspeed is not recorded, we estimate it by integrating the
+    Longitudinal Acceleration.
+    
+    This is much preferred to measuring the Airspeed during RTOs as for most
+    aircraft the Airspeed sensors are not able to record accurately below 60
+    knots, meaning lower speed RTOs may be missed.
     '''
 
     units = ut.KT
+    
+    @classmethod
+    def can_operate(cls, available):
+        return 'Rejected Takeoff' in available and any_of(
+            ('Acceleration Longitudinal Offset Removed', 
+             'Groundspeed'), available)
 
     def derive(self,
+               # Accel is first dependency as maximum recoding frequency
+               accel=P('Acceleration Longitudinal Offset Removed'),
                gnd_spd=P('Groundspeed'),
                rtos=S('Rejected Takeoff')):
+        if gnd_spd:
+            self.create_kpvs_within_slices(gnd_spd.array, rtos, max_value)
+            return
+        # Without groundspeed, we only calculate an estimated Groundspeed for RTOs.
+        scale = GRAVITY_IMPERIAL / KTS_TO_FPS
+        for rto_slice in rtos.get_slices():
+            spd = integrate(accel.array[rto_slice], accel.frequency, scale=scale)
+            index, value = max_value(spd)
+            self.create_kpv(rto_slice.start + index, value)
 
-        self.create_kpvs_within_slices(gnd_spd.array, rtos, max_value)
+        
 
 
 class GroundspeedAtTouchdown(KeyPointValueNode):
@@ -8444,8 +8474,7 @@ class RateOfClimbDuringGoAroundMax(KeyPointValueNode):
 
 class RateOfDescentMax(KeyPointValueNode):
     '''
-    In cases where the aircraft does not leave the ground, we get a descending
-    phase that equates to an empty list, which is not iterable.
+
     '''
 
     units = ut.FPM
