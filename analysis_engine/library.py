@@ -108,39 +108,55 @@ def any_of(names, available):
 
 def air_track(lat_start, lon_start, lat_end, lon_end, spd, hdg, frequency):
     """
-    Computation of the air track for cases where recorded latitude and longitude
-    are not available but the origin and destination airport locations are known.
+Computation of the air track for cases where recorded latitude and longitude
+are not available but the origin and destination airport locations are known.
 
-    Note that as the data will be "stretched" to match the origin and
-    destination coordinates, either groundspeed or airspeed may be used, as
-    the stretching function effectively determines the average wind.
+Note that as the data will be "stretched" to match the origin and
+destination coordinates, either groundspeed or airspeed may be used, as
+the stretching function effectively determines the average wind.
 
-    :param lat_start: Fixed latitude point at the origin.
-    :type lat_start: float, latitude degrees.
-    :param lon_start: Fixed longitude point at the origin.
-    :type lon_start: float, longitude degrees.
-    :param lat_end: Fixed latitude point at the destination.
-    :type lat_end: float, latitude degrees.
-    :param lon_end: Fixed longitude point at the destination.
-    :type lon_end: float, longitude degrees.
-    :param spd: Speed (air or ground) in knots
-    :type gspd: Numpy masked array.
-    :param hdg: Heading (ideally true) in degrees.
-    :type hdg: Numpy masked array.
-    :param frequency: Frequency of the groundspeed and heading data
-    :type frequency: Float (units = Hz)
+:param lat_start: Fixed latitude point at the origin.
+:type lat_start: float, latitude degrees.
+:param lon_start: Fixed longitude point at the origin.
+:type lon_start: float, longitude degrees.
+:param lat_end: Fixed latitude point at the destination.
+:type lat_end: float, latitude degrees.
+:param lon_end: Fixed longitude point at the destination.
+:type lon_end: float, longitude degrees.
+:param spd: Speed (air or ground) in knots
+:type gspd: Numpy masked array.
+:param hdg: Heading (ideally true) in degrees.
+:type hdg: Numpy masked array.
+:param frequency: Frequency of the groundspeed and heading data
+:type frequency: Float (units = Hz)
 
-    :returns
-    :param lat_track: Latitude of computed ground track
-    :type lat_track: Numpy masked array
-    :param lon_track: Longitude of computed ground track
-    :type lon_track: Numpy masked array.
+:returns
+:param lat_track: Latitude of computed ground track
+:type lat_track: Numpy masked array
+:param lon_track: Longitude of computed ground track
+:type lon_track: Numpy masked array.
 
-    :error conditions
-    :Fewer than 5 valid data points, returns None, None
-    :Invalid mode fails with ValueError
-    :Mismatched array lengths fails with ValueError
-    """
+:error conditions
+:Fewer than 5 valid data points, returns None, None
+:Invalid mode fails with ValueError
+:Mismatched array lengths fails with ValueError
+"""
+
+    def estimate_endpoint(spd, hdg_rad, frequency, spd_ratio=1.0):
+        # For the available speed, heading compute the endpoint in meters east and north.
+        # spd_ratio allows for adjustment of the airspeed scaling as this is often the most sigificant contributor to errors.
+        spd_north = spd * spd_ratio * np.ma.cos(hdg_rad)
+        spd_east = spd * spd_ratio * np.ma.sin(hdg_rad)
+
+        # Compute displacements in metres north and east of the starting point.
+        north = integrate(spd_north, frequency, scale=KTS_TO_MPS)
+        east = integrate(spd_east, frequency, scale=KTS_TO_MPS)
+        # The delta U north and east (dun & due) correct for the integration over
+        # (N-1) sample intervals.
+        closest_north = closest_unmasked_value(north, -1)
+        closest_east = closest_unmasked_value(east, -1)
+        return closest_north, closest_east
+    
     # First check that the gspd/hdg arrays are sensible.
     if len(spd) != len(hdg):
         raise ValueError('Ground_track requires equi-length speed and '
@@ -154,33 +170,30 @@ def air_track(lat_start, lon_start, lat_end, lon_end, spd, hdg, frequency):
     lat = np_ma_masked_zeros_like(spd)
     lon = np_ma_masked_zeros_like(spd)
 
+    # Do some spadework to prepare the ground
     repair_mask(spd, repair_duration=None)
     repair_mask(hdg, repair_duration=None)
-
     valid_slice = np.ma.clump_unmasked(spd)[0]
-
     hdg_rad = hdg[valid_slice] * deg2rad
-    spd_north = spd[valid_slice] * np.ma.cos(hdg_rad)
-    spd_east = spd[valid_slice] * np.ma.sin(hdg_rad)
-
-    # Compute displacements in metres north and east of the starting point.
-    north = integrate(spd_north, frequency, scale=KTS_TO_MPS)
-    east = integrate(spd_east, frequency, scale=KTS_TO_MPS)
-
+    
+    # How far is the journey?
     brg, dist = bearing_and_distance(lat_start, lon_start, lat_end, lon_end)
     north_final = dist * np.cos(brg * deg2rad)
     east_final = dist * np.sin(brg * deg2rad)
 
-    # The delta U north and east (dun & due) correct for the integration over
-    # (N-1) sample intervals.
-    closest_north = closest_unmasked_value(north, -1)
-    closest_east = closest_unmasked_value(east, -1)
+    # Where does the basic speed vector take us?
+    closest_north, closest_east = estimate_endpoint(spd[valid_slice], hdg_rad, frequency, spd_ratio=1.0)
+
+    # If we rescale, what's the error?
+    spd_ratio = dist / (sqrt(closest_north.value**2 + closest_east.value**2))
+    closest_north, closest_east = estimate_endpoint(spd[valid_slice], hdg_rad, frequency, spd_ratio=spd_ratio)
+        
     # calculate error per sample (in knots)
     dun = (north_final - closest_north.value) / ((closest_north.index-1) * KTS_TO_MPS)
     due = (east_final - closest_east.value) / ((closest_east.index-1) * KTS_TO_MPS)
 
-    north = integrate(spd_north+dun, frequency, scale=KTS_TO_MPS)
-    east = integrate(spd_east+due, frequency, scale=KTS_TO_MPS)
+    north = integrate(spd[valid_slice] * spd_ratio * np.ma.cos(hdg_rad)+dun, frequency, scale=KTS_TO_MPS)
+    east = integrate(spd[valid_slice] * spd_ratio * np.ma.sin(hdg_rad)+due, frequency, scale=KTS_TO_MPS)
 
     bearings = np.ma.array(np.rad2deg(np.arctan2(east, north)))
     distances = np.ma.array(np.ma.sqrt(north**2 + east**2))

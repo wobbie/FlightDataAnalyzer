@@ -66,10 +66,10 @@ class TestAirTrack(unittest.TestCase):
                              spd, hdg, 1.0)
         self.assertEqual(lat[0], 25.751953125)
         self.assertEqual(lon[0], -80.332374000000002)
-        self.assertEqual(lat[5000], 17.175493224321155)
-        self.assertEqual(lon[5000], -79.51891417137719)
-        self.assertAlmostEqual(lat[-1], 9.0492517693791772)
-        self.assertEqual(lon[-1], -79.530753090869467)
+        self.assertAlmostEqual(lat[5000], 17.185, places=3)
+        self.assertAlmostEqual(lon[5000], -79.486, places=3)
+        self.assertAlmostEqual(lat[-1], 9.05, places=2)
+        self.assertAlmostEqual(lon[-1], -79.45, places=2)
 
 
 class TestIsPower2(unittest.TestCase):
