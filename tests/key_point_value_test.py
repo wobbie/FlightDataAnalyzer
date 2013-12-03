@@ -9145,9 +9145,9 @@ class TestDualInputByCaptDuration(unittest.TestCase, NodeTest):
         dual = M('Dual Input Warning', np.ma.zeros(50), values_mapping=mapping)
         dual.array[3:10] = 'Dual'
 
-        mapping = {0: '-', 1: 'Capt', 2: 'FO'}
+        mapping = {0: '-', 1: 'Captain', 2: 'First Officer'}
         pilot = M('Pilot Flying', np.ma.zeros(50), values_mapping=mapping)
-        pilot.array[0:20] = 'FO'
+        pilot.array[0:20] = 'First Officer'
 
         takeoff_roll = buildsection('Takeoff Roll', 0, 5)
         landing_roll = buildsection('Landing Roll', 44, 50)
@@ -9180,9 +9180,9 @@ class TestDualInputByFODuration(unittest.TestCase, NodeTest):
         dual = M('Dual Input Warning', np.ma.zeros(50), values_mapping=mapping)
         dual.array[3:10] = 'Dual'
 
-        mapping = {0: '-', 1: 'Capt', 2: 'FO'}
+        mapping = {0: '-', 1: 'Captain', 2: 'First Officer'}
         pilot = M('Pilot Flying', np.ma.zeros(50), values_mapping=mapping)
-        pilot.array[0:20] = 'Capt'
+        pilot.array[0:20] = 'Captain'
 
         takeoff_roll = buildsection('Takeoff Roll', 0, 5)
         landing_roll = buildsection('Landing Roll', 44, 50)

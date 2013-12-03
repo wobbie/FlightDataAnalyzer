@@ -104,7 +104,10 @@ class NodeTest(object):
 
             with hdf_file(hdf_path) as hdf:
                 for param_name in param_names:
-                    params.append(hdf.get(param_name))
+                    p = hdf.get(param_name)
+                    if param_name == 'Pilot Flying':
+                        p.array.values_mapping = {0: '-', 1: 'Captain', 2: 'First Officer'}
+                    params.append(p)
 
         if _slice:
             phase = S(name=phase_name, frequency=1)
@@ -388,7 +391,7 @@ class TestDualInputWarning(unittest.TestCase, NodeTest):
         ]
 
     def test_derive(self):
-        pilot_map = {0: '-', 1: 'Capt', 2: 'FO'}
+        pilot_map = {0: '-', 1: 'Captain', 2: 'First Officer'}
         pilot_array = MappedArray([1] * 20 + [0] * 10 + [2] * 20,
                                   values_mapping=pilot_map)
         capt_array = np.ma.concatenate((15 + np.arange(20), np.zeros(30)))

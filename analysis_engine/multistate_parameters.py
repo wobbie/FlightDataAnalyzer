@@ -343,8 +343,8 @@ class DualInputWarning(MultistateDerivedParameterNode):
                stick_fo=P('Sidestick Angle (FO)')):
 
         array = np_ma_zeros_like(pilot.array)
-        array[pilot.array == 'Capt'] = stick_fo.array[pilot.array == 'Capt']
-        array[pilot.array == 'FO'] = stick_capt.array[pilot.array == 'FO']
+        array[pilot.array == 'Captain'] = stick_fo.array[pilot.array == 'Captain']
+        array[pilot.array == 'First Officer'] = stick_capt.array[pilot.array == 'First Officer']
         array = np.ma.array(array > 0.5, mask=array.mask, dtype=int)
 
         slices = runs_of_ones(array)
@@ -1307,7 +1307,7 @@ class PilotFlying(MultistateDerivedParameterNode):
     - A320 Flight Profile Specification
     - A321 Flight Profile Specification
     '''
-    values_mapping = {0: '-', 1: 'Capt', 2: 'FO'}
+    values_mapping = {0: '-', 1: 'Captain', 2: 'First Officer'}
 
     def derive(self,
                stick_capt=P('Sidestick Angle (Capt)'),
@@ -1330,8 +1330,8 @@ class PilotFlying(MultistateDerivedParameterNode):
             angle_fo = repair_mask(angle_fo, repair_duration=31,
                                    extrapolate=True)
 
-            pilot_flying[angle_capt > angle_fo] = 'Capt'
-            pilot_flying[angle_capt < angle_fo] = 'FO'
+            pilot_flying[angle_capt > angle_fo] = 'Captain'
+            pilot_flying[angle_capt < angle_fo] = 'First Officer'
 
         self.array = pilot_flying
 
