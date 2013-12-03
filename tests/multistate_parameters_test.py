@@ -952,8 +952,10 @@ class TestFlaperon(unittest.TestCase):
         flaperon.derive(al, ar, model, series, family)
         # ensure values are grouped into aileron settings accordingly
         # flaperon is now step at movement start
-        self.assertEqual(unique_values(flaperon.array.astype(int)),
-                         [(0, 22056), (5, 291), (10, 1205)])
+        self.assertEqual(unique_values(flaperon.array.astype(int)),{
+            0: 22056, 
+            5: 282,
+            10: 1148})
         
 
 class TestFuelQtyLow(unittest.TestCase):
@@ -1328,8 +1330,8 @@ class TestSlat(unittest.TestCase):
 
         node = Slat()
         node.derive(slat, model, series, family)
-        values = unique_values(list(node.array.raw))
-        self.assertEqual(values, [(0, 6), (16, 16), (25, 33)])
+        values = unique_values(node.array.astype(int))
+        self.assertEqual(values, {0: 6, 16: 16, 25: 33})
         self.assertEqual(node.values_mapping, {0: '0', 16: '16', 25: '25'})
 
 

@@ -1277,7 +1277,7 @@ def clump_multistate(array, state, _slices=[slice(None)], condition=True):
 
 def unique_values(array):
     '''
-    Count the number of unique values found within an array.
+    Count the number of unique valid values found within an array.
     
     Hint: If you get "TypeError: array cannot be safely cast to required type"
     and your data is integer type, try casting it to int type:
@@ -1289,9 +1289,36 @@ def unique_values(array):
     :returns: [(val, count), (val2, count2)]
     :rtype: List of tuples
     '''
-    counts = np.bincount(array)
+    counts = np.bincount(array.compressed())
     vals = np.nonzero(counts)[0]
-    return zip(vals, counts[vals])
+    if hasattr(array, 'values_mapping'):
+        keys = [array.values_mapping[x] for x in vals]
+    else:
+        keys = vals
+    return dict(zip(keys, counts[vals]))
+
+
+def most_common_value(array):
+    '''
+    Find the most repeating valid value within an array. Works with mapped
+    arrays too.
+    
+    Hint: If you get "TypeError: array cannot be safely cast to required type"
+    and your data is integer type, try casting it to int type:
+    
+    most_common_value(array.astype(int))
+    
+    :param array: Array to count occurrences of values within
+    :type array: np.array
+    :returns: [(val, count), (val2, count2)]
+    :rtype: List of tuples
+    '''
+    counts = np.bincount(array.compressed())
+    key = counts.argmax()
+    if hasattr(array, 'values_mapping'):
+        return array.values_mapping[key]
+    else:
+        return key
 
 
 def compress_iter_repr(iterable, cast=None, join='+'):
