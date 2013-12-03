@@ -256,8 +256,8 @@ class TestSplitSegments(unittest.TestCase):
         segment_tuples = split_segments(hdf)
         self.assertEqual(segment_tuples,
                          [('START_AND_STOP', slice(0, 9952.0, None)),
-                          ('START_AND_STOP', slice(9952.0, 21799.0, None)),
-                          ('START_AND_STOP', slice(21799.0, 24665.0, None)),
+                          ('START_AND_STOP', slice(9952.0, 21751.0, None)),
+                          ('START_AND_STOP', slice(21751.0, 24665.0, None)),
                           ('START_AND_STOP', slice(24665.0, 27898.0, None)),
                           ('START_AND_STOP', slice(27898.0, 31424.0, None))])
     
@@ -269,9 +269,9 @@ class TestSplitSegments(unittest.TestCase):
         
         segment_tuples = split_segments(hdf)
         self.assertEqual(segment_tuples,
-                         [('START_AND_STOP', slice(0, 3583.0, None)),
-                          ('START_AND_STOP', slice(3583.0, 6446.0, None)),
-                          ('START_AND_STOP', slice(6446.0, 9912.0, None)),
+                         [('START_AND_STOP', slice(0, 3407.0, None)),
+                          ('START_AND_STOP', slice(3407.0, 6362.0, None)),
+                          ('START_AND_STOP', slice(6362.0, 9912.0, None)),
                           ('START_AND_STOP', slice(9912.0, 13064.0, None)),
                           ('START_AND_STOP', slice(13064.0, 16467.0, None)),
                           ('START_AND_STOP', slice(16467.0, 19200.0, None))])
