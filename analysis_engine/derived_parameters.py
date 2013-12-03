@@ -5213,15 +5213,18 @@ class Headwind(DerivedParameterNode):
             'Heading True Continuous',
         ), available)
 
-    def derive(self, windspeed=P('Wind Speed'),
+    def derive(self, aspd=P('Airspeed True'),
+               windspeed=P('Wind Speed'),
                wind_dir=P('Wind Direction Continuous'),
                head=P('Heading True Continuous'),
                toffs=S('Takeoff'),
                alt_aal=P('Altitude AAL'),
-               gspd=P('Groundspeed'),
-               aspd=P('Airspeed True')):
+               gspd=P('Groundspeed')):
 
         rad_scale = radians(1.0)
+        if aspd:
+            # mask windspeed data while going slow
+            windspeed.array[aspd.array.mask] = np.ma.masked
         headwind = windspeed.array * np.ma.cos((wind_dir.array-head.array)*rad_scale)
 
         # If we have airspeed and groundspeed, overwrite the values for the
