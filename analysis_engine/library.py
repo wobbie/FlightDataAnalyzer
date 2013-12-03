@@ -4206,7 +4206,7 @@ def np_ma_concatenate(arrays):
         return np.ma.concatenate(arrays)
 
 
-def np_ma_zeros_like(array, mask=False):
+def np_ma_zeros_like(array, mask=False, dtype=float):
     """
     The Numpy masked array library does not have equivalents for some array
     creation functions. These are provided with similar names which may be
@@ -4219,7 +4219,7 @@ def np_ma_zeros_like(array, mask=False):
 
     :returns: Numpy masked array of unmasked zero values, length same as input array.
     """
-    return np.ma.array(np.zeros_like(array.data), mask=mask, dtype=float)
+    return np.ma.array(np.zeros_like(array.data), mask=mask, dtype=dtype)
 
 
 def np_ma_ones_like(array):
@@ -4265,7 +4265,7 @@ def np_ma_masked_zeros(length):
     return np.ma.array(data=np.zeros(length), mask=True)
 
 
-def np_ma_masked_zeros_like(array):
+def np_ma_masked_zeros_like(array, dtype=float):
     """
     Creates a masked array filled with masked values. The unmasked data
     values are all zero. The very klunky code here is to circumvent Numpy's
@@ -4281,8 +4281,8 @@ def np_ma_masked_zeros_like(array):
     :returns: Numpy masked array of masked 0.0 float values, length same as
     input array.
     """
-    return np.ma.array(data = np_ma_zeros_like(array).data,
-                       mask = np_ma_ones_like(array).data)
+    return np.ma.array(data=np.zeros(len(array), dtype=dtype),
+                       mask=np.ones(len(array), dtype=np.bool))
 
 
 def truck_and_trailer(data, ttp, overall, trailer, curve_sense, _slice):
