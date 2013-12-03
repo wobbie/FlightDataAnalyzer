@@ -235,6 +235,7 @@ def _split_on_dfc(slice_start_secs, slice_stop_secs, dfc_frequency,
     unmasked_edges = np.ma.flatnotmasked_edges(dfc_diff[dfc_slice])
     if unmasked_edges is None:
         return None
+    unmasked_edges /= dfc_frequency
     if eng_split_index:
         # Split on the jump closest to the engine parameter minimums.
         dfc_jump = unmasked_edges[np.ma.argmin(np.ma.abs(
@@ -242,8 +243,7 @@ def _split_on_dfc(slice_start_secs, slice_stop_secs, dfc_frequency,
     else:
         # Split on the first DFC jump.
         dfc_jump = unmasked_edges[0]
-    dfc_index = round((dfc_jump / dfc_frequency) + slice_start_secs +
-                      dfc_half_period)
+    dfc_index = round(dfc_jump + slice_start_secs + dfc_half_period)
     # account for rounding of dfc index exceeding slow slice
     if dfc_index > slice_stop_secs:
         split_index = slice_stop_secs

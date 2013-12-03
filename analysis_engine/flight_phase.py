@@ -1192,7 +1192,7 @@ class Takeoff(FlightPhaseNode):
             if speedy.slice.start is None:
                 break
 
-            # The aircraft is part way down it's takeoff run at the start of
+            # The aircraft is part way down its takeoff run at the start of
             # the section.
             takeoff_run = speedy.slice.start
 
