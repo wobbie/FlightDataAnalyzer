@@ -1007,6 +1007,7 @@ class GearDownSelected(MultistateDerivedParameterNode):
 
     TODO: Derive from "Gear Up" only if recorded.
     '''
+    align_frequency = 1
 
     values_mapping = {
         0: 'Up',
@@ -1055,6 +1056,7 @@ class GearUpSelected(MultistateDerivedParameterNode):
     for us establishing transitions from 'Gear Down' with the assocaited Red
     Warnings.
     '''
+    align_frequency = 1
 
     values_mapping = {
         0: 'Down',
