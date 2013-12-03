@@ -3284,11 +3284,12 @@ class AltitudeAtFirstFlapRetractionDuringGoAround(KeyPointValueNode):
         for go_around in go_arounds:
             # Find the index and height at this go-around minimum:
             pit_index, pit_value = min_value(alt_aal.array, go_around.slice)
-            for flap_ret in flap_rets.get(within_slice=go_around.slice):
+            for flap_ret in flap_rets.get_ordered_by_index(within_slice=go_around.slice):
                 if flap_ret.index > pit_index:
                     # Use height between go around minimum and gear up:
                     flap_up_ht = alt_aal.array[flap_ret.index] - pit_value
-                self.create_kpv(flap_ret.index, flap_up_ht)
+                    self.create_kpv(flap_ret.index, flap_up_ht)
+                    break
 
 
 class AltitudeAtFirstFlapRetraction(KeyPointValueNode):

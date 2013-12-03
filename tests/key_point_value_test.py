@@ -3156,7 +3156,7 @@ class TestAltitudeAtFirstFlapRetractionDuringGoAround(unittest.TestCase, NodeTes
         node = AltitudeAtFirstFlapRetractionDuringGoAround()
         node.derive(self.alt_aal, flap_rets, self.go_arounds)
         self.assertEqual(node, [
-            KeyPointValue(100, 1000, 'Altitude At First Flap Retraction During Go Around'),
+            KeyPointValue(100, 0, 'Altitude At First Flap Retraction During Go Around'),
         ])
 
     def test_derive_no_ktis(self):
