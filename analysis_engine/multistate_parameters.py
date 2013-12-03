@@ -1005,7 +1005,6 @@ class GearDownSelected(MultistateDerivedParameterNode):
 
     This is the basis for 'Gear Up Selected'.
 
-    TODO: Add a transit delay (~10secs) to the selection to when the gear down.
     TODO: Derive from "Gear Up" only if recorded.
     '''
 

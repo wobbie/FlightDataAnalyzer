@@ -607,37 +607,16 @@ class GearExtending(FlightPhaseNode):
     finite period. Based on the Gear Red Warnings.
 
     For some aircraft no parameters to identify the transit are recorded, so
-    a nominal period of 5 seconds at gear down and gear up is included to
+    a nominal period is included in Gear Down Selected Calculations to
     allow for exceedance of gear transit limits.
     '''
-    @classmethod
-    def can_operate(cls, available):
-        return 'Gear Down' in available and 'Airborne' in available
 
-    def derive(self, gear_warn=M('Gear (*) Red Warning'),
+    def derive(self, gear_down_selected=M('Gear Down Selected'),
                gear_down=M('Gear Down'), airs=S('Airborne')):
-        if gear_warn:
-            red_periods = runs_of_ones(gear_warn.array == 'Warning')
-            for gear_move in red_periods:
-                if gear_down.array[gear_move.stop + 1] == 'Down':
-                    # we are extending towards gear-down position
-                    self.create_phase(gear_move)                
-                else:
-                    # we were retracting
-                    continue
-            return
         
-        # Aircraft without red warning captions for travelling
-        edge_list = []
-        for air in airs:
-            edge_list.append(find_edges(gear_down.array.raw, air.slice))
-        # We now have a list of lists and this trick flattens the result.
-        for edge in sum(edge_list, []):
-            # We have no transition state, so allow 5 seconds for the
-            # gear to extend.
-            begin = edge
-            end = edge + (5.0 * gear_down.frequency)
-            self.create_phase(slice(begin, end))
+        in_transit = (gear_down_selected.array == 'Down') & (gear_down.array != 'Down')
+        gear_extending = slices_and(runs_of_ones(in_transit), airs.get_slices())
+        self.create_phases(gear_extending)
 
 
 class GearExtended(FlightPhaseNode):
@@ -656,38 +635,16 @@ class GearRetracting(FlightPhaseNode):
     finite period. Based on the Gear Red Warnings.
 
     For some aircraft no parameters to identify the transit are recorded, so
-    a nominal period of 5 seconds at gear down and gear up is included to
+    a nominal period is included in Gear Up Selected Calculations to
     allow for exceedance of gear transit limits.
     '''
-    @classmethod
-    def can_operate(cls, available):
-        return 'Gear Down' in available and 'Airborne' in available
 
-    def derive(self, gear_warn=M('Gear (*) Red Warning'),
+    def derive(self, gear_up_selected=M('Gear Up Selected'),
                gear_down=M('Gear Down'), airs=S('Airborne')):
-        if gear_warn:
-            red_periods = runs_of_ones(gear_warn.array == 'Warning')
-            for gear_move in red_periods:
-                if gear_down.array[gear_move.start - 1] == 'Down':
-                    # we were down so are now retracting gear upwards
-                    self.create_phase(gear_move)
-                else:
-                    # we were extending, skip
-                    continue
-            return
-        else:
-            # Aircraft without red warning captions for travelling
-            edge_list = []
-            for air in airs:
-                edge_list.append(find_edges(gear_down.array.raw, air.slice,
-                                            direction='falling_edges'))
-            # We now have a list of lists and this trick flattens the result.
-            for edge in sum(edge_list, []):
-                # We have no transition state, so allow 5 seconds for the
-                # gear to retract.
-                begin = edge
-                end = edge + (5.0 * gear_down.frequency)
-                self.create_phase(slice(begin, end))
+        
+        in_transit = (gear_up_selected.array == 'Up') & (gear_down.array != 'Up')
+        gear_retracting = slices_and(runs_of_ones(in_transit), airs.get_slices())
+        self.create_phases(gear_retracting)
 
 
 class GearRetracted(FlightPhaseNode):
@@ -1235,7 +1192,7 @@ class Takeoff(FlightPhaseNode):
             if speedy.slice.start is None:
                 break
 
-            # The aircraft is part way down it's takeoff run at the start of
+            # The aircraft is part way down its takeoff run at the start of
             # the section.
             takeoff_run = speedy.slice.start
 

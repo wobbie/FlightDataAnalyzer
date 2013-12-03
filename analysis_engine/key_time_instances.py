@@ -797,9 +797,9 @@ class TakeoffAccelerationStart(KeyTimeInstanceNode):
                 if first_accel > TAKEOFF_ACCELERATION_THRESHOLD:
                     start_accel = takeoff.slice.start
                 else:
-                    start_accel=index_at_value(accel.array,
-                                               TAKEOFF_ACCELERATION_THRESHOLD,
-                                               takeoff.slice)
+                    start_accel = index_at_value(accel.array,
+                                                 TAKEOFF_ACCELERATION_THRESHOLD,
+                                                 takeoff.slice)
 
             if start_accel is None:
                 '''

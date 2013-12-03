@@ -965,55 +965,27 @@ class TestFinalApproach(unittest.TestCase):
 
 
 class TestGearRetracting(unittest.TestCase):
+    def setUp(self):
+        self.node_class = GearRetracting
+        
     def test_can_operate(self):
-        opts = GearRetracting.get_operational_combinations()
+        opts = self.node_class.get_operational_combinations()
         self.assertEqual(opts,[
-                         ('Gear Down', 'Airborne'),
-                         ('Gear (*) Red Warning', 'Gear Down', 'Airborne')])
+                         ('Gear Up Selected', 'Gear Down', 'Airborne')])
 
-    def test_737_3C(self):
-        gear_down = M('Gear Down', np.ma.array([1,1,1,0,0,0,0,0,0,0,0,1,1]),
+    def test_derive(self):
+        gear_down = M('Gear Down', np.ma.array([1,1,1,1,0,0,0,0,0,1,1,1]),
                       values_mapping={0:'Up', 1:'Down'})
-        gear_warn_l = M('Gear (L) Red Warning',
-                        np.ma.array([0,0,0,1,0,0,0,0,0,1,0,0]),
-                        values_mapping={1:'Warning', 0:'False'})
-        gear_warn_n = M('Gear (N) Red Warning',
-                        np.ma.array([0,0,0,0,1,0,0,0,1,0,0,0]),
-                        values_mapping={1:'Warning', 0:'False'})
-        gear_warn_r = M('Gear (R) Red Warning',
-                        np.ma.array([0,0,0,0,0,1,0,1,0,0,0,0]),
-                        values_mapping={1:'Warning', 0:'False'})
+        gear_up_sel = M('Gear Up Selected',
+                        np.ma.array([0,0,1,1,1,1,1,0,0,0,0,0]),
+                        values_mapping={0:'Down', 1:'Up'})
         airs = buildsection('Airborne', 1, 11)
-        gear_warn = Gear_RedWarning()
-        gear_warn.derive(gear_warn_l, gear_warn_n, gear_warn_r, airs)
         
-        gr = GearRetracting()
-        gr.derive(gear_warn, gear_down, airs)
-        expected = buildsection('Gear Retracting', 3, 6)
-        self.assertEqual(list(gr), list(expected))
-
-
-    def test_derive_with_mask(self):
-        gear_down = M('Gear Down', np.ma.array([1,1,1,0,0,0,0,0,0,0,0,1,1]),
-                      values_mapping={0:'Up', 1:'Down'})
-        gear_warn_l = M('Gear (L) Red Warning',
-                        np.ma.array([0,0,0,1,0,0,0,0,0,1,0,0]),
-                        values_mapping={1:'Warning', 0:'False'})
-        gear_warn_l.array[0] = np.ma.masked
-        gear_warn_n = M('Gear (N) Red Warning',
-                        np.ma.array([0,0,0,0,1,0,0,0,1,0,0,0]),
-                        values_mapping={1:'Warning', 0:'False'})
-        gear_warn_r = M('Gear (R) Red Warning',
-                        np.ma.array([0,0,0,0,0,1,0,1,0,0,0,0]),
-                        values_mapping={1:'Warning', 0:'False'})
-        airs = buildsection('Airborne', 1, 11)
-        gear_warn = Gear_RedWarning()
-        gear_warn.derive(gear_warn_l, gear_warn_n, gear_warn_r, airs)
         
-        gr = GearRetracting()
-        gr.derive(gear_warn, gear_down, airs)
-        expected=buildsection('Gear Retracting', 3, 6)
-        self.assertEqual(list(gr), list(expected))
+        node = self.node_class()
+        node.derive(gear_up_sel, gear_down, airs)
+        expected=buildsection('Gear Retracting', 2, 4)
+        self.assertEqual(list(node), list(expected))
 
 
 class TestGoAroundAndClimbout(unittest.TestCase):
@@ -1583,55 +1555,28 @@ class TestDescentToFlare(unittest.TestCase):
 
 
 class TestGearExtending(unittest.TestCase):
+    def setUp(self):
+        self.node_class = GearExtending
+        
     def test_can_operate(self):
-        opts = GearExtending.get_operational_combinations()
+        opts = self.node_class.get_operational_combinations()
         self.assertEqual(opts,[
-                         ('Gear Down', 'Airborne'),
-                         ('Gear (*) Red Warning', 'Gear Down', 'Airborne')])
+                         ('Gear Down Selected', 'Gear Down', 'Airborne')])
 
-    def test_737_3C(self):
-        gear_down = M('Gear Down', np.ma.array([1,1,1,0,0,0,0,0,0,0,0,1,1]),
+
+    def test_derive(self):
+        gear_down = M('Gear Down', np.ma.array([1,1,1,1,0,0,0,0,0,1,1,1]),
                       values_mapping={0:'Up', 1:'Down'})
-        gear_warn_l = M('Gear (L) Red Warning',
-                        np.ma.array([0,0,0,1,0,0,0,0,0,1,0,0]),
-                        values_mapping={1:'Warning', 0:'False'})
-        gear_warn_n = M('Gear (N) Red Warning',
-                        np.ma.array([0,0,0,0,1,0,0,0,1,0,0,0]),
-                        values_mapping={1:'Warning', 0:'False'})
-        gear_warn_r = M('Gear (R) Red Warning',
-                        np.ma.array([0,0,0,0,0,1,0,1,0,0,0,0]),
-                        values_mapping={1:'Warning', 0:'False'})
+        gear_down_sel = M('Gear Down Selected',
+                        np.ma.array([1,1,0,0,0,0,0,1,1,1,1,1]),
+                        values_mapping={0:'Up', 1:'Down'})
         airs = buildsection('Airborne', 1, 11)
-        gear_warn = Gear_RedWarning()
-        gear_warn.derive(gear_warn_l, gear_warn_n, gear_warn_r, airs)
         
-        gr = GearExtending()
-        gr.derive(gear_warn, gear_down, airs)
-        expected = buildsection('Gear Extending', 7, 10)
-        self.assertEqual(list(gr), list(expected))
-
-
-    def test_derive_with_mask(self):
-        gear_down = M('Gear Down', np.ma.array([1,1,1,0,0,0,0,0,0,0,0,1,1]),
-                      values_mapping={0:'Up', 1:'Down'})
-        gear_warn_l = M('Gear (L) Red Warning',
-                        np.ma.array([0,0,0,1,0,0,0,0,0,1,0,0]),
-                        values_mapping={1:'Warning', 0:'False'})
-        gear_warn_l.array[0] = np.ma.masked
-        gear_warn_n = M('Gear (N) Red Warning',
-                        np.ma.array([0,0,0,0,1,0,0,0,1,0,0,0]),
-                        values_mapping={1:'Warning', 0:'False'})
-        gear_warn_r = M('Gear (R) Red Warning',
-                        np.ma.array([0,0,0,0,0,1,0,1,0,0,0,0]),
-                        values_mapping={1:'Warning', 0:'False'})
-        airs = buildsection('Airborne', 1, 11)
-        gear_warn = Gear_RedWarning()
-        gear_warn.derive(gear_warn_l, gear_warn_n, gear_warn_r, airs)
         
-        gr = GearExtending()
-        gr.derive(gear_warn, gear_down, airs)
-        expected=buildsection('Gear Extending', 7, 10)
-        self.assertEqual(list(gr), list(expected))
+        node = self.node_class()
+        node.derive(gear_down_sel, gear_down, airs)
+        expected=buildsection('Gear Extending', 7, 9)
+        self.assertEqual(list(node), list(expected))
 
 
 class TestGearExtended(unittest.TestCase):
