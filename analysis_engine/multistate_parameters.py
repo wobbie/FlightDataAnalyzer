@@ -252,7 +252,7 @@ class Configuration(MultistateDerivedParameterNode):
                model=A('Model'), series=A('Series'), family=A('Family')):
         
         angles = at.get_conf_angles(model.value, series.value, family.value)
-        self.array = MappedArray(np_ma_masked_zeros_like(flap.array),
+        self.array = MappedArray(np_ma_masked_zeros_like(flap.array, dtype=np.short),
                                  values_mapping=self.values_mapping)        
         for (state, (s, f, a)) in angles.iteritems():
             condition = (flap.array == f)
@@ -343,15 +343,15 @@ class DualInputWarning(MultistateDerivedParameterNode):
                stick_fo=P('Sidestick Angle (FO)')):
 
         array = np_ma_zeros_like(pilot.array)
-        array[pilot.array == 'Capt'] = stick_fo.array[pilot.array == 'Capt']
-        array[pilot.array == 'FO'] = stick_capt.array[pilot.array == 'FO']
+        array[pilot.array == 'Captain'] = stick_fo.array[pilot.array == 'Captain']
+        array[pilot.array == 'First Officer'] = stick_capt.array[pilot.array == 'First Officer']
         array = np.ma.array(array > 0.5, mask=array.mask, dtype=int)
 
         slices = runs_of_ones(array)
         slices = slices_remove_small_slices(slices, 3, self.hz)
         slices = slices_remove_small_gaps(slices, 15, self.hz)
 
-        dual = np_ma_zeros_like(array)
+        dual = np_ma_zeros_like(array, dtype=np.short)
         for sl in slices:
             dual[sl] = 1
         self.array = dual
@@ -569,7 +569,7 @@ class EngThrustModeRequired(MultistateDerivedParameterNode):
         if len(thrusts) == 1:
             self.array = thrusts[0].array
         
-        array = MappedArray(np_ma_zeros_like(thrusts[0].array),
+        array = MappedArray(np_ma_zeros_like(thrusts[0].array, dtype=np.short),
                             values_mapping=self.values_mapping)
         
         masks = []
@@ -1022,7 +1022,7 @@ class GearDownSelected(MultistateDerivedParameterNode):
                gear_down=M('Gear Down'),
                gear_warn=M('Gear (*) Red Warning')):
 
-        self.array = np.ma.zeros(gear_down.array.size)
+        self.array = np.ma.zeros(gear_down.array.size, dtype=np.short)
         self.array[gear_down.array == 'Down'] = 'Down'
         if gear_warn:
             # We use up to 10s of `Gear (*) Red Warning` == 'Warning'
@@ -1103,7 +1103,7 @@ class Gear_RedWarning(MultistateDerivedParameterNode):
             ##True: 'Warning'})
         red_air = red_warning.any(axis=0) & in_air
         # creating mapped array is probably not be required due to __setattr__
-        red = np.ma.zeros(len(red_air))
+        red = np.ma.zeros(len(red_air), dtype=np.short)
         red[red_air] = 1
         self.array = MappedArray(red, values_mapping=self.values_mapping)
 
@@ -1308,13 +1308,13 @@ class PilotFlying(MultistateDerivedParameterNode):
     - A320 Flight Profile Specification
     - A321 Flight Profile Specification
     '''
-    values_mapping = {0: '-', 1: 'Capt', 2: 'FO'}
+    values_mapping = {0: '-', 1: 'Captain', 2: 'First Officer'}
 
     def derive(self,
                stick_capt=P('Sidestick Angle (Capt)'),
                stick_fo=P('Sidestick Angle (FO)')):
 
-        pilot_flying = MappedArray(np.ma.zeros(stick_capt.array.size),
+        pilot_flying = MappedArray(np.ma.zeros(stick_capt.array.size, dtype=np.short),
                                    values_mapping=self.values_mapping)
 
         if stick_capt.array.size > 61:
@@ -1331,8 +1331,8 @@ class PilotFlying(MultistateDerivedParameterNode):
             angle_fo = repair_mask(angle_fo, repair_duration=31,
                                    extrapolate=True)
 
-            pilot_flying[angle_capt > angle_fo] = 'Capt'
-            pilot_flying[angle_capt < angle_fo] = 'FO'
+            pilot_flying[angle_capt > angle_fo] = 'Captain'
+            pilot_flying[angle_capt < angle_fo] = 'First Officer'
 
         self.array = pilot_flying
 
@@ -1585,7 +1585,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         Basic Speedbrake algorithm for Stowed and Deployed states from
         Spoiler Handle.
         '''
-        array = MappedArray(np_ma_masked_zeros_like(handle_array),
+        array = MappedArray(np_ma_masked_zeros_like(handle_array, dtype=np.short),
                             values_mapping=cls.values_mapping)
         array[handle_array < 1] = 'Stowed'
         array[handle_array >= 1] = 'Deployed/Cmd Up'
@@ -1679,7 +1679,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         armed.
         '''
         # Default is stowed.
-        array = MappedArray(np_ma_masked_zeros_like(handle_array),
+        array = MappedArray(np_ma_masked_zeros_like(handle_array, dtype=np.short),
                             values_mapping=cls.values_mapping)
         array[spoiler_gnd_armed_array != 'Armed'] = 'Stowed'
         array[spoiler_gnd_armed_array == 'Armed'] = 'Armed/Cmd Dn'
@@ -1692,7 +1692,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         Speedbrake Handle Positions for 787, taken from early recordings. 
         '''
         # Speedbrake Handle only
-        speedbrake = np.ma.zeros(len(handle.array))
+        speedbrake = np.ma.zeros(len(handle.array), dtype=np.short)
         stepped_array = step_values(handle.array, [0, 10, 20])
         # Assuming all values from 15 and above are Deployed. Typically a
         # maximum value of 60 is recorded when deployed with reverse thrust 
@@ -1716,7 +1716,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
             Partial or Extended = Deployed/Cmd Up
         '''
         switch = spdsw.array
-        speedbrake = np_ma_zeros_like(switch)
+        speedbrake = np.ma.zeros(len(switch), dtype=np.short)
         speedbrake = np.ma.where(switch=='Retract', 'Stowed',
                                  'Deployed/Cmd Up')
         speedbrake = np.ma.where(switch=='Armed', 'Armed/Cmd Dn',
@@ -1740,7 +1740,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
             # We have a speedbrake deployed discrete. Set initial state to
             # stowed, then set armed states if available, and finally set
             # deployed state:
-            array = np.ma.zeros(len(deployed.array))
+            array = np.ma.zeros(len(deployed.array), dtype=np.short)
             if armed:
                 array[armed.array == 'Armed'] = 1
             array[deployed.array == 'Deployed'] = 2
@@ -1776,7 +1776,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
             logger.warning(
                 'SpeedbrakeSelected: algorithm for family `%s` is undecided, '
                 'temporarily using speedbrake handle.', family_name)
-            self.array = np_ma_masked_zeros_like(handle.array)
+            self.array = np_ma_masked_zeros_like(handle.array, dtype=np.short)
 
         elif family_name == 'BD-100':
             self.array = self.bd100_speedbrake(handle.array,
@@ -1871,7 +1871,7 @@ class StableApproach(MultistateDerivedParameterNode):
         # options are FLAP, GEAR GS HI/LO, LOC, SPD HI/LO and VSI HI/LO
 
         # create an empty fully masked array
-        self.array = np.ma.zeros(len(alt.array))
+        self.array = np.ma.zeros(len(alt.array), dtype=np.short)
         self.array.mask = True
         # shortcut for repairing masks
         repair = lambda ar, ap: repair_mask(ar[ap], zero_if_masked=True)
@@ -2135,7 +2135,7 @@ class ThrustReversers(MultistateDerivedParameterNode):
                            e2_ulk_lft, e2_ulk_rgt, e3_ulk_all, e3_ulk_lft,
                            e3_ulk_rgt, e4_ulk_all, e4_ulk_lft, e4_ulk_rgt)
 
-        array = np_ma_zeros_like(deployed_stack[0])
+        array = np_ma_zeros_like(deployed_stack[0], dtype=np.short)
         stacks = [deployed_stack,]
 
         if any(unlocked_params):
@@ -2231,7 +2231,7 @@ class TAWSAlert(MultistateDerivedParameterNode):
         )
         res = params_state.any(axis=0)
 
-        self.array = np_ma_masked_zeros_like(params_state[0])
+        self.array = np_ma_masked_zeros_like(params_state[0], dtype=np.short)
         if airs:
             for air in airs:
                 self.array[air.slice] = res[air.slice]

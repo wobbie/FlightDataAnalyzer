@@ -3214,7 +3214,7 @@ class TestHeadwind(unittest.TestCase):
         wd = P('Wind Direction Continuous', np.ma.array([-21]))
         head=P('Heading True Continuous', np.ma.array([30]))
         hw = Headwind()
-        hw.derive(ws,wd,head)
+        hw.derive(None, ws,wd,head)
         expected = np.ma.array([52.8629128481863])
         self.assertAlmostEqual(hw.array.data, expected.data)
         
@@ -3223,7 +3223,7 @@ class TestHeadwind(unittest.TestCase):
         wd = P('Wind Direction Continuous', np.ma.array([0, 90, 180, -180, -90, 360, 23, -23], dtype=float))
         head=P('Heading True Continuous', np.ma.array([-180, -90, 0, 180, 270, 360*15, 361*23, 359*23], dtype=float))
         hw = Headwind()
-        hw.derive(ws,wd,head)
+        hw.derive(None, ws,wd,head)
         expected = np.ma.array([-20]*3+[20]*5)
         ma_test.assert_almost_equal(hw.array, expected)
         

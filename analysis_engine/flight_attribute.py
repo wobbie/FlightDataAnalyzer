@@ -8,11 +8,14 @@ from collections import Counter
 from datetime import datetime
 from operator import itemgetter
 
-from analysis_engine import __version__, library, settings
+from analysis_engine import __version__, settings
 from analysis_engine.api_handler import get_api_handler, NotFoundError
-from analysis_engine.library import (datetime_of_index,
+from analysis_engine.library import (all_of,
+                                     datetime_of_index,
                                      min_value,
-                                     max_value)
+                                     max_value,
+                                     value_at_index,
+                                     )
 from analysis_engine.node import A, KTI, KPV, FlightAttributeNode, M, P, S
 
 
@@ -31,60 +34,60 @@ class DeterminePilot(object):
             return 'First Officer'
         return None
 
-    ##def _controls_changed(self, slice_, pitch, roll):
-        ### Check if either pitch or roll changed during provided slice:
-        ##return pitch[slice_].ptp() > settings.CONTROLS_IN_USE_TOLERANCE or \
-                ##roll[slice_].ptp() > settings.CONTROLS_IN_USE_TOLERANCE
+    def _controls_changed(self, slice_, pitch, roll):
+        # Check if either pitch or roll changed during provided slice:
+        return pitch[slice_].ptp() > settings.CONTROLS_IN_USE_TOLERANCE or \
+                roll[slice_].ptp() > settings.CONTROLS_IN_USE_TOLERANCE
 
-    ##def _control_column_in_use(self, cc_capt, cc_fo, phase):
-        ##'''
-        ##Check if control column is used by Captain or FO.
-        ##'''
-        ##capt_force = cc_capt[phase.slice].ptp() > \
-            ##settings.CONTROL_COLUMN_IN_USE_TOLERANCE
-        ##fo_force = cc_fo[phase.slice].ptp() > \
-            ##settings.CONTROL_COLUMN_IN_USE_TOLERANCE
+    def _control_column_in_use(self, cc_capt, cc_fo, phase):
+        '''
+        Check if control column is used by Captain or FO.
+        '''
+        capt_force = cc_capt[phase.slice].ptp() > \
+            settings.CONTROL_COLUMN_IN_USE_TOLERANCE
+        fo_force = cc_fo[phase.slice].ptp() > \
+            settings.CONTROL_COLUMN_IN_USE_TOLERANCE
 
-        ##if capt_force and fo_force:
-            ##self.warning(
-                ##"Cannot determine whether captain or first officer was at the "
-                ##"controls because both control columns are in use during '%s' "
-                ##"slice.", phase.name)
-            ##return None
+        if capt_force and fo_force:
+            self.warning(
+                "Cannot determine whether captain or first officer was at the "
+                "controls because both control columns are in use during '%s' "
+                "slice.", phase.name)
+            return None
 
-        ##if capt_force:
-            ##return 'Captain'
-        ##elif fo_force:
-            ##return 'First Officer'
+        if capt_force:
+            return 'Captain'
+        elif fo_force:
+            return 'First Officer'
 
-        ### 4. No change in captain or first officer control columns:
-        ##self.warning("Both captain and first officer control columns "
-                     ##"do not change during '%s' slice.", phase.name)
-        ##return None
+        # 4. No change in captain or first officer control columns:
+        self.warning("Both captain and first officer control columns "
+                     "do not change during '%s' slice.", phase.name)
+        return None
 
-    ##def _controls_in_use(self, pitch_capt, pitch_fo, roll_capt, roll_fo, phase):
-        ##capt_flying = self._controls_changed(phase.slice, pitch_capt, roll_capt)
-        ##fo_flying = self._controls_changed(phase.slice, pitch_fo, roll_fo)
+    def _controls_in_use(self, pitch_capt, pitch_fo, roll_capt, roll_fo, phase):
+        capt_flying = self._controls_changed(phase.slice, pitch_capt, roll_capt)
+        fo_flying = self._controls_changed(phase.slice, pitch_fo, roll_fo)
 
-        ### 1. Cannot determine who is flying - both sets of controls have input:
-        ##if capt_flying and fo_flying:
-            ##self.warning("Cannot determine whether captain or first officer "
-                ##"was at the controls because both controls change during '%s' "
-                ##"slice.", phase.name)
-            ##return None
+        # 1. Cannot determine who is flying - both sets of controls have input:
+        if capt_flying and fo_flying:
+            self.warning("Cannot determine whether captain or first officer "
+                "was at the controls because both controls change during '%s' "
+                "slice.", phase.name)
+            return None
 
-        ### 2. The captain was flying the aircraft:
-        ##if capt_flying:
-            ##return 'Captain'
+        # 2. The captain was flying the aircraft:
+        if capt_flying:
+            return 'Captain'
 
-        ### 3. The first officer was flying the aircraft:
-        ##if fo_flying:
-            ##return 'First Officer'
+        # 3. The first officer was flying the aircraft:
+        if fo_flying:
+            return 'First Officer'
 
-        ### 4. No change in captain or first officer controls:
-        ##self.warning("Both captain and first officer controls do not change "
-            ##"during '%s' slice.", phase.name)
-        ##return None
+        # 4. No change in captain or first officer controls:
+        self.warning("Both captain and first officer controls do not change "
+            "during '%s' slice.", phase.name)
+        return None
     
     def _key_vhf_in_use(self, key_vhf_capt, key_vhf_fo, phase):
         key_vhf_capt_changed = key_vhf_capt[phase.slice].ptp()
@@ -97,24 +100,30 @@ class DeterminePilot(object):
         # Either both Capt and FO Key VHF change or neither.
         return None
     
-    def _determine_pilot(self, pitch_capt, pitch_fo, roll_capt, roll_fo,
-                         cc_capt, cc_fo, phase, ap1, ap2, key_vhf_capt,
-                         key_vhf_fo):
-
+    def _determine_pilot(self, pilot_flying, pitch_capt, pitch_fo, roll_capt,
+                         roll_fo, cc_capt, cc_fo, phase, ap1, ap2, 
+                         key_vhf_capt, key_vhf_fo):
+        
+        if pilot_flying:
+            # this is the most reliable measurement, use this and no other
+            from analysis_engine.library import most_common_value
+            return most_common_value(pilot_flying.array[phase.slice])
+        
+        #FIXME: Skip over the Pitch and Control Column parts!
         # 1. Check for change in pitch and roll controls during the phase:
-        ##if all((pitch_capt, pitch_fo, roll_capt, roll_fo, phase)):
-            ##pilot = self._controls_in_use(
-                ##pitch_capt.array, pitch_fo.array, roll_capt.array,
-                ##roll_fo.array, phase)
-            ##if pilot:
-                ##return pilot
+        if all((pitch_capt, pitch_fo, roll_capt, roll_fo, phase)):
+            pilot = self._controls_in_use(
+                pitch_capt.array, pitch_fo.array, roll_capt.array,
+                roll_fo.array, phase)
+            if pilot:
+                return pilot
 
         # 1. Check for changes in control column during the phase:
-        ##if all((cc_capt, cc_fo, phase)):
-            ##pilot = self._control_column_in_use(cc_capt.array, cc_fo.array,
-                                                ##phase)
-            ##if pilot:
-                ##return pilot
+        if all((cc_capt, cc_fo, phase)):
+            pilot = self._control_column_in_use(cc_capt.array, cc_fo.array,
+                                                phase)
+            if pilot:
+                return pilot
 
         # Check for change in VHF controls during the phase:
         if all((key_vhf_capt, key_vhf_fo, phase)):
@@ -554,25 +563,29 @@ class TakeoffPilot(FlightAttributeNode, DeterminePilot):
 
     @classmethod
     def can_operate(cls, available):
-
-        controls = library.all_of((
+        pilot_flying = all_of((
+            'Pilot Flying',
+            'Takeoff',
+            ), available)
+        controls = all_of((
             'Pitch (Capt)',
             'Pitch (FO)',
             'Roll (Capt)',
             'Roll (FO)',
             'Takeoff',
-        ), available)
-        autopilot = library.all_of((
+            ), available)
+        autopilot = all_of((
             'AP (1) Engaged',
             'AP (2) Engaged',
             'Liftoff',
             # Optional: 'AP (3) Engaged'
-        ), available)
-        key_vhf = library.all_of(('Key VHF (1)', 'Key VHF (2)', 'Takeoff'),
+            ), available)
+        key_vhf = all_of(('Key VHF (1)', 'Key VHF (2)', 'Takeoff'),
                                  available)
-        return controls or autopilot or key_vhf
+        return pilot_flying or controls or autopilot or key_vhf
 
     def derive(self,
+               pilot_flying=M('Pilot Flying'),
                pitch_capt=P('Pitch (Capt)'),
                pitch_fo=P('Pitch (FO)'),
                roll_capt=P('Roll (Capt)'),
@@ -589,13 +602,13 @@ class TakeoffPilot(FlightAttributeNode, DeterminePilot):
         phase = takeoffs.get_first() if takeoffs else None
         index = liftoffs.get_first() if liftoffs else None
         if index is not None:
-            ap_at_index = lambda ap: library.value_at_index(ap.array, index)
+            ap_at_index = lambda ap: value_at_index(ap.array, index)
             ap1 = ap_at_index(ap1_eng) if ap1_eng else None
             ap2 = ap_at_index(ap2_eng) if ap2_eng else None
         else:
             ap1 = ap2 = None
-        args = (pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo,
-                phase, ap1, ap2, key_vhf_capt, key_vhf_fo)
+        args = (pilot_flying, pitch_capt, pitch_fo, roll_capt, roll_fo, 
+                cc_capt, cc_fo, phase, ap1, ap2, key_vhf_capt, key_vhf_fo)
         self.set_flight_attr(self._determine_pilot(*args))
 
 
@@ -855,25 +868,29 @@ class LandingPilot(FlightAttributeNode, DeterminePilot):
 
     @classmethod
     def can_operate(cls, available):
-
-        controls = library.all_of((
+        pilot_flying = all_of((
+            'Pilot Flying',
+            'Landing',
+            ), available)
+        controls = all_of((
             'Pitch (Capt)',
             'Pitch (FO)',
             'Roll (Capt)',
             'Roll (FO)',
             'Landing',
-        ), available)
-        autopilot = library.all_of((
+            ), available)
+        autopilot = all_of((
             'AP (1) Engaged',
             'AP (2) Engaged',
             'Touchdown',
             # Optional: 'AP (3) Engaged'
-        ), available)
-        key_vhf = library.all_of(('Key VHF (1)', 'Key VHF (2)', 'Landing'),
+            ), available)
+        key_vhf = all_of(('Key VHF (1)', 'Key VHF (2)', 'Landing'),
                                  available)
-        return controls or autopilot or key_vhf
+        return pilot_flying or controls or autopilot or key_vhf
 
     def derive(self,
+               pilot_flying=M('Pilot Flying'),
                pitch_capt=P('Pitch (Capt)'),
                pitch_fo=P('Pitch (FO)'),
                roll_capt=P('Roll (Capt)'),
@@ -890,12 +907,12 @@ class LandingPilot(FlightAttributeNode, DeterminePilot):
         phase = landings.get_last() if landings else None
         index = touchdowns.get_last() if touchdowns else None
         if index is not None:
-            ap_at_index = lambda ap: library.value_at_index(ap.array, index)
+            ap_at_index = lambda ap: value_at_index(ap.array, index)
             ap1 = ap_at_index(ap1_eng) if ap1_eng else None
             ap2 = ap_at_index(ap2_eng) if ap2_eng else None
         else:
             ap1 = ap2 = None
-        args = (pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo,
+        args = (pilot_flying, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo,
                 phase, ap1, ap2, key_vhf_capt, key_vhf_fo)
         self.set_flight_attr(self._determine_pilot(*args))
 

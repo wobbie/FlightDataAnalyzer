@@ -104,7 +104,10 @@ class NodeTest(object):
 
             with hdf_file(hdf_path) as hdf:
                 for param_name in param_names:
-                    params.append(hdf.get(param_name))
+                    p = hdf.get(param_name)
+                    if param_name == 'Pilot Flying':
+                        p.array.values_mapping = {0: '-', 1: 'Captain', 2: 'First Officer'}
+                    params.append(p)
 
         if _slice:
             phase = S(name=phase_name, frequency=1)
@@ -388,7 +391,7 @@ class TestDualInputWarning(unittest.TestCase, NodeTest):
         ]
 
     def test_derive(self):
-        pilot_map = {0: '-', 1: 'Capt', 2: 'FO'}
+        pilot_map = {0: '-', 1: 'Captain', 2: 'First Officer'}
         pilot_array = MappedArray([1] * 20 + [0] * 10 + [2] * 20,
                                   values_mapping=pilot_map)
         capt_array = np.ma.concatenate((15 + np.arange(20), np.zeros(30)))
@@ -952,8 +955,10 @@ class TestFlaperon(unittest.TestCase):
         flaperon.derive(al, ar, model, series, family)
         # ensure values are grouped into aileron settings accordingly
         # flaperon is now step at movement start
-        self.assertEqual(unique_values(flaperon.array.astype(int)),
-                         [(0, 22056), (5, 291), (10, 1205)])
+        self.assertEqual(unique_values(flaperon.array.astype(int)),{
+            0: 22056, 
+            5: 282,
+            10: 1148})
         
 
 class TestFuelQtyLow(unittest.TestCase):
@@ -1328,8 +1333,8 @@ class TestSlat(unittest.TestCase):
 
         node = Slat()
         node.derive(slat, model, series, family)
-        values = unique_values(list(node.array.raw))
-        self.assertEqual(values, [(0, 6), (16, 16), (25, 33)])
+        values = unique_values(node.array.astype(int))
+        self.assertEqual(values, {0: 6, 16: 16, 25: 33})
         self.assertEqual(node.values_mapping, {0: '0', 16: '16', 25: '25'})
 
 

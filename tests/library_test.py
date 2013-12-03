@@ -5073,6 +5073,34 @@ class TestTrimSlices(unittest.TestCase):
 For the Truck and Trailer algorithm, see TestPeakCurvature above.
 """
 
+class TestUniqueValue(unittest.TestCase):
+    def test_unique_values(self):
+        res = unique_values(np.ma.array([0,1,1,1,4,4,7,1,1],
+                                   mask=[1,0,0,0,0,0,0,0,1]))
+        self.assertEqual(res, {1: 4,
+                               4: 2,
+                               7: 1})
+        
+    def test_unique_with_multistate(self):
+        array = MappedArray(np.ma.array([0, 1, 0, 0, 0, 1, 1],
+                                   mask=[1, 0, 0, 0, 0, 0, 1]),
+                            values_mapping={0:'A', 1:'B'})
+        res = unique_values(array)
+        self.assertEqual(res, {'A': 3, 'B': 2})
+        
+class TestMostCommonValue(unittest.TestCase):
+    def test_most_common_value(self):
+        res = most_common_value(np.ma.array([0,1,1,1,4,4,7,1,1],
+                                   mask=[1,0,0,0,0,0,0,0,1]))
+        self.assertEqual(res, 1)
+        
+    def test_unique_with_multistate(self):
+        array = MappedArray(np.ma.array([0, 3, 0, 0, 0, 3, 3],
+                                   mask=[1, 0, 0, 0, 0, 0, 1]),
+                            values_mapping={0:'A', 3:'B'})
+        res = most_common_value(array)
+        self.assertEqual(res, 'A')    
+
 
 class TestValueAtTime(unittest.TestCase):
     # Reminder: value_at_time (array, hz, offset, time_index)

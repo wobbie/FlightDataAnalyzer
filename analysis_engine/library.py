@@ -1277,7 +1277,7 @@ def clump_multistate(array, state, _slices=[slice(None)], condition=True):
 
 def unique_values(array):
     '''
-    Count the number of unique values found within an array.
+    Count the number of unique valid values found within an array.
     
     Hint: If you get "TypeError: array cannot be safely cast to required type"
     and your data is integer type, try casting it to int type:
@@ -1289,9 +1289,36 @@ def unique_values(array):
     :returns: [(val, count), (val2, count2)]
     :rtype: List of tuples
     '''
-    counts = np.bincount(array)
+    counts = np.bincount(array.compressed())
     vals = np.nonzero(counts)[0]
-    return zip(vals, counts[vals])
+    if hasattr(array, 'values_mapping'):
+        keys = [array.values_mapping[x] for x in vals]
+    else:
+        keys = vals
+    return dict(zip(keys, counts[vals]))
+
+
+def most_common_value(array):
+    '''
+    Find the most repeating valid value within an array. Works with mapped
+    arrays too.
+    
+    Hint: If you get "TypeError: array cannot be safely cast to required type"
+    and your data is integer type, try casting it to int type:
+    
+    most_common_value(array.astype(int))
+    
+    :param array: Array to count occurrences of values within
+    :type array: np.array
+    :returns: [(val, count), (val2, count2)]
+    :rtype: List of tuples
+    '''
+    counts = np.bincount(array.compressed())
+    key = counts.argmax()
+    if hasattr(array, 'values_mapping'):
+        return array.values_mapping[key]
+    else:
+        return key
 
 
 def compress_iter_repr(iterable, cast=None, join='+'):
@@ -4179,7 +4206,7 @@ def np_ma_concatenate(arrays):
         return np.ma.concatenate(arrays)
 
 
-def np_ma_zeros_like(array, mask=False):
+def np_ma_zeros_like(array, mask=False, dtype=float):
     """
     The Numpy masked array library does not have equivalents for some array
     creation functions. These are provided with similar names which may be
@@ -4192,7 +4219,7 @@ def np_ma_zeros_like(array, mask=False):
 
     :returns: Numpy masked array of unmasked zero values, length same as input array.
     """
-    return np.ma.array(np.zeros_like(array.data), mask=mask, dtype=float)
+    return np.ma.array(np.zeros_like(array.data), mask=mask, dtype=dtype)
 
 
 def np_ma_ones_like(array):
@@ -4238,7 +4265,7 @@ def np_ma_masked_zeros(length):
     return np.ma.array(data=np.zeros(length), mask=True)
 
 
-def np_ma_masked_zeros_like(array):
+def np_ma_masked_zeros_like(array, dtype=float):
     """
     Creates a masked array filled with masked values. The unmasked data
     values are all zero. The very klunky code here is to circumvent Numpy's
@@ -4254,8 +4281,8 @@ def np_ma_masked_zeros_like(array):
     :returns: Numpy masked array of masked 0.0 float values, length same as
     input array.
     """
-    return np.ma.array(data = np_ma_zeros_like(array).data,
-                       mask = np_ma_ones_like(array).data)
+    return np.ma.array(data=np.zeros(len(array), dtype=dtype),
+                       mask=np.ones(len(array), dtype=np.bool))
 
 
 def truck_and_trailer(data, ttp, overall, trailer, curve_sense, _slice):
