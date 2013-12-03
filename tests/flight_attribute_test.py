@@ -189,8 +189,8 @@ class TestDeterminePilot(unittest.TestCase):
         # Controls in use, no phase.
         reset_all_mocks()
         pilot = determine_pilot._determine_pilot(
-            pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo, None,
-            None, None, None, None)
+            None, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo,
+            None, None, None, None, None)
         self.assertFalse(determine_pilot._autopilot_engaged.called)
         self.assertFalse(determine_pilot._controls_in_use.called)
         self.assertEqual(pilot, None)
@@ -199,7 +199,7 @@ class TestDeterminePilot(unittest.TestCase):
         determine_pilot._controls_in_use.return_value = None
         determine_pilot._control_column_in_use.return_value = None
         pilot = determine_pilot._determine_pilot(
-            pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo, phase,
+            None, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo, phase,
             None, None, None, None)
         self.assertFalse(determine_pilot._autopilot_engaged.called)
         determine_pilot._controls_in_use.assert_called_once_with(
@@ -212,7 +212,7 @@ class TestDeterminePilot(unittest.TestCase):
         reset_all_mocks()
         determine_pilot._controls_in_use.return_value = 'Captain'
         pilot = determine_pilot._determine_pilot(
-            pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo, phase,
+            None, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo, phase,
             None, None, None, None)
         self.assertFalse(determine_pilot._autopilot_engaged.called)
         determine_pilot._controls_in_use.assert_called_once_with(pitch_capt.array, pitch_fo.array, roll_capt.array, roll_fo.array, phase)
@@ -220,7 +220,7 @@ class TestDeterminePilot(unittest.TestCase):
         # Only Autopilot.
         reset_all_mocks()
         determine_pilot._autopilot_engaged.return_value = 'Captain'
-        pilot = determine_pilot._determine_pilot(None, None, None, None, None, None, None, ap1, ap2, None, None)
+        pilot = determine_pilot._determine_pilot(None, None, None, None, None, None, None, None, ap1, ap2, None, None)
         determine_pilot._autopilot_engaged.assert_called_once_with(ap1, ap2)
         self.assertFalse(determine_pilot._controls_in_use.called)
         self.assertEqual(pilot, determine_pilot._autopilot_engaged.return_value)
@@ -229,7 +229,7 @@ class TestDeterminePilot(unittest.TestCase):
         determine_pilot._controls_in_use.return_value = 'Captain'
         determine_pilot._autopilot_engaged.return_value = 'First Officer'
         pilot = determine_pilot._determine_pilot(
-            pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo, phase,
+            None, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo, phase,
             ap1, ap2, None, None)
         self.assertFalse(determine_pilot._autopilot_engaged.called)
         determine_pilot._controls_in_use.assert_called_once_with(pitch_capt.array, pitch_fo.array, roll_capt.array, roll_fo.array, phase)
@@ -240,7 +240,7 @@ class TestDeterminePilot(unittest.TestCase):
         determine_pilot._controls_in_use.return_value = None
         determine_pilot._control_column_in_use.return_value = None
         pilot = determine_pilot._determine_pilot(
-            pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo, phase,
+            None, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo, phase,
             ap1, ap2, None, None)
         determine_pilot._autopilot_engaged.assert_called_once_with(ap1, ap2)
         determine_pilot._controls_in_use.assert_called_once_with(
@@ -332,14 +332,14 @@ class TestDeterminePilot(unittest.TestCase):
                                                         phase_name)
 
             pilot = determine_pilot._determine_pilot(
-                pitch_capt, pitch_fo, roll_capt, roll_fo, None, None,
+                None, pitch_capt, pitch_fo, roll_capt, roll_fo, None, None,
                 phase, None, None, vhf_capt, vhf_fo)
 
             # pitch and roll are not enough to determine the pilot
             self.assertIsNone(pilot)
 
             pilot = determine_pilot._determine_pilot(
-                pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt,
+                None, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt,
                 cc_fo, phase, None, None, vhf_capt, vhf_fo)
 
             # control column force should allow to determine the pilot
@@ -383,14 +383,14 @@ class TestDeterminePilot(unittest.TestCase):
                                                         phase_name)
 
             pilot = determine_pilot._determine_pilot(
-                pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt,
+                None, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt,
                 cc_fo, phase, None, None, None, None)
 
             # controls are not enough to determine the pilot
             self.assertIsNone(pilot)
 
             pilot = determine_pilot._determine_pilot(
-                pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt,
+                None, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt,
                 cc_fo, phase, None, None, vhf_capt, vhf_fo)
 
             # Key VHF (*) should allow to determine the pilot
@@ -666,6 +666,8 @@ class TestLandingPilot(unittest.TestCase):
     def test_can_operate(self):
         opts = LandingPilot.get_operational_combinations()
         combinations = [
+            # Only Pilot Flying
+            ('Pilot Flying', 'Landing'),
             # Only Controls:
             ('Pitch (Capt)', 'Pitch (FO)', 'Roll (Capt)', 'Roll (FO)',
                 'Landing'),
@@ -681,7 +683,7 @@ class TestLandingPilot(unittest.TestCase):
                 'AP (1) Engaged', 'AP (2) Engaged', 'Landing', 'Touchdown'),
         ]
         for combination in combinations:
-            self.assertTrue(combination in opts)
+            self.assertTrue(combination in opts, msg=combination)
 
     @patch('analysis_engine.library.value_at_index')
     def test_derive(self, value_at_index):
@@ -1059,6 +1061,8 @@ class TestTakeoffPilot(unittest.TestCase):
     def test_can_operate(self):
         opts = TakeoffPilot.get_operational_combinations()
         combinations = [
+            # Only Pilot Flying
+            ('Pilot Flying', 'Takeoff'),
             # Only Controls:
             ('Pitch (Capt)', 'Pitch (FO)', 'Roll (Capt)', 'Roll (FO)',
                 'Takeoff'),
