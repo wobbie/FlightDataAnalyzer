@@ -4811,6 +4811,7 @@ class LongitudePrepared(DerivedParameterNode, CoordinatesStraighten):
     See Latitude Smoothed for notes.
     """
 
+    align_frequency = 1
     units = ut.DEGREE
 
     @classmethod
@@ -4823,8 +4824,8 @@ class LongitudePrepared(DerivedParameterNode, CoordinatesStraighten):
                         'Longitude At Touchdown'), available) and\
                 any_of(('Heading', 'Heading True'), available))
 
-    # Note hdg is alignment master to force 1Hz operation when latitude &
-    # longitude are only recorded at 0.25Hz.
+    # Note force to 1Hz operation as latitude & longitude can be only
+    # recorded at 0.25Hz.
     def derive(self,
                lat=P('Latitude'), lon=P('Longitude'),
                hdg_mag=P('Heading'),
@@ -4858,6 +4859,7 @@ class LatitudePrepared(DerivedParameterNode, CoordinatesStraighten):
     See Latitude Smoothed for notes.
     """
 
+    align_frequency = 1
     units = ut.DEGREE
 
     @classmethod
@@ -4870,8 +4872,8 @@ class LatitudePrepared(DerivedParameterNode, CoordinatesStraighten):
                         'Longitude At Touchdown'), available) and \
                 any_of(('Heading', 'Heading True'), available))
 
-    # Note hdg is alignment master to force 1Hz operation when latitude &
-    # longitude are only recorded at 0.25Hz.
+    # Note force to 1Hz operation as latitude & longitude can be only
+    # recorded at 0.25Hz.
     def derive(self,
                lat=P('Latitude'), lon=P('Longitude'),
                hdg_mag=P('Heading'),
