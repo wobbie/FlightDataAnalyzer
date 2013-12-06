@@ -1740,7 +1740,7 @@ class ControlColumnForce(DerivedParameterNode):
     The combined force from the captain and the first officer.
     '''
 
-    units = ut.LBF
+    units = ut.DECANEWTON
 
     def derive(self,
                force_capt=P('Control Column Force (Capt)'),
@@ -1800,7 +1800,7 @@ class ControlWheelForce(DerivedParameterNode):
     The combined force from the captain and the first officer.
     '''
 
-    units = ut.LBF
+    units = ut.DECANEWTON
 
     def derive(self,
                force_capt=P('Control Wheel Force (Capt)'),
@@ -5085,7 +5085,7 @@ class RudderPedalForce(DerivedParameterNode):
     be zero.
     '''
 
-    units = ut.LBF  # FIXME: Or should this be ut.LB?
+    units = ut.DECANEWTON
 
     def derive(self,
                fcl=P('Rudder Pedal Force (Capt) (L)'),
