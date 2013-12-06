@@ -5924,6 +5924,10 @@ class ApproachRange(DerivedParameterNode):
                 if corr < 0.995:
                     self.warning('Low convergence in computing ILS '
                                  'glideslope offset.')
+                    
+                # We can be sure there is a glideslope antenna because we captured the glidepath.
+                extend = runway_distances(runway)[1]  # gs_2_loc
+            
             else:
                 # Just work off the height data assuming the pilot was aiming
                 # to touchdown close to the glideslope antenna (for a visual
@@ -5936,6 +5940,16 @@ class ApproachRange(DerivedParameterNode):
                 if corr < 0.990:
                     self.warning('Low convergence in computing visual '
                                  'approach path offset.')
+                    
+                # If we have a glideslope antenna position, use this as the pilot will normally land abeam the antenna.
+                try:
+                    # Reference to the end of the runway as it is treated as a visual approach later on.
+                    start_2_loc, gs_2_loc, end_2_loc, pgs_lat, pgs_lon = \
+                        runway_distances(runway)
+                    extend = gs_2_loc - end_2_loc
+                except (KeyError, TypeError):
+                    # If no ILS antennae, put the touchdown point 1000ft from start of runway
+                    extend = runway_length(runway) - 1000 / METRES_TO_FEET
 
             ## This plot code allows the actual flightpath and regression line
             ## to be viewed in case of concern about the performance of the
@@ -5950,14 +5964,6 @@ class ApproachRange(DerivedParameterNode):
             ##plt.plot(x1,y1,'-',x2,y2,'-',xnew,ynew,'-')
             ##plt.show()
 
-            # Touchdown point nominally 1000ft from start of runway but
-            # use glideslope antenna position if we know it.
-            try:
-                start_2_loc, gs_2_loc, end_2_loc, pgs_lat, pgs_lon = \
-                    runway_distances(runway)
-                extend = gs_2_loc
-            except (KeyError, TypeError):
-                extend = runway_length(runway) - 1000 / METRES_TO_FEET
 
             # Shift the values in this approach so that the range = 0 at
             # 0ft on the projected ILS or approach slope.
