@@ -14,6 +14,7 @@ from analysis_engine.library import (all_of,
                                      datetime_of_index,
                                      min_value,
                                      max_value,
+                                     most_common_value,
                                      value_at_index,
                                      )
 from analysis_engine.node import A, KTI, KPV, FlightAttributeNode, M, P, S
@@ -106,8 +107,9 @@ class DeterminePilot(object):
         
         if pilot_flying:
             # this is the most reliable measurement, use this and no other
-            from analysis_engine.library import most_common_value
-            return most_common_value(pilot_flying.array[phase.slice])
+            pf = pilot_flying.array[phase.slice]
+            pf[pf == '-'] = np.ma.masked
+            return most_common_value(pf)
         
         #FIXME: Skip over the Pitch and Control Column parts!
         # 1. Check for change in pitch and roll controls during the phase:
