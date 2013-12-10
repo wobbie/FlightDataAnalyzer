@@ -4834,9 +4834,12 @@ class LongitudePrepared(DerivedParameterNode, CoordinatesStraighten):
                lat_lift=KPV('Latitude At Liftoff'),
                lon_lift=KPV('Longitude At Liftoff'),
                lat_land=KPV('Latitude At Touchdown'),
-               lon_land=KPV('Longitude At Touchdown')):
+               lon_land=KPV('Longitude At Touchdown'),
+               frame=A('Frame')):
 
-        if lat and lon:
+        frame_name = frame.value if frame else ''
+
+        if lat and lon and frame_name != 'A300-600_SFIM_360-426B0J10':
             """
             This removes the jumps in longitude arising from the poor resolution of
             the recorded signal.
@@ -4882,9 +4885,12 @@ class LatitudePrepared(DerivedParameterNode, CoordinatesStraighten):
                lat_lift=KPV('Latitude At Liftoff'),
                lon_lift=KPV('Longitude At Liftoff'),
                lat_land=KPV('Latitude At Touchdown'),
-               lon_land=KPV('Longitude At Touchdown')):
+               lon_land=KPV('Longitude At Touchdown'),
+               frame=A('Frame')):
 
-        if lat and lon:
+        frame_name = frame.value if frame else ''
+
+        if lat and lon and frame_name != 'A300-600_SFIM_360-426B0J10':
             self.array = self._smooth_coordinates(lat, lon)
         else:
             if hdg_true:
@@ -5958,18 +5964,23 @@ class ApproachRange(DerivedParameterNode):
                     # If no ILS antennae, put the touchdown point 1000ft from start of runway
                     extend = runway_length(runway) - 1000 / METRES_TO_FEET
 
+
+            '''
             ## This plot code allows the actual flightpath and regression line
             ## to be viewed in case of concern about the performance of the
             ## algorithm.
-            ##import matplotlib.pyplot as plt
-            ##x1=app_range[gs_est.start:this_app_slice.stop]
-            ##y1=alt_aal.array[gs_est.start:this_app_slice.stop]
-            ##x2=app_range[gs_est]
-            ##y2=alt_aal.array[gs_est] * (1-0.13*glide.array[gs_est])
-            ##xnew = np.linspace(np.min(x2),np.max(x2),num=2)
-            ##ynew = (xnew - offset)/slope
-            ##plt.plot(x1,y1,'-',x2,y2,'-',xnew,ynew,'-')
-            ##plt.show()
+            import matplotlib.pyplot as plt
+            x1=app_range[gs_est.start:this_app_slice.stop]
+            y1=alt_aal.array[gs_est.start:this_app_slice.stop]
+            x2=app_range[gs_est]
+            y2=alt_aal.array[gs_est] * (1-0.13*glide.array[gs_est])
+##            xnew = np.linspace(np.min(x2),np.max(x2),num=2)
+##            ynew = (xnew - offset)/slope
+            ynew = np.array([100, 500])
+            xnew = ynew * slope + offset
+            plt.plot(x1,y1,'-',x2,y2,'-',xnew,ynew,'-')
+            plt.show()
+            '''
 
 
             # Shift the values in this approach so that the range = 0 at
