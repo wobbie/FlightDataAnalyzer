@@ -5088,6 +5088,11 @@ class TestUniqueValue(unittest.TestCase):
         res = unique_values(array)
         self.assertEqual(res, {'A': 3, 'B': 2})
         
+    def test_no_valid_data(self):
+        # returns None when nothing is valid
+        res = unique_values(np.ma.array([10, 20, 10], mask=True))
+        self.assertEqual(res, {})
+        
 class TestMostCommonValue(unittest.TestCase):
     def test_most_common_value(self):
         res = most_common_value(np.ma.array([0,1,1,1,4,4,7,1,1],
@@ -5099,7 +5104,12 @@ class TestMostCommonValue(unittest.TestCase):
                                    mask=[1, 0, 0, 0, 0, 0, 1]),
                             values_mapping={0:'A', 3:'B'})
         res = most_common_value(array)
-        self.assertEqual(res, 'A')    
+        self.assertEqual(res, 'A')
+        
+    def test_no_valid_data(self):
+        # returns None when nothing is valid
+        res = most_common_value(np.ma.array([10, 20, 10], mask=True))
+        self.assertEqual(res, None)
 
 
 class TestValueAtTime(unittest.TestCase):
