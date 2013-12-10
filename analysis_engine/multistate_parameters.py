@@ -1578,17 +1578,21 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
                or ('Family' in x and 'Spoiler Switch' in x)\
                or ('Family' in x and 'Speedbrake Handle' in x)\
                or ('Family' in x and 'Speedbrake' in x)
-    
+
     @classmethod
-    def greater_than_one(cls, handle_array):
+    def derive_from_handle(cls, handle_array, deployed=1, armed=None):
         '''
         Basic Speedbrake algorithm for Stowed and Deployed states from
         Spoiler Handle.
         '''
         array = MappedArray(np_ma_masked_zeros_like(handle_array, dtype=np.short),
                             values_mapping=cls.values_mapping)
-        array[handle_array < 1] = 'Stowed'
-        array[handle_array >= 1] = 'Deployed/Cmd Up'
+        stowed_value = deployed
+        if armed is not None:
+            stowed_value = armed
+            array[(handle_array >= stowed_value) & (handle_array < deployed)] = 'Armed/Cmd Dn'
+        array[handle_array < stowed_value] = 'Stowed'
+        array[handle_array >= deployed] = 'Deployed/Cmd Up'
         return array
 
     @staticmethod
@@ -1620,7 +1624,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         Speedbrake Positions > 1 = Deployed
         '''
         if spdbrk and handle:
-            # Speedbrake and Speedbrake Handle available
+            # Speedbrake and Speedbrake Hbd100_speedbrakeandle available
             '''
             Speedbrake status taken from surface position. This allows
             for aircraft where the handle is inoperative, overwriting
@@ -1755,6 +1759,11 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         elif family_name == 'B787':
             self.array = self.b787_speedbrake(handle)
 
+        elif family_name == 'A300' and not spdbrk:
+            # Have only seen Speedbrake Handle ,not Speedbrake parameter so
+            # far for A300
+            self.array = self.derive_from_handle(handle.array, deployed=10)
+
         elif family_name in ('A319', 'A320', 'A321'):
             self.array = self.a320_speedbrake(armed, spdbrk)
 
@@ -1781,7 +1790,6 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         elif family_name == 'BD-100':
             self.array = self.bd100_speedbrake(handle.array,
                                                spoiler_gnd_armed.array)
-
         else:
             raise NotImplementedError("No Speedbrake mapping for '%s'" % \
                                       family_name)

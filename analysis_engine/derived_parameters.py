@@ -1740,7 +1740,7 @@ class ControlColumnForce(DerivedParameterNode):
     The combined force from the captain and the first officer.
     '''
 
-    units = ut.LBF
+    units = ut.DECANEWTON
 
     def derive(self,
                force_capt=P('Control Column Force (Capt)'),
@@ -1800,7 +1800,7 @@ class ControlWheelForce(DerivedParameterNode):
     The combined force from the captain and the first officer.
     '''
 
-    units = ut.LBF
+    units = ut.DECANEWTON
 
     def derive(self,
                force_capt=P('Control Wheel Force (Capt)'),
@@ -4811,6 +4811,7 @@ class LongitudePrepared(DerivedParameterNode, CoordinatesStraighten):
     See Latitude Smoothed for notes.
     """
 
+    align_frequency = 1
     units = ut.DEGREE
 
     @classmethod
@@ -4823,8 +4824,8 @@ class LongitudePrepared(DerivedParameterNode, CoordinatesStraighten):
                         'Longitude At Touchdown'), available) and\
                 any_of(('Heading', 'Heading True'), available))
 
-    # Note hdg is alignment master to force 1Hz operation when latitude &
-    # longitude are only recorded at 0.25Hz.
+    # Note force to 1Hz operation as latitude & longitude can be only
+    # recorded at 0.25Hz.
     def derive(self,
                lat=P('Latitude'), lon=P('Longitude'),
                hdg_mag=P('Heading'),
@@ -4858,6 +4859,7 @@ class LatitudePrepared(DerivedParameterNode, CoordinatesStraighten):
     See Latitude Smoothed for notes.
     """
 
+    align_frequency = 1
     units = ut.DEGREE
 
     @classmethod
@@ -4870,8 +4872,8 @@ class LatitudePrepared(DerivedParameterNode, CoordinatesStraighten):
                         'Longitude At Touchdown'), available) and \
                 any_of(('Heading', 'Heading True'), available))
 
-    # Note hdg is alignment master to force 1Hz operation when latitude &
-    # longitude are only recorded at 0.25Hz.
+    # Note force to 1Hz operation as latitude & longitude can be only
+    # recorded at 0.25Hz.
     def derive(self,
                lat=P('Latitude'), lon=P('Longitude'),
                hdg_mag=P('Heading'),
@@ -5083,7 +5085,7 @@ class RudderPedalForce(DerivedParameterNode):
     be zero.
     '''
 
-    units = ut.LBF  # FIXME: Or should this be ut.LB?
+    units = ut.DECANEWTON
 
     def derive(self,
                fcl=P('Rudder Pedal Force (Capt) (L)'),
@@ -5922,6 +5924,17 @@ class ApproachRange(DerivedParameterNode):
                 if corr < 0.995:
                     self.warning('Low convergence in computing ILS '
                                  'glideslope offset.')
+                    
+                # We can be sure there is a glideslope antenna because we
+                # captured the glidepath.
+                try:
+                    # Reference to the localizer as it is an ILS approach.
+                    extend = runway_distances(runway)[1]  # gs_2_loc
+                except (KeyError, TypeError):
+                    # If ILS antennae coordinates not known, substitute the
+                    # touchdown point 1000ft from start of runway
+                    extend = runway_length(runway) - 1000 / METRES_TO_FEET
+            
             else:
                 # Just work off the height data assuming the pilot was aiming
                 # to touchdown close to the glideslope antenna (for a visual
@@ -5934,6 +5947,16 @@ class ApproachRange(DerivedParameterNode):
                 if corr < 0.990:
                     self.warning('Low convergence in computing visual '
                                  'approach path offset.')
+                    
+                # If we have a glideslope antenna position, use this as the pilot will normally land abeam the antenna.
+                try:
+                    # Reference to the end of the runway as it is treated as a visual approach later on.
+                    start_2_loc, gs_2_loc, end_2_loc, pgs_lat, pgs_lon = \
+                        runway_distances(runway)
+                    extend = gs_2_loc - end_2_loc
+                except (KeyError, TypeError):
+                    # If no ILS antennae, put the touchdown point 1000ft from start of runway
+                    extend = runway_length(runway) - 1000 / METRES_TO_FEET
 
             ## This plot code allows the actual flightpath and regression line
             ## to be viewed in case of concern about the performance of the
@@ -5948,14 +5971,6 @@ class ApproachRange(DerivedParameterNode):
             ##plt.plot(x1,y1,'-',x2,y2,'-',xnew,ynew,'-')
             ##plt.show()
 
-            # Touchdown point nominally 1000ft from start of runway but
-            # use glideslope antenna position if we know it.
-            try:
-                start_2_loc, gs_2_loc, end_2_loc, pgs_lat, pgs_lon = \
-                    runway_distances(runway)
-                extend = gs_2_loc
-            except (KeyError, TypeError):
-                extend = runway_length(runway) - 1000 / METRES_TO_FEET
 
             # Shift the values in this approach so that the range = 0 at
             # 0ft on the projected ILS or approach slope.

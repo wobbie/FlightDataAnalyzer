@@ -3885,7 +3885,7 @@ class ControlColumnForceMax(KeyPointValueNode):
     '''
     '''
 
-    units = ut.LBF
+    units = ut.DECANEWTON
 
     def derive(self,
                force=P('Control Column Force'),
@@ -3899,7 +3899,7 @@ class ControlWheelForceMax(KeyPointValueNode):
     '''
     '''
 
-    units = ut.LBF
+    units = ut.DECANEWTON
 
     def derive(self,
                force=P('Control Wheel Force'),
@@ -9016,7 +9016,7 @@ class RudderPedalForceMax(KeyPointValueNode):
     '''
     Maximum rudder pedal force (irrespective of which foot is used !)
     '''
-    units = ut.LBF
+    units = ut.DECANEWTON
 
     def derive(self,
                force=P('Rudder Pedal Force'),

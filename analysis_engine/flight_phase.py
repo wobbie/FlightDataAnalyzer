@@ -1154,13 +1154,15 @@ class RejectedTakeoff(FlightPhaseNode):
                     potential_rtos.append(accel_lon_slice)
             
         for next_index, potential_rto in enumerate(potential_rtos, start=1):
-            
-            if not is_index_within_slices(min(potential_rto.start + 60,
-                                              len(accel_lon.array) - 1),
-                                          groundeds.get_slices()):
-                continue
-
-            self.create_phase(slice(max(potential_rto.start-(10 * self.hz), 0), 
+            # we get the min of the potential rto stop and the end of the
+            # data for cases where the potential rto is detected close to the
+            # end of the data
+            check_grounded_idx = min(potential_rto.stop + 30 * self.frequency,
+                                     len(accel_lon.array) - 1)
+            if is_index_within_slices(check_grounded_idx, groundeds.get_slices()):
+                # if soon after potential rto and still grounded we have a
+                # rto, otherwise we continue to takeoff
+                self.create_phase(slice(max(potential_rto.start-(10 * self.hz), 0),
                                     min(potential_rto.stop+(30 * self.hz),
                                         len(accel_lon.array))))
 

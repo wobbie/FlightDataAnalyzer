@@ -1378,15 +1378,31 @@ class TestSpeedbrakeSelected(unittest.TestCase):
         )
         self.assertEqual(list(spd_sel.array),
             ['Stowed', 'Stowed', 'Armed/Cmd Dn', 'Deployed/Cmd Up', 'Deployed/Cmd Up', 'Stowed'])
-    
-    def test_greater_than_one(self):
+
+    def test_derive_from_handle(self):
         handle_array = np.ma.concatenate([np.ma.arange(0, 2, 0.1),
                                           np.ma.arange(2, 0, -0.1)])
         spd_sel = SpeedbrakeSelected()
-        array = spd_sel.greater_than_one(handle_array)
+        array = spd_sel.derive_from_handle(handle_array)
         self.assertEqual(list(array), # MappedArray .tolist() does not output states.
                          ['Stowed']*10+['Deployed/Cmd Up']*20+['Stowed']*10)
-    
+
+        handle_array = np.ma.concatenate([np.ma.arange(0, 2, 0.1),
+                                          np.ma.array([13]*10),
+                                          np.ma.arange(0.99, 0, -0.1)])
+        spd_sel = SpeedbrakeSelected()
+        array = spd_sel.derive_from_handle(handle_array, deployed=5, armed=1)
+        self.assertEqual(list(array), # MappedArray .tolist() does not output states.
+                         ['Stowed']*10+['Armed/Cmd Dn']*10+['Deployed/Cmd Up']*10+['Stowed']*10)
+
+        handle_array = np.ma.concatenate([np.ma.arange(0, 2, 0.1),
+                                          np.ma.array([13]*10),
+                                          np.ma.arange(0.99, 0, -0.1)])
+        spd_sel = SpeedbrakeSelected()
+        array = spd_sel.derive_from_handle(handle_array, deployed=5)
+        self.assertEqual(list(array), # MappedArray .tolist() does not output states.
+                         ['Stowed']*20+['Deployed/Cmd Up']*10+['Stowed']*10)
+
     def test_bd100_speedbrake(self):
         handle = load(os.path.join(
             test_data_path, 'SpeedbrakeSelected_SpeedbrakeHandle_2.nod'))
