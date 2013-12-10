@@ -600,11 +600,11 @@ class TakeoffPilot(FlightAttributeNode, DeterminePilot):
                liftoffs=KTI('Liftoff')):
 
         phase = takeoffs.get_first() if takeoffs else None
-        index = liftoffs.get_first() if liftoffs else None
-        if index is not None:
-            ap_at_index = lambda ap: value_at_index(ap.array, index)
-            ap1 = ap_at_index(ap1_eng) if ap1_eng else None
-            ap2 = ap_at_index(ap2_eng) if ap2_eng else None
+        lift = liftoffs.get_first() if liftoffs else None
+        if lift and ap1_eng and ap2_eng:
+            # check AP state at the floored index (just before lift)
+            ap1 = ap1_eng.array[lift.index] == 'Engaged'
+            ap2 = ap2_eng.array[lift.index] == 'Engaged'
         else:
             ap1 = ap2 = None
         args = (pilot_flying, pitch_capt, pitch_fo, roll_capt, roll_fo, 
@@ -905,11 +905,11 @@ class LandingPilot(FlightAttributeNode, DeterminePilot):
                touchdowns=KTI('Touchdown')):
 
         phase = landings.get_last() if landings else None
-        index = touchdowns.get_last() if touchdowns else None
-        if index is not None:
-            ap_at_index = lambda ap: value_at_index(ap.array, index)
-            ap1 = ap_at_index(ap1_eng) if ap1_eng else None
-            ap2 = ap_at_index(ap2_eng) if ap2_eng else None
+        tdwn = touchdowns.get_last() if touchdowns else None
+        if tdwn and ap1_eng and ap2_eng:
+            # check AP state at the floored index (just before tdwn)
+            ap1 = ap1_eng.array[tdwn.index] == 'Engaged'
+            ap2 = ap2_eng.array[tdwn.index] == 'Engaged'
         else:
             ap1 = ap2 = None
         args = (pilot_flying, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo,
