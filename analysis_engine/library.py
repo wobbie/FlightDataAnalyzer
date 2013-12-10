@@ -1360,6 +1360,8 @@ def unique_values(array):
     :returns: [(val, count), (val2, count2)]
     :rtype: List of tuples
     '''
+    if not np.ma.count(array):
+        return {}
     counts = np.bincount(array.compressed())
     vals = np.nonzero(counts)[0]
     if hasattr(array, 'values_mapping'):
@@ -1384,6 +1386,9 @@ def most_common_value(array):
     :returns: [(val, count), (val2, count2)]
     :rtype: List of tuples
     '''
+    if not np.ma.count(array):
+        # no valid data
+        return None
     counts = np.bincount(array.compressed())
     key = counts.argmax()
     if hasattr(array, 'values_mapping'):
