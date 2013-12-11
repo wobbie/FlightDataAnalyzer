@@ -868,13 +868,14 @@ class Liftoff(KeyTimeInstanceNode):
     def can_operate(cls, available):
         return 'Airborne' in available
 
-    def derive(self, vert_spd=P('Vertical Speed Inertial'),
+    def derive(self,
+               vert_spd=P('Vertical Speed Inertial'),
                acc_norm=P('Acceleration Normal Offset Removed'),
                vert_spd_baro=P('Vertical Speed'),
-               alt_rad = P('Altitude Radio'),
-               gog = P('Gear On Ground'),
+               alt_rad=P('Altitude Radio'),
+               gog=M('Gear On Ground'),
                airs=S('Airborne'),
-               frame = A('Frame')):
+               frame=A('Frame')):
         
         for air in airs:
             index_acc = index_rad = index_gog = None

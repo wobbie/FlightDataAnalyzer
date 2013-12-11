@@ -1063,7 +1063,7 @@ class GearUpSelected(MultistateDerivedParameterNode):
         1: 'Up',
     }
 
-    def derive(self, gear_dn_sel=P('Gear Down Selected')):
+    def derive(self, gear_dn_sel=M('Gear Down Selected')):
         # Invert the Gear Down Selected array
         self.array = 1 - gear_dn_sel.array.raw
 
@@ -1080,15 +1080,18 @@ class Gear_RedWarning(MultistateDerivedParameterNode):
     
     @classmethod
     def can_operate(self, available):
-        return 'Airborne' in available and any_of(
-            ('Gear (L) Red Warning', 'Gear (N) Red Warning', 
-             'Gear (R) Red Warning'), available)
+        return 'Airborne' in available and any_of((
+            'Gear (L) Red Warning',
+            'Gear (N) Red Warning',
+            'Gear (R) Red Warning',
+        ), available)
     
     def derive(self, 
                gear_warn_l=M('Gear (L) Red Warning'),
                gear_warn_n=M('Gear (N) Red Warning'),
                gear_warn_r=M('Gear (R) Red Warning'),
                airs=S('Airborne')):
+
         # Join available gear parameters and use whichever are available.
         red_warning = vstack_params_where_state(
             (gear_warn_l, 'Warning'),
