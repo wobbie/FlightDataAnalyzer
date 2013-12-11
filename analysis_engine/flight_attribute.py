@@ -14,6 +14,7 @@ from analysis_engine.library import (all_of,
                                      datetime_of_index,
                                      min_value,
                                      max_value,
+                                     most_common_value,
                                      value_at_index,
                                      )
 from analysis_engine.node import A, KTI, KPV, FlightAttributeNode, M, P, S
@@ -106,8 +107,9 @@ class DeterminePilot(object):
         
         if pilot_flying:
             # this is the most reliable measurement, use this and no other
-            from analysis_engine.library import most_common_value
-            return most_common_value(pilot_flying.array[phase.slice])
+            pf = pilot_flying.array[phase.slice]
+            pf[pf == '-'] = np.ma.masked
+            return most_common_value(pf)
         
         #FIXME: Skip over the Pitch and Control Column parts!
         # 1. Check for change in pitch and roll controls during the phase:
@@ -600,11 +602,11 @@ class TakeoffPilot(FlightAttributeNode, DeterminePilot):
                liftoffs=KTI('Liftoff')):
 
         phase = takeoffs.get_first() if takeoffs else None
-        index = liftoffs.get_first() if liftoffs else None
-        if index is not None:
-            ap_at_index = lambda ap: value_at_index(ap.array, index)
-            ap1 = ap_at_index(ap1_eng) if ap1_eng else None
-            ap2 = ap_at_index(ap2_eng) if ap2_eng else None
+        lift = liftoffs.get_first() if liftoffs else None
+        if lift and ap1_eng and ap2_eng:
+            # check AP state at the floored index (just before lift)
+            ap1 = ap1_eng.array[lift.index] == 'Engaged'
+            ap2 = ap2_eng.array[lift.index] == 'Engaged'
         else:
             ap1 = ap2 = None
         args = (pilot_flying, pitch_capt, pitch_fo, roll_capt, roll_fo, 
@@ -905,11 +907,11 @@ class LandingPilot(FlightAttributeNode, DeterminePilot):
                touchdowns=KTI('Touchdown')):
 
         phase = landings.get_last() if landings else None
-        index = touchdowns.get_last() if touchdowns else None
-        if index is not None:
-            ap_at_index = lambda ap: value_at_index(ap.array, index)
-            ap1 = ap_at_index(ap1_eng) if ap1_eng else None
-            ap2 = ap_at_index(ap2_eng) if ap2_eng else None
+        tdwn = touchdowns.get_last() if touchdowns else None
+        if tdwn and ap1_eng and ap2_eng:
+            # check AP state at the floored index (just before tdwn)
+            ap1 = ap1_eng.array[tdwn.index] == 'Engaged'
+            ap2 = ap2_eng.array[tdwn.index] == 'Engaged'
         else:
             ap1 = ap2 = None
         args = (pilot_flying, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo,
