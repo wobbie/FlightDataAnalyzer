@@ -248,7 +248,7 @@ class Configuration(MultistateDerivedParameterNode):
         return True
 
     
-    def derive(self, slat=P('Slat'), flap=M('Flap'), flaperon=P('Flaperon'),
+    def derive(self, slat=M('Slat'), flap=M('Flap'), flaperon=M('Flaperon'),
                model=A('Model'), series=A('Series'), family=A('Family')):
         
         angles = at.get_conf_angles(model.value, series.value, family.value)
