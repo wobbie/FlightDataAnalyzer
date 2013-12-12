@@ -26,7 +26,6 @@ from settings import (CLIMB_THRESHOLD,
                       NAME_VALUES_DESCENT,
                       NAME_VALUES_ENGINE,
                       NAME_VALUES_LEVER,
-                      NAME_VALUES_SLAT,
                       TAKEOFF_ACCELERATION_THRESHOLD,
                       TRANSITION_ALTITUDE,
                       VERTICAL_SPEED_FOR_LIFTOFF)
@@ -477,8 +476,9 @@ class TopOfDescent(KeyTimeInstanceNode):
 # Flap
 
 
-class FlapSet(KeyTimeInstanceNode):
+class FlapLeverSet(KeyTimeInstanceNode):
     '''
+    Indicates where the flap was set.
     '''
 
     NAME_FORMAT = 'Flap %(flap)s Set'
@@ -494,12 +494,10 @@ class FlapSet(KeyTimeInstanceNode):
                flap_synth=M('Flap Lever (Synthetic)')):
 
         flap = flap_lever or flap_synth
-        # FIXME: Flat is a multi-state parameter - we shouldn't use raw array!
-        self.create_ktis_at_edges(
-            flap.array.raw,
-            direction='all_edges',
-            name='flap',
-        )
+        # TODO: Simplify when we've dealt with KTI node refactoring...
+        for _, state in sorted(flap.values_mapping.iteritems()):
+            self.create_ktis_on_state_change(state, flap.array, name='flap',
+                                             change='entering')
 
 
 class FirstFlapExtensionWhileAirborne(KeyTimeInstanceNode):
@@ -586,23 +584,6 @@ class SlatAlternateArmedSet(KeyTimeInstanceNode):
     def derive(self, saa=M('Slat Alternate Armed')):
 
         self.create_ktis_on_state_change('Armed', saa.array, change='entering')
-
-
-class SlatSet(KeyTimeInstanceNode):
-    '''
-    '''
-
-    NAME_FORMAT = 'Slat %(slat)s Set'
-    NAME_VALUES = NAME_VALUES_SLAT
-
-    def derive(self, slat=M('Slat')):
-
-        # FIXME: Slat is a multi-state parameter - we shouldn't use raw array!
-        self.create_ktis_at_edges(
-            slat.array.raw,
-            direction='all_edges',
-            name='slat',
-        )
 
 
 class SpeedbrakeOpen(KeyTimeInstanceNode):
