@@ -3540,7 +3540,7 @@ class FlapAngle(DerivedParameterNode):
         family_name = family.value if family else ''
         flap_A = flap_A or flap_A_inboard
         flap_B = flap_B or flap_B_inboard
-        
+
         if family_name == 'B787':
             lever_angles = at.get_lever_angles(None, None, family_name, key='value')
             # Flap settings 1 and 25 only affect Slat.
