@@ -19,7 +19,8 @@ from analysis_engine.library import (align,
                                      max_value,
                                      np_ma_masked_zeros,
                                      np_ma_masked_zeros_like,
-                                     np_ma_ones_like)
+                                     np_ma_ones_like,
+                                     unique_values)
 
 from analysis_engine.node import (Attribute,
                                   A,
@@ -146,6 +147,7 @@ from analysis_engine.derived_parameters import (
     RateOfTurn,
     Roll,
     ThrottleLevers,
+    ThrustAsymmetry,
     TrackDeviationFromRunway,
     Track,
     TrackContinuous,
@@ -4269,6 +4271,40 @@ class TestTailwind(unittest.TestCase):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestThrustAsymmetry(unittest.TestCase):
+    def test_can_operate(self):
+        opts = ThrustAsymmetry.get_operational_combinations()
+        expected = [
+            ('Eng (*) EPR Max', 'Eng (*) EPR Min'),
+            ('Eng (*) N1 Max', 'Eng (*) N1 Min'),
+            ]
+        for exp in expected:
+            self.assertIn(exp, opts, msg=exp)
+        
+    def test_derive_n1(self):
+        n1_max = P('Eng (*) N1 Max', np.arange(10, 30))
+        n1_min = P('Eng (*) N1 Min', np.arange(8, 28))
+        asym = ThrustAsymmetry()
+        asym.derive(None, None, n1_max=n1_max, n1_min=n1_min)
+        self.assertEqual(len(asym.array), len(n1_max.array))
+        uniq = unique_values(asym.array.astype(int))
+        # there should be all 20 values being 2 out
+        self.assertEqual(uniq, {2: 16})  # 3 values masked out
+        
+    def test_derive_epr_and_n1(self):
+        n1_max = P('Eng (*) N1 Max', np.arange(10, 30))
+        n1_min = P('Eng (*) N1 Min', np.arange(8, 28))
+        # create decimal array in the range of 0 to 2
+        epr_max = P('Eng (*) EPR Max', np.arange(0.0, 1.8, step=0.2))
+        epr_min = P('Eng (*) EPR Min', np.arange(0.2, 2.0, step=0.2))
+        asym = ThrustAsymmetry()
+        asym.get_derived((epr_max, epr_min, n1_max, n1_min))
+        self.assertEqual(len(asym.array), len(epr_max.array))
+        self.assertEqual(asym.array[2], -20)
+        self.assertAlmostEqual(asym.array[-3], -20)
+        
 
 
 class TestThrottleLevers(unittest.TestCase):

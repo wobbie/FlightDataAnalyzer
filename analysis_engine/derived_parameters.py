@@ -5126,7 +5126,7 @@ class ThrustAsymmetry(DerivedParameterNode):
     '''
     Thrust asymmetry based on N1.
 
-    For EPR rated aircraft, this measure should still be applicable as we are
+    For EPR rated aircraft, this measure is applicable as we are
     not applying a manufacturer's limit to the value, rather this is being
     used to identify imbalance of thrust and as the thrust comes from engine
     speed, N1 is still applicable.
@@ -5134,9 +5134,8 @@ class ThrustAsymmetry(DerivedParameterNode):
     Using a 5 second moving average to desensitise the parameter against
     transient differences as engines accelerate.
 
-    If we have EPR rated engines, but no N1 recorded, a possible solution
-    would be to treat EPR=2.0 as 100% and EPR=1.0 as 0% so the Thrust
-    Asymmetry would be simply (EPRmax-EPRmin)*100.
+    If we have EPR rated engines, we treat EPR=2.0 as 100% and EPR=1.0 as 0%
+    so the Thrust Asymmetry is simply (EPRmax-EPRmin)*100.
 
     For propeller aircraft the product of prop speed and torgue should be
     used to provide a similar single asymmetry value.
@@ -5144,10 +5143,20 @@ class ThrustAsymmetry(DerivedParameterNode):
 
     units = ut.PERCENT
 
-    def derive(self, max_n1=P('Eng (*) N1 Max'), min_n1=P('Eng (*) N1 Min')):
+    @classmethod
+    def can_operate(self, available):
+        return all_of(('Eng (*) EPR Max', 'Eng (*) EPR Min'), available) or\
+               all_of(('Eng (*) N1 Max', 'Eng (*) N1 Min'), available)
 
+    def derive(self, epr_max=P('Eng (*) EPR Max'), epr_min=P('Eng (*) EPR Min'),
+               n1_max=P('Eng (*) N1 Max'), n1_min=P('Eng (*) N1 Min')):
+        # use EPR if we have it in preference to N1
+        if epr_max:
+            diff = (epr_max.array - epr_min.array) * 100
+        else:
+            diff = (n1_max.array - n1_min.array)
         window = 5 * self.frequency # 5 second window
-        self.array = moving_average(max_n1.array - min_n1.array, window=window)
+        self.array = moving_average(diff, window=window)
 
 
 class TurbulenceRMSG(DerivedParameterNode):
