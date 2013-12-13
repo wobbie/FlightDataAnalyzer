@@ -2755,9 +2755,9 @@ class TestAlphaFloorDuration(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = AlphaFloorDuration
         self.operational_combinations = [
-            ('Alpha Floor',),
-            ('FMA AT Information',),
-            ('Alpha Floor', 'FMA AT Information'),
+            ('Alpha Floor', 'Airborne'),
+            ('FMA AT Information', 'Airborne'),
+            ('Alpha Floor', 'FMA AT Information', 'Airborne'),
         ]
 
     @unittest.skip('Test Not Implemented')

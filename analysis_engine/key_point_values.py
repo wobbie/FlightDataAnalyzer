@@ -2366,17 +2366,19 @@ class AlphaFloorDuration(KeyPointValueNode):
     @classmethod
     def can_operate(cls, available):
 
-        return any_of(('Alpha Floor', 'FMA AT Information'), available)
+        return 'Airborne' in available and any_of(('Alpha Floor', 'FMA AT Information'), available)
 
     def derive(self,
                alpha_floor=M('Alpha Floor'),
-               autothrottle_info=M('FMA AT Information')):
+               autothrottle_info=M('FMA AT Information'),
+               airs=S('Airborne')):
 
         combined = vstack_params_where_state(
             (alpha_floor, 'Engaged'),
             (autothrottle_info, 'Alpha Floor'),
         ).any(axis=0)
-        self.create_kpvs_from_slice_durations(runs_of_ones(combined), self.hz)
+        air_alpha_floor = slices_and(airs.get_slices(), runs_of_ones(combined))
+        self.create_kpvs_from_slice_durations(air_alpha_floor, self.hz)
 
 
 ##############################################################################
