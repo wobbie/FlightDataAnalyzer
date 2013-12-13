@@ -668,7 +668,10 @@ class CreateKPVsWhereTest(NodeTest):
     def test_derive_basic(self):
         if hasattr(self, 'node_class'):
             node = self.node_class()
-            node.derive(*(self.params + self.phases))
+            params = self.params
+            if self.phases:
+                params.append(self.phases)
+            node.derive(*(params))
             self.assertEqual(node, self.expected)
 
 
