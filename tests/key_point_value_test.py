@@ -2765,13 +2765,15 @@ class TestAlphaFloorDuration(unittest.TestCase, NodeTest):
         self.assertTrue(False, msg='Test Not Implemented.')
 
     def test_derive_basic(self):
-        array = np.ma.array([0] * 3 + [1] * 3 + [0] * 14)
+        array = np.ma.array([1] + [0] * 2 + [1] * 3 + [0] * 14)
         mapping = {0: '-', 1: 'Engaged'}
         alpha_floor = M('Alpha Floor', array=array, values_mapping=mapping)
 
         array = np.ma.repeat([0, 0, 1, 2, 3, 4, 3, 2, 1, 0], 2)
         mapping = {0: '-', 1: '-', 2: '-', 3: 'Alpha Floor', 4: '-' }
         autothrottle_info = M('FMA AT Information', array=array, values_mapping=mapping)
+
+        airs = buildsection('Airborne', 2, 18)
 
         name = self.node_class.get_name()
         expected = KPV(name=name, items=[
@@ -2781,7 +2783,7 @@ class TestAlphaFloorDuration(unittest.TestCase, NodeTest):
         ])
 
         node = self.node_class()
-        node.derive(alpha_floor, autothrottle_info)
+        node.derive(alpha_floor, autothrottle_info, airs)
         self.assertEqual(node, expected)
 
 
