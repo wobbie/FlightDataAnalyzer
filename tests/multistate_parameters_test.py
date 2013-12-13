@@ -1312,6 +1312,9 @@ class TestPitchAlternateLaw(unittest.TestCase, NodeTest):
 
 class TestSlat(unittest.TestCase):
 
+    def setUp(self):
+        self.node_class = Slat
+
     def test_can_operate(self):
         self.assertTrue(Slat.can_operate(
             ('Slat Angle', 'Model', 'Series', 'Family'),
@@ -1326,12 +1329,12 @@ class TestSlat(unittest.TestCase):
 
     def test_derive_A300B4F(self):
         model = A('Model', None)
-        series = A('Series', 'A300B4(F)')
+        series = A('Series', 'A300B4')
         family = A('Family', 'A300')
 
         slat = P('Slat Angle', [0] * 5 + range(50))
 
-        node = Slat()
+        node = self.node_class()
         node.derive(slat, model, series, family)
         values = unique_values(node.array.astype(int))
         self.assertEqual(values, {0: 6, 16: 16, 25: 33})

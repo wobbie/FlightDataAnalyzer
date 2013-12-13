@@ -1417,9 +1417,9 @@ class KeyTimeInstanceNode(FormattedNameNode):
             NAME_VALUES = {'number': range(1, 5)}
             # ...
 
-        class FlapSet(KeyTimeInstanceNode):
-            NAME_FORMAT = 'Flap (%(flap)d) Set'
-            NAME_VALUES = {'flap': (1, 2, 5, 10, 15, 25, 30, 40)}
+        class FlapLeverSet(KeyTimeInstanceNode):
+            NAME_FORMAT = 'Flap (%(flap)s) Set'
+            NAME_VALUES = {'flap': ('0', '1', '5', '10', '15', '25', '30')}
             # ...
 
     The marker ``(*)`` is intended to imply **all** of something so the
@@ -1466,6 +1466,7 @@ class KeyTimeInstanceNode(FormattedNameNode):
         self.append(kti)
         return kti
 
+    # TODO: We should try to merge this with create_ktis_on_state_change().
     def create_ktis_at_edges(self, array, direction='rising_edges', phase=None,
                              name=None, replace_values={}):
         '''
@@ -1495,13 +1496,7 @@ class KeyTimeInstanceNode(FormattedNameNode):
                 kwargs = dict(replace_values=replace_values)
                 if name:
                     # Annotate the transition with the post-change state.
-                    v = array[int(math.floor(edge_index)) + 1]
-                    if name in ['conf', 'flap']:
-                        # Ensure KTIs with integer detents don't have decimal
-                        # places and that those that are floats only have one
-                        # decimal place:
-                        v = int(v) if float(v).is_integer() else '%.1f' % v
-                    kwargs.update(**{name: v})
+                    kwargs.update(**{name: array[int(math.floor(edge_index)) + 1]})
                 self.create_kti(edge_index, **kwargs)
 
         # High level function scans phase blocks or complete array and
@@ -1515,8 +1510,9 @@ class KeyTimeInstanceNode(FormattedNameNode):
                 if each_period.slice.stop or len(array) > each_period.slice.start or 0:
                     kti_edges(array, each_period.slice)
 
+    # TODO: We should try to merge this with create_ktis_at_edges().
     def create_ktis_on_state_change(self, state, array, change='entering',
-                                    phase=None):
+                                    phase=None, name=None, replace_values={}):
         '''
         Create KTIs from multistate parameters where data reaches and leaves
         given state.
@@ -1530,6 +1526,11 @@ class KeyTimeInstanceNode(FormattedNameNode):
         # Low level function that finds start and stop indices of given state
         # and creates KTIs
         def state_changes(state, array, change, _slice=None):
+            # Prepare kwargs to pass through to self.create_kti():
+            kwargs = dict(replace_values=replace_values)
+            if name:
+                # Annotate the transition with the post-change state.
+                kwargs.update(**{name: state})
             # TODO: to improve performance reverse the state into numeric value
             # and look it up in array.raw instead
             if _slice is None:
@@ -1551,11 +1552,11 @@ class KeyTimeInstanceNode(FormattedNameNode):
                         # We don't create the KTI at the beginning of the data, as
                         # it is not a "state change"
                         start = period.start + valid_slice.start
-                        self.create_kti(start - 0.5)
+                        self.create_kti(start - 0.5, **kwargs)
                     if change in ('leaving', 'entering_and_leaving') \
                        and period.stop < slice_len:
                         stop = period.stop + valid_slice.start
-                        self.create_kti(stop - 0.5)
+                        self.create_kti(stop - 0.5, **kwargs)
             return
 
         repaired_array = repair_mask(array, frequency=self.frequency, repair_duration=64)
