@@ -668,7 +668,10 @@ class CreateKPVsWhereTest(NodeTest):
     def test_derive_basic(self):
         if hasattr(self, 'node_class'):
             node = self.node_class()
-            node.derive(*(self.params + self.phases))
+            params = self.params
+            if self.phases:
+                params.append(self.phases)
+            node.derive(*(params))
             self.assertEqual(node, self.expected)
 
 
@@ -2755,9 +2758,9 @@ class TestAlphaFloorDuration(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = AlphaFloorDuration
         self.operational_combinations = [
-            ('Alpha Floor',),
-            ('FMA AT Information',),
-            ('Alpha Floor', 'FMA AT Information'),
+            ('Alpha Floor', 'Airborne'),
+            ('FMA AT Information', 'Airborne'),
+            ('Alpha Floor', 'FMA AT Information', 'Airborne'),
         ]
 
     @unittest.skip('Test Not Implemented')
@@ -2765,13 +2768,15 @@ class TestAlphaFloorDuration(unittest.TestCase, NodeTest):
         self.assertTrue(False, msg='Test Not Implemented.')
 
     def test_derive_basic(self):
-        array = np.ma.array([0] * 3 + [1] * 3 + [0] * 14)
+        array = np.ma.array([1] + [0] * 2 + [1] * 3 + [0] * 14)
         mapping = {0: '-', 1: 'Engaged'}
         alpha_floor = M('Alpha Floor', array=array, values_mapping=mapping)
 
         array = np.ma.repeat([0, 0, 1, 2, 3, 4, 3, 2, 1, 0], 2)
         mapping = {0: '-', 1: '-', 2: '-', 3: 'Alpha Floor', 4: '-' }
         autothrottle_info = M('FMA AT Information', array=array, values_mapping=mapping)
+
+        airs = buildsection('Airborne', 2, 18)
 
         name = self.node_class.get_name()
         expected = KPV(name=name, items=[
@@ -2781,7 +2786,7 @@ class TestAlphaFloorDuration(unittest.TestCase, NodeTest):
         ])
 
         node = self.node_class()
-        node.derive(alpha_floor, autothrottle_info)
+        node.derive(alpha_floor, autothrottle_info, airs)
         self.assertEqual(node, expected)
 
 
@@ -8597,7 +8602,7 @@ class TestTAWSWindshearCautionBelow1500FtDuration(unittest.TestCase,
                                                   CreateKPVsWhereTest):
     def setUp(self):
         self.param_name = 'TAWS Windshear Caution'
-        self.phase_name = None
+        self.phase_name = 'Fast'
         self.node_class = TAWSWindshearCautionBelow1500FtDuration
         self.values_mapping = {0: '-', 1: 'Caution'}
 
@@ -8618,7 +8623,7 @@ class TestTAWSWindshearSirenBelow1500FtDuration(unittest.TestCase,
                                                 CreateKPVsWhereTest):
     def setUp(self):
         self.param_name = 'TAWS Windshear Siren'
-        self.phase_name = None
+        self.phase_name = 'Fast'
         self.node_class = TAWSWindshearSirenBelow1500FtDuration
         self.values_mapping = {0: '-', 1: 'Siren'}
 
@@ -8639,7 +8644,7 @@ class TestTAWSWindshearWarningBelow1500FtDuration(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = TAWSWindshearWarningBelow1500FtDuration
-        self.operational_combinations = [('TAWS Windshear Warning', 'Altitude AAL For Flight Phases')]
+        self.operational_combinations = [('TAWS Windshear Warning', 'Altitude AAL For Flight Phases', 'Fast')]
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):

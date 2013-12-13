@@ -2366,17 +2366,19 @@ class AlphaFloorDuration(KeyPointValueNode):
     @classmethod
     def can_operate(cls, available):
 
-        return any_of(('Alpha Floor', 'FMA AT Information'), available)
+        return 'Airborne' in available and any_of(('Alpha Floor', 'FMA AT Information'), available)
 
     def derive(self,
                alpha_floor=M('Alpha Floor'),
-               autothrottle_info=M('FMA AT Information')):
+               autothrottle_info=M('FMA AT Information'),
+               airs=S('Airborne')):
 
         combined = vstack_params_where_state(
             (alpha_floor, 'Engaged'),
             (autothrottle_info, 'Alpha Floor'),
         ).any(axis=0)
-        self.create_kpvs_from_slice_durations(runs_of_ones(combined), self.hz)
+        air_alpha_floor = slices_and(airs.get_slices(), runs_of_ones(combined))
+        self.create_kpvs_from_slice_durations(air_alpha_floor, self.hz)
 
 
 ##############################################################################
@@ -9758,10 +9760,12 @@ class TAWSWindshearWarningBelow1500FtDuration(KeyPointValueNode):
     units = ut.SECOND
 
     def derive(self, taws_windshear=M('TAWS Windshear Warning'),
-               alt_aal=P('Altitude AAL For Flight Phases')):
+               alt_aal=P('Altitude AAL For Flight Phases'),
+               fasts=S('Fast')):
+        fast_below_1500 = slices_and(fasts.get_slices(), alt_aal.slices_below(1500))
         self.create_kpvs_where(taws_windshear.array == 'Warning',
                                taws_windshear.hz,
-                               alt_aal.slices_from_to(1500, 0))
+                               fast_below_1500)
 
 
 class TAWSWindshearCautionBelow1500FtDuration(KeyPointValueNode):
@@ -9772,10 +9776,12 @@ class TAWSWindshearCautionBelow1500FtDuration(KeyPointValueNode):
     units = ut.SECOND
 
     def derive(self, taws_windshear=M('TAWS Windshear Caution'),
-               alt_aal=P('Altitude AAL For Flight Phases')):
+               alt_aal=P('Altitude AAL For Flight Phases'),
+               fasts=S('Fast')):
+        fast_below_1500 = slices_and(fasts.get_slices(), alt_aal.slices_below(1500))
         self.create_kpvs_where(taws_windshear.array == 'Caution',
                                taws_windshear.hz,
-                               alt_aal.slices_from_to(1500, 0))
+                               fast_below_1500)
 
 
 class TAWSWindshearSirenBelow1500FtDuration(KeyPointValueNode):
@@ -9786,10 +9792,12 @@ class TAWSWindshearSirenBelow1500FtDuration(KeyPointValueNode):
     units = ut.SECOND
 
     def derive(self, taws_windshear=M('TAWS Windshear Siren'),
-               alt_aal=P('Altitude AAL For Flight Phases')):
+               alt_aal=P('Altitude AAL For Flight Phases'),
+               fasts=S('Fast')):
+        fast_below_1500 = slices_and(fasts.get_slices(), alt_aal.slices_below(1500))
         self.create_kpvs_where(taws_windshear.array == 'Siren',
                                taws_windshear.hz,
-                               alt_aal.slices_from_to(1500, 0))
+                               fast_below_1500)
 
 
 ##############################################################################
