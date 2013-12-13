@@ -7,6 +7,7 @@ import numpy as np
 
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
+from math import floor
 
 from analysis_engine import hooks, settings
 from analysis_engine.datastructures import Segment
@@ -231,7 +232,7 @@ def _split_on_dfc(slice_start_secs, slice_stop_secs, dfc_frequency,
     :rtype: int or float or None
     '''
     dfc_slice = slice(slice_start_secs * dfc_frequency,
-                      slice_stop_secs * dfc_frequency)
+                      floor(slice_stop_secs * dfc_frequency)+1)
     unmasked_edges = np.ma.flatnotmasked_edges(dfc_diff[dfc_slice])
     if unmasked_edges is None:
         return None
