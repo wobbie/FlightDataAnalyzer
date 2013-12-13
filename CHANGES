@@ -16,6 +16,9 @@ You can view the differences in tagged versions as follows:
 
 v0.5.2
 ------
+ - Flap nodes which ignore 'Lever 0' state use string states rather than raw vals
+ - TAWS Windshear detects climb as well as approach
+ - Alpha floor only detect while Airborne
  - AP Engaged / Disengaged widened phase to Fast rather than Airborne
  - Takeoff and Landing Pilot identification fix for Pilot Flying parameter 
    (currently on Airbus with sidesticks)
