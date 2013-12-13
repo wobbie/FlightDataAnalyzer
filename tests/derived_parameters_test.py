@@ -3898,52 +3898,49 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
             ('Flap Angle (L)', 'Flap Angle (R)', 'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard', 'Frame'),
             ('Flap Angle (L)', 'Flap Angle (R)', 'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard', 'Slat Angle', 'Frame'),
         ]
-    
+
     def test_derive_787(self):
-        flap_angle_l = load(os.path.join(test_data_path,
-                                         '787_flap_angle_l.nod'))
-        flap_angle_r = load(os.path.join(test_data_path,
-                                         '787_flap_angle_r.nod'))
-        slat_l = load(os.path.join(test_data_path, '787_slat_l.nod'))
-        slat_r = load(os.path.join(test_data_path, '787_slat_r.nod'))
-        slat = SlatAngle()
-        slat.derive(slat_l, slat_r)
+        _load = lambda x: load(os.path.join(test_data_path, x))
+        flap_angle_l = _load('787_flap_angle_l.nod')
+        flap_angle_r = _load('787_flap_angle_r.nod')
+        slat_angle_l = _load('787_slat_l.nod')
+        slat_angle_r = _load('787_slat_r.nod')
+        slat_angle = SlatAngle()
+        slat_angle.derive(slat_angle_l, slat_angle_r)
         family = A('Family', 'B787')
-        f = FlapAngle()
-        f.derive(flap_angle_l, flap_angle_r, None, None, None, None,
-                 slat, None, family)
-        # Include transitions.
-        self.assertEqual(f.array[18635], 0.70000000000000007)
-        self.assertEqual(f.array[18650], 1.0)
-        self.assertEqual(f.array[18900], 5.0)
-        # The original Flap data does not always record exact Flap settings.
-        self.assertEqual(f.array[19070], 19.945)
-        self.assertEqual(f.array[19125], 24.945)
-        self.assertEqual(f.array[19125], 24.945)
-        self.assertEqual(f.array[19250], 30.0)
-    
+        node = self.node_class()
+        node.derive(flap_angle_l, flap_angle_r, None, None, None, None, slat_angle, None, family)
+        # Include transitions:
+        self.assertEqual(node.array[18635], 0.70000000000000007)
+        self.assertEqual(node.array[18650], 1.0)
+        self.assertEqual(node.array[18900], 5.0)
+        # The original flap data does not always record exact flap settings:
+        self.assertEqual(node.array[19070], 19.945)
+        self.assertEqual(node.array[19125], 24.945)
+        self.assertEqual(node.array[19125], 24.945)
+        self.assertEqual(node.array[19250], 30.0)
+
     def test__combine_flap_set_basic(self):
-        conf_map = {
-            0:    (0, 0),
-            1:    (50, 0),
-            5:    (50, 5),
-            15:   (50, 15),
-            20:   (50, 20),
-            25:   (100, 20),
-            30:   (100, 30),
+        lever_angles = {
+            0:  (0, 0, None),
+            1:  (50, 0, None),
+            5:  (50, 5, None),
+            15: (50, 15, None),
+            20: (50, 20, None),
+            25: (100, 20, None),
+            30: (100, 30, None),
         }
-        slat_array = np.ma.array([0, 50, 50, 50, 50, 100, 100], dtype=float)
-        flap_array = np.ma.array([0, 0, 5, 15, 20, 20, 30], dtype=float)
-        flap_slat = FlapAngle._combine_flap_slat(slat_array, flap_array,
-                                                 conf_map)
-        self.assertEqual(flap_slat.tolist(),
-                         [0.0, 1.0, 5.0, 15.0, 20.0, 25.0, 30.0])
+        slat_array = np.ma.array((0.0, 50, 50, 50, 50, 100, 100))
+        flap_array = np.ma.array((0.0, 0, 5, 15, 20, 20, 30))
+        array = self.node_class._combine_flap_slat(slat_array, flap_array, lever_angles)
+        self.assertEqual(array.tolist(), [0.0, 1.0, 5.0, 15.0, 20.0, 25.0, 30.0])
 
     def test_hercules(self):
-        f = FlapAngle()
-        f.derive(P(array=np.ma.array(range(0, 5000, 100) + range(5000, 0, -200))),
-                 None, None, None, None, None, None, None, A('Frame', 'L382-Hercules'))
-        self.assertAlmostEqual(f.array[50], 2500, 1)
+        parameter = P(array=np.ma.array(range(0, 5000, 100) + range(5000, 0, -200)))
+        frame = A('Frame', 'L382-Hercules')
+        node = self.node_class()
+        node.derive(parameter, None, None, None, None, None, None, None, frame)
+        self.assertAlmostEqual(node.array[50], 2500, 1)
 
 
 class TestHeadingTrueContinuous(unittest.TestCase):

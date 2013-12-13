@@ -446,6 +446,9 @@ class AccelerationNormal20FtToFlareMax(KeyPointValueNode):
 
 class AccelerationNormalWithFlapUpWhileAirborneMax(KeyPointValueNode):
     '''
+    Maximum normal acceleration value with flaps retracted.
+
+    Note that this KPV uses the flap lever angle, not the flap surface angle.
     '''
 
     units = ut.G
@@ -463,13 +466,16 @@ class AccelerationNormalWithFlapUpWhileAirborneMax(KeyPointValueNode):
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-        # Mask data where the flaps are down:
-        acc_flap_up = np.ma.masked_where(flap.array > 0.0, acc_norm.array)
+        retracted = (flap.array == '0') | (flap.array == 'Lever 0')
+        acc_flap_up = np.ma.masked_where(~retracted, acc_norm.array)
         self.create_kpv_from_slices(acc_flap_up, airborne, max_value)
 
 
 class AccelerationNormalWithFlapUpWhileAirborneMin(KeyPointValueNode):
     '''
+    Minimum normal acceleration value with flaps retracted.
+
+    Note that this KPV uses the flap lever angle, not the flap surface angle.
     '''
 
     units = ut.G
@@ -487,13 +493,16 @@ class AccelerationNormalWithFlapUpWhileAirborneMin(KeyPointValueNode):
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-        # Mask data where the flaps are down:
-        acc_flap_up = np.ma.masked_where(flap.array > 0.0, acc_norm.array)
+        retracted = (flap.array == '0') | (flap.array == 'Lever 0')
+        acc_flap_up = np.ma.masked_where(~retracted, acc_norm.array)
         self.create_kpv_from_slices(acc_flap_up, airborne, min_value)
 
 
 class AccelerationNormalWithFlapDownWhileAirborneMax(KeyPointValueNode):
     '''
+    Maximum normal acceleration value with flaps extended.
+
+    Note that this KPV uses the flap lever angle, not the flap surface angle.
     '''
 
     units = ut.G
@@ -511,13 +520,16 @@ class AccelerationNormalWithFlapDownWhileAirborneMax(KeyPointValueNode):
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-        # Mask data where the flaps are up:
-        acc_flap_up = np.ma.masked_where(flap.array == 0.0, acc_norm.array)
-        self.create_kpv_from_slices(acc_flap_up, airborne, max_value)
+        retracted = (flap.array == '0') | (flap.array == 'Lever 0')
+        acc_flap_dn = np.ma.masked_where(retracted, acc_norm.array)
+        self.create_kpv_from_slices(acc_flap_dn, airborne, max_value)
 
 
 class AccelerationNormalWithFlapDownWhileAirborneMin(KeyPointValueNode):
     '''
+    Minimum normal acceleration value with flaps extended.
+
+    Note that this KPV uses the flap lever angle, not the flap surface angle.
     '''
 
     units = ut.G
@@ -535,9 +547,9 @@ class AccelerationNormalWithFlapDownWhileAirborneMin(KeyPointValueNode):
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-        # Mask data where the flaps are up:
-        acc_flap_up = np.ma.masked_where(flap.array == 0.0, acc_norm.array)
-        self.create_kpv_from_slices(acc_flap_up, airborne, min_value)
+        retracted = (flap.array == '0') | (flap.array == 'Lever 0')
+        acc_flap_dn = np.ma.masked_where(retracted, acc_norm.array)
+        self.create_kpv_from_slices(acc_flap_dn, airborne, min_value)
 
 
 class AccelerationNormalAtLiftoff(KeyPointValueNode):
@@ -1514,18 +1526,18 @@ class AirspeedMinusMinManeouvringSpeedMin(KeyPointValueNode):
 
 class AirspeedWithFlapMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
-    Maximum airspeed recorded with each Flap setting.
-    
+    Maximum airspeed recorded with each flap setting.
+
     The KPV name includes the source parameter used for the flap measurement
     taken:
-    
+
     - 'Flap': based on the Flap Lever as recorded or a Flap Lever (Sythetic)
       generated from other available sources (for safety investigations).
-    - 'Flap Including Transition': Flap setting includes the transition periods 
-      into and out of the flap detented position (for maintenance 
+    - 'Flap Including Transition': Flap setting includes the transition periods
+      into and out of the flap detented position (for maintenance
       investigations on the more cautious side).
-    - 'Flap Excluding Transition': Flap only where the detented flap position 
-      has been reached, excluding the transition periods (for maintenance 
+    - 'Flap Excluding Transition': Flap only where the detented flap position
+      has been reached, excluding the transition periods (for maintenance
       investigations).
     '''
 
@@ -1577,7 +1589,7 @@ class AirspeedWithFlapMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
 class AirspeedWithFlapMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
     Minimum airspeed recorded with each Flap Lever setting.
-    
+
     Based on Flap Lever for safety based investigations which primarily
     depend upon the pilot actions, rather than maintenance investigations
     which depend upon the actual flap surface position. Uses Flap Lever if
@@ -1613,20 +1625,20 @@ class AirspeedWithFlapMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
 class AirspeedWithFlapAndSlatExtendedMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
     Maximum airspeed recorded with Slat Extended and without Flap extended.
-    
+
     Based upon Flap and Slat surface positions for maintenance based
     investigations where the results may be compared to Slat limiting speeds.
     Measurements which include Flap transitions can be found in other
     measurements.
-    
+
     The KPV name includes the source parameter used for the flap measurement
     taken:
-    
-    - 'Flap Including Transition': Flap (and Slat) setting includes the 
-      transition periods  into and out of the flap detented position 
+
+    - 'Flap Including Transition': Flap (and Slat) setting includes the
+      transition periods  into and out of the flap detented position
       (for maintenance investigations on the more cautious side).
-    - 'Flap Excluding Transition': Flap (and Slat) taken only where the 
-      detented flap position has been reached, excluding the transition 
+    - 'Flap Excluding Transition': Flap (and Slat) taken only where the
+      detented flap position has been reached, excluding the transition
       periods (for maintenance investigations).
     '''
 
@@ -1682,17 +1694,17 @@ class AirspeedWithFlapAndSlatExtendedMax(KeyPointValueNode, FlapOrConfigurationM
 class AirspeedWithFlapDuringClimbMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
     Maximum airspeed recorded during the Climb phase with each Flap setting.
-    
+
     The KPV name includes the source parameter used for the flap measurement
     taken:
-    
+
     - 'Flap': based on the Flap Lever as recorded or a Flap Lever (Sythetic)
       generated from other available sources (for safety investigations).
-    - 'Flap Including Transition': Flap setting includes the transition periods 
-      into and out of the flap detented position (for maintenance 
+    - 'Flap Including Transition': Flap setting includes the transition periods
+      into and out of the flap detented position (for maintenance
       investigations on the more cautious side).
-    - 'Flap Excluding Transition': Flap only where the detented flap position 
-      has been reached, excluding the transition periods (for maintenance 
+    - 'Flap Excluding Transition': Flap only where the detented flap position
+      has been reached, excluding the transition periods (for maintenance
       investigations).
     '''
 
@@ -1744,7 +1756,7 @@ class AirspeedWithFlapDuringClimbMax(KeyPointValueNode, FlapOrConfigurationMaxOr
 class AirspeedWithFlapDuringClimbMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
     Minimum airspeed recorded during the Climb phase with each Flap setting.
-    
+
     Based on Flap Lever for safety based investigations which primarily
     depend upon the pilot actions, rather than maintenance investigations
     which depend upon the actual flap surface position. Uses Flap Lever if
@@ -1777,19 +1789,19 @@ class AirspeedWithFlapDuringClimbMin(KeyPointValueNode, FlapOrConfigurationMaxOr
 
 class AirspeedWithFlapDuringDescentMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
-    Maximum airspeed recorded during the Descent phase (down to the start of 
+    Maximum airspeed recorded during the Descent phase (down to the start of
     flare) with each Flap setting.
-    
+
     The KPV name includes the source parameter used for the flap measurement
     taken:
-    
+
     - 'Flap': based on the Flap Lever as recorded or a Flap Lever (Sythetic)
       generated from other available sources (for safety investigations).
-    - 'Flap Including Transition': Flap setting includes the transition periods 
-      into and out of the flap detented position (for maintenance 
+    - 'Flap Including Transition': Flap setting includes the transition periods
+      into and out of the flap detented position (for maintenance
       investigations on the more cautious side).
-    - 'Flap Excluding Transition': Flap only where the detented flap position 
-      has been reached, excluding the transition periods (for maintenance 
+    - 'Flap Excluding Transition': Flap only where the detented flap position
+      has been reached, excluding the transition periods (for maintenance
       investigations).
     '''
 
@@ -1840,9 +1852,9 @@ class AirspeedWithFlapDuringDescentMax(KeyPointValueNode, FlapOrConfigurationMax
 
 class AirspeedWithFlapDuringDescentMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
-    Minimum airspeed recorded during the Descent phase (down to the start of 
+    Minimum airspeed recorded during the Descent phase (down to the start of
     flare) with each Flap setting.
-    
+
     Based on Flap Lever for safety based investigations which primarily
     depend upon the pilot actions, rather than maintenance investigations
     which depend upon the actual flap surface position. Uses Flap Lever if
@@ -1910,7 +1922,7 @@ class AirspeedAtFirstFlapExtensionWhileAirborne(KeyPointValueNode):
                ff_ext=KTI('First Flap Extension While Airborne')):
 
         if ff_ext:
-            index=ff_ext[-1].index
+            index = ff_ext[-1].index
             self.create_kpv(index, value_at_index(airspeed.array, index))
 
 
@@ -2354,17 +2366,19 @@ class AlphaFloorDuration(KeyPointValueNode):
     @classmethod
     def can_operate(cls, available):
 
-        return any_of(('Alpha Floor', 'FMA AT Information'), available)
+        return 'Airborne' in available and any_of(('Alpha Floor', 'FMA AT Information'), available)
 
     def derive(self,
                alpha_floor=M('Alpha Floor'),
-               autothrottle_info=M('FMA AT Information')):
+               autothrottle_info=M('FMA AT Information'),
+               airs=S('Airborne')):
 
         combined = vstack_params_where_state(
             (alpha_floor, 'Engaged'),
             (autothrottle_info, 'Alpha Floor'),
         ).any(axis=0)
-        self.create_kpvs_from_slice_durations(runs_of_ones(combined), self.hz)
+        air_alpha_floor = slices_and(airs.get_slices(), runs_of_ones(combined))
+        self.create_kpvs_from_slice_durations(air_alpha_floor, self.hz)
 
 
 ##############################################################################
@@ -2960,7 +2974,8 @@ class AltitudeWithFlapMax(KeyPointValueNode):
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-        alt_flap = alt_std.array * np.ma.minimum(flap.array, 1.0)
+        retracted = (flap.array == '0') | (flap.array == 'Lever 0')
+        alt_flap = np.ma.masked_where(retracted, alt_std.array)
         self.create_kpvs_within_slices(alt_flap, airborne, max_value)
 
 
@@ -3035,14 +3050,14 @@ class AltitudeAtFlapExtensionWithGearDown(KeyPointValueNode):
 
         flap = flap_lever or flap_synth
 
-        for air_down in slices_and([a.slice for a in airborne], 
-                                   [g.slice for g in gear_ext]):
-            extend_indexes = np.ma.where(np.ma.diff(flap.array.raw[air_down])>0)[0]
-            if len(extend_indexes)==0:
-                continue
-            for extend_index in extend_indexes:
+        # Raw flap values must increase to detect extensions.
+        extend = np.ma.diff(flap.array.raw) > 0
+
+        for air_down in slices_and((a.slice for a in airborne),
+                                   (g.slice for g in gear_ext)):
+            for index in np.ma.where(extend[air_down])[0]:
                 # The flap we are moving to is +1 from the diff index
-                index = (air_down.start or 0) + extend_index + 1
+                index = (air_down.start or 0) + index + 1
                 value = alt_aal.array[index]
                 self.create_kpv(index, value, flap=flap.array[index])
 
@@ -3072,14 +3087,14 @@ class AirspeedAtFlapExtensionWithGearDown(KeyPointValueNode):
 
         flap = flap_lever or flap_synth
 
-        for air_down in slices_and([a.slice for a in airborne], 
-                                   [g.slice for g in gear_ext]):
-            extend_indexes = np.ma.where(np.ma.diff(flap.array.raw[air_down])>0)[0]
-            if len(extend_indexes)==0:
-                continue
-            for extend_index in extend_indexes:
+        # Raw flap values must increase to detect extensions.
+        extend = np.ma.diff(flap.array.raw) > 0
+
+        for air_down in slices_and((a.slice for a in airborne),
+                                   (g.slice for g in gear_ext)):
+            for index in np.ma.where(extend[air_down])[0]:
                 # The flap we are moving to is +1 from the diff index
-                index = (air_down.start or 0) + extend_index + 1
+                index = (air_down.start or 0) + index + 1
                 value = air_spd.array[index]
                 self.create_kpv(index, value, flap=flap.array[index])
 
@@ -3095,7 +3110,7 @@ class AltitudeRadioCleanConfigurationMin(KeyPointValueNode):
                flap=M('Flap'),
                gear_retr=S('Gear Retracted')):
 
-        alt_rad_noflap = np.ma.masked_where(flap.array != 0.0, alt_rad.array)
+        alt_rad_noflap = np.ma.masked_where(flap.array != '0', alt_rad.array)
         self.create_kpvs_within_slices(alt_rad_noflap, gear_retr, min_value)
 
 
@@ -3113,7 +3128,8 @@ class AirspeedRelativeAtFirstFlapRetraction(KeyPointValueNode):
     name = 'Airspeed Relative To Vref30+80 At First Flap Retraction'
     units = ut.KT
 
-    def derive(self, airspeed=P('Airspeed'),
+    def derive(self,
+               airspeed=P('Airspeed'),
                gw=P('Gross Weight Smoothed'),
                alt_retract=KPV('Altitude At First Flap Change After Liftoff'),
                series=A('Series'),
@@ -3127,7 +3143,7 @@ class AirspeedRelativeAtFirstFlapRetraction(KeyPointValueNode):
             gw_ret = value_at_index(gw.array, index)
             # Get the Vref speed for flap 30 and the current weight.
             vref = vspeed_lookup('Vref', series.value, engine.value, '30', gw_ret)
-            self.create_kpv(index, speed_ret-(vref+80.0))
+            self.create_kpv(index, speed_ret - (vref + 80.0))
 
 
 class AirspeedRelativeAtFirstFlapExtensionWithGearDown(KeyPointValueNode):
@@ -3139,25 +3155,24 @@ class AirspeedRelativeAtFirstFlapExtensionWithGearDown(KeyPointValueNode):
     name = 'Airspeed Relative To Vref30+80 At First Flap Extension With Gear Down'
     units = ut.KT
 
-    def derive (self, speed=KPV('Airspeed At Flap Extension With Gear Down'),
-                gw_ldg=KPV('Gross Weight At Touchdown'),
-                series=A('Series'),
-                engine=A('Engine Type')):
+    def derive(self,
+               speed=KPV('Airspeed At Flap Extension With Gear Down'),
+               gw_ldg=KPV('Gross Weight At Touchdown'),
+               series=A('Series'),
+               engine=A('Engine Type')):
 
         if series.value not in ['B757-200(F)', 'B767-300F(ER)']:
             return
-
         kpv_20 = [k for k in speed if '20' in k.name]
-        if kpv_20==[]:
+        if not kpv_20:
             # The crew did not select flap 20 with gear down on this flight.
             return
         # If there were multiple flap deployments, we'll just use the last one.
         index = kpv_20[-1].index
         speed_20 = kpv_20[-1].value
-        
         # Get the Vref speed for a landing at flap 30 and the projected weight.
         vref_ldg = vspeed_lookup('Vref', series.value, engine.value, '30', gw_ldg[0].value)
-        self.create_kpv(index, speed_20-(vref_ldg+80.0))
+        self.create_kpv(index, speed_20 - (vref_ldg + 80.0))
 
 
 class AirspeedRelativeAtFlap20SelectionWithGearDown(KeyPointValueNode):
@@ -3169,24 +3184,23 @@ class AirspeedRelativeAtFlap20SelectionWithGearDown(KeyPointValueNode):
     name = 'Airspeed Relative To Vref30+80 At Flap 20 Selection With Gear Down'
     units = ut.KT
 
-    def derive (self, speed=KPV('Airspeed At Flap Extension With Gear Down'),
-                gw_ldg=KPV('Gross Weight At Touchdown'),
-                series=A('Series'), engine=A('Engine Type'),):
+    def derive(self,
+               speed=KPV('Airspeed At Flap Extension With Gear Down'),
+               gw_ldg=KPV('Gross Weight At Touchdown'),
+               series=A('Series'), engine=A('Engine Type'),):
 
         if series.value not in ['B757-200(F)', 'B767-300F(ER)']:
             return
-
         kpv_20 = speed.get_ordered_by_index()
-        if kpv_20==[]:
+        if not kpv_20:
             # The crew did not extend flap with gear down on this flight.
             return
         # We are only interested in the first one.
         index = kpv_20[0].index
         speed_20 = kpv_20[0].value
-        
         # Get the Vref speed for a landing at flap 30 and the projected weight.
         vref_ldg = vspeed_lookup('Vref', series.value, engine.value, '30', gw_ldg[0].value)
-        self.create_kpv(index, speed_20-(vref_ldg+80.0))
+        self.create_kpv(index, speed_20 - (vref_ldg + 80.0))
 
 
 ##########################################################################
@@ -3212,22 +3226,22 @@ class AltitudeAtFirstFlapChangeAfterLiftoff(KeyPointValueNode):
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-        
-        if flap_liftoff == []:
-            # No Flap at Liftoff identified
-            return
 
-        if flap_liftoff.get_first().value == 0.0:
-            # if taken off with flap 0 likely first flap change after liftoff
-            # will be on approach to land which we are not interested in
-            # here.
+        # Check whether takeoff with flap 0 occurred, as it is likely the first
+        # flap change will be on the approach to landing which we are not
+        # interested in here.
+        #
+        # Note: The KPV 'Flap At Liftoff' uses 'Flap' which we expect to always
+        #       have a '0' state with a value of 0.0 in this KPV. Should this
+        #       change, this code will need to be updated.
+        if not flap_liftoff or flap_liftoff.get_first().value == 0.0:
             return
 
         for air in airborne:
             change_indexes = np.ma.where(np.ma.diff(flap.array[air.slice]))[0]
             if len(change_indexes):
                 # Create at first change:
-                index = (air.slice.start or 0) + change_indexes[0] +0.5
+                index = (air.slice.start or 0) + change_indexes[0] + 0.5
                 self.create_kpv(index, value_at_index(alt_aal.array, index))
 
 
@@ -3253,7 +3267,7 @@ class AltitudeAtLastFlapChangeBeforeTouchdown(KeyPointValueNode):
 
         for touchdown in touchdowns:
             land_flap = flap.array.raw[touchdown.index]
-            flap_move = abs(flap.array.raw-land_flap)
+            flap_move = abs(flap.array.raw - land_flap)
             rough_index = index_at_value(flap_move, 0.5, slice(touchdown.index, 0, -1))
             # index_at_value tries to be precise, but in this case we really
             # just want the index at the new flap setting.
@@ -3268,7 +3282,7 @@ class AltitudeAtFirstFlapRetractionDuringGoAround(KeyPointValueNode):
     Go Around Flap Retracted pinpoints the flap retraction instance within the
     500ft go-around window. Create a single KPV for the first flap retraction
     within a Go Around And Climbout phase.
-    
+
     Note: Updated to provide relative altitude, in the same manner as
     "Altitude At Gear Up Selection During Go Around" as this eases
     identification of the KPVs in the case of multiple go-arounds.
@@ -3301,7 +3315,7 @@ class AltitudeAtFirstFlapRetraction(KeyPointValueNode):
     def derive(self,
                alt_aal=P('Altitude AAL'),
                flap_rets=KTI('Flap Retraction While Airborne')):
-        
+
         flap_ret = flap_rets.get_first()
         if flap_ret:
             self.create_kpv(flap_ret.index, alt_aal.array[flap_ret.index])
@@ -3316,7 +3330,7 @@ class AltitudeAtLastFlapRetraction(KeyPointValueNode):
     def derive(self,
                alt_aal=P('Altitude AAL'),
                flap_rets=KTI('Flap Retraction While Airborne')):
-        
+
         flap_ret = flap_rets.get_last()
         if flap_ret:
             self.create_kpv(flap_ret.index, alt_aal.array[flap_ret.index])
@@ -3378,7 +3392,8 @@ class AltitudeAtGearDownSelectionWithFlapDown(KeyPointValueNode):
                flap_synth=M('Flap Lever (Synthetic)')):
 
         flap = flap_lever or flap_synth
-        flap_dns = np.ma.clump_unmasked(np.ma.masked_equal(flap.array, 0.0))
+        retracted = (flap.array == '0') | (flap.array == 'Lever 0')
+        flap_dns = runs_of_ones(~retracted)
         flap_dn_gear_downs = gear_downs.get(within_slices=flap_dns)
         self.create_kpvs_at_ktis(alt_aal.array, flap_dn_gear_downs)
 
@@ -3488,7 +3503,8 @@ class AltitudeAtGearDownSelectionWithFlapUp(KeyPointValueNode):
                flap_synth=M('Flap Lever (Synthetic)')):
 
         flap = flap_lever or flap_synth
-        flap_ups = np.ma.clump_unmasked(np.ma.masked_greater(flap.array, 0.0))
+        retracted = (flap.array == '0') | (flap.array == 'Lever 0')
+        flap_ups = runs_of_ones(retracted)
         flap_up_gear_downs = gear_downs.get(within_slices=flap_ups)
         self.create_kpvs_at_ktis(alt_aal.array, flap_up_gear_downs)
 
@@ -5319,6 +5335,9 @@ class MachDuringCruiseAvg(KeyPointValueNode):
 
 class MachWithFlapMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
+    Maximum value of Mach for each flap detent.
+
+    Note that this KPV uses the flap lever angle, not the flap surface angle.
     '''
 
     NAME_FORMAT = 'Mach With Flap %(flap)s Max'
@@ -7299,45 +7318,57 @@ class HeightMinsToTouchdown(KeyPointValueNode):
 
 class FlapAtLiftoff(KeyPointValueNode):
     '''
-    Flap angle (note, not Flap Lever) measured at Liftoff.
+    Flap angle measured at liftoff.
+
+    Note that this KPV uses the flap surface angle, not the flap lever angle.
     '''
 
     units = ut.DEGREE
 
     def derive(self, flap=M('Flap'), liftoffs=KTI('Liftoff')):
+
         self.create_kpvs_at_ktis(flap.array, liftoffs, interpolate=False)
 
 
 class FlapAtTouchdown(KeyPointValueNode):
     '''
-    Flap angle (note, not Flap Lever) measured at Touchdown.
+    Flap angle measured at touchdown.
+
+    Note that this KPV uses the flap surface angle, not the flap lever angle.
     '''
 
     units = ut.DEGREE
 
     def derive(self, flap=M('Flap'), touchdowns=KTI('Touchdown')):
+
         self.create_kpvs_at_ktis(flap.array, touchdowns, interpolate=False)
 
 
 class FlapAtGearDownSelection(KeyPointValueNode):
     '''
-    Flap (note, not Flap Lever) angle at gear down selection.
+    Flap angle at gear down selection.
+
+    Note that this KPV uses the flap surface angle, not the flap lever angle.
     '''
 
     units = ut.DEGREE
 
     def derive(self, flap=M('Flap'), gear_dn_sel=KTI('Gear Down Selection')):
+
         self.create_kpvs_at_ktis(flap.array, gear_dn_sel, interpolate=False)
 
 
 class FlapWithGearUpMax(KeyPointValueNode):
     '''
-    Maximum Flap angle (note, not Flap Lever) while Gear Up.
+    Maximum flap angle while the landing gear is up.
+
+    Note that this KPV uses the flap surface angle, not the flap lever angle.
     '''
 
     units = ut.DEGREE
 
     def derive(self, flap=M('Flap'), gear=M('Gear Down')):
+
         gear_up = np.ma.masked_equal(gear.array.raw, gear.array.state['Down'])
         gear_up_slices = np.ma.clump_unmasked(gear_up)
         self.create_kpvs_within_slices(flap.array, gear_up_slices, max_value)
@@ -7345,15 +7376,19 @@ class FlapWithGearUpMax(KeyPointValueNode):
 
 class FlapWithSpeedbrakeDeployedMax(KeyPointValueNode):
     '''
-    Maximum Flap angle (note, not Flap Lever) while speedbrake deployed.
+    Maximum flap angle while the speedbrakes are deployed.
+
+    Note that this KPV uses the flap surface angle, not the flap lever angle.
     '''
 
     units = ut.DEGREE
 
-    def derive(self, flap=M('Flap'),
+    def derive(self,
+               flap=M('Flap'),
                spd_brk=M('Speedbrake Selected'),
                airborne=S('Airborne'),
                landings=S('Landing')):
+
         deployed = spd_brk.array == 'Deployed/Cmd Up'
         deployed = mask_outside_slices(deployed, airborne.get_slices())
         deployed = mask_inside_slices(deployed, landings.get_slices())
@@ -7364,6 +7399,8 @@ class FlapWithSpeedbrakeDeployedMax(KeyPointValueNode):
 class FlapAt1000Ft(KeyPointValueNode):
     '''
     Flap setting at 1000ft on approach.
+
+    Note that this KPV uses the flap surface angle, not the flap lever angle.
     '''
 
     units = ut.DEGREE
@@ -7377,6 +7414,8 @@ class FlapAt1000Ft(KeyPointValueNode):
 class FlapAt500Ft(KeyPointValueNode):
     '''
     Flap setting at 500ft on approach.
+
+    Note that this KPV uses the flap surface angle, not the flap lever angle.
     '''
 
     units = ut.DEGREE
@@ -7385,8 +7424,8 @@ class FlapAt500Ft(KeyPointValueNode):
 
         for gate in gates.get(name='500 Ft Descending'):
             self.create_kpv(gate.index, flap.array.raw[gate.index])
-    
-    
+
+
 ##############################################################################
 
 
@@ -7762,15 +7801,11 @@ class GroundspeedFlapChangeDuringTakeoffMax(KeyPointValueNode):
 
     def derive(self,
                gnd_spd=P('Groundspeed'),
-               flap=P('Flap'),
+               flap=M('Flap'),
                takeoff_roll=S('Takeoff Roll')):
 
         flap_changes = np.ma.ediff1d(flap.array, to_begin=0)
         masked_in_range = np.ma.masked_equal(flap_changes, 0)
-
-        # Masking groundspeed where speedbrake is within limit.
-        # WARNING: in this particular case we don't want the KPV to be created
-        # when the condition is not met.
         gspd_masked = np.ma.array(gnd_spd.array, mask=masked_in_range.mask)
         self.create_kpvs_within_slices(gspd_masked, takeoff_roll, max_value)
 
@@ -7871,10 +7906,10 @@ class PitchAfterFlapRetractionMax(KeyPointValueNode):
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
+        retracted = (flap.array == '0') | (flap.array == 'Lever 0')
         scope = []
         for air in airborne:
-            clean = np.ma.masked_greater(flap.array[air.slice], 0.0)
-            slices = np.ma.clump_unmasked(clean)
+            slices = runs_of_ones(retracted[air.slice])
             if not slices:
                 continue
             scope.append(slice(air.slice.start + slices[0].start, air.slice.stop))
@@ -9089,10 +9124,10 @@ class SpeedbrakeDeployedWithFlapDuration(KeyPointValueNode):
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
+        retracted = (flap.array == '0') | (flap.array == 'Lever 0')
         for air in airborne:
             spd_brk_dep = spd_brk.array[air.slice] == 'Deployed/Cmd Up'
-            flap_extend = flap.array[air.slice] > 0
-            array = spd_brk_dep & flap_extend
+            array = spd_brk_dep & ~retracted[air.slice]
             slices = shift_slices(runs_of_ones(array), air.slice.start)
             self.create_kpvs_from_slice_durations(slices, self.frequency,
                                                   mark='start')
@@ -9725,10 +9760,12 @@ class TAWSWindshearWarningBelow1500FtDuration(KeyPointValueNode):
     units = ut.SECOND
 
     def derive(self, taws_windshear=M('TAWS Windshear Warning'),
-               alt_aal=P('Altitude AAL For Flight Phases')):
+               alt_aal=P('Altitude AAL For Flight Phases'),
+               fasts=S('Fast')):
+        fast_below_1500 = slices_and(fasts.get_slices(), alt_aal.slices_below(1500))
         self.create_kpvs_where(taws_windshear.array == 'Warning',
                                taws_windshear.hz,
-                               alt_aal.slices_from_to(1500, 0))
+                               fast_below_1500)
 
 
 class TAWSWindshearCautionBelow1500FtDuration(KeyPointValueNode):
@@ -9739,10 +9776,12 @@ class TAWSWindshearCautionBelow1500FtDuration(KeyPointValueNode):
     units = ut.SECOND
 
     def derive(self, taws_windshear=M('TAWS Windshear Caution'),
-               alt_aal=P('Altitude AAL For Flight Phases')):
+               alt_aal=P('Altitude AAL For Flight Phases'),
+               fasts=S('Fast')):
+        fast_below_1500 = slices_and(fasts.get_slices(), alt_aal.slices_below(1500))
         self.create_kpvs_where(taws_windshear.array == 'Caution',
                                taws_windshear.hz,
-                               alt_aal.slices_from_to(1500, 0))
+                               fast_below_1500)
 
 
 class TAWSWindshearSirenBelow1500FtDuration(KeyPointValueNode):
@@ -9753,10 +9792,12 @@ class TAWSWindshearSirenBelow1500FtDuration(KeyPointValueNode):
     units = ut.SECOND
 
     def derive(self, taws_windshear=M('TAWS Windshear Siren'),
-               alt_aal=P('Altitude AAL For Flight Phases')):
+               alt_aal=P('Altitude AAL For Flight Phases'),
+               fasts=S('Fast')):
+        fast_below_1500 = slices_and(fasts.get_slices(), alt_aal.slices_below(1500))
         self.create_kpvs_where(taws_windshear.array == 'Siren',
                                taws_windshear.hz,
-                               alt_aal.slices_from_to(1500, 0))
+                               fast_below_1500)
 
 
 ##############################################################################

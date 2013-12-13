@@ -179,6 +179,8 @@ class APURunning(MultistateDerivedParameterNode):
     Simple measure of APU status, suitable for plotting if you want an on/off
     measure. Used for fuel usage measurements.
     '''
+    
+    name = 'APU Running'
 
     values_mapping = {0 : '-',  1 : 'Running'}
 
@@ -248,7 +250,7 @@ class Configuration(MultistateDerivedParameterNode):
         return True
 
     
-    def derive(self, slat=P('Slat'), flap=M('Flap'), flaperon=P('Flaperon'),
+    def derive(self, slat=M('Slat'), flap=M('Flap'), flaperon=M('Flaperon'),
                model=A('Model'), series=A('Series'), family=A('Family')):
         
         angles = at.get_conf_angles(model.value, series.value, family.value)
@@ -1063,7 +1065,7 @@ class GearUpSelected(MultistateDerivedParameterNode):
         1: 'Up',
     }
 
-    def derive(self, gear_dn_sel=P('Gear Down Selected')):
+    def derive(self, gear_dn_sel=M('Gear Down Selected')):
         # Invert the Gear Down Selected array
         self.array = 1 - gear_dn_sel.array.raw
 
@@ -1080,15 +1082,18 @@ class Gear_RedWarning(MultistateDerivedParameterNode):
     
     @classmethod
     def can_operate(self, available):
-        return 'Airborne' in available and any_of(
-            ('Gear (L) Red Warning', 'Gear (N) Red Warning', 
-             'Gear (R) Red Warning'), available)
+        return 'Airborne' in available and any_of((
+            'Gear (L) Red Warning',
+            'Gear (N) Red Warning',
+            'Gear (R) Red Warning',
+        ), available)
     
     def derive(self, 
                gear_warn_l=M('Gear (L) Red Warning'),
                gear_warn_n=M('Gear (N) Red Warning'),
                gear_warn_r=M('Gear (R) Red Warning'),
                airs=S('Airborne')):
+
         # Join available gear parameters and use whichever are available.
         red_warning = vstack_params_where_state(
             (gear_warn_l, 'Warning'),

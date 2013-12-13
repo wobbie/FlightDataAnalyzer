@@ -13,6 +13,7 @@ from analysis_engine.library import (all_of,
                                      minimum_unmasked,
                                      np_ma_masked_zeros_like,
                                      peak_curvature,
+                                     runs_of_ones,
                                      slices_and,
                                      slices_not)
 
@@ -25,7 +26,6 @@ from settings import (CLIMB_THRESHOLD,
                       NAME_VALUES_DESCENT,
                       NAME_VALUES_ENGINE,
                       NAME_VALUES_LEVER,
-                      NAME_VALUES_SLAT,
                       TAKEOFF_ACCELERATION_THRESHOLD,
                       TRANSITION_ALTITUDE,
                       VERTICAL_SPEED_FOR_LIFTOFF)
@@ -488,15 +488,14 @@ class TopOfDescent(KeyTimeInstanceNode):
 # Flap
 
 
-class FlapSet(KeyTimeInstanceNode):
+class FlapLeverSet(KeyTimeInstanceNode):
     '''
+    Indicates where the flap was set.
     '''
 
-    # Note: We must use %s not %d as we've encountered a flap of 17.5 degrees.
     NAME_FORMAT = 'Flap %(flap)s Set'
     NAME_VALUES = NAME_VALUES_LEVER
-    
-    
+
     @classmethod
     def can_operate(cls, available):
 
@@ -507,12 +506,10 @@ class FlapSet(KeyTimeInstanceNode):
                flap_synth=M('Flap Lever (Synthetic)')):
 
         flap = flap_lever or flap_synth
-
-        # Mark all flap changes, and annotate with the new flap position.
-        # Could include "phase=airborne" if we want to eliminate ground flap
-        # changes.
-        self.create_ktis_at_edges(flap.array.raw, direction='all_edges',
-                                  name='flap')
+        # TODO: Simplify when we've dealt with KTI node refactoring...
+        for _, state in sorted(flap.values_mapping.iteritems()):
+            self.create_ktis_on_state_change(state, flap.array, name='flap',
+                                             change='entering')
 
 
 class FirstFlapExtensionWhileAirborne(KeyTimeInstanceNode):
@@ -523,8 +520,10 @@ class FirstFlapExtensionWhileAirborne(KeyTimeInstanceNode):
     @classmethod
     def can_operate(cls, available):
 
-        return 'Airborne' in available and \
-            any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available)
+        return 'Airborne' in available and any_of((
+            'Flap Lever',
+            'Flap Lever (Synthetic)',
+        ), available)
 
     def derive(self,
                flap_lever=M('Flap Lever'),
@@ -532,17 +531,14 @@ class FirstFlapExtensionWhileAirborne(KeyTimeInstanceNode):
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-
+        retracted = (flap.array == '0') | (flap.array == 'Lever 0')
         for air in airborne:
-            cleans = np.ma.flatnotmasked_contiguous(
-                np.ma.masked_not_equal(flap.array[air.slice],0.0))
-            if not isinstance(cleans, list):
-                continue
+            cleans = runs_of_ones(retracted[air.slice])
             for clean in cleans:
-                # Skip the case where the airborne slice ends
-                if clean.stop == air.slice.stop-air.slice.start:
+                # Skip the case where the airborne slice ends:
+                if clean.stop == air.slice.stop - air.slice.start:
                     continue
-                # Subtract half a sample index as the transition took place between indices.
+                # Subtract half a sample index as transition between indices:
                 self.create_kti(clean.stop + air.slice.start - 0.5)
 
 
@@ -554,8 +550,10 @@ class FlapExtensionWhileAirborne(KeyTimeInstanceNode):
     @classmethod
     def can_operate(cls, available):
 
-        return 'Airborne' in available and \
-            any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available)
+        return 'Airborne' in available and any_of((
+            'Flap Lever',
+            'Flap Lever (Synthetic)',
+        ), available)
 
     def derive(self,
                flap_lever=M('Flap Lever'),
@@ -563,7 +561,11 @@ class FlapExtensionWhileAirborne(KeyTimeInstanceNode):
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-        self.create_ktis_at_edges(flap.array.raw, phase=airborne)
+        self.create_ktis_at_edges(
+            flap.array.raw,  # must increase to detect extensions.
+            direction='rising_edges',
+            phase=airborne,
+        )
 
 
 class FlapLoadReliefSet(KeyTimeInstanceNode):
@@ -596,22 +598,6 @@ class SlatAlternateArmedSet(KeyTimeInstanceNode):
         self.create_ktis_on_state_change('Armed', saa.array, change='entering')
 
 
-class SlatSet(KeyTimeInstanceNode):
-    '''
-    '''
-
-    NAME_FORMAT = 'Slat %(slat)s Set'
-    NAME_VALUES = NAME_VALUES_SLAT
-    
-    def derive(self,
-               slat=P('Slat')):
-        # Mark all slat changes, and annotate with the new slat position.
-        # Could include "phase=airborne" if we want to eliminate ground slat
-        # changes.
-        self.create_ktis_at_edges(np.rint(slat.array).astype(np.int),
-                                  direction='all_edges', name='slat')
-
-
 class SpeedbrakeOpen(KeyTimeInstanceNode):
     '''
     A convenient indication of speedbrake use.
@@ -630,8 +616,10 @@ class FlapRetractionWhileAirborne(KeyTimeInstanceNode):
     @classmethod
     def can_operate(cls, available):
 
-        return 'Airborne' in available and \
-            any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available)
+        return 'Airborne' in available and any_of((
+            'Flap Lever',
+            'Flap Lever (Synthetic)',
+        ), available)
 
     def derive(self,
                flap_lever=M('Flap Lever'),
@@ -639,9 +627,8 @@ class FlapRetractionWhileAirborne(KeyTimeInstanceNode):
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-
         self.create_ktis_at_edges(
-            flap.array.raw,
+            flap.array.raw,  # must decrease to detect retractions.
             direction='falling_edges',
             phase=airborne,
         )
@@ -654,8 +641,10 @@ class FlapRetractionDuringGoAround(KeyTimeInstanceNode):
     @classmethod
     def can_operate(cls, available):
 
-        return 'Go Around And Climbout' in available and \
-            any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available)
+        return 'Go Around And Climbout' in available and any_of((
+            'Flap Lever',
+            'Flap Lever (Synthetic)',
+        ), available)
 
     def derive(self,
                flap_lever=M('Flap Lever'),
@@ -663,9 +652,8 @@ class FlapRetractionDuringGoAround(KeyTimeInstanceNode):
                go_arounds=S('Go Around And Climbout')):
 
         flap = flap_lever or flap_synth
-
         self.create_ktis_at_edges(
-            flap.array.raw,
+            flap.array.raw,  # must decrease to detect retractions.
             direction='falling_edges',
             phase=go_arounds,
         )
@@ -880,13 +868,14 @@ class Liftoff(KeyTimeInstanceNode):
     def can_operate(cls, available):
         return 'Airborne' in available
 
-    def derive(self, vert_spd=P('Vertical Speed Inertial'),
+    def derive(self,
+               vert_spd=P('Vertical Speed Inertial'),
                acc_norm=P('Acceleration Normal Offset Removed'),
                vert_spd_baro=P('Vertical Speed'),
-               alt_rad = P('Altitude Radio'),
-               gog = P('Gear On Ground'),
+               alt_rad=P('Altitude Radio'),
+               gog=M('Gear On Ground'),
                airs=S('Airborne'),
-               frame = A('Frame')):
+               frame=A('Frame')):
         
         for air in airs:
             index_acc = index_rad = index_gog = None
