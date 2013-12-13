@@ -9727,10 +9727,12 @@ class TAWSWindshearWarningBelow1500FtDuration(KeyPointValueNode):
     units = ut.SECOND
 
     def derive(self, taws_windshear=M('TAWS Windshear Warning'),
-               alt_aal=P('Altitude AAL For Flight Phases')):
+               alt_aal=P('Altitude AAL For Flight Phases'),
+               fasts=S('Fast')):
+        fast_below_1500 = slices_and(fasts.get_slices(), alt_aal.slices_below(1500))
         self.create_kpvs_where(taws_windshear.array == 'Warning',
                                taws_windshear.hz,
-                               alt_aal.slices_from_to(1500, 0))
+                               fast_below_1500)
 
 
 class TAWSWindshearCautionBelow1500FtDuration(KeyPointValueNode):
@@ -9741,10 +9743,12 @@ class TAWSWindshearCautionBelow1500FtDuration(KeyPointValueNode):
     units = ut.SECOND
 
     def derive(self, taws_windshear=M('TAWS Windshear Caution'),
-               alt_aal=P('Altitude AAL For Flight Phases')):
+               alt_aal=P('Altitude AAL For Flight Phases'),
+               fasts=S('Fast')):
+        fast_below_1500 = slices_and(fasts.get_slices(), alt_aal.slices_below(1500))
         self.create_kpvs_where(taws_windshear.array == 'Caution',
                                taws_windshear.hz,
-                               alt_aal.slices_from_to(1500, 0))
+                               fast_below_1500)
 
 
 class TAWSWindshearSirenBelow1500FtDuration(KeyPointValueNode):
@@ -9755,10 +9759,12 @@ class TAWSWindshearSirenBelow1500FtDuration(KeyPointValueNode):
     units = ut.SECOND
 
     def derive(self, taws_windshear=M('TAWS Windshear Siren'),
-               alt_aal=P('Altitude AAL For Flight Phases')):
+               alt_aal=P('Altitude AAL For Flight Phases'),
+               fasts=S('Fast')):
+        fast_below_1500 = slices_and(fasts.get_slices(), alt_aal.slices_below(1500))
         self.create_kpvs_where(taws_windshear.array == 'Siren',
                                taws_windshear.hz,
-                               alt_aal.slices_from_to(1500, 0))
+                               fast_below_1500)
 
 
 ##############################################################################
