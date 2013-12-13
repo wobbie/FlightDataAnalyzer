@@ -179,6 +179,8 @@ class APURunning(MultistateDerivedParameterNode):
     Simple measure of APU status, suitable for plotting if you want an on/off
     measure. Used for fuel usage measurements.
     '''
+    
+    name = 'APU Running'
 
     values_mapping = {0 : '-',  1 : 'Running'}
 
