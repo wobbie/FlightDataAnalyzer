@@ -94,6 +94,8 @@ class APEngagedSelection(KeyTimeInstanceNode):
     name = 'AP Engaged Selection'
 
     def derive(self, ap=M('AP Engaged'), phase=S('Fast')):
+        # TODO: Use a phase that includes on ground too, say Acceleration
+        # Start before liftoff to Turn off Runway after touchdown.
         self.create_ktis_on_state_change(
             'Engaged',
             ap.array,
@@ -113,6 +115,8 @@ class APDisengagedSelection(KeyTimeInstanceNode):
     name = 'AP Disengaged Selection'
 
     def derive(self, ap=M('AP Engaged'), phase=S('Fast')):
+        # TODO: Use a phase that includes on ground too, say Acceleration
+        # Start before liftoff to Turn off Runway after touchdown.        
         self.create_ktis_on_state_change(
             'Engaged',
             ap.array,
@@ -123,12 +127,14 @@ class APDisengagedSelection(KeyTimeInstanceNode):
 
 class ATEngagedSelection(KeyTimeInstanceNode):
     '''
+    
     '''
 
     name = 'AT Engaged Selection'
 
     def derive(self, at=M('AT Engaged'), phase=S('Airborne')):
-
+        # TODO: Use a phase that includes on ground too, say Acceleration
+        # Start before liftoff to Turn off Runway after touchdown.
         self.create_ktis_on_state_change(
             'Engaged',
             at.array,
@@ -144,7 +150,8 @@ class ATDisengagedSelection(KeyTimeInstanceNode):
     name = 'AT Disengaged Selection'
 
     def derive(self, at=P('AT Engaged'), phase=S('Airborne')):
-
+        # TODO: Use a phase that includes on ground too, say Acceleration
+        # Start before liftoff to Turn off Runway after touchdown.
         self.create_ktis_on_state_change(
             'Engaged',
             at.array,
@@ -157,7 +164,10 @@ class ATDisengagedSelection(KeyTimeInstanceNode):
 
 
 class Transmit(KeyTimeInstanceNode):
-
+    '''
+    Whenever the HF, VHF or Satcom transmits are used, this KTI is triggered.
+    '''
+    
     @classmethod
     def can_operate(cls, available):
         return any(d in available for d in cls.get_dependency_names())
