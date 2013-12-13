@@ -766,7 +766,7 @@ class TestAPEngagedSelection(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = APEngagedSelection
-        self.operational_combinations = [('AP Engaged', 'Airborne')]
+        self.operational_combinations = [('AP Engaged', 'Fast')]
 
     def test_derive(self):
         ap = M(
@@ -775,8 +775,8 @@ class TestAPEngagedSelection(unittest.TestCase, NodeTest):
             values_mapping={0: '-', 1: 'Engaged'},
         )
         aes = APEngagedSelection()
-        air = buildsection('Airborne', 2, 5)
-        aes.derive(ap, air)
+        fast = buildsection('Fast', 2, 5)
+        aes.derive(ap, fast)
         expected = [KeyTimeInstance(index=2.5, name='AP Engaged Selection')]
         self.assertEqual(aes, expected)
 
@@ -785,7 +785,7 @@ class TestAPDisengagedSelection(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = APEngagedSelection
-        self.operational_combinations = [('AP Engaged', 'Airborne')]
+        self.operational_combinations = [('AP Engaged', 'Fast')]
 
     def test_derive(self):
         ap = M(
@@ -794,8 +794,8 @@ class TestAPDisengagedSelection(unittest.TestCase, NodeTest):
             values_mapping={0: '-', 1: 'Engaged'},
         )
         ads = APDisengagedSelection()
-        air = buildsection('Airborne', 2, 5)
-        ads.derive(ap, air)
+        fast = buildsection('Fast', 2, 5)
+        ads.derive(ap, fast)
         expected = [KeyTimeInstance(index=3.5, name='AP Disengaged Selection')]
         self.assertEqual(ads, expected)
 
