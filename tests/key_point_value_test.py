@@ -8597,7 +8597,7 @@ class TestTAWSWindshearCautionBelow1500FtDuration(unittest.TestCase,
                                                   CreateKPVsWhereTest):
     def setUp(self):
         self.param_name = 'TAWS Windshear Caution'
-        self.phase_name = None
+        self.phase_name = 'Fast'
         self.node_class = TAWSWindshearCautionBelow1500FtDuration
         self.values_mapping = {0: '-', 1: 'Caution'}
 
@@ -8618,7 +8618,7 @@ class TestTAWSWindshearSirenBelow1500FtDuration(unittest.TestCase,
                                                 CreateKPVsWhereTest):
     def setUp(self):
         self.param_name = 'TAWS Windshear Siren'
-        self.phase_name = None
+        self.phase_name = 'Fast'
         self.node_class = TAWSWindshearSirenBelow1500FtDuration
         self.values_mapping = {0: '-', 1: 'Siren'}
 
@@ -8639,7 +8639,7 @@ class TestTAWSWindshearWarningBelow1500FtDuration(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = TAWSWindshearWarningBelow1500FtDuration
-        self.operational_combinations = [('TAWS Windshear Warning', 'Altitude AAL For Flight Phases')]
+        self.operational_combinations = [('TAWS Windshear Warning', 'Altitude AAL For Flight Phases', 'Fast')]
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
