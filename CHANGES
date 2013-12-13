@@ -9,9 +9,21 @@ You can view the differences in tagged versions as follows:
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
 
+?v0.5.3?
+--------
+ - Thrust Asymmetry now supports EPR asymmetry as a percentage value.
+
+
 v0.5.2
 ------
-
+ - AP Engaged / Disengaged widened phase to Fast rather than Airborne
+ - Takeoff and Landing Pilot identification fix for Pilot Flying parameter 
+   (currently on Airbus with sidesticks)
+ - air_track for fitting lat/long smoothed tracks improved for long distances
+ - Approach Range improved for Visual Approaches (no valid Glideslope) for 
+   approaches to airports with ILS installed
+ - RTO ensures liftoff occurs within 30secs of potential RTO
+ - Force Lat/Long to 1Hz for those with lower sample rates
 
 
 v0.5.1
@@ -44,7 +56,6 @@ Nodes added:
 Nodes removed:
  - Removed "Altitude STD At Lifoff" and "Altitude STD At Touchdown" KPVs
  - Removed "Configuration At Landing" KPV as we rely upon "Flap At Touchdown"
- - 
  
  
 v0.4.1
@@ -78,6 +89,7 @@ v0.3.2
  - Fix to thrust_reversers_working indexing (including refactor of 
    clump_multistate)
 
+
 v0.3.1
 ------
  - Flap Angle supports more than two signals, including (C) and (MCP) channels
@@ -89,10 +101,12 @@ v0.3.1
  - Support for Slat included in Flap Lever (Synthetic) to ensure slat only 
    transitions are included.
 
+
 v0.2.2
 ------
  - Fix to nodes to calculate a new offset when aligning to a higher frequency
    to ensure offset does not exceed the time of the first sample
+
 
 v0.2.1
 ------
@@ -107,11 +121,13 @@ v0.2.1
  - Clip replaced with second_window
   - Improves speed
   - Corrects truncation of adjacent peaks
+
   
 v0.1.1
 ------
 
- - 
+ - Numerous improvements
+
 
 v0.0.6
 -----
@@ -124,6 +140,7 @@ v0.0.2
 -----
 
  - Support for B757 / B767.
+
 
 v0.0.1
 ------
