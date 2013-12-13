@@ -2086,9 +2086,9 @@ class ThrustReversers(MultistateDerivedParameterNode):
             'Eng (2) Thrust Reverser (R) Deployed',
             'Eng (2) Thrust Reverser (R) Unlocked',
         ), available) or all_of((
-            'Eng (1) Thrust Reverser Unlocked',
+            #'Eng (1) Thrust Reverser Unlocked',   # bonus if available!
             'Eng (1) Thrust Reverser Deployed',
-            'Eng (2) Thrust Reverser Unlocked',
+            #'Eng (2) Thrust Reverser Unlocked',  # bonus if available!
             'Eng (2) Thrust Reverser Deployed',
         ), available) or all_of((
             'Eng (1) Thrust Reverser In Transit',
