@@ -4,8 +4,82 @@ Changes
 The highlighted changes are shown for the following production releases. Each
 release will have included many additional new features and improvements.
 
-0.3.1
------
+You can view the differences in tagged versions as follows:
+
+  git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
+
+
+v0.5.2
+------
+
+
+
+v0.5.1
+------
+
+Improvements:
+ - Units all use constants defined in FlightDataUtilities repository
+ - Headwind improvement to use Airspeed as first dependency to increase hz
+ - Pilot Flying (currently for Airbus Sidestick) added for Flight Attributes 
+   Takeoff Pilot and Landing Pilot.
+ - Split Segments fix for DFC splits where incorrect engine split index was used
+ - Gear Extending/Retracting use Gear Selected rather than Red Warnings directly
+ - air_track accounts for airspeed calibration errors on really bad aircraft
+ - Takeoff and Landing Roll work when no Pitch parameter available (yes, some 
+   really bad aircraft!)
+ - Groundspeed established from Longitudinal Acceleration within Groundspeed 
+   During RTO Max
+ - TAWS Alert can_operate method fix
+ - Invalidate "Year" parameter before calculate timebase so we use the 
+   fallback_dt.year in its place.
+ - create_kpvs_within_slices fix to rounding of start and stop edges
+ - Improved smoothing of Heading and Altitude for Hercules aircraft
+ - bearings_and_distances library routine improved for earth curvature
+ - Multiple Go Around KPV improvements
+ 
+Nodes added:
+ - "Master Caution" merges multiple signals
+ - "Pitch Above 1000 Ft Min" and "Pitch Above 1000 Ft Max"
+
+Nodes removed:
+ - Removed "Altitude STD At Lifoff" and "Altitude STD At Touchdown" KPVs
+ - Removed "Configuration At Landing" KPV as we rely upon "Flap At Touchdown"
+ - 
+ 
+ 
+v0.4.1
+------
+ - A319, A320, A321 support - Flap Lever (Synthetic), Configuration and Speedbrake
+ 
+Improvements:
+ - climb flight phase added to Height Loss KPVs
+ - AOA works from just one signal rather than relying on both (A) and (B)
+ - Nodes support setting of aliases "hz" and "sample_rate" in place of frequency
+ - Overflow correction fix 0.0 now does nothing rather than mask
+ - TCAS RA uses recorded TCAS RA parameter (on Airbus) in preference to 
+   TCAS Combined Control (on Boeings)
+ - Altitude correction for CRJ Alitiude Radio
+ - Improve overflow correction for Altitude Radio
+ - Split Segments supports GROUND_ONLY when no movement determined on ground
+   based upon Heading.
+ - FlapAtTouchdown KPVs all use the Flap Angle rather than the Flap Lever
+ - process_flight supports stripping of hdf5 derived parameters for reprocessing
+ - _value library now returns states (assumes order by that of raw value)
+ - Master Warning inhibited when engines not running
+ - ILS Established works better with low sample rate data and makes sure the 
+   aircraft path converges onto the beam and does not just pass through.
+ - Flight Phase "Bottom Of Descent" revised to be more robust
+ - Gross Weight at Liftoff and touchdown - catch repair errors where no valid data
+
+
+v0.3.2
+------
+
+ - Fix to thrust_reversers_working indexing (including refactor of 
+   clump_multistate)
+
+v0.3.1
+------
  - Flap Angle supports more than two signals, including (C) and (MCP) channels
  - Improvements to Top Of Climb (find_toc_tod) and Bottom of Descent (uses just 
    ClimbCruiseDescent) make climbs and descents more robust.
@@ -15,13 +89,13 @@ release will have included many additional new features and improvements.
  - Support for Slat included in Flap Lever (Synthetic) to ensure slat only 
    transitions are included.
 
-0.2.2
------
+v0.2.2
+------
  - Fix to nodes to calculate a new offset when aligning to a higher frequency
    to ensure offset does not exceed the time of the first sample
 
-0.2.1
------
+v0.2.1
+------
  - Added analyzer profiles
  - Support for CL-600 Aircraft Families
  - Support for A340 Aircraft Families
@@ -33,20 +107,25 @@ release will have included many additional new features and improvements.
  - Clip replaced with second_window
   - Improves speed
   - Corrects truncation of adjacent peaks
+  
+v0.1.1
+------
 
-0.0.6
+ - 
+
+v0.0.6
 -----
 
  - Support for Beechcraft 1900D.
  - Improved liftoff detection algorithm.
 
 
-0.0.2
+v0.0.2
 -----
 
  - Support for B757 / B767.
 
-0.0.1
+v0.0.1
 ------
 
  - Initial release directed at B737.
