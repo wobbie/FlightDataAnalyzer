@@ -244,9 +244,6 @@ class EngStart(KeyTimeInstanceNode):
     
     Engines running at the start of the valid data are assumed to start when
     the data starts.
-    
-    For the purist, we should look at N3 for three-shaft engines, but
-    checking N2 appears to work fine.
     '''
 
     NAME_FORMAT = 'Eng (%(number)d) Start'
