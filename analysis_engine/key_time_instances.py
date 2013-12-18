@@ -528,7 +528,10 @@ class FirstFlapExtensionWhileAirborne(KeyTimeInstanceNode):
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-        retracted = (flap.array == '0') | (flap.array == 'Lever 0')
+        if 'Lever 0' in flap.array.state:
+            retracted = flap.array == 'Lever 0'
+        elif '0' in flap.array.state:
+            retracted = flap.array == '0'
         for air in airborne:
             cleans = runs_of_ones(retracted[air.slice])
             for clean in cleans:
