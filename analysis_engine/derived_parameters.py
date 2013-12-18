@@ -4835,11 +4835,11 @@ class LongitudePrepared(DerivedParameterNode, CoordinatesStraighten):
                lon_lift=KPV('Longitude At Liftoff'),
                lat_land=KPV('Latitude At Touchdown'),
                lon_land=KPV('Longitude At Touchdown'),
-               frame=A('Frame')):
+               ):
 
         frame_name = frame.value if frame else ''
 
-        if lat and lon and frame_name != 'A300-600_SFIM_360-426B0J10':
+        if lat and lon:
             """
             This removes the jumps in longitude arising from the poor resolution of
             the recorded signal.
@@ -4886,11 +4886,11 @@ class LatitudePrepared(DerivedParameterNode, CoordinatesStraighten):
                lon_lift=KPV('Longitude At Liftoff'),
                lat_land=KPV('Latitude At Touchdown'),
                lon_land=KPV('Longitude At Touchdown'),
-               frame=A('Frame')):
+               ):
 
         frame_name = frame.value if frame else ''
 
-        if lat and lon and frame_name != 'A300-600_SFIM_360-426B0J10':
+        if lat and lon:
             self.array = self._smooth_coordinates(lat, lon)
         else:
             if hdg_true:
