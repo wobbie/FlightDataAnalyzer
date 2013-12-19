@@ -4837,8 +4837,6 @@ class LongitudePrepared(DerivedParameterNode, CoordinatesStraighten):
                lon_land=KPV('Longitude At Touchdown'),
                ):
 
-        frame_name = frame.value if frame else ''
-
         if lat and lon:
             """
             This removes the jumps in longitude arising from the poor resolution of
@@ -4887,8 +4885,6 @@ class LatitudePrepared(DerivedParameterNode, CoordinatesStraighten):
                lat_land=KPV('Latitude At Touchdown'),
                lon_land=KPV('Longitude At Touchdown'),
                ):
-
-        frame_name = frame.value if frame else ''
 
         if lat and lon:
             self.array = self._smooth_coordinates(lat, lon)
