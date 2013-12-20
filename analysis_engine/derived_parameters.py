@@ -3292,9 +3292,14 @@ class FuelQty(DerivedParameterNode):
                fuel_qty1=P('Fuel Qty (1)'),
                fuel_qty2=P('Fuel Qty (2)'),
                fuel_qty3=P('Fuel Qty (3)'),
+               fuel_qty4=P('Fuel Qty (4)'),
+               fuel_qty5=P('Fuel Qty (5)'),
+               fuel_qty6=P('Fuel Qty (6)'),
+               fuel_qty7=P('Fuel Qty (7)'),
+               fuel_qty_trim=P('Fuel Qty (Trim)'),
                fuel_qty_aux=P('Fuel Qty (Aux)')):
         params = []
-        for param in (fuel_qty1, fuel_qty2, fuel_qty3, fuel_qty_aux):
+        for param in (fuel_qty1, fuel_qty2, fuel_qty3, fuel_qty4, fuel_qty5, fuel_qty6, fuel_qty7, fuel_qty_trim, fuel_qty_aux):
             if not param:
                 continue
             # Repair array masks to ensure that the summed values are not too small
