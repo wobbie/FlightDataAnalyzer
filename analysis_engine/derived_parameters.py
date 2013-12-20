@@ -3432,11 +3432,8 @@ class Groundspeed(DerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available):
-        return all_of(('Groundspeed (1)','Groundspeed (2)'),
-                      available) \
-               or \
-               all_of(('Acceleration Longitudinal Offset Removed', 'Rejected Takeoff'),
-                      available)               
+        return any_of(('Groundspeed (1)','Groundspeed (2)'),
+                      available)
 
     def derive(self,
                source_A = P('Groundspeed (1)'),

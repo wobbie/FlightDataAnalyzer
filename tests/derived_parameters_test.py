@@ -2473,7 +2473,7 @@ class TestGroundspeed(unittest.TestCase):
     
     def test_can_operate(self):
         opts = Groundspeed.get_operational_combinations()
-        self.assertEqual(opts, [('Groundspeed (1)', 'Groundspeed (2)')])
+        self.assertEqual(opts, [('Groundspeed (1)',), ('Groundspeed (2)',), ('Groundspeed (1)', 'Groundspeed (2)')])
     
     def test_basic(self):
         one = P('Groundspeed (1)', np.ma.array([100,200,300]), frequency=0.5, offset=0.0)
