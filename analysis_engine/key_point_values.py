@@ -6667,6 +6667,24 @@ class EngOilPressMin(KeyPointValueNode):
         self.create_kpvs_within_slices(oil_press.array, airborne, min_value)
 
 
+class EngOilPressWarningDuration(KeyPointValueNode):
+    '''
+    For aircraft with engine oil pressure warning indications, this measures
+    the duration of either engine warning.
+    '''
+    
+    units = ut.SECOND
+    
+    def derive(self, 
+               oil_press_warn=P('Eng (*) Oil Press Warning'),
+               airborne=S('Airborne')):
+        
+        self.create_kpvs_where(oil_press_warn.array == 'Warning', 
+                               frequency=oil_press_warn.frequency,
+                               phase=airborne)
+        
+
+
 ##############################################################################
 # Engine Oil Quantity
 
