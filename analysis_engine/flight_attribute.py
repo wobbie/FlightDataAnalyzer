@@ -62,8 +62,8 @@ class DeterminePilot(object):
             return 'First Officer'
 
         # 4. No change in captain or first officer control columns:
-        self.warning("Both captain and first officer control columns "
-                     "do not change during '%s' slice.", phase.name)
+        self.warning("Neither captain's nor first officer's control column "
+                     "changes during '%s' slice.", phase.name)
         return None
 
     def _controls_in_use(self, pitch_capt, pitch_fo, roll_capt, roll_fo, phase):
