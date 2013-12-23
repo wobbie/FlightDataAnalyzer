@@ -461,6 +461,33 @@ class Eng_Fire(MultistateDerivedParameterNode):
         ).any(axis=0)
 
 
+class Eng_Oil_Press_Warning(MultistateDerivedParameterNode):
+    '''
+    Combine all oil pressure warning indications.
+    '''
+
+    name = 'Eng (*) Oil Press Warning'
+    values_mapping = {0: '-', 1: 'Warning'}
+
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               eng1=P('Eng (1) Oil Press Low'),
+               eng2=P('Eng (2) Oil Press Low'),
+               eng3=P('Eng (3) Oil Press Low'),
+               eng4=P('Eng (4) Oil Press Low'),
+               ):
+    
+        self.array = vstack_params_where_state(
+            (eng1, 'Warning'),
+            (eng2, 'Warning'),
+            (eng3, 'Warning'),
+            (eng4, 'Warning'),
+            ).any(axis=0)
+
+
 class Eng_AllRunning(MultistateDerivedParameterNode):
     '''
     Discrete parameter describing when all available engines are running.
