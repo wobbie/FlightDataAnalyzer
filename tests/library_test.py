@@ -1794,7 +1794,7 @@ class TestFirstOrderLag(unittest.TestCase):
         array = np.ma.zeros(5)
         array[3] = np.ma.masked
         result = first_order_lag (array, 1.0, 1.0, initial_value = 1.0)
-        ma_test.assert_mask_eqivalent(result.mask, [0,0,0,1,0],
+        ma_test.assert_mask_equivalent(result.mask, [0,0,0,1,0],
                                       err_msg='Masks are not equal')
 
 
@@ -1854,7 +1854,7 @@ class TestFirstOrderWashout(unittest.TestCase):
         array = np.ma.zeros(5)
         array[3] = np.ma.masked
         result = first_order_washout (array, 1.0, 1.0, initial_value = 1.0)
-        ma_test.assert_mask_eqivalent(result.mask, [0,0,0,1,0],
+        ma_test.assert_mask_equivalent(result.mask, [0,0,0,1,0],
                                       err_msg='Masks are not equal')
 
 
@@ -3649,7 +3649,7 @@ class TestRateOfChange(unittest.TestCase):
                                               dtype=float), 1), 4)
         answer = np.ma.array(data=[-1.0,-1.0,0.0,0.75,1.25,1.0,1.0,1.0,-1.0,2.0],
                              mask=False)
-        ma_test.assert_mask_eqivalent(sloped, answer)
+        ma_test.assert_mask_equivalent(sloped, answer)
 
     def test_rate_of_change_increased_frequency(self):
         sloped = rate_of_change(P('Test',
@@ -3657,7 +3657,7 @@ class TestRateOfChange(unittest.TestCase):
                                               dtype=float), 2), 4)
         answer = np.ma.array(data=[-2.0,-2.0,6.0,-2.0,1.0,1.75,2.0,4.0,-2.0,4.0],
                              mask=False)
-        ma_test.assert_mask_eqivalent(sloped, answer)
+        ma_test.assert_mask_equivalent(sloped, answer)
 
     def test_rate_of_change_reduced_frequency(self):
         sloped = rate_of_change(P('Test',
@@ -3665,7 +3665,7 @@ class TestRateOfChange(unittest.TestCase):
                                               dtype=float), 0.5), 4)
         answer = np.ma.array(data=[-0.5,-0.5,0.5,0.5,0.25,0.75,0.75,0.25,0.25,1.0],
                              mask=False)
-        ma_test.assert_mask_eqivalent(sloped, answer)
+        ma_test.assert_mask_equivalent(sloped, answer)
 
     def test_rate_of_change_transfer_mask(self):
         sloped = rate_of_change(P('Test',
@@ -3673,7 +3673,7 @@ class TestRateOfChange(unittest.TestCase):
                             mask = [0, 1,  0, 0, 0, 1, 0, 0, 0, 1]), 1), 2)
         answer = np.ma.array(data = [0,-1.0,0,1.0,0,1.5,0,0.5,0,0],
              mask = [True,False,True,False,True,False,True,False,True,True])
-        ma_test.assert_mask_eqivalent(sloped, answer)
+        ma_test.assert_mask_equivalent(sloped, answer)
 
     def test_rate_of_change_half_width_zero(self):
         self.assertRaises(ValueError,
@@ -3696,7 +3696,7 @@ class TestRateOfChange(unittest.TestCase):
                                               dtype=float), 1), 5, method='regression')
         answer = np.ma.array(data=[0.0,0.0,0.0,0.0,0.2,0.3,0.3,0.2,0.0,0.0,0.0,0.0],
                              mask=False)
-        ma_test.assert_mask_eqivalent(sloped, answer)
+        ma_test.assert_mask_equivalent(sloped, answer)
 
 
 class TestRepairMask(unittest.TestCase):
