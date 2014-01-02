@@ -62,6 +62,7 @@ from analysis_engine.multistate_parameters import (
     Slat,
     SlatExcludingTransition,
     SlatIncludingTransition,
+    SpeedControl,
     SpeedbrakeSelected,
     StableApproach,
     StickPusher,
@@ -2023,3 +2024,39 @@ class TestTCASFailure(unittest.TestCase):
     def test_derive(self):
         pass
 
+
+class TestSpeedControl(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = SpeedControl
+        self.operational_combinations = [
+            ('Speed Control Auto',),
+            ('Speed Control Manual',),
+            ('Speed Control Auto', 'Speed Control Manual'),
+            ('Speed Control (1) Auto',),
+            ('Speed Control (1) Manual',),
+            ('Speed Control (1) Auto', 'Speed Control (1) Manual'),
+            ('Speed Control (2) Auto',),
+            ('Speed Control (2) Manual',),
+            ('Speed Control (2) Auto', 'Speed Control (2) Manual'),
+        ]
+
+    def test_derive(self):
+        sc0a = M(
+            name='Speed Control Auto',
+            array=np.ma.array((0, 0, 1, 1, 0, 0)),
+            values_mapping={0: 'Manual', 1: 'Auto'},
+        )
+        sc0m = M(
+            name='Speed Control Manual',
+            array=np.ma.array((0, 1, 1, 1, 1, 0)),
+            values_mapping={0: 'Auto', 1: 'Manual'},
+        )
+        node = self.node_class()
+        node.derive(sc0a, sc0m, None, None, None, None)
+        expected = M(
+            name='Speed Control',
+            array=np.ma.array((1, 0, 1, 1, 0, 1)),
+            values_mapping={0: 'Manual', 1: 'Auto'},
+        )
+        ma_test.assert_array_equal(node.array, expected.array)

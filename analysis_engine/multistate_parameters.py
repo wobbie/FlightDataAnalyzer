@@ -2403,3 +2403,34 @@ class TCASFailure(MultistateDerivedParameterNode):
             (tcas_l_failure, 'Failed'),
             (tcas_r_failure, 'Failed'),
         ).any(axis=0)
+
+
+class SpeedControl(MultistateDerivedParameterNode):
+
+    values_mapping = {0: 'Manual', 1: 'Auto'}
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return any_of((
+            'Speed Control Auto',
+            'Speed Control Manual',
+            'Speed Control (1) Auto',
+            'Speed Control (1) Manual',
+            'Speed Control (2) Auto',
+            'Speed Control (2) Manual',
+        ), available)
+
+    def derive(self,
+               sc0a=M('Speed Control Auto'),
+               sc0m=M('Speed Control Manual'),
+               sc1a=M('Speed Control (1) Auto'),
+               sc1m=M('Speed Control (1) Manual'),
+               sc2a=M('Speed Control (2) Auto'),
+               sc2m=M('Speed Control (2) Manual')):
+
+        self.array = vstack_params_where_state(
+            (sc0a, 'Auto'), (sc0m, 'Auto'),
+            (sc1a, 'Auto'), (sc1m, 'Auto'),
+            (sc2a, 'Auto'), (sc2m, 'Auto'),
+        ).any(axis=0).astype(np.int)
