@@ -1742,6 +1742,19 @@ def find_edges_on_state_change(state, array, change='entering', phase=None):
     return edge_list
 
 
+def first_available_parameter(*parameters):
+    '''
+    Returns the first available parameter from the provided list.
+
+    A parameter is available if it has an array that is not fully masked.
+    '''
+    for parameter in parameters:
+        if parameter and not parameter.array.mask.all():
+            return parameter
+    else:
+        return None
+
+
 def first_valid_sample(array, start_index=0):
     '''
     Returns the first valid sample of data from a point in an array.
