@@ -25,7 +25,7 @@ if platform.system() == 'Windows':
     import wx
     # Must appear before the importing plt
     import matplotlib
-    matplotlib.use('WXAgg')
+    matplotlib.use('agg')
 
 import matplotlib.pyplot as plt
 
