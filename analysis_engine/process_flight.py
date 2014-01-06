@@ -50,7 +50,7 @@ def geo_locate(hdf, items):
 def _timestamp(start_datetime, item_list):
     '''
     Adds item.datetime (from timedelta of item.index + start_datetime)
-    
+
     :param start_datetime: Origin timestamp used as a base to the index
     :type start_datetime: datetime
     :param item_list: list of objects with a .index attribute
@@ -65,7 +65,7 @@ def derive_parameters(hdf, node_mgr, process_order):
     '''
     Derives parameters in process_order. Dependencies are sourced via the
     node_mgr.
-    
+
     :param hdf: Data file accessor used to get and save parameter data and attributes
     :type hdf: hdf_file
     :param node_mgr: Used to determine the type of node in the process_order
@@ -80,18 +80,18 @@ def derive_parameters(hdf, node_mgr, process_order):
     section_list = SectionNode()  # 'Node Name' : node()  pass in node.get_accessor()
     flight_attrs = []
     duration = hdf.duration
-    
+
     for param_name in process_order:
         if param_name in node_mgr.hdf_keys:
             continue
-        
+
         elif node_mgr.get_attribute(param_name) is not None:
             # add attribute to dictionary of available params
             ###params[param_name] = node_mgr.get_attribute(param_name) #TODO: optimise with only one call to get_attribute
             continue
-        
+
         node_class = node_mgr.derived_nodes[param_name]  #NB raises KeyError if Node is "unknown"
-        
+
         # build ordered dependencies
         deps = []
         node_deps = node_class.get_dependency_names()
@@ -100,7 +100,7 @@ def derive_parameters(hdf, node_mgr, process_order):
                 deps.append(params[dep_name])
             elif node_mgr.get_attribute(dep_name) is not None:
                 deps.append(node_mgr.get_attribute(dep_name))
-            elif dep_name in node_mgr.hdf_keys:  
+            elif dep_name in node_mgr.hdf_keys:
                 # LFL/Derived parameter
                 # all parameters (LFL or other) need get_aligned which is
                 # available on DerivedParameterNode
@@ -175,7 +175,7 @@ def derive_parameters(hdf, node_mgr, process_order):
                 slice_ = slice(start, stop)
                 one_hz = Section(one_hz.name, slice_, start_edge, stop_edge)
                 aligned_section[index] = one_hz
-                
+
                 if not (0 <= start <= duration and 0 <= stop <= duration + 4):
                     msg = "Section '%s' (%.2f, %.2f) not between 0 and %d"
                     raise IndexError(msg % (one_hz.name, start, stop, duration))
@@ -220,7 +220,7 @@ def derive_parameters(hdf, node_mgr, process_order):
                                      "length '%s'." % (param_name,
                                                        expected_length,
                                                        array_length))
-            
+
             hdf.set_param(result)
             # Keep hdf_keys up to date.
             node_mgr.hdf_keys.append(param_name)
@@ -254,7 +254,7 @@ def parse_analyser_profiles(analyser_profiles):
     '''
     Parse analyser profiles into additional_modules and required nodes as
     expected by process_flight.
-    
+
     :param analyser_profiles: A list of analyser profile tuples containing semicolon separated module paths and whether or not the nodes are required e.g. [('package.module_one;package.module_two', True), ]
     :type analyser_profiles: [[str, bool], ]
     :returns: A list of additional module paths and a list of required node names.
@@ -280,10 +280,10 @@ def process_flight(hdf_path, tail_number, aircraft_info={},
     '''
     Processes the HDF file (hdf_path) to derive the required_params (Nodes)
     within python modules (settings.NODE_MODULES).
-    
+
     Note: For Flight Data Services, the definitive API is located here:
         "PolarisTaskManagement.test.tasks_mask.process_flight"
-        
+
     :param hdf_path: Path to HDF File
     :type hdf_path: String
     :param aircraft: Aircraft specific attributes
@@ -303,8 +303,7 @@ def process_flight(hdf_path, tail_number, aircraft_info={},
 
     :returns: See below:
     :rtype: Dict
-    
-    
+
     Sample aircraft_info
     --------------------
     {
@@ -319,7 +318,7 @@ def process_flight(hdf_path, tail_number, aircraft_info={},
         'Main Gear To Altitude Radio': # Distance in metres
         'Wing Span': # Distance in metres
     }
-    
+
     Sample achieved_flight_record
     -----------------------------
     {
@@ -369,17 +368,17 @@ def process_flight(hdf_path, tail_number, aircraft_info={},
             'identifier': '21L',
             'magnetic_heading': 212.6,
             'strip': {
-                'id': 1, 
-                'length': 13123, 
-                'surface': 'ASP', 
+                'id': 1,
+                'length': 13123,
+                'surface': 'ASP',
                 'width': 147},
             'start': {
-                'elevation': 308, 
-                'latitude': 37.952425, 
+                'elevation': 308,
+                'latitude': 37.952425,
                 'longitude': 23.970422},
             'end': {
-                'elevation': 279, 
-                'latitude': 37.923511, 
+                'elevation': 279,
+                'latitude': 37.923511,
                 'longitude': 23.943261},
             'glideslope': {
                 'angle': 3.0,
@@ -400,17 +399,17 @@ def process_flight(hdf_path, tail_number, aircraft_info={},
             'identifier': '21L',
             'magnetic_heading': 212.6,
             'strip': {
-                'id': 1, 
-                'length': 13123, 
-                'surface': 'ASP', 
+                'id': 1,
+                'length': 13123,
+                'surface': 'ASP',
                 'width': 147},
             'start': {
-                'elevation': 308, 
-                'latitude': 37.952425, 
+                'elevation': 308,
+                'latitude': 37.952425,
                 'longitude': 23.970422},
             'end': {
-                'elevation': 279, 
-                'latitude': 37.923511, 
+                'elevation': 279,
+                'latitude': 37.923511,
                 'longitude': 23.943261},
             'glideslope': {
                 'angle': 3.0,
@@ -427,19 +426,19 @@ def process_flight(hdf_path, tail_number, aircraft_info={},
                 'longitude': 23.939294},
             },
     }
-    
+
     Sample Return
     -------------
     {
-        'flight':[Attribute('name value')]  # sample: [Attribute('Takeoff Airport', {'id':1234, 'name':'Int. Airport'}, Attribute('Approaches', [4567,7890]), ...], 
+        'flight':[Attribute('name value')]  # sample: [Attribute('Takeoff Airport', {'id':1234, 'name':'Int. Airport'}, Attribute('Approaches', [4567,7890]), ...],
         'kti':[GeoKeyTimeInstance('index name latitude longitude')] if lat/long available else [KeyTimeInstance('index name')]
         'kpv':[KeyPointValue('index value name slice')]
     }
-    
+
     '''
     logger.info("Processing: %s", hdf_path)
-    
-    
+
+
     if aircraft_info:
         # Aircraft info has already been provided.
         logger.info(
@@ -447,14 +446,14 @@ def process_flight(hdf_path, tail_number, aircraft_info={},
             aircraft_info)
     else:
         aircraft_info = get_aircraft_info(tail_number)
-        
-    
+
+
     aircraft_info['Tail Number'] = tail_number
-    
+
     # go through modules to get derived nodes
     node_modules = additional_modules + settings.NODE_MODULES
     derived_nodes = get_derived_nodes(node_modules)
-    
+
     if requested:
         requested = \
             list(set(requested).intersection(set(derived_nodes)))
@@ -462,17 +461,17 @@ def process_flight(hdf_path, tail_number, aircraft_info={},
         # if requested isn't set, try using ALL derived_nodes!
         logger.info("No requested nodes declared, using all derived nodes")
         requested = derived_nodes.keys()
-    
+
     # include all flight attributes as requested
     if include_flight_attributes:
         requested = list(set(
             requested + get_derived_nodes(
                 ['analysis_engine.flight_attribute']).keys()))
-        
+
     # open HDF for reading
     with hdf_file(hdf_path) as hdf:
         if hooks.PRE_FLIGHT_ANALYSIS:
-            logger.info("Performing PRE_FLIGHT_ANALYSIS actions: %s", 
+            logger.info("Performing PRE_FLIGHT_ANALYSIS actions: %s",
                          hooks.PRE_FLIGHT_ANALYSIS.func_name)
             hooks.PRE_FLIGHT_ANALYSIS(hdf, aircraft_info)
         else:
@@ -494,19 +493,19 @@ def process_flight(hdf_path, tail_number, aircraft_info={},
                         hdf.cache_param_list.append(node)
             logging.info("HDF set to cache parameters: %s",
                          hdf.cache_param_list)
-        
+
         # derive parameters
         kti_list, kpv_list, section_list, approach_list, flight_attrs = \
             derive_parameters(hdf, node_mgr, process_order)
-             
+
         # geo locate KTIs
         kti_list = geo_locate(hdf, kti_list)
         kti_list = _timestamp(start_datetime, kti_list)
-        
+
         # geo locate KPVs
         kpv_list = geo_locate(hdf, kpv_list)
         kpv_list = _timestamp(start_datetime, kpv_list)
-        
+
         # Store version of FlightDataAnalyser
         hdf.analysis_version = __version__
         # Store dependency tree
@@ -514,10 +513,10 @@ def process_flight(hdf_path, tail_number, aircraft_info={},
         # Store aircraft info
         hdf.set_attr('aircraft_info', aircraft_info)
         hdf.set_attr('achieved_flight_record', achieved_flight_record)
-        
+
     return {
-        'flight' : flight_attrs, 
-        'kti' : kti_list, 
+        'flight' : flight_attrs,
+        'kti' : kti_list,
         'kpv' : kpv_list,
         'approach': approach_list,
         'phases' : section_list,
@@ -537,10 +536,10 @@ def main():
     parser.add_argument('file', type=str,
                         help='Path of file to process.')
     help = 'Write CSV of processing results. Set "False" to disable.'
-    parser.add_argument('-csv', dest='write_csv', type=str, default='True', 
+    parser.add_argument('-csv', dest='write_csv', type=str, default='True',
                         help=help)
     help = 'Write KML of flight track. Set "False" to disable.'
-    parser.add_argument('-kml', dest='write_kml', type=str, default='True', 
+    parser.add_argument('-kml', dest='write_kml', type=str, default='True',
                         help=help)
     parser.add_argument('-r', '--requested', type=str, nargs='+', dest='requested',
                         default=[], help='Requested nodes.')
@@ -551,22 +550,22 @@ def main():
                         help='Aircraft tail number.')
     parser.add_argument('--strip', default=False, action='store_true',
                         help='Strip the HDF5 file to only the LFL parameters')
-    
+
     # Aircraft info
     parser.add_argument('-aircraft-family', dest='aircraft_family', type=str,
                         help='Aircraft family.')
     parser.add_argument('-aircraft-series', dest='aircraft_series', type=str,
                         help='Aircraft series.')
     parser.add_argument('-aircraft-model', dest='aircraft_model', type=str,
-                        help='Aircraft model.')    
+                        help='Aircraft model.')
     parser.add_argument('-aircraft-manufacturer', dest='aircraft_manufacturer',
                         type=str, help='Aircraft manufacturer.')
     help = 'Whether or not the aircraft records precise positioning parameters.'
     parser.add_argument('-precise-positioning', dest='precise_positioning',
                         type=str, help=help)
-    parser.add_argument('-frame', dest='frame', type=str, 
+    parser.add_argument('-frame', dest='frame', type=str,
                         help='Data frame name.')
-    parser.add_argument('-frame-qualifier', dest='frame_qualifier', type=str, 
+    parser.add_argument('-frame-qualifier', dest='frame_qualifier', type=str,
                         help='Data frame qualifier.')
     parser.add_argument('-identifier', dest='identifier', type=str,
                         help='Aircraft identifier.')
@@ -595,7 +594,7 @@ def main():
                         help='Engine series.')
     parser.add_argument('-engine-type', dest='engine_type', type=str,
                         help='Engine type.')
-    
+
     args = parser.parse_args()
     aircraft_info = {}
     if args.aircraft_model:
@@ -632,7 +631,7 @@ def main():
         aircraft_info['Engine Series'] = args.engine_series
     if args.engine_type:
         aircraft_info['Engine Type'] = args.engine_type
-    
+
     # Derive parameters to new HDF
     hdf_copy = copy_file(args.file, postfix='_process')
     if args.strip:
@@ -645,17 +644,17 @@ def main():
     # Write CSV file
     if args.write_csv.lower() == 'true':
         csv_dest = os.path.splitext(hdf_copy)[0] + '.csv'
-        csv_flight_details(hdf_copy, res['kti'], res['kpv'], res['phases'], 
+        csv_flight_details(hdf_copy, res['kti'], res['kpv'], res['phases'],
                            dest_path=csv_dest)
         logger.info("KPV, KTI and Phases writen to csv: %s", csv_dest)
     # Write KML file
     if args.write_kml.lower() == 'true':
         kml_dest = os.path.splitext(hdf_copy)[0] + '.kml'
-        dest = track_to_kml(hdf_copy, res['kti'], res['kpv'], res['approach'], 
+        dest = track_to_kml(hdf_copy, res['kti'], res['kpv'], res['approach'],
                      plot_altitude='Altitude QNH', dest_path=kml_dest)
         if dest:
             logger.info("Flight Track with attributes writen to kml: %s", dest)
-    
+
     # - END -
 
 
