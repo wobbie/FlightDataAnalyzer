@@ -11,8 +11,8 @@ from hdfaccess.parameter import MappedArray
 
 #from analysis_engine.exceptions import DataFrameError
 from analysis_engine.node import (
-    A, MultistateDerivedParameterNode, 
-    #KPV, KTI, 
+    A, MultistateDerivedParameterNode,
+    #KPV, KTI,
     M,
     P,
     S
@@ -113,7 +113,7 @@ class APEngaged(MultistateDerivedParameterNode):
     '''
     Determines if *any* of the "AP (*) Engaged" parameters are recording the
     state of Engaged.
-    
+
     This is a discrete with only the Engaged state.
     '''
 
@@ -179,7 +179,7 @@ class APURunning(MultistateDerivedParameterNode):
     Simple measure of APU status, suitable for plotting if you want an on/off
     measure. Used for fuel usage measurements.
     '''
-    
+
     name = 'APU Running'
 
     values_mapping = {0 : '-',  1 : 'Running'}
@@ -187,11 +187,11 @@ class APURunning(MultistateDerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
         return 'APU N1' in available
-    
+
     def derive(self, apu_n1=P('APU N1')):
         self.array = np.ma.where(apu_n1.array > 50.0, 'Running', '-')
-    
-    
+
+
 class Configuration(MultistateDerivedParameterNode):
     '''
     Parameter for aircraft that use configuration. Reflects the actual state
@@ -249,13 +249,13 @@ class Configuration(MultistateDerivedParameterNode):
 
         return True
 
-    
+
     def derive(self, slat=M('Slat'), flap=M('Flap'), flaperon=M('Flaperon'),
                model=A('Model'), series=A('Series'), family=A('Family')):
-        
+
         angles = at.get_conf_angles(model.value, series.value, family.value)
         self.array = MappedArray(np_ma_masked_zeros_like(flap.array, dtype=np.short),
-                                 values_mapping=self.values_mapping)        
+                                 values_mapping=self.values_mapping)
         for (state, (s, f, a)) in angles.iteritems():
             condition = (flap.array == f)
             if s is not None:
@@ -267,13 +267,13 @@ class Configuration(MultistateDerivedParameterNode):
         # Repair the mask to smooth out transitions:
         nearest_neighbour_mask_repair(self.array, copy=False,
                                       repair_gap_size=(30 * self.hz),
-                                      direction='backward')    
+                                      direction='backward')
 
 
 class Daylight(MultistateDerivedParameterNode):
     '''
     Calculate Day or Night based upon Civil Twilight.
-    
+
     FAA Regulation FAR 1.1 defines night as: "Night means the time between
     the end of evening civil twilight and the beginning of morning civil
     twilight, as published in the American Air Almanac, converted to local
@@ -461,16 +461,43 @@ class Eng_Fire(MultistateDerivedParameterNode):
         ).any(axis=0)
 
 
+class Eng_Oil_Press_Warning(MultistateDerivedParameterNode):
+    '''
+    Combine all oil pressure warning indications.
+    '''
+
+    name = 'Eng (*) Oil Press Warning'
+    values_mapping = {0: '-', 1: 'Warning'}
+
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               eng1=P('Eng (1) Oil Press Low'),
+               eng2=P('Eng (2) Oil Press Low'),
+               eng3=P('Eng (3) Oil Press Low'),
+               eng4=P('Eng (4) Oil Press Low'),
+               ):
+
+        self.array = vstack_params_where_state(
+            (eng1, 'Low Press'),
+            (eng2, 'Low Press'),
+            (eng3, 'Low Press'),
+            (eng4, 'Low Press'),
+            ).any(axis=0)
+
+
 class Eng_AllRunning(MultistateDerivedParameterNode):
     '''
     Discrete parameter describing when all available engines are running.
-    
+
     TODO: Include Fuel cut-off switch if recorded?
-    
+
     TODO: Confirm that all engines were recording for the N2 Min / Fuel Flow
     Min parameters - theoretically there could be only three engines in the
     frame for a four engine aircraft. Use "Engine Count".
-    
+
     TODO: Support shutdown for Propellor aircraft that don't record fuel flow.
     '''
     name = 'Eng (*) All Running'
@@ -478,13 +505,13 @@ class Eng_AllRunning(MultistateDerivedParameterNode):
         0 : 'Not Running',
         1 : 'Running',
         }
-    
+
     @classmethod
     def can_operate(cls, available):
         return 'Eng (*) N1 Min' in available or \
                'Eng (*) N2 Min' in available or \
                'Eng (*) Fuel Flow Min' in available
-    
+
     def derive(self,
                eng_n1=P('Eng (*) N1 Min'),
                eng_n2=P('Eng (*) N2 Min'),
@@ -500,7 +527,7 @@ class Eng_AllRunning(MultistateDerivedParameterNode):
                 else np.ones_like(eng_n2.array, dtype=bool)
             self.array = n2_running & fuel_flowing
         else:
-            # Fall back on N1 
+            # Fall back on N1
             self.array = eng_n1.array > 10
             # TODO: extend to NP for props
 
@@ -547,38 +574,38 @@ class EngThrustModeRequired(MultistateDerivedParameterNode):
     '''
     Combines Eng Thrust Mode Required parameters.
     '''
-    
+
     values_mapping = {
         0: '-',
         1: 'Required',
     }
-    
+
     @classmethod
     def can_operate(cls, available):
         return any_of(cls.get_dependency_names(), available)
-    
+
     def derive(self,
                thrust1=P('Eng (1) Thrust Mode Required'),
                thrust2=P('Eng (2) Thrust Mode Required'),
                thrust3=P('Eng (3) Thrust Mode Required'),
                thrust4=P('Eng (4) Thrust Mode Required')):
-        
+
         thrusts = [thrust for thrust in [thrust1,
                                          thrust2,
                                          thrust3,
                                          thrust4] if thrust]
-        
+
         if len(thrusts) == 1:
             self.array = thrusts[0].array
-        
+
         array = MappedArray(np_ma_zeros_like(thrusts[0].array, dtype=np.short),
                             values_mapping=self.values_mapping)
-        
+
         masks = []
         for thrust in thrusts:
             masks.append(thrust.array.mask)
             array[thrust.array == 'Required'] = 'Required'
-        
+
         array.mask = merge_masks(masks)
         self.array = array
 
@@ -792,7 +819,7 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
 
         if not all_of(('Flap', 'Model', 'Series', 'Family'), available):
             return False
-        
+
         try:
             at.get_conf_angles(model.value, series.value, family.value)
         except KeyError:
@@ -815,7 +842,7 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
         except KeyError:
             angles = at.get_lever_angles(model.value, series.value, family.value)
             use_conf = False
-        
+
         # Get the values mapping, airbus requires some hacking:
         if use_conf:
             self.values_mapping = at.constants.LEVER_STATES
@@ -847,14 +874,14 @@ class Flaperon(MultistateDerivedParameterNode):
     '''
     Where Ailerons move together and used as Flaps, these are known as
     "Flaperon" control.
-    
+
     Flaperons are measured where both Left and Right Ailerons move down,
     which on the left creates possitive roll but on the right causes negative
     roll. The difference of the two signals is the Flaperon control.
-    
-    The Flaperon is stepped at the start of movement into the nearest aileron 
+
+    The Flaperon is stepped at the start of movement into the nearest aileron
     detents, e.g. 0, 5, 10 deg
-    
+
     Note: This is used for Airbus models and does not necessarily mean as
     much to other aircraft types.
     '''
@@ -897,12 +924,12 @@ class FuelQty_Low(MultistateDerivedParameterNode):
         0: '-',
         1: 'Warning',
     }
-    
+
     @classmethod
     def can_operate(cls, available):
         return any_of(('Fuel Qty Low', 'Fuel Qty (1) Low', 'Fuel Qty (2) Low'),
                       available)
-        
+
     def derive(self, fqty = M('Fuel Qty Low'),
                fqty1 = M('Fuel Qty (1) Low'),
                fqty2 = M('Fuel Qty (2) Low')):
@@ -918,10 +945,10 @@ class GearDown(MultistateDerivedParameterNode):
     '''
     This Multi-State parameter uses "majority voting" to decide whether the
     gear is up or down.
-    
+
     If Gear (*) Down is not recorded, it will be created from Gear Down
     Selected which is from the cockpit lever.
-    
+
     TODO: Add a transit delay (~10secs) to the selection to when the gear is
     down.
     '''
@@ -1079,7 +1106,7 @@ class Gear_RedWarning(MultistateDerivedParameterNode):
     values_mapping = {0: '-',
                       1: 'Warning'}
     #store in hdf = False! glimpse into the future ;)
-    
+
     @classmethod
     def can_operate(self, available):
         return 'Airborne' in available and any_of((
@@ -1087,8 +1114,8 @@ class Gear_RedWarning(MultistateDerivedParameterNode):
             'Gear (N) Red Warning',
             'Gear (R) Red Warning',
         ), available)
-    
-    def derive(self, 
+
+    def derive(self,
                gear_warn_l=M('Gear (L) Red Warning'),
                gear_warn_n=M('Gear (N) Red Warning'),
                gear_warn_r=M('Gear (R) Red Warning'),
@@ -1125,7 +1152,7 @@ class ILSInnerMarker(MultistateDerivedParameterNode):
     def can_operate(cls, available):
         return any_of(cls.get_dependency_names(), available)
 
-    def derive(self, 
+    def derive(self,
                ils_mkr_capt=M('ILS Inner Marker (Capt)'),
                ils_mkr_fo=M('ILS Inner Marker (FO)')):
 
@@ -1147,7 +1174,7 @@ class ILSMiddleMarker(MultistateDerivedParameterNode):
     def can_operate(cls, available):
         return any_of(cls.get_dependency_names(), available)
 
-    def derive(self, 
+    def derive(self,
                ils_mkr_capt=M('ILS Middle Marker (Capt)'),
                ils_mkr_fo=M('ILS Middle Marker (FO)')):
 
@@ -1169,7 +1196,7 @@ class ILSOuterMarker(MultistateDerivedParameterNode):
     def can_operate(cls, available):
         return any_of(cls.get_dependency_names(), available)
 
-    def derive(self, 
+    def derive(self,
                ils_mkr_capt=M('ILS Outer Marker (Capt)'),
                ils_mkr_fo=M('ILS Outer Marker (FO)')):
 
@@ -1180,7 +1207,7 @@ class ILSOuterMarker(MultistateDerivedParameterNode):
 
 
 class KeyVHFCapt(MultistateDerivedParameterNode):
-    
+
     name = 'Key VHF (Capt)'
     values_mapping = {0: '-', 1: 'Keyed'}
 
@@ -1201,7 +1228,7 @@ class KeyVHFCapt(MultistateDerivedParameterNode):
 
 
 class KeyVHFFO(MultistateDerivedParameterNode):
-    
+
     name = 'Key VHF (FO)'
     values_mapping = {0: '-', 1: 'Keyed'}
 
@@ -1252,7 +1279,7 @@ class MasterWarning(MultistateDerivedParameterNode):
     def can_operate(cls, available):
         return any_of(cls.get_dependency_names(), available)
 
-    def derive(self, 
+    def derive(self,
                warn_capt=M('Master Warning (Capt)'),
                warn_fo=M('Master Warning (FO)')):
 
@@ -1522,7 +1549,7 @@ class StickShaker(MultistateDerivedParameterNode):
                        #'Stick Shaker (R) (1)',
                        #'Stick Shaker (R) (2)',
                        ),available)
-    
+
     def derive(self, ssl = M('Stick Shaker (L)'),
                ssr=M('Stick Shaker (R)'),
                ss1=M('Stick Shaker (1)'),
@@ -1535,13 +1562,13 @@ class StickShaker(MultistateDerivedParameterNode):
                #b777_R1=M('Stick Shaker (R) (1)'),
                #b777_R2=M('Stick Shaker (R) (2)'),
                ):
-        
+
         if frame and frame.value=='B777':
             #Provision has been included for Boeing 777 type, but until this has been
             #evaluated in detail it raises an exception because there are two bits per
             #shaker, and their operation is not obvious from the documentation.
             raise ValueError
-        
+
         available = [par for par in [ssl, ssr, ss1, ss2, ss3, ss4,
                                      #b777_L1, b777_L2, b777_R1, b777_R2,
                                      ] if par]
@@ -1552,7 +1579,7 @@ class StickShaker(MultistateDerivedParameterNode):
         elif len(available) == 1:
             self.array = available[0].array
             self.offset = available[0].offset
-            self.frequency = available[0].frequency        
+            self.frequency = available[0].frequency
 
 
 class SpeedbrakeSelected(MultistateDerivedParameterNode):
@@ -1608,7 +1635,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         array = np.ma.where(spdbrk.array > 1.0,
                             'Deployed/Cmd Up', armed.array)
         return array
-    
+
     @staticmethod
     def b737_speedbrake(spdbrk, handle):
         '''
@@ -1680,7 +1707,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         array = np.ma.where(handle.array >= 25.0,
                             'Deployed/Cmd Up', armed)
         return array
-    
+
     @classmethod
     def bd100_speedbrake(cls, handle_array, spoiler_gnd_armed_array):
         '''
@@ -1694,22 +1721,22 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         array[spoiler_gnd_armed_array == 'Armed'] = 'Armed/Cmd Dn'
         array[handle_array >= 1] = 'Deployed/Cmd Up'
         return array
-    
+
     @staticmethod
     def b787_speedbrake(handle):
         '''
-        Speedbrake Handle Positions for 787, taken from early recordings. 
+        Speedbrake Handle Positions for 787, taken from early recordings.
         '''
         # Speedbrake Handle only
         speedbrake = np.ma.zeros(len(handle.array), dtype=np.short)
         stepped_array = step_values(handle.array, [0, 10, 20])
         # Assuming all values from 15 and above are Deployed. Typically a
-        # maximum value of 60 is recorded when deployed with reverse thrust 
+        # maximum value of 60 is recorded when deployed with reverse thrust
         # whereas values of 30-60 are seen during the approach.
         speedbrake[stepped_array == 10] = 1
         speedbrake[stepped_array == 20] = 2
         return speedbrake
-    
+
     @staticmethod
     def learjet_speedbrake(spdsw):
         '''
@@ -1718,7 +1745,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         4 = Extended
         7 = Armed
         6 = Partial
-        
+
         Here we map thus:
             Retract = Stowed
             Armed = Armed/Cmd Dn
@@ -1745,7 +1772,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
 
         if deployed:
             # Families include: A340, ...
-            
+
             # We have a speedbrake deployed discrete. Set initial state to
             # stowed, then set armed states if available, and finally set
             # deployed state:
@@ -1815,7 +1842,7 @@ class StableApproach(MultistateDerivedParameterNode):
 
     if all the above steps are met, the result is the declaration of:
     9. "Stable"
-    
+
     If Vapp is recorded, a more constraint airspeed threshold is applied.
     Where parameters are not monitored below a certain threshold (e.g. ILS
     below 200ft) the stability criteria just before 200ft is reached is
@@ -1851,19 +1878,19 @@ class StableApproach(MultistateDerivedParameterNode):
     def can_operate(cls, available):
         # Commented out optional dependencies
         # Airspeed Relative, ILS and Vapp are optional
-        deps = ['Approach And Landing', 'Gear Down', 'Flap', 
+        deps = ['Approach And Landing', 'Gear Down', 'Flap',
                 'Track Deviation From Runway',
-                #'Airspeed Relative For 3 Sec', 
-                'Vertical Speed', 
+                #'Airspeed Relative For 3 Sec',
+                'Vertical Speed',
                 #'ILS Glideslope', 'ILS Localizer',
-                #'Eng (*) N1 Min For 5 Sec', 
+                #'Eng (*) N1 Min For 5 Sec',
                 'Altitude AAL',
                 #'Vapp',
                 ]
         return all_of(deps, available) and (
             'Eng (*) N1 Min For 5 Sec' in available or \
             'Eng (*) EPR Min For 5 Sec' in available)
-    
+
     def derive(self,
                apps=S('Approach And Landing'),
                gear=M('Gear Down'),
@@ -1878,7 +1905,7 @@ class StableApproach(MultistateDerivedParameterNode):
                alt=P('Altitude AAL'),
                vapp=P('Vapp'),
                family=A('Family')):
-      
+
         #Ht AAL due to
         # the altitude above airfield level corresponding to each cause
         # options are FLAP, GEAR GS HI/LO, LOC, SPD HI/LO and VSI HI/LO
@@ -1916,7 +1943,7 @@ class StableApproach(MultistateDerivedParameterNode):
             else:
                 engine = repair(eng_n1.array, _slice)
             altitude = repair(alt.array, _slice)
-            
+
             index_at_50 = index_closest_value(altitude, 50)
             index_at_200 = index_closest_value(altitude, 200)
 
@@ -1994,11 +2021,11 @@ class StableApproach(MultistateDerivedParameterNode):
             self.array[_slice][stable] = 7
             STABLE_VERTICAL_SPEED_MIN = -1000
             STABLE_VERTICAL_SPEED_MAX = -200
-            stable_vert = (vertical_speed >= STABLE_VERTICAL_SPEED_MIN) & (vertical_speed <= STABLE_VERTICAL_SPEED_MAX) 
+            stable_vert = (vertical_speed >= STABLE_VERTICAL_SPEED_MIN) & (vertical_speed <= STABLE_VERTICAL_SPEED_MAX)
             # extend the stability at the end of the altitude threshold through to landing
             stable_vert[altitude < 50] = stable_vert[index_at_50]
             stable &= stable_vert.filled(True)
-            
+
             #== 8. Engine Power (N1) ==
             self.array[_slice][stable] = 8
             # TODO: Patch this value depending upon aircraft type
@@ -2013,7 +2040,7 @@ class StableApproach(MultistateDerivedParameterNode):
             # extend the stability at the end of the altitude threshold through to landing
             stable_engine[altitude < 50] = stable_engine[index_at_50]
             stable &= stable_engine.filled(True)
-            
+
             # TODO: Use Engine TPR instead of EPR if available.
 
             #== 9. Stable ==
@@ -2050,12 +2077,12 @@ class StickShaker(MultistateDerivedParameterNode):
         if shake_l and shake_r:
             self.array = np.ma.logical_or(shake_l.array, shake_r.array)
             self.frequency , self.offset = shake_l.frequency, shake_l.offset
-        
+
         elif shake_l:
             # Named (L) but in fact (L) and (R) are or'd together at the DAU.
             self.array, self.frequency, self.offset = \
                 shake_l.array, shake_l.frequency, shake_l.offset
-        
+
         elif shake_act:
             self.array, self.frequency, self.offset = \
                 shake_act.array, shake_act.frequency, shake_act.offset
@@ -2158,13 +2185,13 @@ class ThrustReversers(MultistateDerivedParameterNode):
 
         array = np.ma.where(deployed_stack.any(axis=0), 1, array)
         array = np.ma.where(deployed_stack.all(axis=0), 2, array)
-        
+
         # update with any transit params
         if any((e1_tst_all, e2_tst_all, e3_tst_all, e4_tst_all)):
             transit_stack = vstack_params_where_state(
                 (e1_tst_all, 'In Transit'), (e2_tst_all, 'In Transit'),
                 (e3_tst_all, 'In Transit'), (e4_tst_all, 'In Transit'),
-                (e1_status, 'In Transit'),  (e2_status, 'In Transit'), 
+                (e1_status, 'In Transit'),  (e2_status, 'In Transit'),
             )
             array = np.ma.where(transit_stack.any(axis=0), 1, array)
             stacks.append(transit_stack)
@@ -2252,17 +2279,17 @@ class TAWSAlert(MultistateDerivedParameterNode):
 
 class TAWSDontSink(MultistateDerivedParameterNode):
     name = 'TAWS Dont Sink'
-    
+
     values_mapping = {
         0: '-',
         1: 'Warning',
     }
-    
+
     @classmethod
     def can_operate(cls, available):
         return ('TAWS (L) Dont Sink' in available) or \
                ('TAWS (R) Dont Sink' in available)
-    
+
     def derive(self, taws_l_dont_sink=M('TAWS (L) Dont Sink'),
                taws_r_dont_sink=M('TAWS (R) Dont Sink')):
         self.array = vstack_params_where_state(
@@ -2273,17 +2300,17 @@ class TAWSDontSink(MultistateDerivedParameterNode):
 
 class TAWSGlideslopeCancel(MultistateDerivedParameterNode):
     name = 'TAWS Glideslope Cancel'
-    
+
     values_mapping = {
         0: '-',
         1: 'Cancel',
     }
-    
+
     @classmethod
     def can_operate(cls, available):
         return ('TAWS (L) Glideslope Cancel' in available) or \
                ('TAWS (R) Glideslope Cancel' in available)
-    
+
     def derive(self, taws_l_gs=M('TAWS (L) Glideslope Cancel'),
                taws_r_gs=M('TAWS (R) Glideslope Cancel')):
         self.array = vstack_params_where_state(
@@ -2294,17 +2321,17 @@ class TAWSGlideslopeCancel(MultistateDerivedParameterNode):
 
 class TAWSTooLowGear(MultistateDerivedParameterNode):
     name = 'TAWS Too Low Gear'
-        
+
     values_mapping = {
         0: '-',
         1: 'Warning',
     }
-    
+
     @classmethod
     def can_operate(cls, available):
         return ('TAWS (L) Too Low Gear' in available) or \
                ('TAWS (R) Too Low Gear' in available)
-    
+
     def derive(self, taws_l_gear=M('TAWS (L) Too Low Gear'),
                taws_r_gear=M('TAWS (R) Too Low Gear')):
         self.array = vstack_params_where_state(
@@ -2322,7 +2349,7 @@ class TakeoffConfigurationWarning(MultistateDerivedParameterNode):
         0: '-',
         1: 'Warning',
     }
-    
+
     @classmethod
     def can_operate(cls, available):
         return any_of(['Takeoff Configuration Stabilizer Warning',
@@ -2334,7 +2361,7 @@ class TakeoffConfigurationWarning(MultistateDerivedParameterNode):
                        'Takeoff Configuration Rudder Warning',
                        'Takeoff Configuration Spoiler Warning'],
                       available)
-    
+
     def derive(self, stabilizer=M('Takeoff Configuration Stabilizer Warning'),
                parking_brake=M('Takeoff Configuration Parking Brake Warning'),
                flap=M('Takeoff Configuration Flap Warning'),
@@ -2357,17 +2384,17 @@ class TakeoffConfigurationWarning(MultistateDerivedParameterNode):
 
 class TCASFailure(MultistateDerivedParameterNode):
     name = 'TCAS Failure'
-        
+
     values_mapping = {
         0: '-',
         1: 'Failed',
     }
-    
+
     @classmethod
     def can_operate(cls, available):
         return ('TCAS (L) Failure' in available) or \
                ('TCAS (R) Failure' in available)
-    
+
     def derive(self, tcas_l_failure=M('TCAS (L) Failure'),
                tcas_r_failure=M('TCAS (R) Failure')):
         self.array = vstack_params_where_state(

@@ -1157,7 +1157,7 @@ class RejectedTakeoff(FlightPhaseNode):
             # we get the min of the potential rto stop and the end of the
             # data for cases where the potential rto is detected close to the
             # end of the data
-            check_grounded_idx = min(potential_rto.stop + 30 * self.frequency,
+            check_grounded_idx = min(potential_rto.stop + 60 * self.frequency,
                                      len(accel_lon.array) - 1)
             if is_index_within_slices(check_grounded_idx, groundeds.get_slices()):
                 # if soon after potential rto and still grounded we have a

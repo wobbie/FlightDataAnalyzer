@@ -2279,17 +2279,11 @@ class TestEng_NpMin(unittest.TestCase):
 
 class TestFuelQty(unittest.TestCase):
     def test_can_operate(self):
-        self.assertEqual(FuelQty.get_operational_combinations(),
-          [('Fuel Qty (1)',), ('Fuel Qty (2)',), ('Fuel Qty (3)',),
-           ('Fuel Qty (Aux)',), ('Fuel Qty (1)', 'Fuel Qty (2)'),
-           ('Fuel Qty (1)', 'Fuel Qty (3)'), ('Fuel Qty (1)', 'Fuel Qty (Aux)'),
-           ('Fuel Qty (2)', 'Fuel Qty (3)'), ('Fuel Qty (2)', 'Fuel Qty (Aux)'),
-           ('Fuel Qty (3)', 'Fuel Qty (Aux)'),
-           ('Fuel Qty (1)', 'Fuel Qty (2)', 'Fuel Qty (3)'),
-           ('Fuel Qty (1)', 'Fuel Qty (2)', 'Fuel Qty (Aux)'),
-           ('Fuel Qty (1)', 'Fuel Qty (3)', 'Fuel Qty (Aux)'),
-           ('Fuel Qty (2)', 'Fuel Qty (3)', 'Fuel Qty (Aux)'),
-           ('Fuel Qty (1)', 'Fuel Qty (2)', 'Fuel Qty (3)', 'Fuel Qty (Aux)')])
+        # testing for number of combinations possible, will operate with at
+        # least one of the listed parameters. Not listing all operational
+        # combinations as this can get very large (2**n-1) where n is the
+        # number of parameters (-1 as none is not a option)
+        self.assertEqual(len(FuelQty.get_operational_combinations()), 2**9-1)
     
     def test_three_tanks(self):
         fuel_qty1 = P('Fuel Qty (1)', 
@@ -2479,7 +2473,7 @@ class TestGroundspeed(unittest.TestCase):
     
     def test_can_operate(self):
         opts = Groundspeed.get_operational_combinations()
-        self.assertEqual(opts, [('Groundspeed (1)', 'Groundspeed (2)')])
+        self.assertEqual(opts, [('Groundspeed (1)',), ('Groundspeed (2)',), ('Groundspeed (1)', 'Groundspeed (2)')])
     
     def test_basic(self):
         one = P('Groundspeed (1)', np.ma.array([100,200,300]), frequency=0.5, offset=0.0)

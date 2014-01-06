@@ -466,7 +466,10 @@ class AccelerationNormalWithFlapUpWhileAirborneMax(KeyPointValueNode):
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-        retracted = (flap.array == '0') | (flap.array == 'Lever 0')
+        if 'Lever 0' in flap.array.state:
+            retracted = flap.array == 'Lever 0'
+        if '0' in flap.array.state:
+            retracted = flap.array == '0'
         acc_flap_up = np.ma.masked_where(~retracted, acc_norm.array)
         self.create_kpv_from_slices(acc_flap_up, airborne, max_value)
 
@@ -493,7 +496,10 @@ class AccelerationNormalWithFlapUpWhileAirborneMin(KeyPointValueNode):
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-        retracted = (flap.array == '0') | (flap.array == 'Lever 0')
+        if 'Lever 0' in flap.array.state:
+            retracted = flap.array == 'Lever 0'
+        elif '0' in flap.array.state:
+            retracted = flap.array == '0'
         acc_flap_up = np.ma.masked_where(~retracted, acc_norm.array)
         self.create_kpv_from_slices(acc_flap_up, airborne, min_value)
 
@@ -520,7 +526,10 @@ class AccelerationNormalWithFlapDownWhileAirborneMax(KeyPointValueNode):
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-        retracted = (flap.array == '0') | (flap.array == 'Lever 0')
+        if 'Lever 0' in flap.array.state:
+            retracted = flap.array == 'Lever 0'
+        elif '0' in flap.array.state:
+            retracted = flap.array == '0'
         acc_flap_dn = np.ma.masked_where(retracted, acc_norm.array)
         self.create_kpv_from_slices(acc_flap_dn, airborne, max_value)
 
@@ -547,7 +556,10 @@ class AccelerationNormalWithFlapDownWhileAirborneMin(KeyPointValueNode):
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-        retracted = (flap.array == '0') | (flap.array == 'Lever 0')
+        if 'Lever 0' in flap.array.state:
+            retracted = flap.array == 'Lever 0'
+        elif '0' in flap.array.state:
+            retracted = flap.array == '0'
         acc_flap_dn = np.ma.masked_where(retracted, acc_norm.array)
         self.create_kpv_from_slices(acc_flap_dn, airborne, min_value)
 
@@ -2974,7 +2986,10 @@ class AltitudeWithFlapMax(KeyPointValueNode):
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-        retracted = (flap.array == '0') | (flap.array == 'Lever 0')
+        if 'Lever 0' in flap.array.state:
+            retracted = flap.array == 'Lever 0'
+        elif '0' in flap.array.state:
+            retracted = flap.array == '0'
         alt_flap = np.ma.masked_where(retracted, alt_std.array)
         self.create_kpvs_within_slices(alt_flap, airborne, max_value)
 
@@ -3392,7 +3407,10 @@ class AltitudeAtGearDownSelectionWithFlapDown(KeyPointValueNode):
                flap_synth=M('Flap Lever (Synthetic)')):
 
         flap = flap_lever or flap_synth
-        retracted = (flap.array == '0') | (flap.array == 'Lever 0')
+        if 'Lever 0' in flap.array.state:
+            retracted = flap.array == 'Lever 0'
+        elif '0' in flap.array.state:
+            retracted = flap.array == '0'
         flap_dns = runs_of_ones(~retracted)
         flap_dn_gear_downs = gear_downs.get(within_slices=flap_dns)
         self.create_kpvs_at_ktis(alt_aal.array, flap_dn_gear_downs)
@@ -3503,7 +3521,10 @@ class AltitudeAtGearDownSelectionWithFlapUp(KeyPointValueNode):
                flap_synth=M('Flap Lever (Synthetic)')):
 
         flap = flap_lever or flap_synth
-        retracted = (flap.array == '0') | (flap.array == 'Lever 0')
+        if 'Lever 0' in flap.array.state:
+            retracted = flap.array == 'Lever 0'
+        elif '0' in flap.array.state:
+            retracted = flap.array == '0'
         flap_ups = runs_of_ones(retracted)
         flap_up_gear_downs = gear_downs.get(within_slices=flap_ups)
         self.create_kpvs_at_ktis(alt_aal.array, flap_up_gear_downs)
@@ -6646,6 +6667,24 @@ class EngOilPressMin(KeyPointValueNode):
         self.create_kpvs_within_slices(oil_press.array, airborne, min_value)
 
 
+class EngOilPressWarningDuration(KeyPointValueNode):
+    '''
+    For aircraft with engine oil pressure warning indications, this measures
+    the duration of either engine warning.
+    '''
+    
+    units = ut.SECOND
+    
+    def derive(self, 
+               oil_press_warn=P('Eng (*) Oil Press Warning'),
+               airborne=S('Airborne')):
+        
+        self.create_kpvs_where(oil_press_warn.array == 'Warning', 
+                               frequency=oil_press_warn.frequency,
+                               phase=airborne)
+        
+
+
 ##############################################################################
 # Engine Oil Quantity
 
@@ -7906,7 +7945,10 @@ class PitchAfterFlapRetractionMax(KeyPointValueNode):
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-        retracted = (flap.array == '0') | (flap.array == 'Lever 0')
+        if 'Lever 0' in flap.array.state:
+            retracted = flap.array == 'Lever 0'
+        elif '0' in flap.array.state:
+            retracted = flap.array == '0'
         scope = []
         for air in airborne:
             slices = runs_of_ones(retracted[air.slice])
@@ -9124,7 +9166,10 @@ class SpeedbrakeDeployedWithFlapDuration(KeyPointValueNode):
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-        retracted = (flap.array == '0') | (flap.array == 'Lever 0')
+        if 'Lever 0' in flap.array.state:
+            retracted = flap.array == 'Lever 0'
+        elif '0' in flap.array.state:
+            retracted = flap.array == '0'
         for air in airborne:
             spd_brk_dep = spd_brk.array[air.slice] == 'Deployed/Cmd Up'
             array = spd_brk_dep & ~retracted[air.slice]

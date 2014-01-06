@@ -244,9 +244,6 @@ class EngStart(KeyTimeInstanceNode):
     
     Engines running at the start of the valid data are assumed to start when
     the data starts.
-    
-    For the purist, we should look at N3 for three-shaft engines, but
-    checking N2 appears to work fine.
     '''
 
     NAME_FORMAT = 'Eng (%(number)d) Start'
@@ -531,7 +528,10 @@ class FirstFlapExtensionWhileAirborne(KeyTimeInstanceNode):
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-        retracted = (flap.array == '0') | (flap.array == 'Lever 0')
+        if 'Lever 0' in flap.array.state:
+            retracted = flap.array == 'Lever 0'
+        elif '0' in flap.array.state:
+            retracted = flap.array == '0'
         for air in airborne:
             cleans = runs_of_ones(retracted[air.slice])
             for clean in cleans:
