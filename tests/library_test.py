@@ -1858,31 +1858,59 @@ class TestFirstOrderWashout(unittest.TestCase):
                                       err_msg='Masks are not equal')
 
 
-class TestFirstAvailableParameter(unittest.TestCase):
+class TestFirstValidParameter(unittest.TestCase):
 
-    def test_first_available_parameter__none(self):
+    def test_first_valid_parameter__none(self):
         p1 = P(name='A', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
         p2 = P(name='B', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
         p3 = P(name='C', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
-        self.assertEqual(first_available_parameter(p1, p2, p3), None)
+        self.assertEqual(first_valid_parameter(p1, p2, p3), None)
 
-    def test_first_available_parameter__fully_unmasked(self):
+    def test_first_valid_parameter__fully_unmasked(self):
         p1 = P(name='A', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
         p2 = P(name='B', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
         p3 = P(name='C', array=np.ma.array(data=[0] * 5, mask=[False] * 5))
-        self.assertEqual(first_available_parameter(p1, p2, p3), p3)
+        self.assertEqual(first_valid_parameter(p1, p2, p3), p3)
 
-    def test_first_available_parameter__partially_unmasked(self):
+    def test_first_valid_parameter__partially_unmasked(self):
         p1 = P(name='A', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
         p2 = P(name='B', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
         p3 = P(name='C', array=np.ma.array(data=[0] * 5, mask=[False] * 4 + [True]))
-        self.assertEqual(first_available_parameter(p1, p2, p3), p3)
+        self.assertEqual(first_valid_parameter(p1, p2, p3), p3)
 
-    def test_first_available_parameter__multiple(self):
+    def test_first_valid_parameter__multiple(self):
         p1 = P(name='A', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
         p2 = P(name='B', array=np.ma.array(data=[0] * 5, mask=[True] * 4 + [False]))
         p3 = P(name='C', array=np.ma.array(data=[0] * 5, mask=[False] * 5))
-        self.assertEqual(first_available_parameter(p1, p2, p3), p2)
+        self.assertEqual(first_valid_parameter(p1, p2, p3), p2)
+
+    def test_first_valid_parameter__valid_samples_within_single_phase(self):
+        phases = [slice(1, 5)]
+        p1 = P(name='A', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
+        p2 = P(name='B', array=np.ma.array(data=[0] * 5, mask=[True] * 4 + [False]))
+        p3 = P(name='C', array=np.ma.array(data=[0] * 5, mask=[False] * 5))
+        self.assertEqual(first_valid_parameter(p1, p2, p3, phases=phases), p2)
+
+    def test_first_valid_parameter__no_valid_samples_within_single_phase(self):
+        phases = [slice(0, 4)]
+        p1 = P(name='A', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
+        p2 = P(name='B', array=np.ma.array(data=[0] * 5, mask=[True] * 4 + [False]))
+        p3 = P(name='C', array=np.ma.array(data=[0] * 5, mask=[False] * 5))
+        self.assertEqual(first_valid_parameter(p1, p2, p3, phases=phases), p3)
+
+    def test_first_valid_parameter__no_valid_samples_within_single_phase_2(self):
+        phases = [slice(1, 4)]
+        p1 = P(name='A', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
+        p2 = P(name='B', array=np.ma.array(data=[0] * 5, mask=[True] * 4 + [False]))
+        p3 = P(name='C', array=np.ma.array(data=[0] * 5, mask=[False] + [True] * 4))
+        self.assertEqual(first_valid_parameter(p1, p2, p3, phases=phases), None)
+
+    def test_first_valid_parameter__valid_samples_within_multiple_phases(self):
+        phases = [slice(0, 2), slice(3, 5)]
+        p1 = P(name='A', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
+        p2 = P(name='B', array=np.ma.array(data=[0] * 5, mask=[True] * 4 + [False]))
+        p3 = P(name='C', array=np.ma.array(data=[0] * 5, mask=[False] * 5))
+        self.assertEqual(first_valid_parameter(p1, p2, p3, phases=phases), p2)
 
 
 class TestFirstValidSample(unittest.TestCase):

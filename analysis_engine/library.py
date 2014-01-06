@@ -1742,15 +1742,32 @@ def find_edges_on_state_change(state, array, change='entering', phase=None):
     return edge_list
 
 
-def first_available_parameter(*parameters):
+def first_valid_parameter(*parameters, **kwargs):
     '''
-    Returns the first available parameter from the provided list.
+    Returns the first valid parameter from the provided list.
 
-    A parameter is available if it has an array that is not fully masked.
+    A parameter is valid if it has an array that is not fully masked.
+
+    Optionally, a list of phases can be provided during which the parameter
+    must be valid. We only require the parameter to be valid during one of the
+    phases.
+
+    :param *parameters: parameters to check for validity/availability.
+    :type *parameters: Parameter
+    :param phases: a list of slices where the parameter must be valid.
+    :type phases: list of slice
+    :returns: the first valid parameter from those provided.
+    :rtype: Parameter or None
     '''
+    phases = kwargs.get('phases')
+    if not phases:
+        phases = [slice(None)]
     for parameter in parameters:
-        if parameter and not parameter.array.mask.all():
-            return parameter
+        if not parameter:
+            continue
+        for phase in phases:
+            if not parameter.array[phase].mask.all():
+                return parameter
     else:
         return None
 
