@@ -60,7 +60,18 @@ class DeterminePilot(object):
             return 'Captain'
         elif fo_force:
             return 'First Officer'
-
+        
+        # The forces are typically 2 or 3 lbf at takeoff, so nowhere near the
+        # threshold. Also both move on the 737NG, so we just look for the
+        # larger of the two.
+        force_ratio = cc_capt[phase.slice].ptp() / cc_fo[phase.slice].ptp()
+        if force_ratio > 1.3:
+            print 'Found Captain with force_ratio of %f' %force_ratio
+            return 'Captain'
+        elif (1.0/force_ratio) > 1.3:
+            print 'Found First Officer with force_ratio of %f' %(1.0/force_ratio)
+            return 'First Officer'
+        
         # 4. No change in captain or first officer control columns:
         self.warning("Neither captain's nor first officer's control column "
                      "changes during '%s' slice.", phase.name)
