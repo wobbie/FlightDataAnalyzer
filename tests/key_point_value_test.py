@@ -9289,22 +9289,29 @@ class TestWindAcrossLandingRunwayAt50Ft(unittest.TestCase, NodeTest):
 # Weight
 
 
-class TestGrossWeightAtLiftoff(unittest.TestCase):
+class TestGrossWeightAtLiftoff(unittest.TestCase, NodeTest):
 
-    def test_can_operate(self):
-        opts = GrossWeightAtLiftoff.get_operational_combinations()
-        self.assertEqual(opts, [('Gross Weight Smoothed', 'Liftoff')])
+    def setUp(self):
+        self.node_class = GrossWeightAtLiftoff
+        self.operational_combinations = [('Gross Weight Smoothed', 'Liftoff')]
+        self.gw = P(name='Gross Weight Smoothed', array=np.ma.array((1, 2, 3)))
+        self.liftoffs = KTI(name='Liftoff', items=[
+            KeyTimeInstance(name='Liftoff', index=1),
+        ])
 
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test Not Implemented')
-        
-    def test_fully_masked_weight(self):
-        gwl = GrossWeightAtLiftoff()
-        gwl.derive(P(array=np.ma.array([1,2,3], mask=[1,1,1])),
-                   KTI(items=[KeyTimeInstance('', 1)]))
-        self.assertEqual(len(gwl), 0)
-        
+    def test_derive__basic(self):
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.gw, self.liftoffs)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(name=name, index=1, value=2),
+        ]))
+
+    def test_derive__masked(self):
+        self.gw.array.mask = True
+        node = self.node_class()
+        node.derive(self.gw, self.liftoffs)
+        self.assertEqual(len(node), 0)
 
 
 class TestGrossWeightAtTouchdown(unittest.TestCase, NodeTest):
@@ -9312,10 +9319,24 @@ class TestGrossWeightAtTouchdown(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = GrossWeightAtTouchdown
         self.operational_combinations = [('Gross Weight Smoothed', 'Touchdown')]
+        self.gw = P(name='Gross Weight Smoothed', array=np.ma.array((1, 2, 3)))
+        self.touchdowns = KTI(name='Touchdown', items=[
+            KeyTimeInstance(name='Touchdown', index=1),
+        ])
 
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test Not Implemented')
+    def test_derive__basic(self):
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.gw, self.touchdowns)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(name=name, index=1, value=2),
+        ]))
+
+    def test_derive__masked(self):
+        self.gw.array.mask = True
+        node = self.node_class()
+        node.derive(self.gw, self.touchdowns)
+        self.assertEqual(len(node), 0)
 
 
 class TestGrossWeightDelta60SecondsInFlightMax(unittest.TestCase):

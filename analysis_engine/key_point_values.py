@@ -10695,36 +10695,46 @@ class WindAcrossLandingRunwayAt50Ft(KeyPointValueNode):
 
 class GrossWeightAtLiftoff(KeyPointValueNode):
     '''
-    The gross weight (based on smoothed data for better accuracy) at Liftoff
+    Gross weight of the aircraft at liftoff.
+
+    We use smoothed gross weight data for better accuracy.
     '''
 
     units = ut.KG
 
-    def derive(self, gross_wgt=P('Gross Weight Smoothed'),
-               liftoffs=KTI('Liftoff')):
+    def derive(self, gw=P('Gross Weight Smoothed'), liftoffs=KTI('Liftoff')):
         try:
-            #Q: Is this repair required for GWSmoothed?
-            array = repair_mask(gross_wgt.array, repair_duration=None)
+            # TODO: Things to consider related to gross weight:
+            #       - Does smoothed gross weight need to be repaired?
+            #       - What should the duration be? Vref Lookup uses 130...
+            #       - Should we extrapolate values as we do for Vref Lookup?
+            array = repair_mask(gw.array, repair_duration=None)
         except ValueError:
-            # No valid data to repair. 
+            self.warning("KPV '%s' will not be created because '%s' array "
+                         "could not be repaired.", self.name, gw.name)
             return
         self.create_kpvs_at_ktis(array, liftoffs)
 
 
 class GrossWeightAtTouchdown(KeyPointValueNode):
     '''
-    The gross weight (based on smoothed data for better accuracy) at Touchdown
+    Gross weight of the aircraft at touchdown.
+
+    We use smoothed gross weight data for better accuracy.
     '''
 
     units = ut.KG
 
-    def derive(self, gross_wgt=P('Gross Weight Smoothed'),
-               touchdowns=KTI('Touchdown')):
+    def derive(self, gw=P('Gross Weight Smoothed'), touchdowns=KTI('Touchdown')):
         try:
-            #Q: Is this repair required for GWSmoothed?
-            array = repair_mask(gross_wgt.array, repair_duration=None)
+            # TODO: Things to consider related to gross weight:
+            #       - Does smoothed gross weight need to be repaired?
+            #       - What should the duration be? Vref Lookup uses 130...
+            #       - Should we extrapolate values as we do for Vref Lookup?
+            array = repair_mask(gw.array, repair_duration=None)
         except ValueError:
-            # No valid data to repair. 
+            self.warning("KPV '%s' will not be created because '%s' array "
+                         "could not be repaired.", self.name, gw.name)
             return
         self.create_kpvs_at_ktis(array, touchdowns)
 
