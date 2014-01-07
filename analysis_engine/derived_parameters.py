@@ -3498,9 +3498,12 @@ class GrossWeightSmoothed(DerivedParameterNode):
     is used in the Zero Fuel Weight calculation.
     '''
 
+    # TODO: What should we do if gross weight is recorded and fuel flow is not?
+
     units = ut.KG
 
-    def derive(self, ff=P('Eng (*) Fuel Flow'),
+    def derive(self,
+               ff=P('Eng (*) Fuel Flow'),
                gw=P('Gross Weight'),
                climbs=S('Climbing'),
                descends=S('Descending'),
