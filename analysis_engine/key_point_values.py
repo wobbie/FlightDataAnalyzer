@@ -3071,8 +3071,7 @@ class AltitudeAtFirstFlapExtensionAfterLiftoff(KeyPointValueNode):
 
 class AltitudeAtFlapExtensionWithGearDown(KeyPointValueNode):
     '''
-    Prepared to cover one customer's SOP relating to selection of Flap 20 on
-    the approach.
+    Altitude at flap extensions while gear is down and aircraft is airborne.
     '''
 
     NAME_FORMAT = 'Altitude At Flap %(flap)s Extension With Gear Down'
@@ -3097,8 +3096,12 @@ class AltitudeAtFlapExtensionWithGearDown(KeyPointValueNode):
         # Raw flap values must increase to detect extensions.
         extend = np.ma.diff(flap.array.raw) > 0
 
-        for air_down in slices_and((a.slice for a in airborne),
-                                   (g.slice for g in gear_ext)):
+        slices = slices_and(
+            (a.slice for a in airborne),
+            (g.slice for g in gear_ext),
+        )
+
+        for air_down in slices:
             for index in np.ma.where(extend[air_down])[0]:
                 # The flap we are moving to is +1 from the diff index
                 index = (air_down.start or 0) + index + 1
@@ -3108,8 +3111,7 @@ class AltitudeAtFlapExtensionWithGearDown(KeyPointValueNode):
 
 class AirspeedAtFlapExtensionWithGearDown(KeyPointValueNode):
     '''
-    Prepared to cover one customer's SOP relating to selection of Flap 20 on
-    the approach.
+    Airspeed at flap extensions while gear is down and aircraft is airborne.
     '''
 
     NAME_FORMAT = 'Airspeed At Flap %(flap)s Extension With Gear Down'
@@ -3134,8 +3136,12 @@ class AirspeedAtFlapExtensionWithGearDown(KeyPointValueNode):
         # Raw flap values must increase to detect extensions.
         extend = np.ma.diff(flap.array.raw) > 0
 
-        for air_down in slices_and((a.slice for a in airborne),
-                                   (g.slice for g in gear_ext)):
+        slices = slices_and(
+            (a.slice for a in airborne),
+            (g.slice for g in gear_ext),
+        )
+
+        for air_down in slices:
             for index in np.ma.where(extend[air_down])[0]:
                 # The flap we are moving to is +1 from the diff index
                 index = (air_down.start or 0) + index + 1
