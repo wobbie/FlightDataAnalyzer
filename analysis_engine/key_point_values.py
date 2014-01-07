@@ -78,7 +78,6 @@ from analysis_engine.library import (ambiguous_runway,
                                      trim_slices,
                                      valid_slices_within_array,
                                      value_at_index,
-                                     vspeed_lookup,
                                      vstack_params_where_state)
 
 
@@ -3157,98 +3156,6 @@ class AltitudeRadioCleanConfigurationMin(KeyPointValueNode):
 
         alt_rad_noflap = np.ma.masked_where(flap.array != '0', alt_rad.array)
         self.create_kpvs_within_slices(alt_rad_noflap, gear_retr, min_value)
-
-
-##########################################################################
-# Speeds relative to Vref Flap 30 + 80 kts (Boeing procedures for 757/767).
-##########################################################################
-
-
-class AirspeedRelativeAtFirstFlapRetraction(KeyPointValueNode):
-    '''
-    Specific to certain 757/767 operations, this is the speed relative to the
-    Vref for flap 30 plus 80kts, at the point of first flap retraction.
-    '''
-    
-    name = 'Airspeed Relative To Vref30+80 At First Flap Retraction'
-    units = ut.KT
-
-    def derive(self,
-               airspeed=P('Airspeed'),
-               gw=P('Gross Weight Smoothed'),
-               alt_retract=KPV('Altitude At First Flap Change After Liftoff'),
-               series=A('Series'),
-               engine=A('Engine Type')):
-
-        if series.value not in ['B757-200(F)', 'B767-300F(ER)']:
-            return
-        if alt_retract:
-            index = alt_retract[0].index
-            speed_ret = value_at_index(airspeed.array, index)
-            gw_ret = value_at_index(gw.array, index)
-            # Get the Vref speed for flap 30 and the current weight.
-            vref = vspeed_lookup('Vref', series.value, engine.value, '30', gw_ret)
-            self.create_kpv(index, speed_ret - (vref + 80.0))
-
-
-class AirspeedRelativeAtFirstFlapExtensionWithGearDown(KeyPointValueNode):
-    '''
-    Specific to certain 757/767 operations, this is the speed relative to the
-    Vref at the landing weight, assuming a flap 30 landing, plus 80kts.
-    '''
-    
-    name = 'Airspeed Relative To Vref30+80 At First Flap Extension With Gear Down'
-    units = ut.KT
-
-    def derive(self,
-               speed=KPV('Airspeed At Flap Extension With Gear Down'),
-               gw_ldg=KPV('Gross Weight At Touchdown'),
-               series=A('Series'),
-               engine=A('Engine Type')):
-
-        if series.value not in ['B757-200(F)', 'B767-300F(ER)']:
-            return
-        kpv_20 = [k for k in speed if '20' in k.name]
-        if not kpv_20:
-            # The crew did not select flap 20 with gear down on this flight.
-            return
-        # If there were multiple flap deployments, we'll just use the last one.
-        index = kpv_20[-1].index
-        speed_20 = kpv_20[-1].value
-        # Get the Vref speed for a landing at flap 30 and the projected weight.
-        vref_ldg = vspeed_lookup('Vref', series.value, engine.value, '30', gw_ldg[0].value)
-        self.create_kpv(index, speed_20 - (vref_ldg + 80.0))
-
-
-class AirspeedRelativeAtFlap20SelectionWithGearDown(KeyPointValueNode):
-    '''
-    Specific to certain 757/767 operations, this is the speed relative to the
-    Vref at the landing weight, assuming a flap 30 landing, plus 80kts.
-    '''
-
-    name = 'Airspeed Relative To Vref30+80 At Flap 20 Selection With Gear Down'
-    units = ut.KT
-
-    def derive(self,
-               speed=KPV('Airspeed At Flap Extension With Gear Down'),
-               gw_ldg=KPV('Gross Weight At Touchdown'),
-               series=A('Series'), engine=A('Engine Type'),):
-
-        if series.value not in ['B757-200(F)', 'B767-300F(ER)']:
-            return
-        kpv_20 = speed.get_ordered_by_index()
-        if not kpv_20:
-            # The crew did not extend flap with gear down on this flight.
-            return
-        # We are only interested in the first one.
-        index = kpv_20[0].index
-        speed_20 = kpv_20[0].value
-        # Get the Vref speed for a landing at flap 30 and the projected weight.
-        vref_ldg = vspeed_lookup('Vref', series.value, engine.value, '30', gw_ldg[0].value)
-        self.create_kpv(index, speed_20 - (vref_ldg + 80.0))
-
-
-##########################################################################
 
 
 class AltitudeAtFirstFlapChangeAfterLiftoff(KeyPointValueNode):

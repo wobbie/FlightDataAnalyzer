@@ -5308,21 +5308,6 @@ class TestValueAtIndex(unittest.TestCase):
             self.assertEquals(value_at_index(array, x, interpolate=False), expected)
 
 
-class TestVspeedLookup(unittest.TestCase):
-    def test_vspdlkup_basic(self):
-        self.assertEqual(vspeed_lookup('V2', 'B737-300', None, '15', 65000), 152)
-
-    def test_vspdlkup_vref(self):
-        self.assertEqual(vspeed_lookup('VRef', 'B737-300', None, '30', 45000), 127)
-        
-    def test_vspdlkup_key_error(self):
-        self.assertRaises(KeyError, vspeed_lookup, 'V2', 'B737_300', None, '15', 65000)
-        
-    def test_vspdlkup_out_of_range_error(self):
-        # We return None so that the incorrect flap at takeoff can be reported.
-        self.assertEqual(vspeed_lookup('V2', 'B737-300', None, '25', 65000), None)
-
-
 class TestVstackParams(unittest.TestCase):
     def test_vstack_params(self):
         a = P('a', array=np.ma.array(range(0, 10)))

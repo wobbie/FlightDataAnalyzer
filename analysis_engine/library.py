@@ -6307,31 +6307,6 @@ def value_at_index(array, index, interpolate=True):
         return r*high_value + (1-r) * low_value
 
 
-def vspeed_lookup(vspeed, aircraft, engine, flap, gw):
-    '''
-    Single point lookup for the vspeed tables.
-    
-    :param vspeed: Selection of "V2" or "Vref"
-    :type vspeed: string
-    :param aircraft: Aircraft series identifier.
-    :type aircraft: string
-    :param engine: Engine Type identifier.
-    :type engine: string
-    :param flap: Flap/conf detent
-    :type flap: string
-    :param gw: Gross Weight in kg
-    :type gw: float
-    
-    :returns: Vspeed in knots
-    :type: float
-    '''
-    vspeed_table = at.get_vspeed_map(series=aircraft, engine_type=engine)()
-    if vspeed.lower() == 'v2':
-        return vspeed_table.v2(flap, gw)
-    else:
-        return vspeed_table.vref(flap, gw)
-
-
 def vstack_params(*params):
     '''
     Create a multi-dimensional masked array with a dimension per param.
