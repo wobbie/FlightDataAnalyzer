@@ -14,7 +14,7 @@ from analysis_engine.datastructures import Segment
 from analysis_engine.node import P
 from analysis_engine.library import (align, calculate_timebase, hash_array,
                                      min_value, normalise, repair_mask,
-                                     rate_of_change, runs_of_ones, 
+                                     rate_of_change, runs_of_ones,
                                      straighten_headings, vstack_params)
 
 from hdfaccess.file import hdf_file
@@ -55,23 +55,23 @@ def _segment_type_and_slice(airspeed, frequency, heading, start, stop):
     the altitude and airspeed can be tested and record values which look like
     the aircraft is in flight; however the aircraft is rarely moved and the
     heading sensor is a good indication that this is a hanger test.
-    
+
     GROUND_ONLY: If the heading changed, the airspeed needs to have been above the
     threshold speed for flight for a minimum amount of time, currently 3
     minutes to determine. If not, this segment is identified as GROUND_ONLY,
     probably taxiing, repositioning on the ground or a rejected takeoff.
-    
+
     START_ONLY: If the airspeed started slow but ended fast, we had a partial
     segment for the start of a flight.
-    
+
     STOP_ONLY:  If the airspeed started fast but ended slow, we had a partial
     segment for the end of a flight.
-    
+
     MID_FLIGHT: The airspeed started and ended fast - no takeoff or landing!
-    
+
     START_AND_STOP: The airspeed started and ended slow, implying a complete
     flight.
-    
+
     segment_type is one of:
     #* 'NO_MOVEMENT' (TO BE SUPPORTED!)
     * 'GROUND_ONLY' (didn't go fast)
@@ -94,17 +94,17 @@ def _segment_type_and_slice(airspeed, frequency, heading, start, stop):
         return segment_type, slice(start, stop)
     unmasked_start += airspeed_start
     unmasked_stop += airspeed_start
-    
+
     slow_start = airspeed[unmasked_start] < settings.AIRSPEED_THRESHOLD
     slow_stop = airspeed[unmasked_stop] < settings.AIRSPEED_THRESHOLD
-    
+
     threshold_exceedance = np.ma.sum(airspeed[airspeed_start:airspeed_stop] >
                                      settings.AIRSPEED_THRESHOLD) * frequency
     hdiff = np.ma.abs(np.ma.diff(heading)).sum()
-    
+
     heading_change = hdiff > settings.HEADING_CHANGE_TAXI_THRESHOLD
     fast_for_long = threshold_exceedance > settings.AIRSPEED_THRESHOLD_TIME
-    
+
     if not heading_change:
         logger.debug("Heading did not change, aircraft did not move.")
         #TODO: support "No Movement" type
@@ -136,7 +136,7 @@ def _get_normalised_split_params(hdf):
     '''
     Get split parameters (currently only engine power) from hdf, normalise
     them on a scale from 0-1.0 and return the minimum.
-    
+
     :param hdf: hdf_file object.
     :type hdf: hdfaccess.file.hdf_file
     :returns: Minimum of normalised split parameters along with its frequency. Will return None, None if no split parameters are available.
@@ -157,7 +157,7 @@ def _get_normalised_split_params(hdf):
         else:
             first_split_param = param
         params.append(param)
-    
+
     if not first_split_param:
         return None, None
     # If there is at least one split parameter available.
@@ -171,7 +171,7 @@ def _get_normalised_split_params(hdf):
 def _rate_of_turn(heading):
     '''
     Create rate of turn from heading.
-    
+
     :param heading: Heading parameter.
     :type heading: Parameter
     '''
@@ -180,7 +180,7 @@ def _rate_of_turn(heading):
     rate_of_turn = np.ma.abs(rate_of_change(heading, 2))
     rate_of_turn_masked = \
         np.ma.masked_greater(rate_of_turn,
-                             settings.RATE_OF_TURN_SPLITTING_THRESHOLD)    
+                             settings.RATE_OF_TURN_SPLITTING_THRESHOLD)
     return rate_of_turn_masked
 
 
@@ -188,7 +188,7 @@ def _split_on_eng_params(slice_start_secs, slice_stop_secs,
                          split_params_min, split_params_frequency):
     '''
     Find split using engine parameters.
-    
+
     :param slice_start_secs: Start of slow slice in seconds.
     :type slice_start_secs: int or float
     :param slice_stop_secs: Stop of slow slice in seconds.
@@ -215,7 +215,7 @@ def _split_on_dfc(slice_start_secs, slice_stop_secs, dfc_frequency,
                   dfc_half_period, dfc_diff, eng_split_index=None):
     '''
     Find split using 'Frame Counter' parameter.
-    
+
     :param slice_start_secs: Start of slow slice in seconds.
     :type slice_start_secs: int or float
     :param slice_stop_secs: Stop of slow slice in seconds.
@@ -275,9 +275,9 @@ def _split_on_rot(slice_start_secs, slice_stop_secs, heading_frequency,
     stopped_slices = np.ma.clump_unmasked(rate_of_turn[rot_slice])
     if not stopped_slices:
         return
-    
+
     middle_stop = min(stopped_slices, key=lambda s: abs(s.start - midpoint))
-    
+
     # Split half-way within the stop slice.
     stop_duration = middle_stop.stop - middle_stop.start
     rot_split_index = \
@@ -290,12 +290,12 @@ def _split_on_rot(slice_start_secs, slice_stop_secs, heading_frequency,
 def split_segments(hdf):
     '''
     TODO: DJ suggested not to use decaying engine oil temperature.
-    
+
     Notes:
      * We do not want to split on masked superframe data if mid-flight (e.g. short section of corrupt data) - repair_mask without defining repair_duration should fix that.
      * Use turning alongside engine parameters to ensure there is no movement?
      XXX: Beware of pre-masked minimums to ensure we don't split on padded superframes
-    
+
     TODO: Use L3UQAR num power ups for difficult cases?
     '''
     airspeed = hdf['Airspeed']
@@ -303,24 +303,24 @@ def split_segments(hdf):
         airspeed_array = repair_mask(airspeed.array, repair_duration=None,
                                      repair_above=settings.AIRSPEED_THRESHOLD)
     except ValueError:
-        # Airspeed array is masked, most likely under min threshold so it did 
+        # Airspeed array is masked, most likely under min threshold so it did
         # not go fast.
         logger.warning("Airspeed is entirely masked. The entire contents of "
                        "the data will be a GROUND_ONLY slice.")
         #TODO: Return "NO_MOVEMENT" when supported
         return [('GROUND_ONLY', slice(0, hdf.duration))]
-    
+
     try:
         # Fetch Heading if available
         heading = hdf.get_param('Heading', valid_only=True)
     except KeyError:
         # try Heading True, otherwise fail loudly with a KeyError
         heading = hdf.get_param('Heading True', valid_only=True)
-        
+
     airspeed_secs = len(airspeed_array) / airspeed.frequency
     slow_array = np.ma.masked_less_equal(airspeed_array,
                                          settings.AIRSPEED_THRESHOLD)
-    
+
     speedy_slices = np.ma.clump_unmasked(slow_array)
     if len(speedy_slices) <= 1:
         logger.info("There are '%d' sections of data where airspeed is "
@@ -331,14 +331,14 @@ def split_segments(hdf):
         # type.
         return [_segment_type_and_slice(airspeed_array, airspeed.frequency,
                                         heading.array, 0, airspeed_secs)]
-    
+
     slow_slices = np.ma.clump_masked(slow_array)
-    
+
     rate_of_turn = _rate_of_turn(heading)
-    
+
     split_params_min, \
     split_params_frequency = _get_normalised_split_params(hdf)
-    
+
     if hdf.reliable_frame_counter:
         dfc = hdf['Frame Counter']
         dfc_diff = np.ma.diff(dfc.array)
@@ -355,7 +355,7 @@ def split_segments(hdf):
         logger.info("'Frame Counter' will not be used for splitting since "
                     "'reliable_frame_counter' is False.")
         dfc = None
-    
+
     segments = []
     start = 0
     for slow_slice in slow_slices:
@@ -367,11 +367,11 @@ def split_segments(hdf):
         if slow_slice.stop == len(airspeed_array):
             # After the loop we will add the remaining data to a segment.
             break
-        
+
         # Get start and stop at 1Hz.
         slice_start_secs = slow_slice.start / airspeed.frequency
         slice_stop_secs = slow_slice.stop / airspeed.frequency
-        
+
         slow_duration = slice_stop_secs - slice_start_secs
         if slow_duration < settings.MINIMUM_SPLIT_DURATION:
             logger.info("Disregarding period of airspeed below '%s' "
@@ -379,7 +379,7 @@ def split_segments(hdf):
                         "('%s').", settings.AIRSPEED_THRESHOLD, slow_duration,
                         settings.MINIMUM_SPLIT_DURATION)
             continue
-        
+
         # Find split based on minimum of engine parameters.
         if split_params_min is not None:
             eng_split_index, eng_split_value = _split_on_eng_params(
@@ -387,7 +387,7 @@ def split_segments(hdf):
                 split_params_frequency)
         else:
             eng_split_index, eng_split_value = None, None
-        
+
         # Split using 'Frame Counter'.
         if dfc is not None:
             dfc_split_index = _split_on_dfc(
@@ -405,7 +405,7 @@ def split_segments(hdf):
             else:
                 logger.info("'Frame Counter' did not jump within slow_slice "
                             "'%s'.", slow_slice)
-        
+
         # Split using minimum of engine parameters.
         if eng_split_value is not None and \
            eng_split_value < settings.MINIMUM_SPLIT_PARAM_VALUE:
@@ -426,12 +426,12 @@ def split_segments(hdf):
                         "slow_slice '%s' at index '%s'.",
                         eng_split_value, settings.MINIMUM_SPLIT_PARAM_VALUE,
                         slow_slice, eng_split_index)
-        
+
         # Split using rate of turn. Q: Should this be considered in other
         # splitting methods.
         if rate_of_turn is None:
             continue
-        
+
         rot_split_index = _split_on_rot(slice_start_secs, slice_stop_secs,
                                         heading.frequency, rate_of_turn)
         if rot_split_index:
@@ -463,8 +463,8 @@ def _mask_invalid_years(array, latest_year):
     '''
     Mask years which are in the future, not 2 or 4 digits or were made before
     the first recording FDR was invented.
-    
-    FDR date based on the Aeronautical Research Laboratory system named the 
+
+    FDR date based on the Aeronautical Research Laboratory system named the
     "Red Egg", made by the British firm of S. Davall & Son in 1960.
     '''
     # ignore 4 digit years in the future
@@ -481,12 +481,12 @@ def _mask_invalid_years(array, latest_year):
 def _calculate_start_datetime(hdf, fallback_dt=None):
     """
     Calculate start datetime.
-    
-    :param hdf: Flight data HDF file 
+
+    :param hdf: Flight data HDF file
     :type hdf: hdf_access object
     :param fallback_dt: Used to replace elements of datetimes which are not available in the hdf file (e.g. YEAR not being recorded)
     :type fallback_dt: datetime
-    
+
     HDF params used:
     :Year: Optional (defaults to 1970)
     :Month: Optional (defaults to 1)
@@ -524,13 +524,13 @@ def _calculate_start_datetime(hdf, fallback_dt=None):
                 continue
         if fallback_dt:
             array = [getattr(fallback_dt, name.lower())]
-            logger.warning("%s not available, using %d from fallback_dt %s", 
+            logger.warning("%s not available, using %d from fallback_dt %s",
                          name, array[0], fallback_dt)
             dt_arrays.append(array)
             continue
         else:
             raise TimebaseError("Required parameter '%s' not available" % name)
-        
+
     length = max([len(array) for array in dt_arrays])
     if length > 1:
         # ensure all arrays are the same length
@@ -544,18 +544,18 @@ def _calculate_start_datetime(hdf, fallback_dt=None):
                                  "length")
             else:
                 pass
-        
+
     # establish timebase for start of data
     try:
         timebase = calculate_timebase(*dt_arrays)
     except (KeyError, ValueError) as err:
         raise TimebaseError("Error with timestamp values: %s" % err)
-    
+
     if timebase > now:
         # Flight Data Analysis in the future is a challenge, lets see if we
         # can correct this first...
         if 'Day' not in hdf:
-            # unlikely to have year, month or day.            
+            # unlikely to have year, month or day.
             # Scenario: that fallback_dt is of the current day but recorded
             # time is in the future of the fallback time, therefore resulting
             # in a futuristic date.
@@ -572,28 +572,28 @@ def _calculate_start_datetime(hdf, fallback_dt=None):
                 return a_year_before
 
         raise TimebaseError("Timebase '%s' is in the future.", timebase)
-    
+
     if settings.MAX_TIMEBASE_AGE and \
        timebase < (now - timedelta(days=settings.MAX_TIMEBASE_AGE)):
         # Only allow recent timebases.
         error_msg = "Timebase '%s' older than the allowed '%d' days." % (
             timebase, settings.MAX_TIMEBASE_AGE)
         raise TimebaseError(error_msg)
-    
+
     logger.info("Valid timebase identified as %s", timebase)
     return timebase
-        
+
 
 def append_segment_info(hdf_segment_path, segment_type, segment_slice, part,
                         fallback_dt=None):
     """
     Get information about a segment such as type, hash, etc. and return a
     named tuple.
-    
+
     If a valid timestamp can't be found, it creates start_dt as epoch(0)
     i.e. datetime(1970,1,1,1,0). Go-fast dt and Stop dt are relative to this
     point in time.
-    
+
     :param hdf_segment_path: path to HDF segment to analyse
     :type hdf_segment_path: string
     :param segment_slice: Slice of this segment relative to original file.
@@ -619,7 +619,7 @@ def append_segment_info(hdf_segment_path, segment_type, segment_slice, part,
             ##start_datetime = datetime.fromtimestamp(0)
         stop_datetime = start_datetime + timedelta(seconds=duration)
         hdf.start_datetime = start_datetime
-    
+
     if segment_type in ('START_AND_STOP', 'START_ONLY', 'STOP_ONLY'):
         # we went fast, so get the index
         spd_above_threshold = \
@@ -649,7 +649,7 @@ def split_hdf_to_segments(hdf_path, aircraft_info, fallback_dt=None,
     """
     Main method - analyses an HDF file for flight segments and splits each
     flight into a new segment appropriately.
-    
+
     :param hdf_path: path to HDF file
     :type hdf_path: string
     :param aircraft_info: Information which identify the aircraft, specfically with the keys 'Tail Number', 'MSN'...
@@ -672,7 +672,7 @@ def split_hdf_to_segments(hdf_path, aircraft_info, fallback_dt=None,
     if draw:
         from analysis_engine.plot_flight import plot_essential
         plot_essential(hdf_path)
-        
+
     with hdf_file(hdf_path) as hdf:
         superframe_present = hdf.superframe_present
 
@@ -682,12 +682,12 @@ def split_hdf_to_segments(hdf_path, aircraft_info, fallback_dt=None,
 
         # now we know the Aircraft is correct, go and do the PRE FILE ANALYSIS
         if hooks.PRE_FILE_ANALYSIS:
-            logger.info("Performing PRE_FILE_ANALYSIS analysis: %s", 
+            logger.info("Performing PRE_FILE_ANALYSIS analysis: %s",
                          hooks.PRE_FILE_ANALYSIS.func_name)
             hooks.PRE_FILE_ANALYSIS(hdf, aircraft_info)
         else:
             logger.info("No PRE_FILE_ANALYSIS actions to perform")
-        
+
         segment_tuples = split_segments(hdf)
         if fallback_dt:
             # fallback_dt is relative to the end of the data; remove the data
@@ -696,7 +696,7 @@ def split_hdf_to_segments(hdf_path, aircraft_info, fallback_dt=None,
             fallback_dt -= timedelta(seconds=secs)
             logger.info("Reduced fallback_dt by %ddays %dhr %dmin to %s",
                secs//86400, secs%86400//3600, secs%86400%3600//60, fallback_dt)
-        
+
     # process each segment (into a new file) having closed original hdf_path
     segments = []
     previous_stop_dt = None
@@ -710,27 +710,27 @@ def split_hdf_to_segments(hdf_path, aircraft_info, fallback_dt=None,
         write_segment(hdf_path, segment_slice, dest_path, supf_boundary=superframe_present)
         segment = append_segment_info(dest_path, segment_type, segment_slice,
                                       part, fallback_dt=fallback_dt)
-        
+
         if previous_stop_dt and segment.start_dt < previous_stop_dt:
             # In theory, this should not happen - but be warned of superframe padding?
             logger.warning(
                 "Segment start_dt '%s' comes before the previous segment "
                 "ended '%s'", segment.start_dt, previous_stop_dt)
         previous_stop_dt = segment.stop_dt
-        
+
         if fallback_dt:
             # move the fallback_dt on to be relative to start of next segment
             fallback_dt += segment.stop_dt - segment.start_dt
         segments.append(segment)
         if draw:
             plot_essential(dest_path)
-            
+
     if draw:
         # show all figures together
         from matplotlib.pyplot import show
         show()
         #close('all') # closes all figures
-         
+
     return segments
 
 
@@ -745,8 +745,8 @@ def main():
     from analysis_engine.utils import get_aircraft_info
     from flightdatautilities.filesystem_tools import copy_file
     logger = logging.getLogger()
-    logger.setLevel(logging.INFO)    
-    
+    logger.setLevel(logging.INFO)
+
     parser = argparse.ArgumentParser(description="Process a flight.")
     parser.add_argument('file', type=str,
                         help='Path of file to process.')

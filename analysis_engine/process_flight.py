@@ -269,7 +269,7 @@ def parse_analyser_profiles(analyser_profiles):
                 continue
             additional_modules.append(import_path)
             if is_required:
-                required_nodes.extend(get_derived_nodes(import_path))
+                required_nodes.extend(get_derived_nodes([import_path]))
     return additional_modules, required_nodes
 
 

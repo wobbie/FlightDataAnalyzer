@@ -39,6 +39,7 @@ from analysis_engine.multistate_parameters import (
     Eng_3_Fire,
     Eng_4_Fire,
     Eng_Fire,
+    Eng_Oil_Press_Warning,
     EventMarker,
     Flap,
     FlapExcludingTransition,
@@ -133,59 +134,59 @@ class TestAPEngaged(unittest.TestCase, NodeTest):
     def test_single_ap(self):
         ap1 = M(array=np.ma.array(data=[0,0,1,1,0,0]),
                    values_mapping={1:'Engaged',0:'-'},
-                   name='AP (1) Engaged')        
+                   name='AP (1) Engaged')
         eng = APEngaged()
         eng.derive(ap1, None, None)
         expected = M(array=np.ma.array(data=[0,0,1,1,0,0]),
                    values_mapping={0: '-', 1: 'Engaged'},
-                   name='AP Engaged', 
-                   frequency=1, 
-                   offset=0.1)        
+                   name='AP Engaged',
+                   frequency=1,
+                   offset=0.1)
         ma_test.assert_array_equal(expected.array, eng.array)
 
     def test_dual_ap(self):
         # Two result in just "Engaged" state still
         ap1 = M(array=np.ma.array(data=[0,0,1,1,0,0]),
                    values_mapping={1:'Engaged',0:'-'},
-                   name='AP (1) Engaged')        
+                   name='AP (1) Engaged')
         ap2 = M(array=np.ma.array(data=[0,0,0,1,1,0]),
                    values_mapping={1:'Engaged',0:'-'},
-                   name='AP (2) Engaged')        
+                   name='AP (2) Engaged')
         ap3 = None
         eng = APEngaged()
         eng.derive(ap1, ap2, ap3)
         expected = M(array=np.ma.array(data=[0,0,1,1,1,0]),
                    values_mapping={0: '-', 1: 'Engaged'},
-                   name='AP Engaged', 
-                   frequency=1, 
-                   offset=0.1)        
-        
+                   name='AP Engaged',
+                   frequency=1,
+                   offset=0.1)
+
         ma_test.assert_array_equal(expected.array, eng.array)
 
     def test_triple_ap(self):
         ap1 = M(array=np.ma.array(data=[0,0,1,1,0,0]),
                    values_mapping={1:'Engaged',0:'-'},
-                   name='AP (1) Engaged', 
-                   frequency=1, 
-                   offset=0.1)        
+                   name='AP (1) Engaged',
+                   frequency=1,
+                   offset=0.1)
         ap2 = M(array=np.ma.array(data=[0,1,0,1,1,0]),
                    values_mapping={1:'Engaged',0:'-'},
-                   name='AP (2) Engaged', 
-                   frequency=1, 
-                   offset=0.2)        
+                   name='AP (2) Engaged',
+                   frequency=1,
+                   offset=0.2)
         ap3 = M(array=np.ma.array(data=[0,0,1,1,1,1]),
                    values_mapping={1:'Engaged',0:'-'},
-                   name='AP (3) Engaged', 
-                   frequency=1, 
-                   offset=0.4)        
+                   name='AP (3) Engaged',
+                   frequency=1,
+                   offset=0.4)
         eng = APEngaged()
         eng.derive(ap1, ap2, ap3)
         expected = M(array=np.ma.array(data=[0,1,1,1,1,1]),
                    values_mapping={0: '-', 1: 'Engaged'},
-                   name='AP Engaged', 
-                   frequency=1, 
-                   offset=0.25)        
-        
+                   name='AP Engaged',
+                   frequency=1,
+                   offset=0.25)
+
         ma_test.assert_array_equal(expected.array, eng.array)
 
 
@@ -193,7 +194,7 @@ class TestAPURunning(unittest.TestCase):
     def test_can_operate(self):
         opts = APURunning.get_operational_combinations()
         self.assertTrue(('APU N1',) in opts)
-    
+
     def test_apu_basic(self):
         n1=P('APU N1', array=np.ma.array([0, 40, 80, 100, 70, 30, 0.0]))
         run=APURunning()
@@ -217,7 +218,7 @@ class TestAPChannelsEngaged(unittest.TestCase, NodeTest):
         # Cannot auto_land on one AP
         ap1 = M(array=np.ma.array(data=[0,0,0,0,0,0]),
                    values_mapping={1:'Engaged',0:'-'},
-                   name='AP (1) Engaged')        
+                   name='AP (1) Engaged')
         values_mapping = {0: '-', 1: 'Single', 2: 'Dual', 3: 'Triple'}
         eng = APChannelsEngaged()
         eng.derive(ap1, None, None)
@@ -231,10 +232,10 @@ class TestAPChannelsEngaged(unittest.TestCase, NodeTest):
     def test_dual_ap(self):
         ap1 = M(array=np.ma.array(data=[0,0,1,1,0,0]),
                    values_mapping={1:'Engaged',0:'-'},
-                   name='AP (1) Engaged')        
+                   name='AP (1) Engaged')
         ap2 = M(array=np.ma.array(data=[0,0,0,1,1,0]),
                    values_mapping={1:'Engaged',0:'-'},
-                   name='AP (2) Engaged')        
+                   name='AP (2) Engaged')
         ap3 = None
         values_mapping = {0: '-', 1: 'Single', 2: 'Dual', 3: 'Triple'}
         eng = APChannelsEngaged()
@@ -242,36 +243,36 @@ class TestAPChannelsEngaged(unittest.TestCase, NodeTest):
         expected = M(array=np.ma.array(data=[0, 0, 1, 2, 1, 0]),
                    values_mapping=values_mapping,
                    name='AP Channels Engaged',
-                   frequency=1, 
-                   offset=0.1)        
-        
+                   frequency=1,
+                   offset=0.1)
+
         ma_test.assert_array_equal(expected.array, eng.array)
 
     def test_triple_ap(self):
         ap1 = M(array=np.ma.array(data=[0,0,1,1,0,0]),
                    values_mapping={1:'Engaged',0:'-'},
-                   name='AP (1) Engaged', 
-                   frequency=1, 
-                   offset=0.1)        
+                   name='AP (1) Engaged',
+                   frequency=1,
+                   offset=0.1)
         ap2 = M(array=np.ma.array(data=[0,1,0,1,1,0]),
                    values_mapping={1:'Engaged',0:'-'},
-                   name='AP (2) Engaged', 
-                   frequency=1, 
-                   offset=0.2)        
+                   name='AP (2) Engaged',
+                   frequency=1,
+                   offset=0.2)
         ap3 = M(array=np.ma.array(data=[0,0,1,1,1,1]),
                    values_mapping={1:'Engaged',0:'-'},
-                   name='AP (3) Engaged', 
-                   frequency=1, 
-                   offset=0.4)        
+                   name='AP (3) Engaged',
+                   frequency=1,
+                   offset=0.4)
         values_mapping = {0: '-', 1: 'Single', 2: 'Dual', 3: 'Triple'}
         eng = APChannelsEngaged()
         eng.derive(ap1, ap2, ap3)
         expected = M(array=np.ma.array(data=[0, 1, 2, 3, 2, 1]),
                    values_mapping=values_mapping,
                    name='AP Channels Engaged',
-                   frequency=1, 
-                   offset=0.25)        
-        
+                   frequency=1,
+                   offset=0.25)
+
         ma_test.assert_array_equal(expected.array, eng.array)
 
 
@@ -293,7 +294,7 @@ class TestConfiguration(unittest.TestCase, NodeTest):
                       values_mapping={x: str(x) for x in np.ma.unique(f)})
         self.ails = M('Flaperon', np.tile(np.ma.array(a), 10000),
                       values_mapping={x: str(x) for x in np.ma.unique(f)})
-    
+
     def test_can_operate(self):
         # Non-airbus aircraft should not be able to create configuration:
         self.assertFalse(self.node_class.can_operate(
@@ -351,17 +352,17 @@ class TestConfiguration(unittest.TestCase, NodeTest):
 
 class TestDaylight(unittest.TestCase):
     def test_can_operate(self):
-        expected = [('Latitude Smoothed', 'Longitude Smoothed', 
+        expected = [('Latitude Smoothed', 'Longitude Smoothed',
                      'Start Datetime', 'HDF Duration')]
         opts = Daylight.get_operational_combinations()
         self.assertEqual(opts, expected)
-    
+
     def test_daylight_aligning(self):
         lat = P('Latitude', np.ma.array([51.1789]*128), offset=0.1)
         lon = P('Longitude', np.ma.array([-1.8264]*128))
         start_dt = A('Start Datetime', datetime.datetime(2012,6,20, 20,25))
         dur = A('HDF Duration', 128)
-        
+
         don = Daylight()
         don.get_derived((lat, lon, start_dt, dur))
         self.assertEqual(list(don.array), [np.ma.masked] + ['Day']*31)
@@ -375,7 +376,7 @@ class TestDaylight(unittest.TestCase):
         lon=P('Longitude', np.ma.arange(-180,180,90/64.0))
         start_dt = A('Start Datetime', datetime.datetime(2012,12,25,01,00))
         dur = A('HDF Duration', 256)
-        
+
         don = Daylight()
         don.align_frequency = 1/64.0  # Force frequency to simplify test
         don.get_derived((lat, lon, start_dt, dur))
@@ -530,7 +531,7 @@ class TestEng_4_Fire(unittest.TestCase, NodeTest):
 
 
 class TestEventMarker(unittest.TestCase):
-    
+
     def test_can_operate(self):
         self.assertTrue(EventMarker.can_operate(('Event Marker (1)',)))
         self.assertTrue(EventMarker.can_operate(('Event Marker (2)',)))
@@ -605,7 +606,7 @@ class TestEng_AllRunning(unittest.TestCase, NodeTest):
         node = self.node_class()
         node.derive(None, n2, ff)
         self.assertEqual(node.array.raw.tolist(), expected)
-        
+
     def test_derive_n1_only(self):
         # fallback to N1 if no N2 and FF
         n1_array = np.ma.array([0, 5, 10, 15, 11, 5, 0])
@@ -614,7 +615,7 @@ class TestEng_AllRunning(unittest.TestCase, NodeTest):
         node = self.node_class()
         node.derive(None, n1, None)
         self.assertEqual(node.array.raw.tolist(), expected)
-    
+
 
 
 class TestEng_AnyRunning(unittest.TestCase, NodeTest):
@@ -653,7 +654,7 @@ class TestEng_AnyRunning(unittest.TestCase, NodeTest):
         node = self.node_class()
         node.derive(None, n2, ff)
         self.assertEqual(node.array.raw.tolist(), expected)
-        
+
     def test_derive_n1_only(self):
         # fallback to N1
         n1_array = np.ma.array([0, 5, 10, 15, 11, 5, 0])
@@ -661,7 +662,35 @@ class TestEng_AnyRunning(unittest.TestCase, NodeTest):
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
         node.derive(n1, None, None)
-        self.assertEqual(node.array.raw.tolist(), expected)    
+        self.assertEqual(node.array.raw.tolist(), expected)
+
+
+class TestEng_Oil_Press_Warning(unittest.TestCase):
+    def test_can_operate(self):
+        combinations = Eng_Oil_Press_Warning.get_operational_combinations()
+        self.assertTrue(('Eng (1) Oil Press Low',) in combinations)
+        self.assertTrue(('Eng (2) Oil Press Low',) in combinations)
+        self.assertTrue(('Eng (3) Oil Press Low',) in combinations)
+        self.assertTrue(('Eng (4) Oil Press Low',) in combinations)
+        self.assertTrue(('Eng (1) Oil Press Low',
+                         'Eng (2) Oil Press Low') in combinations)
+        self.assertTrue(('Eng (1) Oil Press Low',
+                         'Eng (2) Oil Press Low',
+                         'Eng (3) Oil Press Low',
+                         'Eng (4) Oil Press Low',) in combinations)
+
+    def test_derive(self):
+        eng_values_mapping = {0: '-', 1: 'Low Press'}
+        eng_1_array = np.ma.array([1,1,0,0,1,0,1,0])
+        eng_1 = M('Eng (1) Oil Press Low', array=eng_1_array,
+                  values_mapping=eng_values_mapping)
+        eng_2_array = np.ma.array([0,1,1,0,0,0,0,1])
+        eng_2 = M('Eng (2) Oil Press Low', array=eng_1_array,
+                  values_mapping=eng_values_mapping)
+        node = Eng_Oil_Press_Warning()
+        node.derive(eng_1, eng_2, None, None)
+        node
+
 
 
 class TestEngThrustModeRequired(unittest.TestCase):
@@ -675,7 +704,7 @@ class TestEngThrustModeRequired(unittest.TestCase):
                          'Eng (2) Thrust Mode Required',
                          'Eng (3) Thrust Mode Required',
                          'Eng (4) Thrust Mode Required',) in opts)
-    
+
     def test_derive_one_param(self):
         thrust_array = np.ma.array([0, 0, 1, 0])
         thrust = M('Eng (2) Thrust Mode Required', array=thrust_array,
@@ -683,7 +712,7 @@ class TestEngThrustModeRequired(unittest.TestCase):
         node = EngThrustModeRequired()
         node.derive(None, thrust, None, None)
         self.assertEqual(thrust.array.raw.tolist(), thrust_array.tolist())
-    
+
     def test_derive_four_params(self):
         thrust_array1 = np.ma.array([0, 0, 1, 0],
                                     mask=[False, False, True, False])
@@ -701,7 +730,7 @@ class TestEngThrustModeRequired(unittest.TestCase):
                     values_mapping=EngThrustModeRequired.values_mapping)
         node = EngThrustModeRequired()
         node.derive(thrust1, thrust2, thrust3, thrust4)
-        
+
         self.assertEqual(
             node.array.tolist(),
             MappedArray([1, 1, 1, 0],
@@ -854,7 +883,7 @@ class TestFlapLeverSynthetic(unittest.TestCase):
         # Prepare our generated flap and slat arrays:
         flap_array = [0.0, 0, 8, 8, 0, 0, 0, 8, 20, 30, 45, 8, 0, 0, 0]
         slat_array = [0.0, 0, 20, 20, 20, 0, 0, 20, 20, 25, 25, 20, 20, 0, 0]
-        flap_array = MappedArray(np.repeat(flap_array, 10), 
+        flap_array = MappedArray(np.repeat(flap_array, 10),
                     values_mapping={0:'0', 8:'8', 20:'20', 30:'30', 45:'45'})
         slat_array = MappedArray(np.repeat(slat_array, 10),
                     values_mapping={0:'0', 20:'20', 25:'25'})
@@ -883,7 +912,7 @@ class TestFlapLeverSynthetic(unittest.TestCase):
         # Prepare our generated flap array:
         flap_array = [0.0, 0, 5, 2, 1, 0, 0, 10, 15, 25, 30, 40, 0, 0, 0]
         flap_array = MappedArray(np.repeat(flap_array, 10),
-            values_mapping={0:'0', 1:'1', 2:'2', 5:'5', 10:'10', 15:'15', 
+            values_mapping={0:'0', 1:'1', 2:'2', 5:'5', 10:'10', 15:'15',
                              25:'25', 30:'30', 40:'40'})
 
         ### Add some noise to make our flap angles more realistic:
@@ -904,7 +933,7 @@ class TestFlapLeverSynthetic(unittest.TestCase):
         mapping = {x: str(x) for x in sorted(set(expected))}
         array = MappedArray(np.repeat(expected, 10), values_mapping=mapping)
         np.testing.assert_array_equal(node.array, array)
-        
+
     def test_derive__a330(self):
         # A330 uses Configuration conditions.
         # Prepare our generated flap and slat arrays:
@@ -916,12 +945,12 @@ class TestFlapLeverSynthetic(unittest.TestCase):
                     'Lever 1', 'Lever 2', 'Lever 2', 'Lever 3', 'Lever 3',
                     'Lever Full', 'Lever 0']
         repeat = 1
-        flap_array = MappedArray(np.repeat(flap_array, repeat), 
+        flap_array = MappedArray(np.repeat(flap_array, repeat),
                     values_mapping={0:'0', 8:'8', 14:'14', 22:'22', 32:'32'})
         slat_array = MappedArray(np.repeat(slat_array, repeat),
                     values_mapping={0:'0', 16:'16', 20:'20', 23:'23'})
         flaperon_array = MappedArray(np.repeat(flaperon_array, repeat),
-                    values_mapping={0:'0', 5:'5', 10:'10'})        
+                    values_mapping={0:'0', 5:'5', 10:'10'})
 
         # Derive the synthetic flap lever:
         flap = M('Flap', flap_array)
@@ -944,7 +973,7 @@ class TestFlaperon(unittest.TestCase):
             model=Attribute('Model', 'A330-222'),
             series=Attribute('Series', 'A330-200'),
             family=Attribute('Family', 'A330')))
-        
+
     def test_derive(self):
         al = load(os.path.join(test_data_path, 'aileron_left.nod'))
         ar = load(os.path.join(test_data_path, 'aileron_right.nod'))
@@ -956,10 +985,10 @@ class TestFlaperon(unittest.TestCase):
         # ensure values are grouped into aileron settings accordingly
         # flaperon is now step at movement start
         self.assertEqual(unique_values(flaperon.array.astype(int)),{
-            0: 22056, 
+            0: 22056,
             5: 282,
             10: 1148})
-        
+
 
 class TestFuelQtyLow(unittest.TestCase):
     def test_can_operate(self):
@@ -974,7 +1003,7 @@ class TestFuelQtyLow(unittest.TestCase):
         warn = FuelQty_Low()
         warn.derive(low, None, None)
         self.assertEqual(warn.array.sum(), 2)
-        
+
     def test_derive_fuel_qty_low_warning_two_params(self):
         one = M(array=np.ma.array([0,0,0,1,1,0]), values_mapping={1: 'Warning'})
         two = M(array=np.ma.array([0,0,1,1,0,0]), values_mapping={1: 'Warning'})
@@ -984,7 +1013,7 @@ class TestFuelQtyLow(unittest.TestCase):
 
 
 class TestGearDown(unittest.TestCase, NodeTest):
-    
+
     def setUp(self):
         self.node_class = GearDown
         self.operational_combinations = [
@@ -1032,17 +1061,17 @@ class TestGearOnGround(unittest.TestCase):
             ('Gear (R) On Ground',),
             ('Gear (L) On Ground', 'Gear (R) On Ground'),
             ])
-        
+
     def test_gear_on_ground_basic(self):
         p_left = M(array=np.ma.array(data=[0,0,1,1]),
                    values_mapping={0:'Air',1:'Ground'},
-                   name='Gear (L) On Ground', 
-                   frequency=1, 
+                   name='Gear (L) On Ground',
+                   frequency=1,
                    offset=0.1)
         p_right = M(array=np.ma.array(data=[0,1,1,1]),
                     values_mapping={0:'Air',1:'Ground'},
-                    name='Gear (R) On Ground', 
-                    frequency=1, 
+                    name='Gear (R) On Ground',
+                    frequency=1,
                     offset=0.6)
         wow=GearOnGround()
         wow.derive(p_left, p_right)
@@ -1053,13 +1082,13 @@ class TestGearOnGround(unittest.TestCase):
     def test_gear_on_ground_common_word(self):
         p_left = M(array=np.ma.array(data=[0,0,1,1]),
                    values_mapping={0:'Air',1:'Ground'},
-                   name='Gear (L) On Ground', 
-                   frequency=1, 
+                   name='Gear (L) On Ground',
+                   frequency=1,
                    offset=0.1)
         p_right = M(array=np.ma.array(data=[0,1,1,1]),
                     values_mapping={0:'Air',1:'Ground'},
-                    name='Gear (R) On Ground', 
-                    frequency=1, 
+                    name='Gear (R) On Ground',
+                    frequency=1,
                     offset=0.1)
         wow=GearOnGround()
         wow.derive(p_left, p_right)
@@ -1070,8 +1099,8 @@ class TestGearOnGround(unittest.TestCase):
     def test_gear_on_ground_left_only(self):
         p_left = M(array=np.ma.array(data=[0,0,1,1]),
                    values_mapping={0:'Air',1:'Ground'},
-                   name='Gear (L) On Ground', 
-                   frequency=1, 
+                   name='Gear (L) On Ground',
+                   frequency=1,
                    offset=0.1)
         wow=GearOnGround()
         wow.derive(p_left, None)
@@ -1082,8 +1111,8 @@ class TestGearOnGround(unittest.TestCase):
     def test_gear_on_ground_right_only(self):
         p_right = M(array=np.ma.array(data=[0,0,0,1]),
                     values_mapping={0:'Air',1:'Ground'},
-                    name='Gear (R) On Ground', 
-                    frequency=1, 
+                    name='Gear (R) On Ground',
+                    frequency=1,
                     offset=0.7)
         wow=GearOnGround()
         wow.derive(None, p_right)
@@ -1146,16 +1175,16 @@ class TestGearDownSelected(unittest.TestCase):
 
 
 class TestGear_RedWarning(unittest.TestCase):
-    
+
     def test_can_operate(self):
         opts = Gear_RedWarning.get_operational_combinations()
         self.assertEqual(len(opts), 7)
         self.assertIn(('Gear (L) Red Warning', 'Airborne'), opts)
-        self.assertIn(('Gear (L) Red Warning', 
-                       'Gear (N) Red Warning', 
+        self.assertIn(('Gear (L) Red Warning',
+                       'Gear (N) Red Warning',
                        'Gear (R) Red Warning',
                        'Airborne'), opts)
-    
+
     def test_derive(self):
         gear_warn_l = M('Gear (L) Red Warning',
                         np.ma.array([0,0,0,1,0,0,0,0,0,1,0,0]),
@@ -1173,9 +1202,9 @@ class TestGear_RedWarning(unittest.TestCase):
         self.assertEqual(list(gear_warn.array),
                          ['-', '-', '-', 'Warning', 'Warning', 'Warning',
                           '-', 'Warning', 'Warning', 'Warning', '-', '-'])
-    
+
 class TestKeyVHFCapt(unittest.TestCase):
-    
+
     def test_can_operate(self):
         self.assertEqual(KeyVHFCapt.get_operational_combinations(),
                          [('Key VHF (1) (Capt)',),
@@ -1185,14 +1214,14 @@ class TestKeyVHFCapt(unittest.TestCase):
                           ('Key VHF (1) (Capt)', 'Key VHF (3) (Capt)'),
                           ('Key VHF (2) (Capt)', 'Key VHF (3) (Capt)'),
                           ('Key VHF (1) (Capt)', 'Key VHF (2) (Capt)', 'Key VHF (3) (Capt)')])
-    
+
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         pass
 
 
 class TestKeyVHFFO(unittest.TestCase):
-    
+
     def test_can_operate(self):
         self.assertEqual(KeyVHFFO.get_operational_combinations(),
                          [('Key VHF (1) (FO)',),
@@ -1202,7 +1231,7 @@ class TestKeyVHFFO(unittest.TestCase):
                           ('Key VHF (1) (FO)', 'Key VHF (3) (FO)'),
                           ('Key VHF (2) (FO)', 'Key VHF (3) (FO)'),
                           ('Key VHF (1) (FO)', 'Key VHF (2) (FO)', 'Key VHF (3) (FO)')])
-    
+
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         pass
@@ -1244,9 +1273,9 @@ class TestPackValvesOpen(unittest.TestCase):
         self.assertEqual(opts, [
             ('ECS Pack (1) On', 'ECS Pack (2) On'),
             ('ECS Pack (1) On', 'ECS Pack (1) High Flow', 'ECS Pack (2) On'),
-            ('ECS Pack (1) On', 'ECS Pack (2) On', 'ECS Pack (2) High Flow'), 
+            ('ECS Pack (1) On', 'ECS Pack (2) On', 'ECS Pack (2) High Flow'),
             ('ECS Pack (1) On', 'ECS Pack (1) High Flow', 'ECS Pack (2) On', 'ECS Pack (2) High Flow')])
-        
+
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
@@ -1369,7 +1398,7 @@ class TestSpeedbrakeSelected(unittest.TestCase):
         self.assertTrue(('Speedbrake', 'Family') in opts)
         self.assertTrue(('Speedbrake Handle', 'Family') in opts)
         self.assertTrue(('Speedbrake Handle', 'Speedbrake', 'Family') in opts)
-        
+
     def test_derive(self):
         # test with deployed
         spd_sel = SpeedbrakeSelected()
@@ -1420,7 +1449,7 @@ class TestSpeedbrakeSelected(unittest.TestCase):
                                             np.ma.arange(11545, 11575),
                                             np.ma.arange(11840, 12013)]).tolist(),
                          np.ma.where(array == 'Deployed/Cmd Up')[0].tolist())
-    
+
     def test_b737_speedbrake(self):
         self.maxDiff = None
         spd_sel = SpeedbrakeSelected()
@@ -1438,11 +1467,11 @@ class TestSpeedbrakeSelected(unittest.TestCase):
         res = spd_sel.b737_speedbrake(spdbrk, handle)
         self.assertEqual(list(res),
                         ['Stowed']*3 + ['Armed/Cmd Dn']*7 + ['Deployed/Cmd Up']*20 + ['Armed/Cmd Dn']*5 + ['Deployed/Cmd Up']*5)
-    
+
     def test_b787_speedbrake(self):
         handle = load(os.path.join(
             test_data_path, 'SpeedBrakeSelected_SpeedbrakeHandle.nod'))
-        
+
         result = SpeedbrakeSelected.b787_speedbrake(handle)
         self.assertEqual(len(np.ma.where(result == 0)[0]), 9445)
         self.assertEqual(np.ma.where(result == 1)[0].tolist(),
@@ -1477,7 +1506,7 @@ class TestStableApproach(unittest.TestCase):
 
     def test_stable_approach(self):
         stable = StableApproach()
-        
+
         # Arrays will be 20 seconds long, index 4, 13,14,15 are stable
         #0. first and last values are not in approach slice
         apps = S()
@@ -1507,13 +1536,13 @@ class TestStableApproach(unittest.TestCase):
         v[6] = -2000
         v[18:19] = [-2000]*1
         vert_spd = P(array=np.ma.array(v))
-        
+
         #TODO: engine cycling at index 12?
-        
+
         #8. Engine power too low at index 5-12
         e = [80, 80, 80, 80, 80, 30, 20, 30, 20, 30, 20, 30, 44, 40, 80, 80, 80, 50, 50, 50, 50]
         eng = P(array=np.ma.array(e))
-        
+
         # Altitude for cutoff heights, 9th element is 200 below, last 4 values are below 100ft last 2 below 50ft
         al = range(2000,219,-200) + range(219,18, -20) + [0]
         # == [2000, 1800, 1600, 1400, 1200, 1000, 800, 600, 400, 219, 199, 179, 159, 139, 119, 99, 79, 59, 39, 19]
@@ -1522,13 +1551,13 @@ class TestStableApproach(unittest.TestCase):
         stable.derive(apps, gear, flap, head, aspd, vert_spd, glide, loc, eng, None, alt, None)
         self.assertEqual(len(stable.array), len(alt.array))
         self.assertEqual(len(stable.array), len(head.array))
-        
+
         self.assertEqual(list(stable.array.data),
         #index: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20
                [0, 1, 1, 4, 9, 2, 8, 6, 5, 8, 8, 3, 3, 8, 9, 9, 9, 9, 9, 9, 0])
         self.assertEqual(list(stable.array.mask),
                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
-        
+
         #========== NO GLIDESLOPE ==========
         # Test without the use of Glideslope (not on it at 1000ft) therefore
         # instability for index 7-10 is now due to low Engine Power
@@ -1537,7 +1566,7 @@ class TestStableApproach(unittest.TestCase):
         self.assertEqual(list(stable.array.data),
         #index: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20
                [0, 1, 1, 4, 9, 2, 8, 8, 8, 8, 8, 3, 3, 8, 9, 9, 9, 9, 9, 9, 0])
-        
+
         #========== VERTICAL SPEED ==========
         # Test with a lot of vertical speed (rather than just gusts above)
         v2 = [-1800] * 20
@@ -1548,8 +1577,8 @@ class TestStableApproach(unittest.TestCase):
                [0, 1, 1, 4, 9, 2, 7, 7, 7, 7, 7, 3, 3, 7, 7, 7, 9, 9, 9, 9, 0])
 
         #========== UNSTABLE GLIDESLOPE JUST ABOVE 200ft ==========
-        # Test that with unstable glideslope just before 200ft, this stability 
-        # reason is continued to touchdown. Higher level checks (Heading at 3) 
+        # Test that with unstable glideslope just before 200ft, this stability
+        # reason is continued to touchdown. Higher level checks (Heading at 3)
         # still take priority at indexes 11-12
         #                                        219ft == 1.5 dots
         g3 = [ 6,  6,  6,  6,  0, .5, .5,-.5,1.2,1.5,1.4,1.3,  0,  0,  0,  0,  0, -2, -2, -2, -2]
@@ -1559,21 +1588,21 @@ class TestStableApproach(unittest.TestCase):
         self.assertEqual(list(stable.array.data),
         #index: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20
                [0, 1, 1, 4, 9, 2, 8, 6, 5, 5, 5, 3, 3, 5, 5, 5, 5, 5, 5, 5, 0])
-        
-        
+
+
     def test_with_real_data(self):
-        
-        apps = S(items=[Section(name='Approach And Landing', 
-                                slice=slice(2702, 2993, None), 
+
+        apps = S(items=[Section(name='Approach And Landing',
+                                slice=slice(2702, 2993, None),
                                 start_edge=2702.0, stop_edge=2993.0)])
-        
+
         #def save_test_node(param):
             #param.save('../tests/test_data/Stable Approach - '+param.name+'.nod')
 
         def test_node(name):
             return load(os.path.join(test_data_path, 'Stable Approach - '+name+'.nod'))
         stable = StableApproach()
-        
+
         gear = test_node('Gear Down')
         flap = test_node('Flap')
         tdev = test_node('Track Deviation From Runway')
@@ -1596,7 +1625,7 @@ class TestStableApproach(unittest.TestCase):
             eng_epr=None,
             alt=alt,
             vapp=None)
-        
+
         self.assertEqual(len(stable.array), len(alt.array))
         analysed = np.ma.clump_unmasked(stable.array)
         self.assertEqual(len(analysed), 1)
@@ -1604,7 +1633,7 @@ class TestStableApproach(unittest.TestCase):
         self.assertEqual(analysed[0].start, apps[0].slice.start)
         # stop is 10 secs after touchdown
         self.assertEqual(analysed[0].stop, 2946)
-        
+
         sect = stable.array[analysed[0]]
         # assert that last few values are correct (masked in gear and flap params should not influence end result)
         self.assertEqual(list(sect[-4:]), ['Stable']*4)
@@ -1645,10 +1674,10 @@ class TestStickShaker(unittest.TestCase):
                        offset=0.7, frequency=2.0,
                        values_mapping = {0: '-',1: 'Shake',})
         ss=StickShaker()
-        self.assertRaises(ValueError, ss.derive, 
-                          left, None, None, None, None, None, 
+        self.assertRaises(ValueError, ss.derive,
+                          left, None, None, None, None, None,
                           A('Frame', 'B777'))
-        
+
 class TestStickPusher(unittest.TestCase):
 
     def test_can_operate(self):
@@ -1807,7 +1836,7 @@ class TestTakeoffConfigurationWarning(unittest.TestCase):
              'Takeoff Configuration Gear Warning',
              'Takeoff Configuration Rudder Warning',
              'Takeoff Configuration Spoiler Warning',)))
-    
+
     @unittest.skip('Test Not Implemented')
     def test_derive_basic(self):
         pass
@@ -1890,9 +1919,9 @@ class TestTAWSAlert(unittest.TestCase):
 
     def test_derive_zeros(self):
         result = [0,0,0,0,0,0,0,0,1,0,1,1,1,0,0,0,0,0,0,0]
-        
+
         terrain_array = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-        
+
         caution = M(name='TAWS Caution Terrain', array=np.ma.array(terrain_array), values_mapping={1:'Warning'})
         caution.array.mask = True
 
@@ -1916,52 +1945,52 @@ class TestTAWSAlert(unittest.TestCase):
 
 
 class TestTAWSDontSink(unittest.TestCase):
-    
+
     def test_can_operate(self):
         self.assertEqual(TAWSDontSink.get_operational_combinations(),
                          [('TAWS (L) Dont Sink',),
                           ('TAWS (R) Dont Sink',),
                           ('TAWS (L) Dont Sink', 'TAWS (R) Dont Sink')])
-    
+
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         pass
 
 
 class TestTAWSGlideslopeCancel(unittest.TestCase):
-    
+
     def test_can_operate(self):
         self.assertEqual(TAWSGlideslopeCancel.get_operational_combinations(),
                          [('TAWS (L) Glideslope Cancel',),
                           ('TAWS (R) Glideslope Cancel',),
                           ('TAWS (L) Glideslope Cancel', 'TAWS (R) Glideslope Cancel')])
-    
+
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         pass
 
 
 class TestTAWSTooLowGear(unittest.TestCase):
-    
+
     def test_can_operate(self):
         self.assertEqual(TAWSTooLowGear.get_operational_combinations(),
                          [('TAWS (L) Too Low Gear',),
                           ('TAWS (R) Too Low Gear',),
                           ('TAWS (L) Too Low Gear', 'TAWS (R) Too Low Gear')])
-    
+
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         pass
 
 
 class TestTCASFailure(unittest.TestCase):
-    
+
     def test_can_operate(self):
         self.assertEqual(TCASFailure.get_operational_combinations(),
                          [('TCAS (L) Failure',),
                           ('TCAS (R) Failure',),
                           ('TCAS (L) Failure', 'TCAS (R) Failure')])
-    
+
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         pass
