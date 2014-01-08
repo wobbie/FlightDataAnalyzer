@@ -3796,7 +3796,7 @@ class TestILSGlideslopeDeviation500To200FtMax(unittest.TestCase, ILSTest):
     # FIXME: Need to amend the test data as it produces no key point value for
     #        the 500-200ft altitude range. Originally this was not a problem
     #        before we split the 1000-250ft range in two.
-    @unittest.expectedFailure
+    @unittest.skip('Test does not work... Need to amend test data.')
     def test_derive_four_peaks(self):
         kpv = ILSGlideslopeDeviation500To200FtMax()
         kpv.derive(*self.prepare__glideslope__four_peaks())
