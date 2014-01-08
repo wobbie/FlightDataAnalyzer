@@ -166,6 +166,7 @@ from analysis_engine.derived_parameters import (
     V2Lookup,
     Vref,
     VrefLookup,
+    VMOLookup,
 )
 
 
@@ -5324,6 +5325,129 @@ class TestVrefLookup(unittest.TestCase, NodeTest):
         expected = np.ma.array(data=[0] * 128, mask=True)
         expected[2:42] = 135
         expected[66:106] = 135
+        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+
+
+########################################
+# Maximum Operating Speed (VMO)
+
+
+class TestVMOLookup(unittest.TestCase, NodeTest):
+
+    class VSX(VelocitySpeed):
+        '''
+        Table for aircraft with undefined VMO.
+        '''
+        tables = {}
+
+    class VS0(VelocitySpeed):
+        '''
+        Table for aircraft that don't have a VMO.
+        '''
+        tables = {'vmo': None}
+
+    class VS1(VelocitySpeed):
+        '''
+        Table for aircraft that have a fixed value for VMO.
+        '''
+        tables = {'vmo': 350}
+
+    class VS2(VelocitySpeed):
+        '''
+        Table for aircraft that have linear interpolated values for VMO.
+        '''
+        tables = {'vmo': {
+            'altitude': (  0, 15000, 25000, 40000),
+               'speed': (350,   350,   300,   300),
+        }}
+
+    class VS3(VelocitySpeed):
+        '''
+        Table for aircraft that have stepped values for VMO.
+        '''
+        tables = {'vmo': {
+            'altitude': (  0, 20000, 20000, 40000),
+               'speed': (350,   350,   300,   300),
+        }}
+
+    def setUp(self):
+        self.node_class = VMOLookup
+        self.altitude = P(name='Altitude', array=np.ma.arange(0, 50000, 1000))
+
+    @patch('analysis_engine.library.at')
+    def test_can_operate(self, at):
+        # Assume that lookup tables are found correctly...
+        at.get_vspeed_map.return_value = self.VS0
+        keys = ('model', 'series', 'family', 'engine_type', 'engine_series')
+        self.assertTrue(self.node_class.can_operate(
+            ('Altitude STD', 'Model', 'Series', 'Family', 'Engine Series',
+             'Engine Type'),
+            **dict(izip(keys, self.generate_attributes('boeing')))
+        ))
+        # Assume that lookup tables are not found correctly...
+        at.get_vspeed_map.return_value = self.VSX
+        keys = ('model', 'series', 'family', 'engine_type', 'engine_series')
+        self.assertFalse(self.node_class.can_operate(
+            ('Altitude STD', 'Model', 'Series', 'Family', 'Engine Series',
+             'Engine Type'),
+            **dict(izip(keys, self.generate_attributes('boeing')))
+        ))
+
+    @patch('analysis_engine.library.at')
+    def test_derive__none(self, at):
+        attributes = self.generate_attributes('boeing')
+        at.get_vspeed_map.return_value = self.VS0
+
+        node = self.node_class()
+        node.derive(self.altitude, *attributes)
+
+        attributes = (a.value for a in attributes)
+        at.get_vspeed_map.assert_called_once_with(*attributes)
+        expected = np.ma.array(data=[0] * 50, mask=True)
+        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+
+    @patch('analysis_engine.library.at')
+    def test_derive__fixed(self, at):
+        attributes = self.generate_attributes('boeing')
+        at.get_vspeed_map.return_value = self.VS1
+
+        node = self.node_class()
+        node.derive(self.altitude, *attributes)
+
+        attributes = (a.value for a in attributes)
+        at.get_vspeed_map.assert_called_once_with(*attributes)
+        expected = np.ma.repeat(350, 50)
+        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+
+    @patch('analysis_engine.library.at')
+    def test_derive__linear(self, at):
+        attributes = self.generate_attributes('boeing')
+        at.get_vspeed_map.return_value = self.VS2
+
+        node = self.node_class()
+        node.derive(self.altitude, *attributes)
+
+        attributes = (a.value for a in attributes)
+        at.get_vspeed_map.assert_called_once_with(*attributes)
+        expected = np.ma.array(data=[0] * 50, mask=True, dtype=float)
+        expected[0:16] = 350
+        expected[16:26] = np.ma.arange(345, 295, -5)
+        expected[26:41] = 300
+        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+
+    @patch('analysis_engine.library.at')
+    def test_derive__stepped(self, at):
+        attributes = self.generate_attributes('boeing')
+        at.get_vspeed_map.return_value = self.VS3
+
+        node = self.node_class()
+        node.derive(self.altitude, *attributes)
+
+        attributes = (a.value for a in attributes)
+        at.get_vspeed_map.assert_called_once_with(*attributes)
+        expected = np.ma.array(data=[0] * 50, mask=True)
+        expected[0:20] = 350
+        expected[20:41] = 300
         ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
 
 

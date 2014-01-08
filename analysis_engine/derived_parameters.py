@@ -6392,4 +6392,53 @@ class VrefLookup(DerivedParameterNode):
                 continue
 
 
+########################################
+# Maximum Operating Speed (VMO)
+
+
+class VMOLookup(DerivedParameterNode):
+    '''
+    Maximum Operating Speed (VMO) can be derived for different aircraft.
+
+    In cases where values cannot be derived solely from recorded parameters, we
+    can make use of a look-up table to determine values for velocity speeds.
+
+    For VMO, looking up a value requires the pressure altitude.
+    '''
+
+    name = 'VMO Lookup'
+    units = ut.KT
+
+    @classmethod
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family'),
+                    engine_type=A('Engine Type'), engine_series=A('Engine Series')):
+
+        core = all_of((
+            'Altitude STD',
+            'Model',
+            'Series',
+            'Family',
+            'Engine Type',
+            'Engine Series',
+        ), available)
+
+        attrs = (model, series, family, engine_type, engine_series)
+        return core and lookup_table(cls, 'vmo', *attrs)
+
+    def derive(self,
+               alt_std=P('Altitude STD'),
+               model=A('Model'),
+               series=A('Series'),
+               family=A('Family'),
+               engine_type=A('Engine Type'),
+               engine_series=A('Engine Series')):
+
+        # Initialise the velocity speed lookup table:
+        attrs = (model, series, family, engine_type, engine_series)
+        table = lookup_table(self, 'vmo', *attrs)
+
+        self.array = table.vmo(alt_std.array)
+
+
 ##############################################################################
