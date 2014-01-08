@@ -6673,3 +6673,44 @@ def is_day(when, latitude, longitude, twilight='civil'):
         return True # It is Day
     else:
         return False # It is Night
+
+
+##### TODO: Add memoize caching... Currently breaks tests!
+####from flightdatautilities.cache import memoize
+####@memoize
+def lookup_table(obj, name, _am, _as, _af, _et=None, _es=None):
+    '''
+    Fetch a lookup table by name for the specified aircraft.
+
+    Handles logging on the passed object if the lookup table is not found.
+
+    :param obj: the node class or instance calling this function.
+    :type obj: Node
+    :param name: the name of the table to lookup.
+    :type name: string
+    :param _am: the aircraft model attribute.
+    :type _am: Attribute
+    :param _as: the aircraft series attribute.
+    :type _as: Attribute
+    :param _af: the aircraft family attribute.
+    :type _af: Attribute
+    :param _et: the engine type attribute.
+    :type _et: Attribute
+    :param _es: the engine series attribute.
+    :type _es: Attribute
+    :returns: the instantiated velocity speed table.
+    :rtype: VelocitySpeed or None
+    '''
+    attributes = (_am, _as, _af, _et, _es)
+    attributes = [(a.value if a else None) for a in attributes]
+    try:
+        _vs = at.get_vspeed_map(*attributes)()
+    except KeyError:
+        pass
+    else:
+        if name in _vs.tables or name in _vs.fallback:
+            return _vs
+    message = 'No %s table available for '
+    message += ', '.join("'%s'" for i in range(len(attributes)))
+    obj.warning(message, name, *attributes)
+    return None

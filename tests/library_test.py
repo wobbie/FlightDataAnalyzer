@@ -7,6 +7,7 @@ import unittest
 
 from datetime import datetime
 from math import sqrt
+from mock import patch
 from time import clock
 
 from analysis_engine.flight_attribute import LandingRunway
@@ -5726,6 +5727,59 @@ class TestSecondWindow(unittest.TestCase):
         sw = load(os.path.join(test_data_path, 'second_window.nod'))
         res = second_window(sw.array, sw.frequency, 3)
         self.assertEqual(np.ma.count(res), 40975)
+
+
+class TestLookupTable(unittest.TestCase):
+
+    class Expected(object):
+        tables = {'v2': {}}
+        fallback = {'vref': {}}
+
+    def setUp(self):
+        self.attrs = (
+            A('Model', 'B737-333'),
+            A('Series', 'B737-300'),
+            A('Family', 'B737 Classic'),
+            A('Engine Type', 'CFM56-3B1'),
+            A('Engine Series', 'CRM56-3'),
+        )
+        self.values = [a.value for a in self.attrs]
+
+    @patch('analysis_engine.library.at')
+    @patch.object(P, 'warning')
+    def test_lookup_table__not_found(self, log, at):
+        at.get_vspeed_map.side_effect = KeyError
+        table = lookup_table(P, 'v2', *self.attrs)
+        at.get_vspeed_map.assert_called_once_with(*self.values)
+        self.assertEqual(log.call_count, 1)
+        self.assertEqual(table, None)
+
+    @patch('analysis_engine.library.at')
+    @patch.object(P, 'warning')
+    def test_lookup_table__found_standard_table(self, log, at):
+        at.get_vspeed_map.return_value = self.Expected
+        table = lookup_table(P, 'v2', *self.attrs)
+        at.get_vspeed_map.assert_called_once_with(*self.values)
+        self.assertEqual(log.call_count, 0)
+        self.assertIsInstance(table, self.Expected)
+
+    @patch('analysis_engine.library.at')
+    @patch.object(P, 'warning')
+    def test_lookup_table__found_fallback_table(self, log, at):
+        at.get_vspeed_map.return_value = self.Expected
+        table = lookup_table(P, 'vref', *self.attrs)
+        at.get_vspeed_map.assert_called_once_with(*self.values)
+        self.assertEqual(log.call_count, 0)
+        self.assertIsInstance(table, self.Expected)
+
+    @patch('analysis_engine.library.at')
+    @patch.object(P, 'warning')
+    def test_lookup_table__found_class_without_table(self, log, at):
+        at.get_vspeed_map.return_value = self.Expected
+        table = lookup_table(P, 'vmo', *self.attrs)
+        at.get_vspeed_map.assert_called_once_with(*self.values)
+        self.assertEqual(log.call_count, 1)
+        self.assertEqual(table, None)
 
 
 if __name__ == '__main__':
