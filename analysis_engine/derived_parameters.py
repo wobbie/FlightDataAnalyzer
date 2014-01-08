@@ -6123,4 +6123,65 @@ class V2(DerivedParameterNode):
             return
 
 
+########################################
+# Reference Speed (Vref)
+
+
+class Vref(DerivedParameterNode):
+    '''
+    Reference Speed (Vref) can be derived for different aircraft.
+
+    If the value is provided in an achieved flight record (AFR), we use this in
+    preference. This allows us to cater for operators that use improved
+    performance tables so that they can provide the values that they used.
+
+    Some other aircraft types record multiple parameters in the same location
+    within data frames. We need to select only the data that we are interested
+    in, i.e. the Vref values.
+
+    The value is restricted to the approach and landing phases which includes
+    all approaches that result in landings and go-arounds.
+    '''
+
+    units = ut.KT
+
+    @classmethod
+    def can_operate(cls, available, afr_vref=A('AFR Vref')):
+
+        afr = all_of((
+            'Airspeed',
+            'AFR Vref',
+            'Approach And Landing',
+        ), available) and afr_vref and afr_vref.value >= AIRSPEED_THRESHOLD
+
+        embraer = all_of((
+            'Airspeed',
+            'V1-Vref',
+            'Approach And Landing',
+        ), available)
+
+        return afr or embraer
+
+    def derive(self,
+               airspeed=P('Airspeed'),
+               v1_vref=P('V1-Vref'),
+               afr_vref=A('AFR Vref'),
+               approaches=S('Approach And Landing')):
+
+        # Prepare a zeroed, masked array based on the airspeed:
+        self.array = np_ma_masked_zeros_like(airspeed.array, np.double)
+
+        # 1. Use value provided in achieved flight record (if available):
+        if afr_vref and afr_vref.value >= AIRSPEED_THRESHOLD:
+            for approach in approaches:
+                self.array[approach.slice] = afr_vref.value
+            return
+
+        # 2. Derive parameter for Embraer 170/190:
+        if v1_vref:
+            for approach in approaches:
+                self.array[approach.slice] = v1_vref.array[approach.slice]
+            return
+
+
 ##############################################################################

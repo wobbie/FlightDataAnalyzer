@@ -160,6 +160,7 @@ from analysis_engine.derived_parameters import (
     WindDirectionTrue,
     # Velocity Speeds:
     V2,
+    Vref,
 )
 
 debug = sys.gettrace() is not None
@@ -4705,6 +4706,60 @@ class TestV2(unittest.TestCase, NodeTest):
         v2_vac = P('V2-Vac', np.ma.array([150] * 128))
         node = self.node_class()
         node.derive(self.airspeed, v2_vac, None, None, None, self.takeoffs, self.climbs, manufacturer)
+        expected = np.ma.array(data=[0] * 128, mask=True)
+        expected[2:42] = 150
+        expected[66:106] = 150
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+
+########################################
+# Reference Speed (Vref)
+
+
+class TestVref(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = Vref
+        self.airspeed = P(name='Airspeed', array=np.ma.array([200] * 128))
+        self.approaches = S(name='Approach And Landing', items=[
+            Section(name='Approach And Landing', slice=slice(2, 42), start_edge=2, stop_edge=42),
+            Section(name='Approach And Landing', slice=slice(66, 106), start_edge=66, stop_edge=106),
+        ])
+
+    def test_can_operate(self):
+        # AFR:
+        self.assertTrue(self.node_class.can_operate(
+            ('Airspeed', 'AFR Vref', 'Approach And Landing'),
+            afr_vref=A(name='AFR Vref', value=120),
+        ))
+        self.assertFalse(self.node_class.can_operate(
+            ('Airspeed', 'AFR Vref', 'Approach And Landing'),
+            afr_vref=A(name='AFR Vref', value=70),
+        ))
+        # Embraer:
+        self.assertTrue(self.node_class.can_operate(
+            ('Airspeed', 'V1-Vref', 'Approach And Landing'),
+        ))
+
+    def test_derive__nothing(self):
+        node = self.node_class()
+        node.derive(self.airspeed, None, None, self.approaches)
+        expected = np.ma.array(data=[0] * 128, mask=True)
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__afr_vref(self):
+        afr_vref = A(name='AFR Vref', value=120)
+        node = self.node_class()
+        node.derive(self.airspeed, None, afr_vref, self.approaches)
+        expected = np.ma.array(data=[0] * 128, mask=True)
+        expected[2:42] = 120
+        expected[66:106] = 120
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__embraer(self):
+        v1_vref = P('V1-Vref', np.ma.array([150] * 128))
+        node = self.node_class()
+        node.derive(self.airspeed, v1_vref, None, self.approaches)
         expected = np.ma.array(data=[0] * 128, mask=True)
         expected[2:42] = 150
         expected[66:106] = 150
