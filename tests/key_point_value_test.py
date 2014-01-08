@@ -2810,11 +2810,12 @@ class TestAltitudeMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
         self.assertTrue(False, msg='Test Not Implemented')
 
 
-class TestAltitudeDuringGoAroundMin(unittest.TestCase, CreateKPVsAtKTIsTest):
+class TestAltitudeDuringGoAroundMin(unittest.TestCase, CreateKPVsWithinSlicesTest):
 
     def setUp(self):
         self.node_class = AltitudeDuringGoAroundMin
-        self.operational_combinations = [('Altitude AAL', 'Go Around')]
+        self.operational_combinations = [('Altitude AAL', 'Go Around And Climbout')]
+        self.function = min_value
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):

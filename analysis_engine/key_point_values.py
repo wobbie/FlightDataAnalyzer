@@ -2830,7 +2830,7 @@ class AltitudeDuringGoAroundMin(KeyPointValueNode):
                alt_aal=P('Altitude AAL'),
                go_arounds=S('Go Around And Climbout')):
 
-        self.create_kpvs_within_slices(alt_aal.array, go_arounds, max_value)
+        self.create_kpvs_within_slices(alt_aal.array, go_arounds, min_value)
 
 
 class HeightAtGoAround(KeyPointValueNode):
