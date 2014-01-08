@@ -164,6 +164,8 @@ from analysis_engine.derived_parameters import (
     # Velocity Speeds:
     AirspeedMinusV2,
     AirspeedMinusV2For3Sec,
+    AirspeedMinusVapp,
+    AirspeedMinusVappFor3Sec,
     AirspeedMinusVref,
     AirspeedMinusVrefFor3Sec,
     MMOLookup,
@@ -5754,6 +5756,96 @@ class TestAirspeedMinusVrefFor3Sec(unittest.TestCase, NodeTest):
         ]
         self.airspeed = P(
             name='Airspeed Minus Vref',
+            array=np.ma.array([100.0] * 6 + [110] * 7 + [120] + [100] * 6),
+            frequency=2,
+        )
+
+    def test_derive__basic(self):
+        node = self.node_class()
+        node.get_derived([self.airspeed])
+        expected = np.ma.array([100.0] * 6 + [110] * 8 + [100] * 6)
+        expected[-3:] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__align(self):
+        self.airspeed.frequency = 1
+        node = self.node_class()
+        node.get_derived([self.airspeed])
+        expected = np.ma.array([100.0] * 11 + [105] + [110] * 16 + [100] * 12)
+        expected[-4:] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+
+########################################
+# Airspeed Minus Vapp
+
+
+class TestAirspeedMinusVapp(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = AirspeedMinusVapp
+        self.operational_combinations = [
+            ('Airspeed', 'Vapp', 'Approach And Landing'),
+            ('Airspeed', 'Vapp Lookup', 'Approach And Landing'),
+            ('Airspeed', 'Vapp', 'Vapp Lookup', 'Approach And Landing'),
+        ]
+        self.airspeed = P('Airspeed', np.ma.repeat(102, 6))
+        self.vapp_record = P('Vapp', np.ma.arange(90, 120, 5))
+        self.vapp_lookup = P('Vapp Lookup', np.ma.arange(95, 125, 5))
+        self.approaches = S(name='Approach And Landing', items=[
+            Section(name='Approach And Landing', slice=slice(0, 4), start_edge=0, stop_edge=4),
+        ])
+
+    def test_derive__record_only(self):
+        node = self.node_class()
+        node.derive(self.airspeed, self.vapp_record, None, self.approaches)
+        expected = np.ma.arange(12, -18, -5)
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__lookup_only(self):
+        node = self.node_class()
+        node.derive(self.airspeed, None, self.vapp_lookup, self.approaches)
+        expected = np.ma.arange(7, -22, -5)
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__prefer_record(self):
+        node = self.node_class()
+        node.derive(self.airspeed, self.vapp_record, self.vapp_lookup, self.approaches)
+        expected = np.ma.arange(12, -18, -5)
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__record_masked(self):
+        self.vapp_record.array.mask = True
+        node = self.node_class()
+        node.derive(self.airspeed, self.vapp_record, self.vapp_lookup, self.approaches)
+        expected = np.ma.arange(7, -22, -5)
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__both_masked(self):
+        self.vapp_record.array.mask = True
+        self.vapp_lookup.array.mask = True
+        node = self.node_class()
+        node.derive(self.airspeed, self.vapp_record, self.vapp_lookup, self.approaches)
+        expected = np.ma.array(data=[0] * 6, mask=[True] * 6)
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__masked_within_phase(self):
+        self.vapp_record.array[:-1] = np.ma.masked
+        node = self.node_class()
+        node.derive(self.airspeed, self.vapp_record, self.vapp_lookup, self.approaches)
+        expected = np.ma.arange(7, -22, -5)
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+
+class TestAirspeedMinusVappFor3Sec(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = AirspeedMinusVappFor3Sec
+        self.operational_combinations = [
+            ('Airspeed Minus Vapp',),
+        ]
+        self.airspeed = P(
+            name='Airspeed Minus Vapp',
             array=np.ma.array([100.0] * 6 + [110] * 7 + [120] + [100] * 6),
             frequency=2,
         )

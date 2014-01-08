@@ -6632,4 +6632,65 @@ class AirspeedMinusVrefFor3Sec(DerivedParameterNode):
         self.array = second_window(speed.array, self.frequency, 3)
 
 
+########################################
+# Airspeed Minus Vapp
+
+
+class AirspeedMinusVapp(DerivedParameterNode):
+    '''
+    Airspeed relative to the Approach Speed (Vapp).
+
+    Values of Vapp are taken from recorded or derived values if available,
+    otherwise we fall back to using a value from a lookup table.
+
+    We also check to ensure that we have some valid samples in any recorded or
+    derived parameter, otherwise, again, we fall back to lookup tables. To
+    avoid issues with small samples of invalid data, we check that the area of
+    data we are interested in has no masked values.
+    '''
+
+    units = ut.KT
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return all_of((
+            'Airspeed',
+            'Approach And Landing',
+        ), available) and any_of(('Vapp', 'Vapp Lookup'), available)
+
+    def derive(self,
+               airspeed=P('Airspeed'),
+               vapp_recorded=P('Vapp'),
+               vapp_lookup=P('Vapp Lookup'),
+               approaches=S('Approach And Landing')):
+
+        # Determine the sections of flight where Vref must be valid:
+        phases = [approach.slice for approach in approaches]
+
+        vapp = first_valid_parameter(vapp_recorded, vapp_lookup, phases=phases)
+
+        if vapp is None:
+            self.array = np_ma_masked_zeros_like(airspeed.array)
+            return
+
+        self.array = airspeed.array - vapp.array
+
+
+class AirspeedMinusVappFor3Sec(DerivedParameterNode):
+    '''
+    Airspeed relative to the Approach Speed (Vapp) over a 3 second window.
+
+    See the derived parameter 'Airspeed Minus Vapp' for further details.
+    '''
+
+    align_frequency = 2
+    align_offset = 0
+    units = ut.KT
+
+    def derive(self, speed=P('Airspeed Minus Vapp')):
+
+        self.array = second_window(speed.array, self.frequency, 3)
+
+
 ##############################################################################
