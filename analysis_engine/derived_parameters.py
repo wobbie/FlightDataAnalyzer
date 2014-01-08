@@ -6693,4 +6693,61 @@ class AirspeedMinusVappFor3Sec(DerivedParameterNode):
         self.array = second_window(speed.array, self.frequency, 3)
 
 
+########################################
+# Airspeed Relative
+
+
+class AirspeedRelative(DerivedParameterNode):
+    '''
+    Airspeed relative to Vref/Vapp.
+
+    See the derived parameters 'Airspeed Minus Vref' and 'Airspeed Minus Vapp'
+    for further details.
+    '''
+
+    units = ut.KT
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return any_of((
+            'Airspeed Minus Vapp',
+            'Airspeed Minus Vref',
+        ), available)
+
+    def derive(self,
+               vapp=P('Airspeed Minus Vapp'),
+               vref=P('Airspeed Minus Vref')):
+
+        parameter = vapp or vref
+        self.array = parameter.array
+
+
+class AirspeedRelativeFor3Sec(DerivedParameterNode):
+    '''
+    Airspeed relative to Vapp/Vref over a 3 second window.
+
+    See the derived parameter 'Airspeed Relative' for further details.
+    '''
+
+    align_frequency = 2
+    align_offset = 0
+    units = ut.KT
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return any_of((
+            'Airspeed Minus Vapp For 3 Sec',
+            'Airspeed Minus Vref For 3 Sec',
+        ), available)
+
+    def derive(self,
+               vapp=P('Airspeed Minus Vapp For 3 Sec'),
+               vref=P('Airspeed Minus Vref For 3 Sec')):
+
+        parameter = vapp or vref
+        self.array = parameter.array
+
+
 ##############################################################################

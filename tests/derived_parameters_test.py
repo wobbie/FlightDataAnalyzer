@@ -168,6 +168,8 @@ from analysis_engine.derived_parameters import (
     AirspeedMinusVappFor3Sec,
     AirspeedMinusVref,
     AirspeedMinusVrefFor3Sec,
+    AirspeedRelative,
+    AirspeedRelativeFor3Sec,
     MMOLookup,
     V2,
     V2Lookup,
@@ -5864,6 +5866,68 @@ class TestAirspeedMinusVappFor3Sec(unittest.TestCase, NodeTest):
         expected = np.ma.array([100.0] * 11 + [105] + [110] * 16 + [100] * 12)
         expected[-4:] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
+
+
+########################################
+# Airspeed Relative
+
+
+class TestAirspeedRelative(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = AirspeedRelative
+        self.operational_combinations = [
+            ('Airspeed Minus Vapp',),
+            ('Airspeed Minus Vref',),
+            ('Airspeed Minus Vapp', 'Airspeed Minus Vref'),
+        ]
+        self.vapp = P(name='Airspeed Minus Vapp', array=np.ma.arange(100, 200))
+        self.vref = P(name='Airspeed Minus Vref', array=np.ma.arange(200, 300))
+
+    def test_derive__vapp(self):
+        node = self.node_class()
+        node.derive(self.vapp, None)
+        ma_test.assert_masked_array_equal(node.array, self.vapp.array)
+
+    def test_derive__vref(self):
+        node = self.node_class()
+        node.derive(None, self.vref)
+        ma_test.assert_masked_array_equal(node.array, self.vref.array)
+
+    def test_derive__both(self):
+        node = self.node_class()
+        node.derive(self.vapp, self.vref)
+        ma_test.assert_masked_array_equal(node.array, self.vapp.array)
+
+
+class TestAirspeedRelativeFor3Sec(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = AirspeedRelativeFor3Sec
+        self.operational_combinations = [
+            ('Airspeed Minus Vapp For 3 Sec',),
+            ('Airspeed Minus Vref For 3 Sec',),
+            ('Airspeed Minus Vapp For 3 Sec', 'Airspeed Minus Vref For 3 Sec'),
+        ]
+        self.vapp = P(name='Airspeed Minus Vapp For 3 Sec',
+                      array=np.ma.arange(100, 200), frequency=2)
+        self.vref = P(name='Airspeed Minus Vref For 3 Sec',
+                      array=np.ma.arange(200, 300), frequency=2)
+
+    def test_derive__vapp(self):
+        node = self.node_class()
+        node.get_derived([self.vapp, None])
+        ma_test.assert_masked_array_equal(node.array, self.vapp.array)
+
+    def test_derive__vref(self):
+        node = self.node_class()
+        node.get_derived([None, self.vref])
+        ma_test.assert_masked_array_equal(node.array, self.vref.array)
+
+    def test_derive__both(self):
+        node = self.node_class()
+        node.get_derived([self.vapp, self.vref])
+        ma_test.assert_masked_array_equal(node.array, self.vapp.array)
 
 
 ##############################################################################
