@@ -6278,4 +6278,118 @@ class Vref(DerivedParameterNode):
             return
 
 
+class VrefLookup(DerivedParameterNode):
+    '''
+    Reference Speed (Vref) can be derived for different aircraft.
+
+    In cases where values cannot be derived solely from recorded parameters, we
+    can make use of a look-up table to determine values for velocity speeds.
+
+    For Vref, looking up a value requires the weight and flap (surface detents)
+    at touchdown or the lowest point in a go-around.
+
+    Flap is used as the first dependency to avoid interpolation of flap detents
+    when flap is recorded at a lower frequency than airspeed.
+    '''
+
+    units = ut.KT
+
+    @classmethod
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family'),
+                    engine_type=A('Engine Type'), engine_series=A('Engine Series')):
+
+        core = all_of((
+            'Airspeed',
+            'Approach And Landing',
+            'Model',
+            'Series',
+            'Family',
+            'Engine Type',
+            'Engine Series',
+        ), available)
+
+        flap = any_of((
+            'Configuration',
+            'Flap',
+        ), available)
+
+        weight = any_of((
+            'Gross Weight Smoothed',
+            'Touchdown',
+        ), available)
+
+        attrs = (model, series, family, engine_type, engine_series)
+        return core and flap and weight and lookup_table(cls, 'vref', *attrs)
+
+    def derive(self,
+               flap=M('Flap'),
+               conf=M('Configuration'),
+               air_spd=P('Airspeed'),
+               gw=P('Gross Weight Smoothed'),
+               approaches=S('Approach And Landing'),
+               touchdowns=KTI('Touchdown'),
+               model=A('Model'),
+               series=A('Series'),
+               family=A('Family'),
+               engine_type=A('Engine Type'),
+               engine_series=A('Engine Series')):
+
+        # Prepare a zeroed, masked array based on the airspeed:
+        self.array = np_ma_masked_zeros_like(air_spd.array, np.double)
+
+        # Determine the sections of flight to populate Vref for:
+        phases = [approach.slice for approach in approaches]
+
+        # Initialise the velocity speed lookup table:
+        attrs = (model, series, family, engine_type, engine_series)
+        table = lookup_table(self, 'vref', *attrs)
+
+        # If we have gross weight, repair gaps up to 2 superframes in length:
+        if gw is not None:
+            try:
+                # TODO: Things to consider related to gross weight:
+                #       - Does smoothed gross weight need to be repaired?
+                repaired_gw = repair_mask(gw.array, repair_duration=130,
+                                          extrapolate=True)
+            except ValueError:
+                self.warning("'%s' will be fully masked because '%s' array "
+                             "could not be repaired.", self.name, gw.name)
+                return
+
+        # Determine the maximum detent in advance to avoid multiple lookups:
+        parameter = conf or flap
+        max_detent = max(table.vref_detents, key=lambda x: parameter.state.get(x, -1))
+
+        for phase in phases:
+            # Select the maximum flap detent during the phase:
+            index, detent = max_value(parameter.array, phase)
+            # Allow no gross weight for aircraft which use a fixed vspeed:
+            weight = repaired_gw[index] if gw is not None else None
+
+            if touchdowns.get(within_slice=phase) or detent in table.vref_detents:
+                # We either touched down, so use the touchdown flap/conf
+                # detent, or we had reached a maximum flap detent during the
+                # approach which is in the vref table.
+                pass
+            else:
+                # Not the final landing and max detent not in vspeed table,
+                # so use the maximum detent possible as a reference.
+                self.info("No touchdown in this approach and maximum "
+                          "%s '%s' not in lookup table. Using max "
+                          "possible detent '%s' as reference.",
+                          parameter.name, detent, max_detent)
+                detent = max_detent
+
+            try:
+                self.array[phase] = table.vref(detent, weight)
+            except (KeyError, ValueError) as error:
+                self.warning("Error in '%s': %s", self.name, error)
+                # Where the aircraft takes off with flap settings outside the
+                # documented vref range, we need the program to continue without
+                # raising an exception, so that the incorrect flap at landing
+                # can be detected.
+                continue
+
+
 ##############################################################################

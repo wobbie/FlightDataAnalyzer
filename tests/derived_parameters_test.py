@@ -165,6 +165,7 @@ from analysis_engine.derived_parameters import (
     V2,
     V2Lookup,
     Vref,
+    VrefLookup,
 )
 
 
@@ -5068,6 +5069,262 @@ class TestVref(unittest.TestCase, NodeTest):
         expected[2:42] = 150
         expected[66:106] = 150
         ma_test.assert_masked_array_equal(node.array, expected)
+
+
+class TestVrefLookup(unittest.TestCase, NodeTest):
+
+    class VSX(VelocitySpeed):
+        '''
+        Table for aircraft with undefined Vref.
+        '''
+        tables = {}
+
+    class VSC0(VelocitySpeed):
+        '''
+        Table for aircraft with configuration and fallback tables.
+        '''
+        weight_unit = ut.TONNE
+        tables = {'vref': {
+            'weight': ( 35,  40,  45,  50,  55,  60,  65),
+              'Full': (113, 119, 126, 132, 139, 145, 152),
+        }}
+        fallback = {'vref': {'3': 140}}
+
+    class VSC1(VelocitySpeed):
+        '''
+        Table for aircraft with configuration and fallback tables only.
+        '''
+        weight_unit = None
+        fallback = {'vref': {'Full': 135}}
+
+    class VSF0(VelocitySpeed):
+        '''
+        Table for aircraft with flap and fallback tables.
+        '''
+        weight_unit = ut.TONNE
+        tables = {'vref': {
+            'weight': ( 35,  40,  45,  50,  55,  60,  65),
+                '40': (113, 119, 126, 132, 139, 145, 152),
+        }}
+        fallback = {'vref': {'30': 140}}
+
+    class VSF1(VelocitySpeed):
+        '''
+        Table for aircraft with flap and fallback tables only.
+        '''
+        weight_unit = None
+        fallback = {'vref': {'35': 135}}
+
+    def setUp(self):
+        self.node_class = VrefLookup
+        self.airspeed = P(name='Airspeed', array=np.ma.array([200] * 128))
+        self.weight = P(name='Gross Weight Smoothed', array=np.ma.repeat([54192.06, 44192.06], 64))
+        self.touchdowns = KTI(name='Touchdown', items=[
+            KeyTimeInstance(name='Touchdown', index=7),
+            KeyTimeInstance(name='Touchdown', index=71),
+        ])
+        self.approaches = S(name='Approach And Landing', items=[
+            Section(name='Approach And Landing', slice=slice(2, 42), start_edge=2, stop_edge=42),
+            Section(name='Approach And Landing', slice=slice(66, 106), start_edge=66, stop_edge=106),
+        ])
+
+    @patch('analysis_engine.library.at')
+    def test_can_operate(self, at):
+        keys = ('model', 'series', 'family', 'engine_type', 'engine_series')
+        # Assume that lookup tables are found correctly...
+        at.get_vspeed_map.return_value = self.VSF0
+        # Flap w/ Weight:
+        self.assertTrue(self.node_class.can_operate(
+            ('Airspeed', 'Approach And Landing', 'Touchdown',
+             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',
+             'Flap', 'Gross Weight Smoothed'),
+            **dict(izip(keys, self.generate_attributes('boeing')))
+        ))
+        # Configuration w/ Weight:
+        self.assertTrue(self.node_class.can_operate(
+            ('Airspeed', 'Approach And Landing', 'Touchdown',
+             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',
+             'Configuration', 'Gross Weight Smoothed'),
+            **dict(izip(keys, self.generate_attributes('airbus')))
+        ))
+        # Flap w/o Weight:
+        self.assertTrue(self.node_class.can_operate(
+            ('Airspeed', 'Approach And Landing', 'Touchdown',
+             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',
+             'Flap'),
+            **dict(izip(keys, self.generate_attributes('beechcraft')))
+        ))
+        # Configuration w/o Weight:
+        self.assertTrue(self.node_class.can_operate(
+            ('Airspeed', 'Approach And Landing', 'Touchdown',
+             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',
+             'Configuration'),
+            **dict(izip(keys, self.generate_attributes('airbus')))
+        ))
+        # Assume that lookup tables are not found correctly...
+        at.get_vspeed_map.return_value = self.VSX
+        self.assertFalse(self.node_class.can_operate(
+            ('Airspeed', 'Approach And Landing', 'Touchdown',
+             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',
+             'Flap', 'Gross Weight Smoothed'),
+            **dict(izip(keys, self.generate_attributes('boeing')))
+        ))
+
+    @patch('analysis_engine.library.at')
+    def test_derive__conf_with_weight__standard(self, at):
+        array = np.ma.repeat(9, 128)
+        mapping = AVAILABLE_CONF_STATES
+        conf = M(name='Configuration', array=array, values_mapping=mapping)
+
+        attributes = self.generate_attributes('airbus')
+        at.get_vspeed_map.return_value = self.VSC0
+
+        node = self.node_class()
+        node.derive(None, conf, self.airspeed, self.weight, self.approaches,
+                    self.touchdowns, *attributes)
+
+        attributes = (a.value for a in attributes)
+        at.get_vspeed_map.assert_called_once_with(*attributes)
+        expected = np.ma.array(data=[0] * 128, mask=True)
+        expected[2:42] = 137
+        expected[66:106] = 125
+        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+
+    @patch('analysis_engine.library.at')
+    def test_derive__conf_with_weight__fallback(self, at):
+        array = np.ma.repeat(6, 128)
+        mapping = AVAILABLE_CONF_STATES
+        conf = M(name='Configuration', array=array, values_mapping=mapping)
+
+        attributes = self.generate_attributes('airbus')
+        at.get_vspeed_map.return_value = self.VSC0
+
+        node = self.node_class()
+        node.derive(None, conf, self.airspeed, self.weight, self.approaches,
+                    self.touchdowns, *attributes)
+
+        attributes = (a.value for a in attributes)
+        at.get_vspeed_map.assert_called_once_with(*attributes)
+        expected = np.ma.array(data=[0] * 128, mask=True)
+        expected[2:42] = 140
+        expected[66:106] = 140
+        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+
+    @patch('analysis_engine.library.at')
+    def test_derive__conf_without_weight__standard(self, at):
+        array = np.ma.repeat(9, 128)
+        mapping = AVAILABLE_CONF_STATES
+        conf = M(name='Configuration', array=array, values_mapping=mapping)
+
+        attributes = self.generate_attributes('airbus')
+        at.get_vspeed_map.return_value = self.VSC0
+
+        node = self.node_class()
+        node.derive(None, conf, self.airspeed, None, self.approaches,
+                    self.touchdowns, *attributes)
+
+        attributes = (a.value for a in attributes)
+        at.get_vspeed_map.assert_called_once_with(*attributes)
+        expected = np.ma.array(data=[0] * 128, mask=True)
+        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+
+    @patch('analysis_engine.library.at')
+    def test_derive__conf_without_weight__fallback(self, at):
+        array = np.ma.repeat(9, 128)
+        mapping = AVAILABLE_CONF_STATES
+        conf = M(name='Configuration', array=array, values_mapping=mapping)
+
+        attributes = self.generate_attributes('airbus')
+        at.get_vspeed_map.return_value = self.VSC1
+
+        node = self.node_class()
+        node.derive(None, conf, self.airspeed, None, self.approaches,
+                    self.touchdowns, *attributes)
+
+        attributes = (a.value for a in attributes)
+        at.get_vspeed_map.assert_called_once_with(*attributes)
+        expected = np.ma.array(data=[0] * 128, mask=True)
+        expected[2:42] = 135
+        expected[66:106] = 135
+        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+
+    @patch('analysis_engine.library.at')
+    def test_derive__flap_with_weight__standard(self, at):
+        array = np.ma.repeat(40, 128)
+        mapping = {f: str(f) for f in (0, 1, 2, 5, 10, 15, 25, 30, 40)}
+        flap = M(name='Flap', array=array, values_mapping=mapping)
+
+        attributes = self.generate_attributes('boeing')
+        at.get_vspeed_map.return_value = self.VSF0
+
+        node = self.node_class()
+        node.derive(flap, None, self.airspeed, self.weight, self.approaches,
+                    self.touchdowns, *attributes)
+
+        attributes = (a.value for a in attributes)
+        at.get_vspeed_map.assert_called_once_with(*attributes)
+        expected = np.ma.array(data=[0] * 128, mask=True)
+        expected[2:42] = 137
+        expected[66:106] = 125
+        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+
+    @patch('analysis_engine.library.at')
+    def test_derive__flap_with_weight__fallback(self, at):
+        array = np.ma.repeat(30, 128)
+        mapping = {f: str(f) for f in (0, 1, 2, 5, 10, 15, 25, 30, 40)}
+        flap = M(name='Flap', array=array, values_mapping=mapping)
+
+        attributes = self.generate_attributes('boeing')
+        at.get_vspeed_map.return_value = self.VSF0
+
+        node = self.node_class()
+        node.derive(flap, None, self.airspeed, self.weight, self.approaches,
+                    self.touchdowns, *attributes)
+
+        attributes = (a.value for a in attributes)
+        at.get_vspeed_map.assert_called_once_with(*attributes)
+        expected = np.ma.array(data=[0] * 128, mask=True)
+        expected[2:42] = 140
+        expected[66:106] = 140
+        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+
+    @patch('analysis_engine.library.at')
+    def test_derive__flap_without_weight__standard(self, at):
+        array = np.ma.repeat(35, 128)
+        mapping = {f: str(f) for f in (0, 17.5, 35)}
+        flap = M(name='Flap', array=array, values_mapping=mapping)
+
+        attributes = self.generate_attributes('beechcraft')
+        at.get_vspeed_map.return_value = self.VSF0
+
+        node = self.node_class()
+        node.derive(flap, None, self.airspeed, None, self.approaches,
+                    self.touchdowns, *attributes)
+
+        attributes = (a.value for a in attributes)
+        at.get_vspeed_map.assert_called_once_with(*attributes)
+        expected = np.ma.array(data=[0] * 128, mask=True)
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    @patch('analysis_engine.library.at')
+    def test_derive__flap_without_weight__fallback(self, at):
+        array = np.ma.repeat(35, 128)
+        mapping = {f: str(f) for f in (0, 17.5, 35)}
+        flap = M(name='Flap', array=array, values_mapping=mapping)
+
+        attributes = self.generate_attributes('beechcraft')
+        at.get_vspeed_map.return_value = self.VSF1
+
+        node = self.node_class()
+        node.derive(flap, None, self.airspeed, None, self.approaches,
+                    self.touchdowns, *attributes)
+
+        attributes = (a.value for a in attributes)
+        at.get_vspeed_map.assert_called_once_with(*attributes)
+        expected = np.ma.array(data=[0] * 128, mask=True)
+        expected[2:42] = 135
+        expected[66:106] = 135
+        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
 
 
 ##############################################################################
