@@ -29,6 +29,7 @@ from analysis_engine.library import (actuator_mismatch,
                                      dp2tas,
                                      dp_over_p2mach,
                                      filter_vor_ils_frequencies,
+                                     first_valid_parameter,
                                      first_valid_sample,
                                      first_order_lag,
                                      first_order_washout,
@@ -6488,6 +6489,86 @@ class MMOLookup(DerivedParameterNode):
         table = lookup_table(self, 'mmo', *attrs)
 
         self.array = table.mmo(alt_std.array)
+
+
+##############################################################################
+# Relative Airspeeds
+
+
+########################################
+# Airspeed Minus V2
+
+
+class AirspeedMinusV2(DerivedParameterNode):
+    '''
+    Airspeed relative to the Takeoff Safety Speed (V2).
+
+    Values of V2 are taken from recorded or derived values if available,
+    otherwise we fall back to using a value from a lookup table.
+
+    We also check to ensure that we have some valid samples in any recorded or
+    derived parameter, otherwise, again, we fall back to lookup tables. To
+    avoid issues with small samples of invalid data, we check that the area of
+    data we are interested in has no masked values.
+
+    As an additional step for the V2 parameter, we repair the masked values and
+    extrapolate as sometimes the recorded parameter does not extend beyond the
+    period during which the aircraft is on the runway.
+    '''
+
+    units = ut.KT
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return all_of((
+            'Airspeed',
+            'Takeoff Acceleration Start',
+            'Climb Start',
+        ), available) and any_of(('V2', 'V2 Lookup'), available)
+
+    def derive(self,
+               airspeed=P('Airspeed'),
+               v2_recorded=P('V2'),
+               v2_lookup=P('V2 Lookup'),
+               takeoff_starts=KTI('Takeoff Acceleration Start'),
+               climb_starts=KTI('Climb Start')):
+
+        # Determine the sections of flight where V2 must be valid:
+        phases = slices_from_ktis(takeoff_starts, climb_starts)
+
+        v2 = first_valid_parameter(v2_recorded, v2_lookup, phases=phases)
+
+        if v2 is None:
+            self.array = np_ma_masked_zeros_like(airspeed.array)
+            return
+
+        # Where V2 is recorded, a low permitted rate of change of 1.0 kt/s
+        # (specified in the Parameter Operating Limit section of the POLARIS
+        # database) forces all false data to be masked, leaving only the
+        # required valid data. By repairing the mask with duration = None, the
+        # valid data is extended. For example, 737-3C data only records V2 on
+        # the runway and it needs to be extended to permit V2-relative KPVs to
+        # be recorded during the climbout.
+        self.array = airspeed.array - repair_mask(v2.array, copy=True,
+                                                  repair_duration=None,
+                                                  extrapolate=True)
+
+
+class AirspeedMinusV2For3Sec(DerivedParameterNode):
+    '''
+    Airspeed relative to the Takeoff Safety Speed (V2) over a 3 second window.
+
+    See the derived parameter 'Airspeed Minus V2' for further details.
+    '''
+
+    align_frequency = 2
+    align_offset = 0
+    units = ut.KT
+
+    def derive(self, speed=P('Airspeed Minus V2')):
+
+        self.array = second_window(speed.array, self.frequency, 3)
 
 
 ##############################################################################

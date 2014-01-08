@@ -162,6 +162,8 @@ from analysis_engine.derived_parameters import (
     WindDirection,
     WindDirectionTrue,
     # Velocity Speeds:
+    AirspeedMinusV2,
+    AirspeedMinusV2For3Sec,
     MMOLookup,
     V2,
     V2Lookup,
@@ -5574,6 +5576,110 @@ class TestMMOLookup(unittest.TestCase, NodeTest):
         expected[0:20] = 0.850
         expected[20:41] = 0.800
         ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+
+
+##############################################################################
+# Relative Airspeeds
+
+
+########################################
+# Airspeed Minus V2
+
+
+class TestAirspeedMinusV2(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = AirspeedMinusV2
+        self.operational_combinations = [
+            ('Airspeed', 'V2', 'Takeoff Acceleration Start', 'Climb Start'),
+            ('Airspeed', 'V2 Lookup', 'Takeoff Acceleration Start', 'Climb Start'),
+            ('Airspeed', 'V2', 'V2 Lookup', 'Takeoff Acceleration Start', 'Climb Start'),
+        ]
+        self.airspeed = P('Airspeed', np.ma.repeat(102, 6))
+        self.v2_record = P('V2', np.ma.arange(90, 120, 5))
+        self.v2_lookup = P('V2 Lookup', np.ma.arange(95, 125, 5))
+        self.takeoffs = KTI(name='Takeoff Acceleration Start', items=[
+            KeyTimeInstance(name='Takeoff Acceleration Start', index=0),
+        ])
+        self.climbs = KTI(name='Climb Start', items=[
+            KeyTimeInstance(name='Climb Start', index=4),
+        ])
+
+    def test_derive__record_only(self):
+        node = self.node_class()
+        node.derive(self.airspeed, self.v2_record, None, self.takeoffs, self.climbs)
+        expected = np.ma.arange(12, -18, -5)
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__lookup_only(self):
+        node = self.node_class()
+        node.derive(self.airspeed, None, self.v2_lookup, self.takeoffs, self.climbs)
+        expected = np.ma.arange(7, -22, -5)
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__prefer_record(self):
+        node = self.node_class()
+        node.derive(self.airspeed, self.v2_record, self.v2_lookup, self.takeoffs, self.climbs)
+        expected = np.ma.arange(12, -18, -5)
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__record_masked(self):
+        self.v2_record.array.mask = True
+        node = self.node_class()
+        node.derive(self.airspeed, self.v2_record, self.v2_lookup, self.takeoffs, self.climbs)
+        expected = np.ma.arange(7, -22, -5)
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__both_masked(self):
+        self.v2_record.array.mask = True
+        self.v2_lookup.array.mask = True
+        node = self.node_class()
+        node.derive(self.airspeed, self.v2_record, self.v2_lookup, self.takeoffs, self.climbs)
+        expected = np.ma.array(data=[0] * 6, mask=[True] * 6)
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__extrapolate(self):
+        self.v2_record.array[1:] = np.ma.masked
+        node = self.node_class()
+        node.derive(self.airspeed, self.v2_record, None, self.takeoffs, self.climbs)
+        expected = np.ma.repeat(12, 6)
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__masked_within_phase(self):
+        self.v2_record.array[:-1] = np.ma.masked
+        node = self.node_class()
+        node.derive(self.airspeed, self.v2_record, self.v2_lookup, self.takeoffs, self.climbs)
+        expected = np.ma.arange(7, -22, -5)
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+
+class TestAirspeedMinusV2For3Sec(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = AirspeedMinusV2For3Sec
+        self.operational_combinations = [
+            ('Airspeed Minus V2',),
+        ]
+        self.airspeed = P(
+            name='Airspeed Minus V2',
+            array=np.ma.array([100.0] * 6 + [110] * 7 + [120] + [100] * 6),
+            frequency=2,
+        )
+
+    def test_derive__basic(self):
+        node = self.node_class()
+        node.get_derived([self.airspeed])
+        expected = np.ma.array([100.0] * 6 + [110] * 8 + [100] * 6)
+        expected[-3:] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__align(self):
+        self.airspeed.frequency = 1
+        node = self.node_class()
+        node.get_derived([self.airspeed])
+        expected = np.ma.array([100.0] * 11 + [105] + [110] * 16 + [100] * 12)
+        expected[-4:] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
 
 
 ##############################################################################
