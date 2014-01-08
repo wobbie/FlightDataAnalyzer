@@ -43,6 +43,7 @@ from analysis_engine.library import (actuator_mismatch,
                                      last_valid_sample,
                                      latitudes_and_longitudes,
                                      localizer_scale,
+                                     lookup_table,
                                      machtat2sat,
                                      mask_inside_slices,
                                      mask_outside_slices,
@@ -6121,6 +6122,99 @@ class V2(DerivedParameterNode):
                 if sample.value is not None:
                     self.array[phase] = sample.value
             return
+
+
+class V2Lookup(DerivedParameterNode):
+    '''
+    Takeoff Safety Speed (V2) can be derived for different aircraft.
+
+    In cases where values cannot be derived solely from recorded parameters, we
+    can make use of a look-up table to determine values for velocity speeds.
+
+    For V2, looking up a value requires the weight and flap (surface detents)
+    at liftoff.
+
+    Flap is used as the first dependency to avoid interpolation of flap detents
+    when flap is recorded at a lower frequency than airspeed.
+    '''
+
+    units = ut.KT
+
+    @classmethod
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family'),
+                    engine_series=A('Engine Series'), engine_type=A('Engine Type')):
+
+        core = all_of((
+            'Airspeed',
+            'Takeoff Acceleration Start',
+            'Climb Start',
+            'Model',
+            'Series',
+            'Family',
+            'Engine Type',
+            'Engine Series',
+        ), available)
+
+        flap = any_of((
+            'Configuration',
+            'Flap',
+        ), available)
+
+        weight = any_of((
+            'Gross Weight At Liftoff',
+            'Liftoff',
+        ), available)
+
+        attrs = (model, series, family, engine_type, engine_series)
+        return core and flap and weight and lookup_table(cls, 'v2', *attrs)
+
+    def derive(self,
+               flap=M('Flap'),
+               conf=M('Configuration'),
+               airspeed=P('Airspeed'),
+               weight_liftoffs=KPV('Gross Weight At Liftoff'),
+               liftoffs=KTI('Liftoff'),
+               takeoff_starts=KTI('Takeoff Acceleration Start'),
+               climb_starts=KTI('Climb Start'),
+               model=A('Model'),
+               series=A('Series'),
+               family=A('Family'),
+               engine_type=A('Engine Type'),
+               engine_series=A('Engine Series')):
+
+        # Prepare a zeroed, masked array based on the airspeed:
+        self.array = np_ma_masked_zeros_like(airspeed.array, np.double)
+
+        # Determine the sections of flight to populate V2 for:
+        phases = slices_from_ktis(takeoff_starts, climb_starts)
+
+        # Initialise the velocity speed lookup table:
+        attrs = (model, series, family, engine_type, engine_series)
+        table = lookup_table(self, 'v2', *attrs)
+
+        for phase in phases:
+
+            if weight_liftoffs:
+                weight_liftoff = weight_liftoffs.get_first(within_slice=phase)
+                index, weight = weight_liftoff.index, weight_liftoff.value
+            else:
+                index, weight = liftoffs.get_first(within_slice=phase).index, None
+
+            if index is None:
+                continue
+
+            detent = (conf or flap).array[index]
+
+            try:
+                self.array[phase] = table.v2(detent, weight)
+            except (KeyError, ValueError) as error:
+                self.warning("Error in '%s': %s", self.name, error)
+                # Where the aircraft takes off with flap settings outside the
+                # documented V2 range, we need the program to continue without
+                # raising an exception, so that the incorrect flap at takeoff
+                # can be detected.
+                continue
 
 
 ########################################
