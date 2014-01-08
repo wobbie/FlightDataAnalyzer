@@ -158,6 +158,8 @@ from analysis_engine.derived_parameters import (
     WindAcrossLandingRunway,
     WindDirection,
     WindDirectionTrue,
+    # Velocity Speeds:
+    V2,
 )
 
 debug = sys.gettrace() is not None
@@ -4627,6 +4629,89 @@ class TestGrossWeight(unittest.TestCase):
         self.assertEqual(result[:10], [None] * 10)
         self.assertAlmostEqual(result[50], 50.5, 1)
 
+
+##############################################################################
+# Velocity Speeds
+
+
+########################################
+# Takeoff Safety Speed (V2)
+
+
+class TestV2(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = V2
+        self.airspeed = P(name='Airspeed', array=np.ma.array([200] * 128))
+        self.takeoffs = KTI(name='Takeoff Acceleration Start', items=[
+            KeyTimeInstance(name='Takeoff Acceleration Start', index=2),
+            KeyTimeInstance(name='Takeoff Acceleration Start', index=66),
+        ])
+        self.climbs = KTI(name='Climb Start', items=[
+            KeyTimeInstance(name='Climb Start', index=42),
+            KeyTimeInstance(name='Climb Start', index=106),
+        ])
+
+    def test_can_operate(self):
+        # AFR:
+        self.assertTrue(self.node_class.can_operate(
+            ('Airspeed', 'AFR V2', 'Takeoff Acceleration Start', 'Climb Start'),
+            afr_v2=A(name='AFR V2', value=120),
+        ))
+        self.assertFalse(self.node_class.can_operate(
+            ('Airspeed', 'AFR V2', 'Takeoff Acceleration Start', 'Climb Start'),
+            afr_v2=A(name='AFR V2', value=70),
+        ))
+        # Embraer:
+        self.assertTrue(self.node_class.can_operate(
+            ('Airspeed', 'V2-Vac', 'Takeoff Acceleration Start', 'Climb Start'),
+        ))
+        # Airbus:
+        self.assertTrue(self.node_class.can_operate(
+            ('Airspeed', 'Selected Speed', 'Speed Control', 'Takeoff Acceleration Start', 'Climb Start', 'Manufacturer'),
+            manufacturer=A(name='Manufacturer', value='Airbus'),
+        ))
+
+    def test_derive__nothing(self):
+        node = self.node_class()
+        node.derive(self.airspeed, None, None, None, None, self.takeoffs, self.climbs, None)
+        expected = np.ma.array(data=[0] * 128, mask=True)
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__afr_v2(self):
+        afr_v2 = A(name='AFR V2', value=120)
+        node = self.node_class()
+        node.derive(self.airspeed, None, None, None, afr_v2, self.takeoffs, self.climbs, None)
+        expected = np.ma.array(data=[0] * 128, mask=True)
+        expected[2:42] = 120
+        expected[66:106] = 120
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__airbus(self):
+        manufacturer = A(name='Manufacturer', value='Airbus')
+        spd_ctl = M('Speed Control', np.ma.array([1] * 64 + [0] * 64), values_mapping={0: 'Manual', 1: 'Auto'})
+        spd_sel = P('Selected Speed', np.ma.array(
+            data=[400] + [120] * 63 + [170] * 64,
+            mask=[True] + [False] * 127,
+        ))
+        node = self.node_class()
+        node.derive(self.airspeed, None, spd_sel, spd_ctl, None, self.takeoffs, self.climbs, manufacturer)
+        expected = np.ma.array(data=[0] * 128, mask=True)
+        expected[2:42] = 120
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__embraer(self):
+        manufacturer = A(name='Manufacturer', value='Embraer')
+        v2_vac = P('V2-Vac', np.ma.array([150] * 128))
+        node = self.node_class()
+        node.derive(self.airspeed, v2_vac, None, None, None, self.takeoffs, self.climbs, manufacturer)
+        expected = np.ma.array(data=[0] * 128, mask=True)
+        expected[2:42] = 150
+        expected[66:106] = 150
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+
+##############################################################################
 
 
 if __name__ == '__main__':

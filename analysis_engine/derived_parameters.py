@@ -67,6 +67,7 @@ from analysis_engine.library import (actuator_mismatch,
                                      second_window,
                                      shift_slice,
                                      slices_between,
+                                     slices_from_ktis,
                                      slices_from_to,
                                      slices_not,
                                      slices_or,
@@ -76,7 +77,8 @@ from analysis_engine.library import (actuator_mismatch,
                                      value_at_index,
                                      vstack_params)
 
-from settings import (AZ_WASHOUT_TC,
+from settings import (AIRSPEED_THRESHOLD,
+                      AZ_WASHOUT_TC,
                       BOUNCED_LANDING_THRESHOLD,
                       FEET_PER_NM,
                       HYSTERESIS_FPIAS,
@@ -6012,3 +6014,113 @@ class ElevatorActuatorMismatch(DerivedParameterNode):
                                 self.frequency)
         
         self.array = amm
+
+
+##############################################################################
+# Velocity Speeds
+
+
+########################################
+# Takeoff Safety Speed (V2)
+
+
+class V2(DerivedParameterNode):
+    '''
+    Takeoff Safety Speed (V2) can be derived for different aircraft.
+
+    If the value is provided in an achieved flight record (AFR), we use this in
+    preference. This allows us to cater for operators that use improved
+    performance tables so that they can provide the values that they used.
+
+    For Airbus aircraft, if auto speed control is enabled, we can use the
+    primary flight display selected speed value from the start of the takeoff
+    run.
+
+    Some other aircraft types record multiple parameters in the same location
+    within data frames. We need to select only the data that we are interested
+    in, i.e. the V2 values.
+
+    The value is restricted to the range from the start of takeoff acceleration
+    to the end of the initial climb flight phase.
+
+    Reference was made to the following documentation to assist with the
+    development of this algorithm:
+
+    - A320 Flight Profile Specification
+    - A321 Flight Profile Specification
+    '''
+
+    units = ut.KT
+
+    @classmethod
+    def can_operate(cls, available, afr_v2=A('AFR V2'),
+                    manufacturer=A('Manufacturer')):
+
+        afr = all_of((
+            'Airspeed',
+            'AFR V2',
+            'Takeoff Acceleration Start',
+            'Climb Start',
+        ), available) and afr_v2 and afr_v2.value >= AIRSPEED_THRESHOLD
+
+        airbus = all_of((
+            'Airspeed',
+            'Selected Speed',
+            'Speed Control',
+            'Takeoff Acceleration Start',
+            'Climb Start',
+            'Manufacturer',
+        ), available) and manufacturer and manufacturer.value == 'Airbus'
+
+        embraer = all_of((
+            'Airspeed',
+            'V2-Vac',
+            'Takeoff Acceleration Start',
+            'Climb Start',
+        ), available)
+
+        return afr or airbus or embraer
+
+    def derive(self,
+               airspeed=P('Airspeed'),
+               v2_vac=A('V2-Vac'),
+               spd_sel=P('Selected Speed'),
+               spd_ctl=P('Speed Control'),
+               afr_v2=A('AFR V2'),
+               takeoff_starts=KTI('Takeoff Acceleration Start'),
+               climb_starts=KTI('Climb Start'),
+               manufacturer=A('Manufacturer')):
+
+        # Prepare a zeroed, masked array based on the airspeed:
+        self.array = np_ma_masked_zeros_like(airspeed.array, np.double)
+
+        # Determine the sections of flight to populate V2 for:
+        phases = slices_from_ktis(takeoff_starts, climb_starts)
+
+        # 1. Use value provided in achieved flight record (if available):
+        if afr_v2 and afr_v2.value >= AIRSPEED_THRESHOLD:
+            for phase in phases:
+                self.array[phase] = afr_v2.value
+            return
+
+        # 2. Derive parameter for Embraer 170/190:
+        if v2_vac:
+            for phase in phases:
+                self.array[phase] = v2_vac.array[phase]
+            return
+
+        # 3. Derive parameter for Airbus:
+        if manufacturer and manufacturer.value == 'Airbus':
+            for phase in phases:
+                # Propagate first non-masked value nearest start of takeoff only:
+                sample = first_valid_sample(np.ma.where(
+                    spd_ctl.array[phase] == 'Auto',
+                    spd_sel.array[phase],
+                    np.ma.masked
+                ))
+                if sample.value is not None:
+                    self.array[phase] = sample.value
+            return
+
+
+##############################################################################
