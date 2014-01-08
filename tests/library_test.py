@@ -5723,8 +5723,8 @@ class TestSecondWindow(unittest.TestCase):
             [10, 10, 9, 8, 7, 6, 5, 4, 3, 2, 2, 2, 2, 4, 6, 8, 10, 12, 14, 16])
 
     def test_three_second_window_with_real_data(self):
-        amv2 = load(os.path.join(test_data_path, 'airspeed_minus_v2.nod'))
-        res = second_window(amv2.array, amv2.frequency, 3)
+        sw = load(os.path.join(test_data_path, 'second_window.nod'))
+        res = second_window(sw.array, sw.frequency, 3)
         self.assertEqual(np.ma.count(res), 40975)
 
 
