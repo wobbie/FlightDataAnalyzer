@@ -2960,7 +2960,7 @@ class TestHeadwind(unittest.TestCase):
         hw.derive(None, ws, wd, head, None, None)
         expected = np.ma.array([-20]*3+[20]*5)
         ma_test.assert_almost_equal(hw.array, expected)
-        
+
     def test_headwind_below_100ft(self):
         # create consistent 20 kt windspeed on the tail
         wspd = P('Wind Speed', np.ma.array([20]*20))
@@ -2979,8 +2979,6 @@ class TestHeadwind(unittest.TestCase):
         np.testing.assert_equal(hw.array[5:15], [-20]*10)
         # below 100ft
         np.testing.assert_equal(hw.array[15:], [-40]*5)
-    
-        
 
 
 class TestWindAcrossLandingRunway(unittest.TestCase):

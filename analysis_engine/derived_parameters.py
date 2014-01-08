@@ -1651,7 +1651,7 @@ class Drift(DerivedParameterNode):
             self.array = track.array - align(heading, track)
 
 
-################################################################################
+##############################################################################
 # Brakes
 
 
@@ -1698,7 +1698,7 @@ class BrakePressure(DerivedParameterNode):
                                           frequency=self.frequency)
 
 
-################################################################################
+##############################################################################
 # Engine EPR
 
 
@@ -1853,7 +1853,7 @@ class Eng_TPRMin(DerivedParameterNode):
         self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
 
 
-################################################################################
+##############################################################################
 # Engine Fuel Flow
 
 
@@ -1910,7 +1910,7 @@ class Eng_FuelFlowMin(DerivedParameterNode):
         self.array = np.ma.min(engines, axis=0)
 
         
-###############################################################################
+##############################################################################
 # Fuel Burn
 
 
@@ -2002,7 +2002,7 @@ class Eng_FuelBurn(DerivedParameterNode):
         self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
 
 
-################################################################################
+##############################################################################
 # Engine Gas Temperature
 
 
@@ -2078,7 +2078,7 @@ class Eng_GasTempMin(DerivedParameterNode):
         self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
 
 
-################################################################################
+##############################################################################
 # Engine N1
 
 
@@ -2183,7 +2183,7 @@ class Eng_N1MinFor5Sec(DerivedParameterNode):
         self.array = second_window(eng_n1_min.array, self.frequency, 5)
 
 
-################################################################################
+##############################################################################
 # Engine N2
 
 
@@ -2271,7 +2271,7 @@ class Eng_N2Min(DerivedParameterNode):
         self.array = np.ma.min(engines, axis=0)
 
 
-################################################################################
+##############################################################################
 # Engine N3
 
 
@@ -2359,7 +2359,7 @@ class Eng_N3Min(DerivedParameterNode):
         self.array = np.ma.min(engines, axis=0)
 
 
-################################################################################
+##############################################################################
 # Engine Np
 
 
@@ -2447,7 +2447,7 @@ class Eng_NpMin(DerivedParameterNode):
         self.array = np.ma.min(engines, axis=0)
 
 
-################################################################################
+##############################################################################
 # Engine Oil Pressure
 
 
@@ -2523,7 +2523,7 @@ class Eng_OilPressMin(DerivedParameterNode):
         self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
 
 
-################################################################################
+##############################################################################
 # Engine Oil Quantity
 
 
@@ -2599,7 +2599,7 @@ class Eng_OilQtyMin(DerivedParameterNode):
         self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
 
 
-################################################################################
+##############################################################################
 # Engine Oil Temperature
 
 
@@ -2693,7 +2693,7 @@ class Eng_OilTempMin(DerivedParameterNode):
             self.array = np_ma_masked_zeros_like(min_array)
 
 
-################################################################################
+##############################################################################
 # Engine Torque
 
 
@@ -2841,7 +2841,7 @@ class Eng_TorquePercentMin(DerivedParameterNode):
         self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
 
 
-################################################################################
+##############################################################################
 # Engine Vibration (N1)
 
 
@@ -2875,7 +2875,7 @@ class Eng_VibN1Max(DerivedParameterNode):
         self.offset = offset_select('mean', [eng1, eng2, eng3, eng4, fan1, fan2, lpt1, lpt2])
 
 
-################################################################################
+##############################################################################
 # Engine Vibration (N2)
 
 
@@ -2909,7 +2909,7 @@ class Eng_VibN2Max(DerivedParameterNode):
         self.offset = offset_select('mean', [eng1, eng2, eng3, eng4, hpc1, hpc2, hpt1, hpt2])
 
 
-################################################################################
+##############################################################################
 # Engine Vibration (N3)
 
 
@@ -2939,7 +2939,7 @@ class Eng_VibN3Max(DerivedParameterNode):
         self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
 
 
-################################################################################
+##############################################################################
 # Engine Vibration (Broadband)
 
 
@@ -2981,7 +2981,7 @@ class Eng_VibBroadbandMax(DerivedParameterNode):
         self.offset = offset_select('mean', params)
 
 
-################################################################################
+##############################################################################
 # Engine Vibration (A)
 
 
@@ -3011,7 +3011,7 @@ class Eng_VibAMax(DerivedParameterNode):
         self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
 
 
-################################################################################
+##############################################################################
 # Engine Vibration (B)
 
 
@@ -3041,7 +3041,7 @@ class Eng_VibBMax(DerivedParameterNode):
         self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
 
 
-################################################################################
+##############################################################################
 # Engine Vibration (C)
 
 
@@ -3071,7 +3071,7 @@ class Eng_VibCMax(DerivedParameterNode):
         self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
 
 
-################################################################################
+##############################################################################
 
 
 class FuelQty(DerivedParameterNode):
@@ -3130,7 +3130,7 @@ class FuelQty(DerivedParameterNode):
             self.offset = 0.0
 
 
-################################################################################
+##############################################################################
 
 class GrossWeight(DerivedParameterNode):
     '''
@@ -5389,7 +5389,7 @@ class ElevatorRight(DerivedParameterNode):
                 self.array = pot.array
 
 
-###############################################################################
+##############################################################################
 # Speedbrake
 
 
@@ -5710,7 +5710,7 @@ class ApproachRange(DerivedParameterNode):
         self.array = app_range
 
 
-################################################################################
+##############################################################################
 
 
 class VOR1Frequency(DerivedParameterNode):
@@ -5979,9 +5979,6 @@ class TrackDeviationFromRunway(DerivedParameterNode):
         if to_rwy:
             self._track_deviation(track.array, takeoff[0].slice, to_rwy.value,
                                   magnetic)
-
-
-
 
 
 class ElevatorActuatorMismatch(DerivedParameterNode):
