@@ -6867,6 +6867,43 @@ class AirspeedMinusVappFor3Sec(DerivedParameterNode):
 
 
 ########################################
+# Airspeed Minus Minimum Airspeed
+
+
+class AirspeedMinusMinimumAirspeed(DerivedParameterNode):
+    '''
+    Airspeed relative to minimum airspeed.
+
+    See the derived parameter 'Minimum Airspeed' for further details.
+    '''
+
+    units = ut.KT
+
+    def derive(self,
+               airspeed=P('Airspeed'),
+               minimum_airspeed=P('Minimum Airspeed')):
+
+        self.array = airspeed.array - minimum_airspeed.array
+
+
+class AirspeedMinusMinimumAirspeedFor3Sec(DerivedParameterNode):
+    '''
+    Airspeed relative to minimum airspeed over a 3 second window.
+
+    See the derived parameter 'Airspeed Minus Minimum Airspeed' for further
+    details.
+    '''
+
+    align_frequency = 2
+    align_offset = 0
+    units = ut.KT
+
+    def derive(self, speed=P('Airspeed Minus Minimum Airspeed')):
+
+        self.array = second_window(speed.array, self.frequency, 3)
+
+
+########################################
 # Airspeed Minus Flap Manoeuvre Speed
 
 

@@ -164,6 +164,8 @@ from analysis_engine.derived_parameters import (
     # Velocity Speeds:
     AirspeedMinusFlapManoeuvreSpeed,
     AirspeedMinusFlapManoeuvreSpeedFor3Sec,
+    AirspeedMinusMinimumAirspeed,
+    AirspeedMinusMinimumAirspeedFor3Sec,
     AirspeedMinusV2,
     AirspeedMinusV2For3Sec,
     AirspeedMinusVapp,
@@ -6136,6 +6138,66 @@ class TestAirspeedMinusVappFor3Sec(unittest.TestCase, NodeTest):
         ]
         self.airspeed = P(
             name='Airspeed Minus Vapp',
+            array=np.ma.array([100.0] * 6 + [110] * 7 + [120] + [100] * 6),
+            frequency=2,
+        )
+
+    def test_derive__basic(self):
+        node = self.node_class()
+        node.get_derived([self.airspeed])
+        expected = np.ma.array([100.0] * 6 + [110] * 8 + [100] * 6)
+        expected[-3:] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__align(self):
+        self.airspeed.frequency = 1
+        node = self.node_class()
+        node.get_derived([self.airspeed])
+        expected = np.ma.array([100.0] * 11 + [105] + [110] * 16 + [100] * 12)
+        expected[-4:] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+
+########################################
+# Airspeed Minus Minimum Airspeed
+
+
+class TestAirspeedMinusMinimumAirspeed(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = AirspeedMinusMinimumAirspeed
+        self.operational_combinations = [
+            ('Airspeed', 'Minimum Airspeed'),
+        ]
+        self.airspeed = P('Airspeed', np.ma.repeat(102, 6))
+        self.minimum_airspeed = P('Minimum Airspeed', np.ma.arange(80, 92, 2))
+
+    def test_derive__basic(self):
+        self.minimum_airspeed.array[3] = np.ma.masked
+        node = self.node_class()
+        node.derive(self.airspeed, self.minimum_airspeed)
+        expected = np.ma.arange(22, 10, -2)
+        expected[3] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__masked(self):
+        self.minimum_airspeed.array.mask = True
+        node = self.node_class()
+        node.derive(self.airspeed, self.minimum_airspeed)
+        expected = np.ma.arange(22, 10, -2)
+        expected.mask = True
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+
+class TestAirspeedMinusMinimumAirspeedFor3Sec(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = AirspeedMinusMinimumAirspeedFor3Sec
+        self.operational_combinations = [
+            ('Airspeed Minus Minimum Airspeed',),
+        ]
+        self.airspeed = P(
+            name='Airspeed Minus Minimum Airspeed',
             array=np.ma.array([100.0] * 6 + [110] * 7 + [120] + [100] * 6),
             frequency=2,
         )
