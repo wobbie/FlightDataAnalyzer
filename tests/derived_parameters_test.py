@@ -3766,7 +3766,17 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
             ('Flap Angle (L)', 'Flap Angle (R)', 'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard', 'Slat Angle', 'Frame'),
         ]
 
-    def test_derive_787(self):
+    @patch('analysis_engine.derived_parameters.at')
+    def test_derive_787(self, at):
+        at.get_lever_angles.return_value = {
+            0:  (0, 0, None),
+            1:  (50, 0, None),
+            5:  (50, 5, None),
+            15: (50, 15, None),
+            20: (50, 20, None),
+            25: (100, 20, None),
+            30: (100, 30, None),
+        }
         _load = lambda x: load(os.path.join(test_data_path, x))
         flap_angle_l = _load('787_flap_angle_l.nod')
         flap_angle_r = _load('787_flap_angle_r.nod')
