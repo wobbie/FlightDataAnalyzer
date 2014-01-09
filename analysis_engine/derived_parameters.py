@@ -770,51 +770,88 @@ class AltitudeAAL(DerivedParameterNode):
         idx = min(first_curve, first_valid_sample(climbing[:to]).index)
         return idx
 
-    def shift_alt_std(self, alt_std):
+    def shift_alt_std(self, alt_std, land_pitch):
         '''
         Return Altitude STD Smoothed shifted relative to 0 for cases where we do not
         have a reliable Altitude Radio.
         '''
-        try:
-            idx = self.find_liftoff_start(alt_std)
+        if land_pitch==None:
             
-            # The liftoff most probably arose in the preceding 10
-            # seconds. Allow 3 seconds afterwards for luck.
-            rotate = slice(max(idx-10*self.frequency,0),
-                           idx+3*self.frequency)
-            # Draw a straight line across this period with a ruler.
-            p,m,c = coreg(alt_std[rotate])
-            ruler = np.ma.arange(rotate.stop-rotate.start)*m+c
-            # Measure how far the altitude is below the ruler.
-            delta = alt_std[rotate] - ruler
-            # The liftoff occurs where the gap is biggest because this is
-            # where the wing lift has caused the local pressure to
-            # increase, hence the altitude appears to decrease.
-            pit = alt_std[np.ma.argmin(delta)+rotate.start]
+            # This is a takeoff case where we ideally recognise the reduction
+            # in pressure at liftoff as the aircraft rotates and the static
+            # pressure field around the aircraft changes.
+            try:
+                idx = self.find_liftoff_start(alt_std)
+                
+                # The liftoff most probably arose in the preceding 10
+                # seconds. Allow 3 seconds afterwards for luck.
+                rotate = slice(max(idx-10*self.frequency,0),
+                               idx+3*self.frequency)
+                # Draw a straight line across this period with a ruler.
+                p,m,c = coreg(alt_std[rotate])
+                ruler = np.ma.arange(rotate.stop-rotate.start)*m+c
+                # Measure how far the altitude is below the ruler.
+                delta = alt_std[rotate] - ruler
+                # The liftoff occurs where the gap is biggest because this is
+                # where the wing lift has caused the local pressure to
+                # increase, hence the altitude appears to decrease.
+                pit = alt_std[np.ma.argmin(delta)+rotate.start]
+                
+                '''
+                # Quick visual check of the operation of the takeoff point detection.
+                import matplotlib.pyplot as plt
+                plt.plot(alt_std)
+                xnew = np.linspace(rotate.start,rotate.stop,num=2)
+                ynew = (xnew-rotate.start)*m + c
+                plt.plot(xnew,ynew,'-')                
+                plt.plot(np.ma.argmin(delta)+rotate.start, pit, 'dg')
+                plt.plot(idx, alt_std[idx], 'dr')
+                plt.show()
+                plt.clf()
+                plt.close()
+                '''
+
+            except:
+                # If something odd about the data causes a problem with this
+                # technique, use a simpler solution. This can give
+                # significantly erroneous results in the case of sloping
+                # runways, but it's the most robust technique.
+                pit = np.ma.min(alt_std)
+
+        else:
+
+            # This is a landing case where we use the pitch attitude to
+            # identify the touchdown point.
+            
+            # First find the lowest point
+            lowest_index = np.ma.argmin(alt_std)
+            lowest_height = alt_std[lowest_index]
+            # and go up 50ft
+            still_airborne = index_at_value(alt_std[lowest_index:], 
+                                            lowest_height + 50.0, 
+                                            endpoint='closing')
+            check_slice = slice(lowest_index, lowest_index + still_airborne)
+            # What was the maximum pitch attitude reached in the last 50ft of the descent?
+            max_pitch = max(land_pitch[check_slice])
+            # and the last index at this attitude is given by:
+            max_pch_idx = (land_pitch[check_slice] == max_pitch).nonzero()[-1][0]
+            pit = alt_std[lowest_index + max_pch_idx]
             
             '''
             # Quick visual check of the operation of the takeoff point detection.
             import matplotlib.pyplot as plt
-            plt.plot(alt_std[:to])
-            xnew = np.linspace(rotate.start,rotate.stop,num=2)
-            ynew = (xnew-rotate.start)*m + c
-            plt.plot(xnew,ynew,'-')                
-            plt.plot(np.ma.argmin(delta)+rotate.start, pit, 'dg')
-            plt.plot(idx, alt_std[idx], 'dr')
+            show_slice = slice(0, lowest_index + still_airborne)
+            plt.plot(alt_std[show_slice] - pit)
+            plt.plot(land_pitch[show_slice]*10.0)
+            plt.plot(lowest_index + max_pch_idx, 0.0, 'dg')
             plt.show()
-            plt.clf()
+            plt.close()
             '''
+            
+        return np.ma.maximum(alt_std - pit, 0.0)
 
-        except:
-            # If something odd about the data causes a problem with this
-            # technique, use a simpler solution. This can give
-            # significantly erroneous results in the case of sloping
-            # runways, but it's the most robust technique.
-            pit = np.ma.min(alt_std)
-        alt_result = alt_std - pit
-        return np.ma.maximum(alt_result, 0.0)
-
-    def compute_aal(self, mode, alt_std, low_hb, high_gnd, alt_rad=None):
+    def compute_aal(self, mode, alt_std, low_hb, high_gnd, alt_rad=None, 
+                    land_pitch=None):
         
         alt_result = np_ma_zeros_like(alt_std)
         if alt_rad is None or np.ma.count(alt_rad)==0:
@@ -823,20 +860,17 @@ class AltitudeAAL(DerivedParameterNode):
             if mode != 'land':
                 return alt_std - high_gnd
             else:
-                return self.shift_alt_std(alt_std)
+                return self.shift_alt_std(alt_std, land_pitch)
 
         if mode=='over_gnd' and (low_hb-high_gnd)>100.0:
             return alt_std - high_gnd
-        
 
         # We pretend the aircraft can't go below ground level for altitude AAL:
         alt_rad_aal = np.ma.maximum(alt_rad, 0.0)
         ralt_sections = np.ma.clump_unmasked(np.ma.masked_outside(alt_rad_aal, 0.1, 100.0))
         if len(ralt_sections) == 0:
-            # Either Altitude Radio did not drop below 100, or did not get
-            # above 100. Either way, we are better off working with just the
-            # pressure altitude signal.
-            return self.shift_alt_std(alt_std)
+            # No useful radio altitude signals, so just use pressure altitude and pitch data.
+            return self.shift_alt_std(alt_std, land_pitch)
 
         if mode == 'land':
             # We refine our definition of the radio altimeter sections to
@@ -857,7 +891,7 @@ class AltitudeAAL(DerivedParameterNode):
                 # Either Altitude Radio did not drop below 100, or did not get
                 # above 100. Either way, we are better off working with just the
                 # pressure altitude signal.
-                return shift_alt_std()
+                return self.shift_alt_std(alt_std, land_pitch)
         
         baro_sections = slices_not(ralt_sections, begin_at=0, 
                                    end_at=len(alt_std))
@@ -879,7 +913,8 @@ class AltitudeAAL(DerivedParameterNode):
 
     def derive(self, alt_rad=P('Altitude Radio'),
                alt_std=P('Altitude STD Smoothed'),
-               speedies=S('Fast')):
+               speedies=S('Fast'),
+               pitch=P('Pitch')):
         # Altitude Radio taken as the prime reference to ensure the minimum
         # ground clearance passing peaks is accurately reflected. Alt AAL
         # forced to 2htz
@@ -1046,12 +1081,20 @@ class AltitudeAAL(DerivedParameterNode):
 
             for dip in dips:
                 alt_rad_section = alt_rad.array[dip['slice']] if alt_rad else None
+                
+                if (dip['type']=='land') and (alt_rad_section==None) and \
+                   (dip['slice'].stop<dip['slice'].start) and pitch:
+                    land_pitch=pitch.array[dip['slice']]
+                else:
+                    land_pitch=None
+
                 alt_aal[dip['slice']] = self.compute_aal(
                     dip['type'],
                     alt_std.array[dip['slice']],
                     dip['alt_std'],
                     dip['highest_ground'],
-                    alt_rad=alt_rad_section)
+                    alt_rad=alt_rad_section,
+                    land_pitch=land_pitch)
             
             # Reset end sections
             alt_aal[quick.start:alt_idxs[0]+1] = 0.0
