@@ -162,6 +162,8 @@ from analysis_engine.derived_parameters import (
     WindDirection,
     WindDirectionTrue,
     # Velocity Speeds:
+    AirspeedMinusFlapManoeuvreSpeed,
+    AirspeedMinusFlapManoeuvreSpeedFor3Sec,
     AirspeedMinusV2,
     AirspeedMinusV2For3Sec,
     AirspeedMinusVapp,
@@ -6064,6 +6066,66 @@ class TestAirspeedMinusVappFor3Sec(unittest.TestCase, NodeTest):
         ]
         self.airspeed = P(
             name='Airspeed Minus Vapp',
+            array=np.ma.array([100.0] * 6 + [110] * 7 + [120] + [100] * 6),
+            frequency=2,
+        )
+
+    def test_derive__basic(self):
+        node = self.node_class()
+        node.get_derived([self.airspeed])
+        expected = np.ma.array([100.0] * 6 + [110] * 8 + [100] * 6)
+        expected[-3:] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__align(self):
+        self.airspeed.frequency = 1
+        node = self.node_class()
+        node.get_derived([self.airspeed])
+        expected = np.ma.array([100.0] * 11 + [105] + [110] * 16 + [100] * 12)
+        expected[-4:] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+
+########################################
+# Airspeed Minus Flap Manoeuvre Speed
+
+
+class TestAirspeedMinusFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = AirspeedMinusFlapManoeuvreSpeed
+        self.operational_combinations = [
+            ('Airspeed', 'Flap Manoeuvre Speed'),
+        ]
+        self.airspeed = P('Airspeed', np.ma.repeat(102, 6))
+        self.flap_mvr_spd = P('Flap Manoeuvre Speed', np.ma.arange(80, 92, 2))
+
+    def test_derive__basic(self):
+        self.flap_mvr_spd.array[3] = np.ma.masked
+        node = self.node_class()
+        node.derive(self.airspeed, self.flap_mvr_spd)
+        expected = np.ma.arange(22, 10, -2)
+        expected[3] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__masked(self):
+        self.flap_mvr_spd.array.mask = True
+        node = self.node_class()
+        node.derive(self.airspeed, self.flap_mvr_spd)
+        expected = np.ma.arange(22, 10, -2)
+        expected.mask = True
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+
+class TestAirspeedMinusFlapManoeuvreSpeedFor3Sec(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = AirspeedMinusFlapManoeuvreSpeedFor3Sec
+        self.operational_combinations = [
+            ('Airspeed Minus Flap Manoeuvre Speed',),
+        ]
+        self.airspeed = P(
+            name='Airspeed Minus Flap Manoeuvre Speed',
             array=np.ma.array([100.0] * 6 + [110] * 7 + [120] + [100] * 6),
             frequency=2,
         )
