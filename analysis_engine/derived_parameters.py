@@ -6496,6 +6496,69 @@ class MMOLookup(DerivedParameterNode):
 
 
 ########################################
+# Minimum Airspeed
+
+
+class MinimumAirspeed(DerivedParameterNode):
+    '''
+    Minimum airspeed at which there is suitable manoeuvrability.
+
+    For Boeing aircraft, use the minimum manoeuvre speed or the minimum
+    operating speed depending on availability.
+
+    For Airbus aircraft, use the lowest selectable airspeed (VLS).
+
+    - Airbus Flight Crew Operating Manual (FCOM) (For All Types)
+    - Boeing Flight Crew Training Manual (FCTM) (For All Types)
+    '''
+
+    units = ut.KT
+
+    @classmethod
+    def can_operate(cls, available):
+
+        core = all_of(('Airborne', 'Airspeed'), available)
+        a = any_of((
+            'FMF Min Manoeuvre Speed',
+            'FC Min Operating Speed',
+            'Min Operating Speed',
+            'VLS',
+        ), available)
+        b = any_of((
+            'FMC Min Manoeuvre Speed',
+        ), available)
+        f = any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available)
+        return core and (a or (b and f))
+
+    def derive(self,
+               airspeed=P('Airspeed'),
+               mms_fmf=P('FMF Min Manoeuvre Speed'),
+               mms_fmc=P('FMC Min Manoeuvre Speed'),
+               mos_fc=P('FC Min Operating Speed'),
+               mos=P('Min Operating Speed'),
+               vls=P('VLS'),
+               flap_lever=M('Flap Lever'),
+               flap_synth=M('Flap Lever (Synthetic)'),
+               airborne=S('Airborne')):
+
+        # Use whatever minimum speed parameter we have available:
+        parameter = first_valid_parameter(vls, mms_fmf, mms_fmc, mos_fc, mos)
+        if not parameter:
+            self.array = np_ma_masked_zeros_like(airspeed.array)
+            return
+        else:
+            self.array = parameter.array
+
+        # Handle where minimum manoeuvre speed is for clean configuration only:
+        if parameter is mms_fmc:
+            flap = flap_lever or flap_synth
+            self.array[flap.array != '0'] = np.ma.masked
+
+        # We want to mask out grounded sections of flight:
+        self.array = mask_outside_slices(self.array, airborne.get_slices())
+
+
+########################################
 # Flap Manoeuvre Speed
 
 
@@ -6510,12 +6573,7 @@ class FlapManoeuvreSpeed(DerivedParameterNode):
     Reference was made to the following documentation to assist with the
     development of this algorithm:
 
-    - B737 Flight Crew Training Manual
-    - B747 Flight Crew Training Manual
-    - B757 Flight Crew Training Manual
-    - B767 Flight Crew Training Manual
-    - B777 Flight Crew Training Manual
-    - B787 Flight Crew Training Manual
+    - Boeing Flight Crew Training Manual (FCTM) (For All Types)
     '''
 
     units = ut.KT

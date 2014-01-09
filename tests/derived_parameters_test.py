@@ -174,6 +174,7 @@ from analysis_engine.derived_parameters import (
     AirspeedRelativeFor3Sec,
     FlapManoeuvreSpeed,
     MMOLookup,
+    MinimumAirspeed,
     V2,
     V2Lookup,
     Vref,
@@ -5596,6 +5597,75 @@ class TestMMOLookup(unittest.TestCase, NodeTest):
         expected[0:20] = 0.850
         expected[20:41] = 0.800
         ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+
+
+########################################
+# Minimum Airspeed
+
+
+class TestMinimumAirspeed(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = MinimumAirspeed
+        self.operational_combinations = [
+            ('Airborne', 'Airspeed', 'VLS'),
+            ('Airborne', 'Airspeed', 'Min Operating Speed'),
+            ('Airborne', 'Airspeed', 'FC Min Operating Speed'),
+            ('Airborne', 'Airspeed', 'FMF Min Manoeuvre Speed'),
+            ('Airborne', 'Airspeed', 'FMC Min Manoeuvre Speed', 'Flap Lever'),
+            ('Airborne', 'Airspeed', 'FMC Min Manoeuvre Speed', 'Flap Lever (Synthetic)'),
+        ]
+        self.airspeed = P('Airspeed', np.ma.repeat(250, 100))
+        self.airborne = buildsection('Airborne', 10, 90)
+
+    def test_derive__invalid(self):
+        node = self.node_class()
+        node.derive(self.airspeed, None, None, None, None, None, None, None, self.airborne)
+        expected = np.ma.repeat(0, 100)
+        expected.mask = True
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__vls(self):
+        vls = P('VLS', np.ma.repeat(180, 100))
+        node = self.node_class()
+        node.derive(self.airspeed, None, None, None, None, vls, None, None, self.airborne)
+        expected = np.ma.array(vls.array)
+        expected.mask = np.repeat((1, 0, 0, 0, 0, 0, 0, 0, 0, 1), 10)
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__mos(self):
+        mos = P('Min Operating Speed', np.ma.repeat(190, 100))
+        node = self.node_class()
+        node.derive(self.airspeed, None, None, None, mos, None, None, None, self.airborne)
+        expected = np.ma.array(mos.array)
+        expected.mask = np.repeat((1, 0, 0, 0, 0, 0, 0, 0, 0, 1), 10)
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__mos_fc(self):
+        mos_fc = P('FC Min Operating Speed', np.ma.repeat(200, 100))
+        node = self.node_class()
+        node.derive(self.airspeed, None, None, mos_fc, None, None, None, None, self.airborne)
+        expected = np.ma.array(mos_fc.array)
+        expected.mask = np.repeat((1, 0, 0, 0, 0, 0, 0, 0, 0, 1), 10)
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__mms_fmc(self):
+        mms_fmc = P('FMC Min Manoeuvre Speed', np.ma.repeat(220, 100))
+        array = np.ma.repeat((20, 10, 10, 0, 0, 0, 0, 10, 10, 20), 10)
+        flap = M('Flap Lever', array, values_mapping={0: '0', 10: '10', 20: '20'})
+        node = self.node_class()
+        node.derive(self.airspeed, None, mms_fmc, None, None, None, flap, None, self.airborne)
+        expected = np.ma.array(mms_fmc.array)
+        expected.mask = np.repeat((1, 1, 1, 0, 0, 0, 0, 1, 1, 1), 10)
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__mms_fmf(self):
+        mms_fmf = P('FMF Min Manoeuvre Speed', np.ma.repeat(210, 100))
+        node = self.node_class()
+        node.derive(self.airspeed, mms_fmf, None, None, None, None, None, None, self.airborne)
+        expected = np.ma.array(mms_fmf.array)
+        expected.mask = np.repeat((1, 0, 0, 0, 0, 0, 0, 0, 0, 1), 10)
+        ma_test.assert_masked_array_equal(node.array, expected)
 
 
 ########################################
