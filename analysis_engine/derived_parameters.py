@@ -62,6 +62,7 @@ from analysis_engine.library import (actuator_mismatch,
                                      rate_of_change_array,
                                      repair_mask,
                                      rms_noise,
+                                     runs_of_ones,
                                      runway_deviation,
                                      runway_distances,
                                      runway_heading,
@@ -69,6 +70,8 @@ from analysis_engine.library import (actuator_mismatch,
                                      runway_snap_dict,
                                      second_window,
                                      shift_slice,
+                                     slices_and,
+                                     slices_of_runs,
                                      slices_between,
                                      slices_from_ktis,
                                      slices_from_to,
@@ -6490,6 +6493,117 @@ class MMOLookup(DerivedParameterNode):
         table = lookup_table(self, 'mmo', *attrs)
 
         self.array = table.mmo(alt_std.array)
+
+
+########################################
+# Flap Manoeuvre Speed
+
+
+class FlapManoeuvreSpeed(DerivedParameterNode):
+    '''
+    Flap manoeuvring speed for various flap settings.
+
+    The flap manoeuvring speed guarantees full manoeuvre capability or at least
+    a certain number of degrees of bank to stick shaker within a few thousand
+    feet of the airport altitude.
+
+    Reference was made to the following documentation to assist with the
+    development of this algorithm:
+
+    - B737 Flight Crew Training Manual
+    - B747 Flight Crew Training Manual
+    - B757 Flight Crew Training Manual
+    - B767 Flight Crew Training Manual
+    - B777 Flight Crew Training Manual
+    - B787 Flight Crew Training Manual
+    '''
+
+    units = ut.KT
+
+    @classmethod
+    def can_operate(cls, available, manufacturer=A('Manufacturer'),
+                    model=A('Model'), series=A('Series'), family=A('Family'),
+                    engine_type=A('Engine Type'), engine_series=A('Engine Series')):
+
+        if not manufacturer.value == 'Boeing':
+            return False
+
+        try:
+            at.get_fms_map(model.value, series.value, family.value)
+        except KeyError:
+            cls.warning("No flap manoeuvre speed tables available for '%s', "
+                        "'%s', '%s'.", model.value, series.value, family.value)
+            return False
+
+        core = all_of((
+            'Airspeed', 'Descent To Flare', 'Gross Weight Smoothed',
+            'Model', 'Series', 'Family', 'Engine Type', 'Engine Series',
+        ), available)
+
+        flap = any_of((
+            'Flap Lever',
+            'Flap Lever (Synthetic)',
+        ), available)
+
+        attrs = (model, series, family, engine_type, engine_series)
+        return core and flap and lookup_table(cls, 'vref', *attrs)
+
+    def derive(self,
+               airspeed=P('Airspeed'),
+               flap_lever=M('Flap Lever'),
+               flap_synth=M('Flap Lever (Synthetic)'),
+               gw=P('Gross Weight Smoothed'),
+               vref_25=P('Vref (25)'),
+               vref_30=P('Vref (30)'),
+               descents=S('Descent To Flare'),
+               model=A('Model'),
+               series=A('Series'),
+               family=A('Family'),
+               engine_type=A('Engine Type'),
+               engine_series=A('Engine Series')):
+
+        flap = flap_lever or flap_synth
+
+        # Prepare a zeroed, masked array based on the airspeed:
+        self.array = np_ma_masked_zeros_like(airspeed.array)
+
+        # Initialise the velocity speed lookup table:
+        attrs = (model, series, family, engine_type, engine_series)
+        table = lookup_table(self, 'vref', *attrs)
+
+        # Lookup the table for recommended flap manoeuvring speeds:
+        fms_table = at.get_fms_map(model.value, series.value, family.value)
+
+        # For each flap detent calculate the flap manoeuvring speed:
+        for detent, slices in slices_of_runs(flap.array):
+
+            fms = fms_table.get(detent)
+            if fms is None:
+                continue  # skip to next detent as no value is defined.
+            elif isinstance(fms[0], tuple):
+                for weight, speed in reversed(fms):
+                    condition = runs_of_ones(gw.array <= weight)
+                    for s in slices_and(slices, condition):
+                        self.array[s] = speed
+            elif isinstance(fms[0], basestring):
+                setting, offset = fms
+                vref_recorded = locals().get('vref_%s' % setting)
+                for s in slices:
+                    # Use recorded vref if available else use lookup tables:
+                    if vref_recorded is not None:
+                        vref = vref_recorded.array[s]
+                    else:
+                        vref = table.vref(setting, gw.array[s])
+                    self.array[s] = vref + offset
+            else:
+                raise TypeError('Encountered invalid table.')
+
+        # We want to mask out sections of flight where the aircraft is not
+        # airborne and where the aircraft is above 20000ft as, for the majority
+        # of aircraft, flaps should not be extended above that limit.  However,
+        # we are really only interested in the descent phase of the flight up
+        # until the flare.
+        self.array = mask_outside_slices(self.array, descents.get_slices())
 
 
 ##############################################################################

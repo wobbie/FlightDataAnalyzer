@@ -170,6 +170,7 @@ from analysis_engine.derived_parameters import (
     AirspeedMinusVrefFor3Sec,
     AirspeedRelative,
     AirspeedRelativeFor3Sec,
+    FlapManoeuvreSpeed,
     MMOLookup,
     V2,
     V2Lookup,
@@ -5592,6 +5593,210 @@ class TestMMOLookup(unittest.TestCase, NodeTest):
         expected = np.ma.array(data=[0] * 50, mask=True)
         expected[0:20] = 0.850
         expected[20:41] = 0.800
+        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+
+
+########################################
+# Flap Manoeuvre Speed
+
+
+class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
+
+    class VSX(VelocitySpeed):
+        '''
+        Table for aircraft with undefined Vref.
+        '''
+        tables = {}
+
+    class VS0(VelocitySpeed):
+        '''
+        Table for aircraft with flap and weight.
+        '''
+        weight_unit = ut.TONNE
+        tables = {'vref': {
+            'weight': ( 35,  40,  45,  50,  55,  60,  65),
+                '30': (111, 119, 127, 134, 141, 147, 154),
+                '40': (107, 115, 123, 131, 138, 146, 153),
+        },
+        'vmo': 340,
+        'mmo': 0.82,
+    }
+
+    def setUp(self):
+        self.node_class = FlapManoeuvreSpeed
+        self.airspeed = P(name='Airspeed', array=np.ma.array([200] * 90))
+        self.weight = P(name='Gross Weight Smoothed', array=np.ma.repeat([50000, 60000], 45))
+        self.descents = S(name='Descent To Flare', items=[
+            Section(name='Descent To Flare', slice=slice(2, 42), start_edge=2, stop_edge=42),
+            Section(name='Descent To Flare', slice=slice(47, 87), start_edge=47, stop_edge=87),
+        ])
+        self.flap_lever = M(
+            name='Flap Lever',
+            array=np.ma.repeat((0, 1, 2, 5, 10, 15, 25, 30, 40), 10),
+            values_mapping={f: str(f) for f in (0, 1, 2, 5, 10, 15, 25, 30, 40)},
+        )
+        self.flap_lever.array.mask = np.repeat(False, 90)  # expand mask.
+
+    @patch('analysis_engine.derived_parameters.at')
+    @patch('analysis_engine.library.at')
+    def test_can_operate(self, at0, at1):
+        nodes = ('Airspeed', 'Descent To Flare', 'Gross Weight Smoothed',
+                 'Model', 'Series', 'Family', 'Engine Series', 'Engine Type')
+        attrs = dict(izip(
+            ('model', 'series', 'family', 'engine_type', 'engine_series'),
+            self.generate_attributes('boeing'),
+        ))
+        attrs.update(manufacturer=A('Manufacturer', 'Boeing'))
+        # Assume that lookup tables are found correctly...
+        at0.get_vspeed_map.return_value = self.VS0
+        at1.get_fms_map.return_value = {}
+        # Flap Lever:
+        available = nodes + ('Flap Lever',)
+        self.assertTrue(self.node_class.can_operate(available, **attrs))
+        # Flap Lever (Synthetic):
+        available = nodes + ('Flap Lever (Synthetic)',)
+        self.assertTrue(self.node_class.can_operate(available, **attrs))
+        # Recorded Vref:
+        available = nodes + ('Flap Lever', 'Vref (25)', 'Vref (30)')
+        self.assertTrue(self.node_class.can_operate(available, **attrs))
+        # Assume that lookup tables are not found correctly...
+        # Please be careful if changing the below side effect iterables!
+        at0.get_vspeed_map.side_effect = (KeyError, self.VSX)
+        at1.get_fms_map.side_effect = ({}, {}, KeyError)
+        available = nodes + ('Flap Lever',)
+        for i in range(3):
+            self.assertFalse(self.node_class.can_operate(available, **attrs))
+
+    @patch('analysis_engine.derived_parameters.at')
+    @patch('analysis_engine.library.at')
+    def test_derive__vref_plus_offset(self, at0, at1):
+        attributes = self.generate_attributes('boeing')
+        at0.get_vspeed_map.return_value = self.VS0
+        at1.get_fms_map.return_value = {
+            '0':  ('40', 70),
+            '1':  ('40', 50),
+            '2':  None,
+            '5':  ('40', 30),
+            '10': ('40', 30),
+            '15': ('40', 20),
+            '25': ('40', 10),
+            '30': ('30', 0),
+            '40': ('40', 0),
+        }
+
+        node = self.node_class()
+        node.derive(self.airspeed, self.flap_lever, None, self.weight,
+                    None, None, self.descents, *attributes)
+
+        attributes = [a.value for a in attributes]
+        at0.get_vspeed_map.assert_called_once_with(*attributes)
+        at1.get_fms_map.assert_called_once_with(*attributes[:3])
+        expected = np.ma.array(data=[0] * 90, mask=True, dtype=np.float)
+        expected[00:10] = 131 + 70
+        expected[10:20] = 131 + 50
+        expected[20:30] = np.ma.masked
+        expected[30:40] = 131 + 30
+        expected[40:45] = 131 + 30
+        expected[45:50] = 146 + 30
+        expected[50:60] = 146 + 20
+        expected[60:70] = 146 + 10
+        expected[70:80] = 147 + 0
+        expected[80:90] = 146 + 0
+        expected[0:2] = np.ma.masked
+        expected[42:47] = np.ma.masked
+        expected[87:90] = np.ma.masked
+        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+
+    @patch('analysis_engine.derived_parameters.at')
+    @patch('analysis_engine.library.at')
+    def test_derive__fixed_speeds_in_weight_bands(self, at0, at1):
+        attributes = self.generate_attributes('boeing')
+        at0.get_vspeed_map.return_value = self.VS0
+        at1.get_fms_map.return_value = {
+            '0':  ((53070, 210), (62823, 220), (99999, 230)),
+            '1':  ((53070, 190), (62823, 200), (99999, 210)),
+            '2':  None,
+            '5':  ((53070, 170), (62823, 180), (99999, 190)),
+            '10': ((53070, 160), (62823, 170), (99999, 180)),
+            '15': ((53070, 150), (62823, 160), (99999, 170)),
+            '25': ((53070, 140), (62823, 150), (99999, 160)),
+            '30': ('30', 0),
+            '40': ('40', 0),
+        }
+
+        node = self.node_class()
+        node.derive(self.airspeed, self.flap_lever, None, self.weight,
+                    None, None, self.descents, *attributes)
+
+        attributes = [a.value for a in attributes]
+        at0.get_vspeed_map.assert_called_once_with(*attributes)
+        at1.get_fms_map.assert_called_once_with(*attributes[:3])
+        expected = np.ma.array(data=[0] * 90, mask=True, dtype=np.float)
+        expected[00:10] = 210
+        expected[10:20] = 190
+        expected[20:30] = np.ma.masked
+        expected[30:40] = 170
+        expected[40:45] = 160
+        expected[45:50] = 170
+        expected[50:60] = 160
+        expected[60:70] = 150
+        expected[70:80] = 147 + 0
+        expected[80:90] = 146 + 0
+        expected[0:2] = np.ma.masked
+        expected[42:47] = np.ma.masked
+        expected[87:90] = np.ma.masked
+        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+
+
+    @patch('analysis_engine.derived_parameters.at')
+    @patch('analysis_engine.library.at')
+    def test_derive__use_recorded_vref(self, at0, at1):
+        attributes = self.generate_attributes('boeing')
+        at0.get_vspeed_map.return_value = self.VS0
+        at1.get_fms_map.return_value = {
+            '0':  ('30', 80),
+            '1':  ('30', 60),
+            '5':  ('30', 40),
+            '15': ('30', 20),
+            '20': ('30', 20),
+            '25': ('25', 0),
+            '30': ('30', 0),
+        }
+
+        # We need to change some of the test data:
+        self.airspeed = P(name='Airspeed', array=np.ma.array([200] * 70))
+        self.weight = P(name='Gross Weight Smoothed', array=np.ma.repeat([50000, 60000], 35))
+        self.descents = S(name='Descent To Flare', items=[
+            Section(name='Descent To Flare', slice=slice(2, 32), start_edge=2, stop_edge=32),
+            Section(name='Descent To Flare', slice=slice(37, 67), start_edge=37, stop_edge=67),
+        ])
+        self.flap_lever = M(
+            name='Flap Lever',
+            array=np.ma.repeat((0, 1, 5, 15, 20, 25, 30), 10),
+            values_mapping={f: str(f) for f in (0, 1, 5, 15, 20, 25, 30)},
+        )
+        self.flap_lever.array.mask = np.repeat(False, 70)  # expand mask.
+        self.vref_25 = P(name='Vref (25)', array=np.ma.array([155] * 70))
+        self.vref_30 = P(name='Vref (30)', array=np.ma.array([150] * 70))
+
+        node = self.node_class()
+        node.derive(self.airspeed, self.flap_lever, None, self.weight,
+                    self.vref_25, self.vref_30, self.descents, *attributes)
+
+        attributes = [a.value for a in attributes]
+        at0.get_vspeed_map.assert_called_once_with(*attributes)
+        at1.get_fms_map.assert_called_once_with(*attributes[:3])
+        expected = np.ma.array(data=[0] * 70, mask=True, dtype=np.float)
+        expected[00:10] = 150 + 80
+        expected[10:20] = 150 + 60
+        expected[20:30] = 150 + 40
+        expected[30:40] = 150 + 20
+        expected[40:50] = 150 + 20
+        expected[50:60] = 155 + 0
+        expected[60:70] = 150 + 0
+        expected[0:2] = np.ma.masked
+        expected[32:37] = np.ma.masked
+        expected[67:70] = np.ma.masked
         ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
 
 
