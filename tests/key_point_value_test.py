@@ -73,6 +73,10 @@ from analysis_engine.key_point_values import (
     AirspeedDuringRejectedTakeoffMax,
     AirspeedGustsDuringFinalApproach,
     AirspeedMax,
+    AirspeedMinusMinimumAirspeedAbove10000FtMin,
+    AirspeedMinusMinimumAirspeed35To10000FtMin,
+    AirspeedMinusMinimumAirspeed10000To50FtMin,
+    AirspeedMinusMinimumAirspeedDuringGoAroundMin,
     AirspeedMinusV235To1000FtMax,
     AirspeedMinusV235To1000FtMin,
     AirspeedMinusV2At35FtDuringTakeoff,
@@ -1739,6 +1743,86 @@ class TestAirspeedMinusV2For3Sec35To1000FtMin(unittest.TestCase, NodeTest):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test Not Implemented')
+
+
+########################################
+# Airspeed: Minus Minimum Airspeed
+
+
+class TestAirspeedMinusMinimumAirspeedAbove10000FtMin(unittest.TestCase, CreateKPVsWithinSlicesTest):
+
+    def setUp(self):
+        self.node_class = AirspeedMinusMinimumAirspeedAbove10000FtMin
+        self.operational_combinations = [('Airspeed Minus Minimum Airspeed', 'Altitude STD')]
+        self.function = min_value
+        self.second_param_method_calls = [('slices_above', (10000,), {})]
+
+    def test_derive(self):
+        air_spd = P('Airspeed Minus Minimum Airspeed', np.ma.arange(200, 241))
+        alt_std = P('Altitude STD', np.ma.array(range(20) + range(20, -1, -1)) * 1000)
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(air_spd, alt_std)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(name=name, index=10, value=210),
+        ]))
+
+
+class TestAirspeedMinusMinimumAirspeed35To10000FtMin(unittest.TestCase, CreateKPVsWithinSlicesTest):
+
+    def setUp(self):
+        self.node_class = AirspeedMinusMinimumAirspeed35To10000FtMin
+        self.operational_combinations = [('Airspeed Minus Minimum Airspeed', 'Altitude STD')]
+        self.function = min_value
+        self.second_param_method_calls = [('slices_from_to', (35, 10000), {})]
+
+    def test_derive(self):
+        air_spd = P('Airspeed Minus Minimum Airspeed', np.ma.arange(200, 241))
+        alt_std = P('Altitude STD', np.ma.array(range(20) + range(20, -1, -1)) * 1000)
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(air_spd, alt_std)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(name=name, index=1, value=201),
+        ]))
+
+
+class TestAirspeedMinusMinimumAirspeed10000To50FtMin(unittest.TestCase, CreateKPVsWithinSlicesTest):
+
+    def setUp(self):
+        self.node_class = AirspeedMinusMinimumAirspeed10000To50FtMin
+        self.operational_combinations = [('Airspeed Minus Minimum Airspeed', 'Altitude STD')]
+        self.function = min_value
+        self.second_param_method_calls = [('slices_from_to', (10000, 50), {})]
+
+    def test_derive(self):
+        air_spd = P('Airspeed Minus Minimum Airspeed', np.ma.arange(200, 241))
+        alt_std = P('Altitude STD', np.ma.array(range(20) + range(20, -1, -1)) * 1000)
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(air_spd, alt_std)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(name=name, index=31, value=231),
+        ]))
+
+
+class TestAirspeedMinusMinimumAirspeedDuringGoAroundMin(unittest.TestCase, CreateKPVsWithinSlicesTest):
+
+    def setUp(self):
+        self.node_class = AirspeedMinusMinimumAirspeedDuringGoAroundMin
+        self.operational_combinations = [('Airspeed Minus Minimum Airspeed', 'Go Around And Climbout')]
+        self.function = min_value
+
+    def test_derive(self):
+        air_spd = P('Airspeed Minus Minimum Airspeed', np.ma.arange(200, 241))
+        go_around = buildsections('Go Around And Climbout', [10, 15], [35, 40])
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(air_spd, go_around)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(name=name, index=10, value=210),
+            KeyPointValue(name=name, index=35, value=235),
+        ]))
 
 
 ########################################

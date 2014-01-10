@@ -1311,6 +1311,73 @@ class AirspeedMinusV2For3Sec35To1000FtMin(KeyPointValueNode):
 
 
 ########################################
+# Airspeed: Minus Minimum Airspeed
+
+
+class AirspeedMinusMinimumAirspeedAbove10000FtMin(KeyPointValueNode):
+    '''
+    Minimum difference between airspeed and the minimum airspeed above 10,000
+    ft. A positive value measured ensures that the aircraft is above the speed
+    limit below which there is a reduced manoeuvring capability.
+    '''
+
+    def derive(self,
+               air_spd=P('Airspeed Minus Minimum Airspeed'),
+               alt_std=P('Altitude STD')):
+
+        self.create_kpvs_within_slices(air_spd.array,
+                                       alt_std.slices_above(10000),
+                                       min_value)
+
+
+class AirspeedMinusMinimumAirspeed35To10000FtMin(KeyPointValueNode):
+    '''
+    Minimum difference between airspeed and the minimum airspeed from 35 to
+    10,000 ft. A positive value measured ensures that the aircraft is above the
+    speed limit below which there is a reduced manoeuvring capability.
+    '''
+
+    def derive(self,
+               air_spd=P('Airspeed Minus Minimum Airspeed'),
+               alt_std=P('Altitude STD')):
+
+        self.create_kpvs_within_slices(air_spd.array,
+                                       alt_std.slices_from_to(35, 10000),
+                                       min_value)
+
+
+class AirspeedMinusMinimumAirspeed10000To50FtMin(KeyPointValueNode):
+    '''
+    Minimum difference between airspeed and the minimum airspeed from 10,000 to
+    50 ft. A positive value measured ensures that the aircraft is above the
+    speed limit below which there is a reduced manoeuvring capability.
+    '''
+
+    def derive(self,
+               air_spd=P('Airspeed Minus Minimum Airspeed'),
+               alt_std=P('Altitude STD')):
+
+        self.create_kpvs_within_slices(air_spd.array,
+                                       alt_std.slices_from_to(10000, 50),
+                                       min_value)
+
+
+class AirspeedMinusMinimumAirspeedDuringGoAroundMin(KeyPointValueNode):
+    '''
+    Minimum difference between airspeed and the minimum airspeed during
+    go-around and the climbout phase. A positive value measured ensures that
+    the aircraft is above the speed limit below which there is a reduced
+    manoeuvring capability.
+    '''
+
+    def derive(self,
+               air_spd=P('Airspeed Minus Minimum Airspeed'),
+               phases=S('Go Around And Climbout')):
+
+        self.create_kpvs_within_slices(air_spd.array, phases, min_value)
+
+
+########################################
 # Airspeed: Relative
 
 
