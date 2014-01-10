@@ -43,6 +43,7 @@ from analysis_engine.library import (ambiguous_runway,
                                      cycle_select,
                                      find_edges,
                                      find_edges_on_state_change,
+                                     first_valid_parameter,
                                      hysteresis,
                                      index_at_value,
                                      index_of_first_start,
@@ -11043,11 +11044,15 @@ class AirspeedMinusVMOMax(KeyPointValueNode):
 
     def derive(self,
                airspeed=P('Airspeed'),
-               vmo=P('VMO'),
+               vmo_record=P('VMO'),
                vmo_lookup=P('VMO Lookup'),
                airborne=S('Airborne')):
 
-        vmo = vmo or vmo_lookup
+        phases = airborne.get_slices()
+        vmo = first_valid_parameter(vmo_record, vmo_lookup, phases=phases)
+        if vmo is None:
+            self.array = np_ma_masked_zeros_like(airspeed.array)
+            return
         self.create_kpvs_within_slices(
             airspeed.array - vmo.array,
             airborne,
@@ -11071,11 +11076,15 @@ class MachMinusMMOMax(KeyPointValueNode):
 
     def derive(self,
                mach=P('Mach'),
-               mmo=P('MMO'),
+               mmo_record=P('MMO'),
                mmo_lookup=P('MMO Lookup'),
                airborne=S('Airborne')):
 
-        mmo = mmo or mmo_lookup
+        phases = airborne.get_slices()
+        mmo = first_valid_parameter(mmo_record, mmo_lookup, phases=phases)
+        if mmo is None:
+            self.array = np_ma_masked_zeros_like(mach.array)
+            return
         self.create_kpvs_within_slices(
             mach.array - mmo.array,
             airborne,

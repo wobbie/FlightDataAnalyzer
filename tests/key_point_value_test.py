@@ -9807,50 +9807,130 @@ class TestLastFlapChangeToTakeoffRollEndDuration(unittest.TestCase, NodeTest):
 
 
 class TestAirspeedMinusVMOMax(unittest.TestCase, NodeTest):
+
     def setUp(self):
         self.node_class = AirspeedMinusVMOMax
         self.operational_combinations = [
             ('VMO', 'Airspeed', 'Airborne'),
             ('VMO Lookup', 'Airspeed', 'Airborne'),
         ]
+        array = [300 + 40 * math.sin(n / (2 * math.pi)) for n in range(20)]
+        self.airspeed = P('Airspeed', np.ma.array(array))
+        self.vmo_record = P('VMO', np.ma.repeat(330, 20))
+        self.vmo_lookup = P('VMO Lookup', np.ma.repeat(335, 20))
+        self.airborne = buildsection('Airborne', 5, 15)
 
-    def test_derive(self):
-        vmo_array = np.ma.array([330] * 20)
-        airspeed_array = np.ma.array(
-            [300 + 40 * math.sin(n / (2 * math.pi)) for n in range(20)]
-        )
-        vmo = P('VMO', array=vmo_array)
-        airspeed = P('Airspeed', array=airspeed_array)
-        airborne = buildsection('Airborne', 5, 15)
+    def test_derive__record_only(self):
+        name = self.node_class.get_name()
         node = self.node_class()
-        node.derive(airspeed, vmo, None, airborne)
-        expected = [
-            KeyPointValue(index=10, value=9.991386482538246,
-                          name='Airspeed Minus VMO Max')
-        ]
-        self.assertEqual(node,  expected)
+        node.derive(self.airspeed, self.vmo_record, None, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=10, value=9.991386482538246, name=name),
+        ]))
+
+    def test_derive__lookup_only(self):
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.airspeed, None, self.vmo_lookup, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=10, value=4.991386482538246, name=name),
+        ]))
+
+    def test_derive__prefer_record(self):
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.airspeed, self.vmo_record, self.vmo_lookup, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=10, value=9.991386482538246, name=name),
+        ]))
+
+    def test_derive__record_masked(self):
+        self.vmo_record.array.mask = True
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.airspeed, self.vmo_record, self.vmo_lookup, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=10, value=4.991386482538246, name=name),
+        ]))
+
+    def test_derive__both_masked(self):
+        self.vmo_record.array.mask = True
+        self.vmo_lookup.array.mask = True
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.airspeed, self.vmo_record, self.vmo_lookup, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[]))
+
+    def test_derive__masked_within_phase(self):
+        self.vmo_record.array[:-1] = np.ma.masked
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.airspeed, self.vmo_record, self.vmo_lookup, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=10, value=4.991386482538246, name=name),
+        ]))
 
 
 class TestMachMinusMMOMax(unittest.TestCase, NodeTest):
+
     def setUp(self):
         self.node_class = MachMinusMMOMax
         self.operational_combinations = [
             ('MMO', 'Mach', 'Airborne'),
             ('MMO Lookup', 'Mach', 'Airborne'),
         ]
+        array = [0.8 + 0.04 * math.sin(n / (2 * math.pi)) for n in range(20)]
+        self.mach = P('Mach', np.ma.array(array))
+        self.mmo_record = P('MMO', np.ma.repeat(0.83, 20))
+        self.mmo_lookup = P('MMO Lookup', np.ma.repeat(0.82, 20))
+        self.airborne = buildsection('Airborne', 5, 15)
 
-    def test_derive(self):
-        mmo_array = np.ma.array([0.83] * 20)
-        airspeed_array = np.ma.array(
-            [0.8 + 0.04 * math.sin(n / (2 * math.pi)) for n in range(20)]
-        )
-        mmo = P('MMO', array=mmo_array)
-        airspeed = P('Airspeed', array=airspeed_array)
-        airborne = buildsection('Airborne', 5, 15)
+    def test_derive__record_only(self):
+        name = self.node_class.get_name()
         node = self.node_class()
-        node.derive(airspeed, mmo, None, airborne)
-        expected = [
-            KeyPointValue(index=10, value=0.009991386482538389,
-                          name='Mach Minus MMO Max')
-        ]
-        self.assertEqual(node,  expected)
+        node.derive(self.mach, self.mmo_record, None, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=10, value=0.009991386482538389, name=name),
+        ]))
+
+    def test_derive__lookup_only(self):
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.mach, None, self.mmo_lookup, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=10, value=0.019991386482538398, name=name),
+        ]))
+
+    def test_derive__prefer_record(self):
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.mach, self.mmo_record, self.mmo_lookup, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=10, value=0.009991386482538389, name=name),
+        ]))
+
+    def test_derive__record_masked(self):
+        self.mmo_record.array.mask = True
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.mach, self.mmo_record, self.mmo_lookup, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=10, value=0.019991386482538398, name=name),
+        ]))
+
+    def test_derive__both_masked(self):
+        self.mmo_record.array.mask = True
+        self.mmo_lookup.array.mask = True
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.mach, self.mmo_record, self.mmo_lookup, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[]))
+
+    def test_derive__masked_within_phase(self):
+        self.mmo_record.array[:-1] = np.ma.masked
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.mach, self.mmo_record, self.mmo_lookup, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=10, value=0.019991386482538398, name=name),
+        ]))
