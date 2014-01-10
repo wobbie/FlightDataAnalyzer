@@ -1978,24 +1978,39 @@ class AirspeedWithFlapDuringDescentMin(KeyPointValueNode, FlapOrConfigurationMax
             self.create_kpv(index, value, flap=detent)
 
 
-class AirspeedRelativeWithFlapDuringDescentMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
+class AirspeedMinusFlapManoeuvreSpeedWithFlapDuringDescentMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
+    Airspeed relative to the flap manoeuvre speed during the descent phase for
+    each flap setting.
+
+    Based on Flap Lever for safety based investigations which primarily
+    depend upon the pilot actions, rather than maintenance investigations
+    which depend upon the actual flap surface position. Uses Flap Lever if
+    available otherwise falls back to Flap Lever (Synthetic) which is
+    established from other sources.
     '''
 
-    NAME_FORMAT = 'Airspeed Relative With Flap %(flap)s During Descent Min'
+    NAME_FORMAT = 'Airspeed Minus Flap Manoeuvre Speed With Flap %(flap)s During Descent Min'
     NAME_VALUES = NAME_VALUES_LEVER
     units = ut.KT
 
     @classmethod
     def can_operate(cls, available):
 
-        return any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available) \
-            and all_of(('Airspeed Relative', 'Descent To Flare'), available)
+        core = all_of((
+            'Airspeed Minus Flap Manoeuvre Speed',
+            'Descent To Flare',
+        ), available)
+        flap = any_of((
+            'Flap Lever',
+            'Flap Lever (Synthetic)',
+        ), available)
+        return core and flap
 
     def derive(self,
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
-               airspeed=P('Airspeed Relative'),
+               airspeed=P('Airspeed Minus Flap Manoeuvre Speed'),
                scope=S('Descent To Flare')):
 
         flap = flap_lever or flap_synth

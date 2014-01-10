@@ -73,6 +73,7 @@ from analysis_engine.key_point_values import (
     AirspeedDuringRejectedTakeoffMax,
     AirspeedGustsDuringFinalApproach,
     AirspeedMax,
+    AirspeedMinusFlapManoeuvreSpeedWithFlapDuringDescentMin,
     AirspeedMinusMinimumAirspeedAbove10000FtMin,
     AirspeedMinusMinimumAirspeed35To10000FtMin,
     AirspeedMinusMinimumAirspeed10000To50FtMin,
@@ -98,7 +99,6 @@ from analysis_engine.key_point_values import (
     AirspeedRelativeFor3Sec500To20FtMax,
     AirspeedRelativeFor3Sec500To20FtMin,
     AirspeedRelativeWithConfigurationDuringDescentMin,
-    AirspeedRelativeWithFlapDuringDescentMin,
     AirspeedTopOfDescentTo10000FtMax,
     AirspeedTopOfDescentTo4000FtMax,
     AirspeedTopOfDescentTo4000FtMin,
@@ -2288,19 +2288,29 @@ class TestAirspeedWithFlapDuringDescentMin(unittest.TestCase, NodeTest):
         pass
 
 
-class TestAirspeedRelativeWithFlapDuringDescentMin(unittest.TestCase, NodeTest):
+class TestAirspeedMinusFlapManoeuvreSpeedWithFlapDuringDescentMin(unittest.TestCase, NodeTest):
 
     def setUp(self):
-        self.node_class = AirspeedRelativeWithFlapDuringDescentMin
+        self.node_class = AirspeedMinusFlapManoeuvreSpeedWithFlapDuringDescentMin
         self.operational_combinations = [
-            ('Flap Lever', 'Airspeed Relative', 'Descent To Flare'),
-            ('Flap Lever (Synthetic)', 'Airspeed Relative', 'Descent To Flare'),
-            ('Flap Lever', 'Flap Lever (Synthetic)', 'Airspeed Relative', 'Descent To Flare'),
+            ('Flap Lever', 'Airspeed Minus Flap Manoeuvre Speed', 'Descent To Flare'),
+            ('Flap Lever (Synthetic)', 'Airspeed Minus Flap Manoeuvre Speed', 'Descent To Flare'),
+            ('Flap Lever', 'Flap Lever (Synthetic)', 'Airspeed Minus Flap Manoeuvre Speed', 'Descent To Flare'),
         ]
 
-    @unittest.skip('Test not implemented.')
     def test_derive(self):
-        pass
+        array = np.ma.array((0, 0, 5, 10, 10, 10, 15, 15, 15, 35))
+        mapping = {int(f): str(f) for f in np.ma.unique(array)}
+        flap = M('Flap Lever', array, values_mapping=mapping)
+        airspeed = P('Airspeed', np.ma.arange(100, 0, -10))
+        descents = buildsection('Descent To Flare', 2, 8)
+        node = self.node_class()
+        node.derive(flap, None, airspeed, descents)
+        self.assertEqual(node.get_ordered_by_index(), [
+            KeyPointValue(index=2, value=80, name='Airspeed Minus Flap Manoeuvre Speed With Flap 5 During Descent Min'),
+            KeyPointValue(index=5, value=50, name='Airspeed Minus Flap Manoeuvre Speed With Flap 10 During Descent Min'),
+            KeyPointValue(index=8, value=20, name='Airspeed Minus Flap Manoeuvre Speed With Flap 15 During Descent Min'),
+        ])
 
 
 ########################################
