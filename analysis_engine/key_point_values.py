@@ -6923,6 +6923,19 @@ class EngTorque500To50FtMin(KeyPointValueNode):
         )
 
 
+class EngTorqueWhileDescendingMax(KeyPointValueNode):
+    '''
+    '''
+
+    units = ut.FT_LB
+
+    def derive(self,
+               eng_trq_max=P('Eng (*) Torque Max'),
+               descending=S('Descending')):
+
+        self.create_kpv_from_slices(eng_trq_max.array, descending, max_value)
+
+
 ##############################################################################
 # Engine Vibrations (N*)
 

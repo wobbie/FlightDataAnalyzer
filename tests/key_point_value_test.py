@@ -230,6 +230,7 @@ from analysis_engine.key_point_values import (
     EngTorqueDuringMaximumContinuousPowerMax,
     EngTorqueDuringTakeoff5MinRatingMax,
     EngTorqueDuringTaxiMax,
+    EngTorqueWhileDescendingMax,
     EngVibAMax,
     EngVibBMax,
     EngVibBroadbandMax,
@@ -5501,6 +5502,18 @@ class TestEngTorque500To50FtMin(unittest.TestCase, CreateKPVsWithinSlicesTest):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test Not Implemented')
+
+
+class TestEngTorqueWhileDescendingMax(unittest.TestCase, CreateKPVFromSlicesTest):
+
+    def setUp(self):
+        self.node_class = EngTorqueWhileDescendingMax
+        self.operational_combinations = [('Eng (*) Torque Max', 'Descending')]
+        self.function = max_value
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
 
 
 ##############################################################################
