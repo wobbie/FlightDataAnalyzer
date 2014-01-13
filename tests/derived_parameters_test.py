@@ -838,8 +838,9 @@ class TestAltitudeAAL(unittest.TestCase):
         slow_and_fast_data = np.ma.array([70] + [85] * 7 + [70]*2)
         phase_fast = Fast()
         phase_fast.derive(Parameter('Airspeed', slow_and_fast_data))
+        pitch = P('Pitch', np_ma_ones_like(slow_and_fast_data))
         alt_aal = AltitudeAAL()
-        alt_aal.derive(None, alt_std, phase_fast)
+        alt_aal.derive(None, alt_std, phase_fast, pitch)
         expected = np.ma.array([0, 0, 30, 80, 250, 560, 200, 50, 0, 0])
         np.testing.assert_array_equal(expected, alt_aal.array.data)
 
@@ -877,7 +878,9 @@ class TestAltitudeAAL(unittest.TestCase):
         alt_aal = AltitudeAAL()
         alt_aal.derive(None,
                        P('Altitude STD', testwave),
-                       phase_fast)
+                       phase_fast,
+                       P('Pitch', np_ma_ones_like(testwave))
+                       )
         '''
         import matplotlib.pyplot as plt
         plt.plot(testwave, '-b')
@@ -907,7 +910,9 @@ class TestAltitudeAAL(unittest.TestCase):
         alt_aal = AltitudeAAL()
         alt_aal.derive(P('Altitude Radio', np.ma.copy(rad_data)),
                        P('Altitude STD', np.ma.copy(std_wave)),
-                       phase_fast)
+                       phase_fast,
+                       P('Pitch', np_ma_ones_like(rad_data))
+                       )
         '''
         import matplotlib.pyplot as plt
         plt.plot(std_wave, '-b')
@@ -972,7 +977,9 @@ class TestAltitudeAAL(unittest.TestCase):
         alt_aal = AltitudeAAL()
         alt_aal.derive(None, 
                        P('Altitude STD', testwave),
-                       phase_fast)
+                       phase_fast,
+                       P('Pitch', np_ma_ones_like(testwave))
+                       )
         '''
         import matplotlib.pyplot as plt
         plt.plot(testwave)
@@ -985,7 +992,34 @@ class TestAltitudeAAL(unittest.TestCase):
         np.testing.assert_almost_equal(alt_aal.array[124], 8594, decimal=0)
         np.testing.assert_almost_equal(alt_aal.array[191], 8594, decimal=0)
         np.testing.assert_almost_equal(alt_aal.array[254], 0, decimal=0)
-    
+
+    def test_alt_aal_no_rad_alt_pitch_inclusion(self):
+        testwave = np.ma.cos(np.arange(0, 3.14 * 2.7, 0.3)) * -280 + 380
+        join = 20
+        x = testwave[join]
+        n = len(testwave) - join
+        testwave[join:] = np.linspace(x, x-80, n)
+        phase_fast = buildsection('Fast', 0, 28)
+        pch = np_ma_ones_like(testwave)
+        pch[23:27]=2.0
+        alt_aal = AltitudeAAL()
+        alt_aal.derive(None, 
+                       P('Altitude STD', testwave),
+                       phase_fast,
+                       P('Pitch', pch)
+                       )
+        
+        '''
+        import matplotlib.pyplot as plt
+        plt.plot(testwave)
+        plt.plot(alt_aal.array)
+        plt.show()
+        '''
+        # Check that AAL goes to zero at the last pitch high point and stays there.
+        self.assertGreater(alt_aal.array[25], 0.0)
+        self.assertEqual(alt_aal.array[26], 0.0)
+        self.assertEqual(alt_aal.array[27], 0.0)
+
     def test_alt_aal_misleading_rad_alt(self):
         # Spurious Altitude Radio data when Altitude STD was above 30000 ft was
         # causing Altitude AAL to be shifted down to -30000 ft.

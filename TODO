@@ -2,6 +2,7 @@
 TODO
 ====
 
+* Change "Spoilers (n)" to be "Spoilers (L) (n)" to more easily group left and right spoilers, rather than knowing the spoiler configuration for each airframe / dataframe combination
 * What to do if AUW is greater or less than the VREF/V2 tables allow? Should this be reported as more than just a warning in log file?
 * Review whether we should keep KeyPointValue slices which indicate which section of data a KPV was created within.
 * Support offset ILS beams for approach tracks
