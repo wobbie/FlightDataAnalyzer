@@ -48,6 +48,7 @@ from analysis_engine.key_point_values import (
     Airspeed1000To500FtMin,
     Airspeed1000To8000FtMax,
     Airspeed3000FtToTopOfClimbMax,
+    Airspeed3000FtToTopOfClimbMin,
     Airspeed3000To1000FtMax,
     Airspeed35To1000FtMax,
     Airspeed35To1000FtMin,
@@ -2436,6 +2437,25 @@ class TestAirspeed3000FtToTopOfClimbMax(unittest.TestCase, NodeTest):
         node.derive(air_spd, alt_aal, tocs)
         self.assertEqual(len(node), 1)
         self.assertEqual(node[0], KeyPointValue(149, 249, 'Airspeed 3000 Ft To Top Of Climb Max'))
+
+
+class TestAirspeed3000FtToTopOfClimbMin(unittest.TestCase, NodeTest):
+    
+    def setUp(self):
+        self.node_class = Airspeed3000FtToTopOfClimbMin
+        self.operational_combinations = [('Airspeed', 'Altitude AAL For Flight Phases', 'Top Of Climb')]
+    
+    def test_derive_basic(self):
+        alt_aal_array = np.ma.arange(0, 20000, 100)
+        alt_aal = P('Altitude AAL For Flight Phases', alt_aal_array)
+        air_spd_array = np.ma.arange(100, 300)
+        air_spd = P('Airspeed', air_spd_array)
+        tocs = KTI('Top Of Climb', items=[KeyTimeInstance(150, 'Top Of Climb')])
+        node = self.node_class()
+        node.derive(air_spd, alt_aal, tocs)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0], KeyPointValue(30, 130, 'Airspeed 3000 Ft To Top Of Climb Min'))
+
 
 class TestAirspeedDuringLevelFlightMax(unittest.TestCase, NodeTest):
 

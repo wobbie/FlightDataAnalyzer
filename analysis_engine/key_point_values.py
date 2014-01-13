@@ -1002,6 +1002,35 @@ class Airspeed3000FtToTopOfClimbMax(KeyPointValueNode):
                                   _slice=slice(index_at_3000ft, toc.index)))
 
 
+class Airspeed3000FtToTopOfClimbMin(KeyPointValueNode):
+    '''
+    Minimum airspeed while climbing from 3,000ft above the airfield to the
+    Top of Climb.
+    '''
+
+    units = ut.KT
+
+    def derive(self,
+               air_spd=P('Airspeed'),
+               alt_aal=P('Altitude AAL For Flight Phases'),
+               tocs=KTI('Top Of Climb')):
+        # TODO: Should we be able to handle multiple Top of Climbs?
+        toc = tocs.get_first()
+        
+        if not toc:
+            return
+        
+        index_at_3000ft = index_at_value(alt_aal.array, 3000,
+                                         _slice=slice(toc.index, None, -1))
+        
+        if not index_at_3000ft:
+            # Top Of Climb below 3000ft?
+            return
+        
+        self.create_kpv(*min_value(air_spd.array,
+                                  _slice=slice(index_at_3000ft, toc.index)))
+
+
 class Airspeed1000To500FtMax(KeyPointValueNode):
     '''
     Maximum airspeed during the Final Approach from 1,000ft above the
