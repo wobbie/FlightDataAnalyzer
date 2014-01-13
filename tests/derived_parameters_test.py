@@ -42,7 +42,7 @@ from analysis_engine.node import (Attribute,
 from analysis_engine.process_flight import process_flight
 from analysis_engine.settings import GRAVITY_IMPERIAL, METRES_TO_FEET
 
-from flight_phase_test import buildsection
+from flight_phase_test import buildsection, buildsections
 
 from analysis_engine.derived_parameters import (
     #ATEngaged,
@@ -4842,45 +4842,31 @@ class TestV2Lookup(unittest.TestCase, NodeTest):
 
     @patch('analysis_engine.library.at')
     def test_can_operate(self, at):
+        nodes = ('Airspeed', 'Liftoff', 'Climb Start',
+                 'Model', 'Series', 'Family', 'Engine Series', 'Engine Type')
         keys = ('model', 'series', 'family', 'engine_type', 'engine_series')
+        airbus = dict(izip(keys, self.generate_attributes('airbus')))
+        boeing = dict(izip(keys, self.generate_attributes('boeing')))
+        beechcraft = dict(izip(keys, self.generate_attributes('beechcraft')))
         # Assume that lookup tables are found correctly...
         at.get_vspeed_map.return_value = self.VSF0
         # Flap w/ Weight:
-        self.assertTrue(self.node_class.can_operate(
-            ('Airspeed', 'Liftoff', 'Climb Start',
-             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',
-             'Flap', 'Gross Weight At Liftoff'),
-            **dict(izip(keys, self.generate_attributes('boeing')))
-        ))
+        available = nodes + ('Flap', 'Gross Weight At Liftoff')
+        self.assertTrue(self.node_class.can_operate(available, **boeing))
         # Configuration w/ Weight:
-        self.assertTrue(self.node_class.can_operate(
-            ('Airspeed', 'Liftoff', 'Climb Start',
-             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',
-             'Configuration', 'Gross Weight At Liftoff'),
-            **dict(izip(keys, self.generate_attributes('airbus')))
-        ))
+        available = nodes + ('Configuration', 'Gross Weight At Liftoff')
+        self.assertTrue(self.node_class.can_operate(available, **airbus))
         # Flap w/o Weight:
-        self.assertTrue(self.node_class.can_operate(
-            ('Airspeed', 'Liftoff', 'Climb Start',
-             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',
-             'Flap'),
-            **dict(izip(keys, self.generate_attributes('beechcraft')))
-        ))
+        available = nodes + ('Flap',)
+        self.assertTrue(self.node_class.can_operate(available, **beechcraft))
         # Configuration w/o Weight:
-        self.assertTrue(self.node_class.can_operate(
-            ('Airspeed', 'Liftoff', 'Climb Start',
-             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',
-             'Configuration'),
-            **dict(izip(keys, self.generate_attributes('airbus')))
-        ))
+        available = nodes + ('Configuration',)
+        self.assertTrue(self.node_class.can_operate(available, **airbus))
         # Assume that lookup tables are not found correctly...
-        at.get_vspeed_map.return_value = self.VSX
-        self.assertFalse(self.node_class.can_operate(
-            ('Airspeed', 'Liftoff', 'Climb Start',
-             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',
-             'Flap', 'Gross Weight At Liftoff'),
-            **dict(izip(keys, self.generate_attributes('boeing')))
-        ))
+        at.get_vspeed_map.side_effect = (KeyError, self.VSX)
+        available = nodes + ('Flap', 'Gross Weight At Liftoff')
+        for i in range(2):
+            self.assertFalse(self.node_class.can_operate(available, **boeing))
 
     @patch('analysis_engine.library.at')
     def test_derive__conf_with_weight__standard(self, at):
@@ -5048,10 +5034,7 @@ class TestVref(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = Vref
         self.airspeed = P(name='Airspeed', array=np.ma.array([200] * 128))
-        self.approaches = S(name='Approach And Landing', items=[
-            Section(name='Approach And Landing', slice=slice(2, 42), start_edge=2, stop_edge=42),
-            Section(name='Approach And Landing', slice=slice(66, 106), start_edge=66, stop_edge=106),
-        ])
+        self.approaches = buildsections('Approach And Landing', (2, 42), (66, 106))
 
     def test_can_operate(self):
         # AFR:
@@ -5145,52 +5128,35 @@ class TestVrefLookup(unittest.TestCase, NodeTest):
             KeyTimeInstance(name='Touchdown', index=7),
             KeyTimeInstance(name='Touchdown', index=71),
         ])
-        self.approaches = S(name='Approach And Landing', items=[
-            Section(name='Approach And Landing', slice=slice(2, 42), start_edge=2, stop_edge=42),
-            Section(name='Approach And Landing', slice=slice(66, 106), start_edge=66, stop_edge=106),
-        ])
+        self.approaches = buildsections('Approach And Landing', (2, 42), (66, 106))
 
     @patch('analysis_engine.library.at')
     def test_can_operate(self, at):
+        nodes = ('Airspeed', 'Approach And Landing', 'Touchdown',
+                 'Model', 'Series', 'Family', 'Engine Series', 'Engine Type')
         keys = ('model', 'series', 'family', 'engine_type', 'engine_series')
+        airbus = dict(izip(keys, self.generate_attributes('airbus')))
+        boeing = dict(izip(keys, self.generate_attributes('boeing')))
+        beechcraft = dict(izip(keys, self.generate_attributes('beechcraft')))
         # Assume that lookup tables are found correctly...
         at.get_vspeed_map.return_value = self.VSF0
         # Flap w/ Weight:
-        self.assertTrue(self.node_class.can_operate(
-            ('Airspeed', 'Approach And Landing', 'Touchdown',
-             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',
-             'Flap', 'Gross Weight Smoothed'),
-            **dict(izip(keys, self.generate_attributes('boeing')))
-        ))
+        available = nodes + ('Flap', 'Gross Weight Smoothed')
+        self.assertTrue(self.node_class.can_operate(available, **boeing))
         # Configuration w/ Weight:
-        self.assertTrue(self.node_class.can_operate(
-            ('Airspeed', 'Approach And Landing', 'Touchdown',
-             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',
-             'Configuration', 'Gross Weight Smoothed'),
-            **dict(izip(keys, self.generate_attributes('airbus')))
-        ))
+        available = nodes + ('Configuration', 'Gross Weight Smoothed')
+        self.assertTrue(self.node_class.can_operate(available, **airbus))
         # Flap w/o Weight:
-        self.assertTrue(self.node_class.can_operate(
-            ('Airspeed', 'Approach And Landing', 'Touchdown',
-             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',
-             'Flap'),
-            **dict(izip(keys, self.generate_attributes('beechcraft')))
-        ))
+        available = nodes + ('Flap',)
+        self.assertTrue(self.node_class.can_operate(available, **beechcraft))
         # Configuration w/o Weight:
-        self.assertTrue(self.node_class.can_operate(
-            ('Airspeed', 'Approach And Landing', 'Touchdown',
-             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',
-             'Configuration'),
-            **dict(izip(keys, self.generate_attributes('airbus')))
-        ))
+        available = nodes + ('Configuration',)
+        self.assertTrue(self.node_class.can_operate(available, **airbus))
         # Assume that lookup tables are not found correctly...
-        at.get_vspeed_map.return_value = self.VSX
-        self.assertFalse(self.node_class.can_operate(
-            ('Airspeed', 'Approach And Landing', 'Touchdown',
-             'Model', 'Series', 'Family', 'Engine Series', 'Engine Type',
-             'Flap', 'Gross Weight Smoothed'),
-            **dict(izip(keys, self.generate_attributes('boeing')))
-        ))
+        at.get_vspeed_map.side_effect = (KeyError, self.VSX)
+        available = nodes + ('Flap', 'Gross Weight Smoothed')
+        for i in range(2):
+            self.assertFalse(self.node_class.can_operate(available, **boeing))
 
     @patch('analysis_engine.library.at')
     def test_derive__conf_with_weight__standard(self, at):
@@ -5397,22 +5363,16 @@ class TestVMOLookup(unittest.TestCase, NodeTest):
 
     @patch('analysis_engine.library.at')
     def test_can_operate(self, at):
+        nodes = ('Altitude STD', 'Model', 'Series', 'Family', 'Engine Series', 'Engine Type')
+        keys = ('model', 'series', 'family', 'engine_type', 'engine_series')
+        boeing = dict(izip(keys, self.generate_attributes('boeing')))
         # Assume that lookup tables are found correctly...
         at.get_vspeed_map.return_value = self.VS0
-        keys = ('model', 'series', 'family', 'engine_type', 'engine_series')
-        self.assertTrue(self.node_class.can_operate(
-            ('Altitude STD', 'Model', 'Series', 'Family', 'Engine Series',
-             'Engine Type'),
-            **dict(izip(keys, self.generate_attributes('boeing')))
-        ))
+        self.assertTrue(self.node_class.can_operate(nodes, **boeing))
         # Assume that lookup tables are not found correctly...
-        at.get_vspeed_map.return_value = self.VSX
-        keys = ('model', 'series', 'family', 'engine_type', 'engine_series')
-        self.assertFalse(self.node_class.can_operate(
-            ('Altitude STD', 'Model', 'Series', 'Family', 'Engine Series',
-             'Engine Type'),
-            **dict(izip(keys, self.generate_attributes('boeing')))
-        ))
+        at.get_vspeed_map.side_effect = (KeyError, self.VSX)
+        for i in range(2):
+            self.assertFalse(self.node_class.can_operate(nodes, **boeing))
 
     @patch('analysis_engine.library.at')
     def test_derive__none(self, at):
@@ -5521,22 +5481,16 @@ class TestMMOLookup(unittest.TestCase, NodeTest):
 
     @patch('analysis_engine.library.at')
     def test_can_operate(self, at):
+        nodes = ('Altitude STD', 'Model', 'Series', 'Family', 'Engine Series', 'Engine Type')
+        keys = ('model', 'series', 'family', 'engine_type', 'engine_series')
+        boeing = dict(izip(keys, self.generate_attributes('boeing')))
         # Assume that lookup tables are found correctly...
         at.get_vspeed_map.return_value = self.VS0
-        keys = ('model', 'series', 'family', 'engine_type', 'engine_series')
-        self.assertTrue(self.node_class.can_operate(
-            ('Altitude STD', 'Model', 'Series', 'Family', 'Engine Series',
-             'Engine Type'),
-            **dict(izip(keys, self.generate_attributes('boeing')))
-        ))
+        self.assertTrue(self.node_class.can_operate(nodes, **boeing))
         # Assume that lookup tables are not found correctly...
-        at.get_vspeed_map.return_value = self.VSX
-        keys = ('model', 'series', 'family', 'engine_type', 'engine_series')
-        self.assertFalse(self.node_class.can_operate(
-            ('Altitude STD', 'Model', 'Series', 'Family', 'Engine Series',
-             'Engine Type'),
-            **dict(izip(keys, self.generate_attributes('boeing')))
-        ))
+        at.get_vspeed_map.side_effect = (KeyError, self.VSX)
+        for i in range(2):
+            self.assertFalse(self.node_class.can_operate(nodes, **boeing))
 
     @patch('analysis_engine.library.at')
     def test_derive__none(self, at):
@@ -5695,10 +5649,7 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
         self.node_class = FlapManoeuvreSpeed
         self.airspeed = P(name='Airspeed', array=np.ma.array([200] * 90))
         self.weight = P(name='Gross Weight Smoothed', array=np.ma.repeat([50000, 60000], 45))
-        self.descents = S(name='Descent To Flare', items=[
-            Section(name='Descent To Flare', slice=slice(2, 42), start_edge=2, stop_edge=42),
-            Section(name='Descent To Flare', slice=slice(47, 87), start_edge=47, stop_edge=87),
-        ])
+        self.descents = buildsections('Descent To Flare', (2, 42), (47, 87))
         self.flap_lever = M(
             name='Flap Lever',
             array=np.ma.repeat((0, 1, 2, 5, 10, 15, 25, 30, 40), 10),
