@@ -1029,14 +1029,13 @@ class TestCalculateTimebase(unittest.TestCase):
 
 
 class TestConvertTwoDigitToFourDigitYear(unittest.TestCase):
-    @mock.patch("analysis_engine.library.CURRENT_YEAR", new='2012')
     def test_convert_two_digit_to_four_digit_year(self):
         # WARNING - this test will fail next year(!)
-        self.assertEquals(convert_two_digit_to_four_digit_year(99), 1999)
-        self.assertEquals(convert_two_digit_to_four_digit_year(13), 1913)
-        self.assertEquals(convert_two_digit_to_four_digit_year(12), 2012) # will break next year
-        self.assertEquals(convert_two_digit_to_four_digit_year(11), 2011)
-        self.assertEquals(convert_two_digit_to_four_digit_year(1), 2001)
+        self.assertEquals(convert_two_digit_to_four_digit_year(99, '2012'), 1999)
+        self.assertEquals(convert_two_digit_to_four_digit_year(13, '2012'), 1913)
+        self.assertEquals(convert_two_digit_to_four_digit_year(12, '2012'), 2012) # will break next year
+        self.assertEquals(convert_two_digit_to_four_digit_year(11, '2012'), 2011)
+        self.assertEquals(convert_two_digit_to_four_digit_year(1, '2012'), 2001)
 
 
 class TestCoReg(unittest.TestCase):

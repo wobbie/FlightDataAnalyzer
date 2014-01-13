@@ -12,8 +12,7 @@ from hdfaccess.parameter import MappedArray
 
 from flightdatautilities import aircrafttables as at
 
-from settings import (CURRENT_YEAR,
-                      DESCENT_LOW_CLIMB_THRESHOLD,
+from settings import (DESCENT_LOW_CLIMB_THRESHOLD,
                       INITIAL_APPROACH_THRESHOLD,
                       KTS_TO_MPS,
                       METRES_TO_FEET,
@@ -630,6 +629,10 @@ def calculate_timebase(years, months, days, hours, mins, secs):
     :raises: InvalidDatetime if no valid timestamps provided
     """
     base_dt = None
+    # Calculate current year here and pass into
+    # convert_two_digit_to_four_digit_year to save calculating year for every
+    # second of flight
+    current_year = str(datetime.now().year)
     # OrderedDict so if all values are the same, max will consistently take the
     # first val on repeated runs
     clock_variation = OrderedDict()
@@ -647,7 +650,7 @@ def calculate_timebase(years, months, days, hours, mins, secs):
         # same for time?
 
         if yr is not None and yr is not np.ma.masked and yr < 100:
-            yr = convert_two_digit_to_four_digit_year(yr)
+            yr = convert_two_digit_to_four_digit_year(yr, current_year)
 
         try:
             dt = datetime(int(yr), int(mth), int(day), int(hr), int(mn), int(sc))
@@ -675,7 +678,7 @@ def calculate_timebase(years, months, days, hours, mins, secs):
         raise InvalidDatetime("No valid datestamps found")
 
 
-def convert_two_digit_to_four_digit_year(yr):
+def convert_two_digit_to_four_digit_year(yr, current_year):
     """
     Everything below the current year is assume to be in the current
     century, everything above is assumed to be in the previous
@@ -688,8 +691,8 @@ def convert_two_digit_to_four_digit_year(yr):
     01 = 2001
     """
     # convert to 4 digit year
-    century = int(CURRENT_YEAR[:2]) * 100
-    yy = int(CURRENT_YEAR[2:])
+    century = int(current_year[:2]) * 100
+    yy = int(current_year[2:])
     if yr > yy:
         return century - 100 + yr
     else:
