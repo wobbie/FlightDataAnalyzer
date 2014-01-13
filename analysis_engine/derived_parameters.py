@@ -3,6 +3,7 @@
 import numpy as np
 import geomag
 
+from copy import deepcopy
 from math import radians
 from scipy.interpolate import interp1d
 
@@ -50,6 +51,7 @@ from analysis_engine.library import (actuator_mismatch,
                                      mask_outside_slices,
                                      match_altitudes,
                                      max_value,
+                                     most_common_value,
                                      moving_average,
                                      np_ma_ones_like,
                                      np_ma_masked_zeros_like,
@@ -6065,7 +6067,7 @@ class V2(DerivedParameterNode):
         afr = all_of((
             'Airspeed',
             'AFR V2',
-            'Takeoff Acceleration Start',
+            'Liftoff',
             'Climb Start',
         ), available) and afr_v2 and afr_v2.value >= AIRSPEED_THRESHOLD
 
@@ -6073,7 +6075,7 @@ class V2(DerivedParameterNode):
             'Airspeed',
             'Selected Speed',
             'Speed Control',
-            'Takeoff Acceleration Start',
+            'Liftoff',
             'Climb Start',
             'Manufacturer',
         ), available) and manufacturer and manufacturer.value == 'Airbus'
@@ -6081,7 +6083,7 @@ class V2(DerivedParameterNode):
         embraer = all_of((
             'Airspeed',
             'V2-Vac',
-            'Takeoff Acceleration Start',
+            'Liftoff',
             'Climb Start',
         ), available)
 
@@ -6093,39 +6095,42 @@ class V2(DerivedParameterNode):
                spd_sel=P('Selected Speed'),
                spd_ctl=P('Speed Control'),
                afr_v2=A('AFR V2'),
-               takeoff_starts=KTI('Takeoff Acceleration Start'),
+               liftoffs=KTI('Liftoff'),
                climb_starts=KTI('Climb Start'),
                manufacturer=A('Manufacturer')):
 
         # Prepare a zeroed, masked array based on the airspeed:
-        self.array = np_ma_masked_zeros_like(airspeed.array, np.double)
+        self.array = np_ma_masked_zeros_like(airspeed.array, np.int)
 
-        # Determine the sections of flight to populate V2 for:
-        phases = slices_from_ktis(takeoff_starts, climb_starts)
+        # Determine interesting sections of flight which we want to use for V2.
+        # Due to issues with how data is recorded, use five superframes before
+        # liftoff until the start of the climb:
+        starts = deepcopy(liftoffs)
+        for start in starts:
+            start.index = max(start.index - 5 * 64 * self.hz, 0)
+        phases = slices_from_ktis(starts, climb_starts)
 
         # 1. Use value provided in achieved flight record (if available):
         if afr_v2 and afr_v2.value >= AIRSPEED_THRESHOLD:
             for phase in phases:
-                self.array[phase] = afr_v2.value
+                self.array[phase] = round(afr_v2.value)
             return
 
         # 2. Derive parameter for Embraer 170/190:
         if v2_vac:
             for phase in phases:
-                self.array[phase] = v2_vac.array[phase]
+                value = most_common_value(v2_vac.array[phase].astype(np.int))
+                if value is not None:
+                    self.array[phase] = value
             return
 
         # 3. Derive parameter for Airbus:
         if manufacturer and manufacturer.value == 'Airbus':
+            spd_sel.array[spd_ctl.array == 'Manual'] = np.ma.masked
             for phase in phases:
-                # Propagate first non-masked value nearest start of takeoff only:
-                sample = first_valid_sample(np.ma.where(
-                    spd_ctl.array[phase] == 'Auto',
-                    spd_sel.array[phase],
-                    np.ma.masked
-                ))
-                if sample.value is not None:
-                    self.array[phase] = sample.value
+                value = most_common_value(spd_sel.array[phase].astype(np.int))
+                if value is not None:
+                    self.array[phase] = value
             return
 
 
@@ -6152,7 +6157,7 @@ class V2Lookup(DerivedParameterNode):
 
         core = all_of((
             'Airspeed',
-            'Takeoff Acceleration Start',
+            'Liftoff',
             'Climb Start',
             'Model',
             'Series',
@@ -6166,13 +6171,8 @@ class V2Lookup(DerivedParameterNode):
             'Flap',
         ), available)
 
-        weight = any_of((
-            'Gross Weight At Liftoff',
-            'Liftoff',
-        ), available)
-
         attrs = (model, series, family, engine_type, engine_series)
-        return core and flap and weight and lookup_table(cls, 'v2', *attrs)
+        return core and flap and lookup_table(cls, 'v2', *attrs)
 
     def derive(self,
                flap=M('Flap'),
@@ -6180,7 +6180,6 @@ class V2Lookup(DerivedParameterNode):
                airspeed=P('Airspeed'),
                weight_liftoffs=KPV('Gross Weight At Liftoff'),
                liftoffs=KTI('Liftoff'),
-               takeoff_starts=KTI('Takeoff Acceleration Start'),
                climb_starts=KTI('Climb Start'),
                model=A('Model'),
                series=A('Series'),
@@ -6189,10 +6188,15 @@ class V2Lookup(DerivedParameterNode):
                engine_series=A('Engine Series')):
 
         # Prepare a zeroed, masked array based on the airspeed:
-        self.array = np_ma_masked_zeros_like(airspeed.array, np.double)
+        self.array = np_ma_masked_zeros_like(airspeed.array, np.int)
 
-        # Determine the sections of flight to populate V2 for:
-        phases = slices_from_ktis(takeoff_starts, climb_starts)
+        # Determine interesting sections of flight which we want to use for V2.
+        # Due to issues with how data is recorded, use five superframes before
+        # liftoff until the start of the climb:
+        starts = deepcopy(liftoffs)
+        for start in starts:
+            start.index = max(start.index - 5 * 64 * self.hz, 0)
+        phases = slices_from_ktis(starts, climb_starts)
 
         # Initialise the velocity speed lookup table:
         attrs = (model, series, family, engine_type, engine_series)
@@ -6268,18 +6272,23 @@ class Vref(DerivedParameterNode):
                approaches=S('Approach And Landing')):
 
         # Prepare a zeroed, masked array based on the airspeed:
-        self.array = np_ma_masked_zeros_like(airspeed.array, np.double)
+        self.array = np_ma_masked_zeros_like(airspeed.array, np.int)
+
+        # Determine the sections of flight to populate:
+        phases = [approach.slice for approach in approaches]
 
         # 1. Use value provided in achieved flight record (if available):
         if afr_vref and afr_vref.value >= AIRSPEED_THRESHOLD:
-            for approach in approaches:
-                self.array[approach.slice] = afr_vref.value
+            for phase in phases:
+                self.array[phase] = round(afr_vref.value)
             return
 
         # 2. Derive parameter for Embraer 170/190:
         if v1_vref:
-            for approach in approaches:
-                self.array[approach.slice] = v1_vref.array[approach.slice]
+            for phase in phases:
+                value = most_common_value(v1_vref.array[phase].astype(np.int))
+                if value is not None:
+                    self.array[phase] = value
             return
 
 
@@ -6341,9 +6350,9 @@ class VrefLookup(DerivedParameterNode):
                engine_series=A('Engine Series')):
 
         # Prepare a zeroed, masked array based on the airspeed:
-        self.array = np_ma_masked_zeros_like(air_spd.array, np.double)
+        self.array = np_ma_masked_zeros_like(air_spd.array, np.int)
 
-        # Determine the sections of flight to populate Vref for:
+        # Determine the sections of flight to populate:
         phases = [approach.slice for approach in approaches]
 
         # Initialise the velocity speed lookup table:
@@ -6696,7 +6705,7 @@ class AirspeedMinusV2(DerivedParameterNode):
 
         return all_of((
             'Airspeed',
-            'Takeoff Acceleration Start',
+            'Liftoff',
             'Climb Start',
         ), available) and any_of(('V2', 'V2 Lookup'), available)
 
@@ -6704,28 +6713,29 @@ class AirspeedMinusV2(DerivedParameterNode):
                airspeed=P('Airspeed'),
                v2_recorded=P('V2'),
                v2_lookup=P('V2 Lookup'),
-               takeoff_starts=KTI('Takeoff Acceleration Start'),
+               liftoffs=KTI('Liftoff'),
                climb_starts=KTI('Climb Start')):
 
-        # Determine the sections of flight where V2 must be valid:
-        phases = slices_from_ktis(takeoff_starts, climb_starts)
+        # Prepare a zeroed, masked array based on the airspeed:
+        self.array = np_ma_masked_zeros_like(airspeed.array)
+
+        # Determine interesting sections of flight which we want to use for V2.
+        # Due to issues with how data is recorded, use five superframes before
+        # liftoff until the start of the climb:
+        starts = deepcopy(liftoffs)
+        for start in starts:
+            start.index = max(start.index - 5 * 64 * self.hz, 0)
+        phases = slices_from_ktis(starts, climb_starts)
 
         v2 = first_valid_parameter(v2_recorded, v2_lookup, phases=phases)
 
         if v2 is None:
-            self.array = np_ma_masked_zeros_like(airspeed.array)
             return
 
-        # Where V2 is recorded, a low permitted rate of change of 1.0 kt/s
-        # (specified in the Parameter Operating Limit section of the POLARIS
-        # database) forces all false data to be masked, leaving only the
-        # required valid data. By repairing the mask with duration = None, the
-        # valid data is extended. For example, 737-3C data only records V2 on
-        # the runway and it needs to be extended to permit V2-relative KPVs to
-        # be recorded during the climbout.
-        self.array = airspeed.array - repair_mask(v2.array, copy=True,
-                                                  repair_duration=None,
-                                                  extrapolate=True)
+        for phase in phases:
+            value = most_common_value(v2.array[phase].astype(np.int))
+            if value is not None:
+                self.array[phase] = airspeed.array[phase] - value
 
 
 class AirspeedMinusV2For3Sec(DerivedParameterNode):
@@ -6777,16 +6787,21 @@ class AirspeedMinusVref(DerivedParameterNode):
                vref_lookup=P('Vref Lookup'),
                approaches=S('Approach And Landing')):
 
-        # Determine the sections of flight where Vref must be valid:
+        # Prepare a zeroed, masked array based on the airspeed:
+        self.array = np_ma_masked_zeros_like(airspeed.array)
+
+        # Determine the sections of flight where data must be valid:
         phases = [approach.slice for approach in approaches]
 
         vref = first_valid_parameter(vref_recorded, vref_lookup, phases=phases)
 
         if vref is None:
-            self.array = np_ma_masked_zeros_like(airspeed.array)
             return
 
-        self.array = airspeed.array - vref.array
+        for phase in phases:
+            value = most_common_value(vref.array[phase].astype(np.int))
+            if value is not None:
+                self.array[phase] = airspeed.array[phase] - value
 
 
 class AirspeedMinusVrefFor3Sec(DerivedParameterNode):
@@ -6838,16 +6853,21 @@ class AirspeedMinusVapp(DerivedParameterNode):
                vapp_lookup=P('Vapp Lookup'),
                approaches=S('Approach And Landing')):
 
-        # Determine the sections of flight where Vref must be valid:
+        # Prepare a zeroed, masked array based on the airspeed:
+        self.array = np_ma_masked_zeros_like(airspeed.array)
+
+        # Determine the sections of flight where data must be valid:
         phases = [approach.slice for approach in approaches]
 
         vapp = first_valid_parameter(vapp_recorded, vapp_lookup, phases=phases)
 
         if vapp is None:
-            self.array = np_ma_masked_zeros_like(airspeed.array)
             return
 
-        self.array = airspeed.array - vapp.array
+        for phase in phases:
+            value = most_common_value(vapp.array[phase].astype(np.int))
+            if value is not None:
+                self.array[phase] = airspeed.array[phase] - value
 
 
 class AirspeedMinusVappFor3Sec(DerivedParameterNode):
