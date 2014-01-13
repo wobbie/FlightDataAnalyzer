@@ -11030,7 +11030,15 @@ class LastFlapChangeToTakeoffRollEndDuration(KeyPointValueNode):
 
 class AirspeedMinusVMOMax(KeyPointValueNode):
     '''
-    Maximum VMO exceeding.
+    Maximum value of Airspeed relative to the Maximum Operating Speed (VMO).
+
+    Values of VMO are taken from recorded or derived values if available,
+    otherwise we fall back to using a value from a lookup table.
+
+    We also check to ensure that we have some valid samples in any recorded or
+    derived parameter, otherwise, again, we fall back to lookup tables. To
+    avoid issues with small samples of invalid data, we check that the area of
+    data we are interested in has no masked values.
     '''
 
     name = 'Airspeed Minus VMO Max'
@@ -11049,10 +11057,13 @@ class AirspeedMinusVMOMax(KeyPointValueNode):
                airborne=S('Airborne')):
 
         phases = airborne.get_slices()
+
         vmo = first_valid_parameter(vmo_record, vmo_lookup, phases=phases)
+
         if vmo is None:
             self.array = np_ma_masked_zeros_like(airspeed.array)
             return
+
         self.create_kpvs_within_slices(
             airspeed.array - vmo.array,
             airborne,
@@ -11062,7 +11073,15 @@ class AirspeedMinusVMOMax(KeyPointValueNode):
 
 class MachMinusMMOMax(KeyPointValueNode):
     '''
-    Maximum MMO exceeding.
+    Maximum value of Mach relative to the Maximum Operating Mach (MMO).
+
+    Values of MMO are taken from recorded or derived values if available,
+    otherwise we fall back to using a value from a lookup table.
+
+    We also check to ensure that we have some valid samples in any recorded or
+    derived parameter, otherwise, again, we fall back to lookup tables. To
+    avoid issues with small samples of invalid data, we check that the area of
+    data we are interested in has no masked values.
     '''
 
     name = 'Mach Minus MMO Max'
@@ -11081,10 +11100,13 @@ class MachMinusMMOMax(KeyPointValueNode):
                airborne=S('Airborne')):
 
         phases = airborne.get_slices()
+
         mmo = first_valid_parameter(mmo_record, mmo_lookup, phases=phases)
+
         if mmo is None:
             self.array = np_ma_masked_zeros_like(mach.array)
             return
+
         self.create_kpvs_within_slices(
             mach.array - mmo.array,
             airborne,
