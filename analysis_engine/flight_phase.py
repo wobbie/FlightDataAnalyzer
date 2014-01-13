@@ -39,7 +39,7 @@ from analysis_engine.library import (
     slices_remove_small_slices,
 )
 
-from analysis_engine.node import FlightPhaseNode, P, S, KTI, M
+from analysis_engine.node import A, FlightPhaseNode, P, S, KTI, M
 
 from analysis_engine.settings import (
     AIRBORNE_THRESHOLD_TIME,
@@ -205,6 +205,27 @@ class Holding(FlightPhaseNode):
                         hold_bands.append(turn_band)
 
             self.create_phases(hold_bands)
+
+
+class EngHotelMode(FlightPhaseNode):
+    '''
+    Some turbo props use the Engine 2 turbine to provide power and air whilst
+    the aircraft is on the ground, a brake is applied to prevent the
+    propellers from rotating
+    '''
+
+    @classmethod
+    def can_operate(cls, available, family=A('Family')):
+        return all_of(('Eng (2) Np', 'Eng (1) N1', 'Eng (2) N1', 'Grounded'), available) \
+            and family.value in ('ATR-42', 'ATR-72') # Not all aircraft with Np will have a 'Hotel' mode
+        
+
+    def derive(self, eng2_np=P('Eng (2) Np'),
+               eng1_n1=P('Eng (1) N1'), eng2_n1=P('Eng (2) N1'), groundeds=S('Grounded')):
+        pos_hotel = (eng2_n1.array > 45) & (eng2_np.array <= 0) & (eng1_n1.array < 40)
+        hotel_mode = slices_and(runs_of_ones(pos_hotel), groundeds.get_slices())
+        self.create_phases(hotel_mode)
+
 
 
 class ApproachAndLanding(FlightPhaseNode):

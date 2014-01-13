@@ -16,6 +16,7 @@ from analysis_engine.flight_phase import (Airborne,
                                           Descending,
                                           DescentLowClimb,
                                           DescentToFlare,
+                                          EngHotelMode,
                                           Fast,
                                           FinalApproach,
                                           GearExtended,
@@ -50,8 +51,8 @@ from analysis_engine.flight_phase import (Airborne,
 from analysis_engine.multistate_parameters import Gear_RedWarning
 from analysis_engine.key_time_instances import TopOfClimb, TopOfDescent
 from analysis_engine.library import integrate
-from analysis_engine.node import (KTI, KeyTimeInstance, M, Parameter, P, S,
-                                  Section, SectionNode, load)
+from analysis_engine.node import (Attribute, KTI, KeyTimeInstance, M, Parameter,
+                                  P, S, Section, SectionNode, load)
 from analysis_engine.process_flight import process_flight
 
 from analysis_engine.settings import AIRSPEED_THRESHOLD
@@ -1552,6 +1553,48 @@ class TestDescentToFlare(unittest.TestCase):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestEngHotelMode(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = EngHotelMode
+
+    def test_can_operate(self):
+        family = Attribute('Family', value='ATR-42')
+        available = ['Eng (2) Np', 'Eng (1) N1', 'Eng (2) N1', 'Grounded']
+        self.assertTrue(self.node_class.can_operate(available, family=family))
+        family.value = 'B737'
+        self.assertFalse(self.node_class.can_operate(available, family=family))
+
+    def test_derive(self):
+        eng2_n1_array = np.arange(0, 50, 5)
+        eng2_n1 = Parameter('Eng (2) N1',
+                            array=np.ma.concatenate((
+                                eng2_n1_array,
+                                [50] * 40,
+                                eng2_n1_array[::-1],)))
+        eng1_n1_array = np.arange(0, 50, 5)
+        eng1_n1 = Parameter('Eng (1) N1',
+                            array=np.ma.concatenate((
+                                [0] * 10,
+                                eng2_n1_array,
+                                [50] * 20,
+                                eng2_n1_array[::-1],
+                                [0] * 10,)))
+        eng2_np = Parameter('Eng (1) N1',
+                            array=np.ma.concatenate((
+                                [0] * 20,
+                                [100] * 20,
+                                [0] * 20,)))
+        groundeds = buildsections('Grounded', (0, 22), (38, None))
+
+        node = self.node_class()
+        node.derive(eng2_np, eng1_n1, eng2_n1, groundeds)
+
+        expected = [Section(name='Eng Hotel Mode', slice=slice(10, 18, None), start_edge=10, stop_edge=18),
+                    Section(name='Eng Hotel Mode', slice=slice(42, 50, None), start_edge=42, stop_edge=50)]
+        self.assertEqual(list(node), expected)
 
 
 class TestGearExtending(unittest.TestCase):
