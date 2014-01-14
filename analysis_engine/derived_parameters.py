@@ -904,6 +904,11 @@ class AltitudeAAL(DerivedParameterNode):
                 # spurious data at lower altitudes.
                 continue
 
+            if mode=='over_gnd':
+                # land mode is handled above so just need to set rad alt as
+                # aal for over ground sections
+                alt_result[ralt_section] = alt_rad_aal[ralt_section]
+
             for baro_section in baro_sections:
                 # I know there must be a better way to code these symmetrical processes, but this works :o)
                 link_baro_rad_fwd(baro_section, ralt_section, alt_rad_aal, alt_std, alt_result)
