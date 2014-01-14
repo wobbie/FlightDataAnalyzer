@@ -4712,7 +4712,7 @@ class TestV2(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = V2
-        self.airspeed = P(name='Airspeed', array=np.ma.array([200] * 1280))
+        self.airspeed = P('Airspeed', np.ma.repeat(200, 1280))
         self.liftoffs = KTI(name='Liftoff', items=[
             KeyTimeInstance(name='Liftoff', index=20),
             KeyTimeInstance(name='Liftoff', index=860),
@@ -4726,11 +4726,11 @@ class TestV2(unittest.TestCase, NodeTest):
         # AFR:
         self.assertTrue(self.node_class.can_operate(
             ('Airspeed', 'AFR V2', 'Liftoff', 'Climb Start'),
-            afr_v2=A(name='AFR V2', value=120),
+            afr_v2=A('AFR V2', 120),
         ))
         self.assertFalse(self.node_class.can_operate(
             ('Airspeed', 'AFR V2', 'Liftoff', 'Climb Start'),
-            afr_v2=A(name='AFR V2', value=70),
+            afr_v2=A('AFR V2', 70),
         ))
         # Embraer:
         self.assertTrue(self.node_class.can_operate(
@@ -4739,44 +4739,42 @@ class TestV2(unittest.TestCase, NodeTest):
         # Airbus:
         self.assertTrue(self.node_class.can_operate(
             ('Airspeed', 'Selected Speed', 'Speed Control', 'Liftoff', 'Climb Start', 'Manufacturer'),
-            manufacturer=A(name='Manufacturer', value='Airbus'),
+            manufacturer=A('Manufacturer', 'Airbus'),
         ))
 
     def test_derive__nothing(self):
         node = self.node_class()
         node.derive(self.airspeed, None, None, None, None, self.liftoffs, self.climbs, None)
-        expected = np.ma.array(data=[0] * 1280, mask=True)
+        expected = np.ma.repeat(0, 1280)
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__afr_v2(self):
-        afr_v2 = A(name='AFR V2', value=120)
+        afr_v2 = A('AFR V2', 120)
         node = self.node_class()
         node.derive(self.airspeed, None, None, None, afr_v2, self.liftoffs, self.climbs, None)
-        expected = np.ma.array(data=[0] * 1280, mask=True)
-        expected[0:420] = 120
-        expected[540:1060] = 120
+        expected = np.ma.repeat((120, 0, 120, 0), (420, 120, 520, 220))
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__airbus(self):
         manufacturer = A(name='Manufacturer', value='Airbus')
-        spd_ctl = M('Speed Control', np.ma.repeat((1, 0, 0, 0), 320), values_mapping={0: 'Manual', 1: 'Auto'})
-        spd_sel = P('Selected Speed', np.ma.array([400] * 10 + [120] * 630 + [170] * 640))
+        spd_ctl = M('Speed Control', np.ma.repeat((1, 0), (320, 960)), values_mapping={0: 'Manual', 1: 'Auto'})
+        spd_sel = P('Selected Speed', np.ma.repeat((400, 120, 170), (10, 630, 640)))
         spd_sel.array[:10] = np.ma.masked
         node = self.node_class()
         node.derive(self.airspeed, None, spd_sel, spd_ctl, None, self.liftoffs, self.climbs, manufacturer)
-        expected = np.ma.array(data=[0] * 1280, mask=True)
-        expected[0:420] = 120
-        #expected[540:1060] = 120
+        expected = np.ma.repeat((120, 0), (420, 860))
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__embraer(self):
         manufacturer = A(name='Manufacturer', value='Embraer')
-        v2_vac = P('V2-Vac', np.ma.array([150.0] * 1280))
+        v2_vac = P('V2-Vac', np.ma.repeat(150, 1280))
         node = self.node_class()
         node.derive(self.airspeed, v2_vac, None, None, None, self.liftoffs, self.climbs, manufacturer)
-        expected = np.ma.array(data=[0] * 1280, mask=True)
-        expected[0:420] = 150
-        expected[540:1060] = 150
+        expected = np.ma.repeat((150, 0, 150, 0), (420, 120, 520, 220))
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
 
@@ -4826,7 +4824,7 @@ class TestV2Lookup(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = V2Lookup
-        self.airspeed = P(name='Airspeed', array=np.ma.array([200] * 1280))
+        self.airspeed = P('Airspeed', np.ma.repeat(200, 1280))
         self.weight = KPV(name='Gross Weight At Liftoff', items=[
             KeyPointValue(name='Gross Weight At Liftoff', index=20, value=54192.06),
             KeyPointValue(name='Gross Weight At Liftoff', index=860, value=44192.06),
@@ -4870,9 +4868,8 @@ class TestV2Lookup(unittest.TestCase, NodeTest):
 
     @patch('analysis_engine.library.at')
     def test_derive__conf_with_weight__standard(self, at):
-        array = np.ma.repeat(2, 1280)
         mapping = AVAILABLE_CONF_STATES
-        conf = M(name='Configuration', array=array, values_mapping=mapping)
+        conf = M('Configuration', np.ma.repeat(2, 1280), values_mapping=mapping)
 
         attributes = self.generate_attributes('airbus')
         at.get_vspeed_map.return_value = self.VSC0
@@ -4883,16 +4880,14 @@ class TestV2Lookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 1280, mask=True)
-        expected[0:420] = 138
-        expected[540:1060] = 125
+        expected = np.ma.repeat((138, 0, 125, 0), (420, 120, 520, 220))
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     @patch('analysis_engine.library.at')
     def test_derive__conf_with_weight__fallback(self, at):
-        array = np.ma.repeat(4, 1280)
         mapping = AVAILABLE_CONF_STATES
-        conf = M(name='Configuration', array=array, values_mapping=mapping)
+        conf = M('Configuration', np.ma.repeat(4, 1280), values_mapping=mapping)
 
         attributes = self.generate_attributes('airbus')
         at.get_vspeed_map.return_value = self.VSC0
@@ -4903,16 +4898,14 @@ class TestV2Lookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 1280, mask=True)
-        expected[0:420] = 140
-        expected[540:1060] = 140
+        expected = np.ma.repeat((140, 0, 140, 0), (420, 120, 520, 220))
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     @patch('analysis_engine.library.at')
     def test_derive__conf_without_weight__standard(self, at):
-        array = np.ma.repeat(2, 1280)
         mapping = AVAILABLE_CONF_STATES
-        conf = M(name='Configuration', array=array, values_mapping=mapping)
+        conf = M('Configuration', np.ma.repeat(2, 1280), values_mapping=mapping)
 
         attributes = self.generate_attributes('airbus')
         at.get_vspeed_map.return_value = self.VSC0
@@ -4923,14 +4916,14 @@ class TestV2Lookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 1280, mask=True)
+        expected = np.ma.repeat(0, 1280)
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     @patch('analysis_engine.library.at')
     def test_derive__conf_without_weight__fallback(self, at):
-        array = np.ma.repeat(2, 1280)
         mapping = AVAILABLE_CONF_STATES
-        conf = M(name='Configuration', array=array, values_mapping=mapping)
+        conf = M('Configuration', np.ma.repeat(2, 1280), values_mapping=mapping)
 
         attributes = self.generate_attributes('airbus')
         at.get_vspeed_map.return_value = self.VSC1
@@ -4941,16 +4934,14 @@ class TestV2Lookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 1280, mask=True)
-        expected[0:420] = 135
-        expected[540:1060] = 135
+        expected = np.ma.repeat((135, 0, 135, 0), (420, 120, 520, 220))
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     @patch('analysis_engine.library.at')
     def test_derive__flap_with_weight__standard(self, at):
-        array = np.ma.repeat(15, 1280)
         mapping = {f: str(f) for f in (0, 1, 2, 5, 10, 15, 25, 30, 40)}
-        flap = M(name='Flap', array=array, values_mapping=mapping)
+        flap = M('Flap', np.ma.repeat(15, 1280), values_mapping=mapping)
 
         attributes = self.generate_attributes('boeing')
         at.get_vspeed_map.return_value = self.VSF0
@@ -4961,16 +4952,14 @@ class TestV2Lookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 1280, mask=True)
-        expected[0:420] = 138
-        expected[540:1060] = 125
+        expected = np.ma.repeat((138, 0, 125, 0), (420, 120, 520, 220))
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     @patch('analysis_engine.library.at')
     def test_derive__flap_with_weight__fallback(self, at):
-        array = np.ma.repeat(5, 1280)
         mapping = {f: str(f) for f in (0, 1, 2, 5, 10, 15, 25, 30, 40)}
-        flap = M(name='Flap', array=array, values_mapping=mapping)
+        flap = M('Flap', np.ma.repeat(5, 1280), values_mapping=mapping)
 
         attributes = self.generate_attributes('boeing')
         at.get_vspeed_map.return_value = self.VSF0
@@ -4981,16 +4970,14 @@ class TestV2Lookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 1280, mask=True)
-        expected[0:420] = 140
-        expected[540:1060] = 140
+        expected = np.ma.repeat((140, 0, 140, 0), (420, 120, 520, 220))
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     @patch('analysis_engine.library.at')
     def test_derive__flap_without_weight__standard(self, at):
-        array = np.ma.repeat(17.5, 1280)
         mapping = {f: str(f) for f in (0, 17.5, 35)}
-        flap = M(name='Flap', array=array, values_mapping=mapping)
+        flap = M('Flap', np.ma.repeat(17.5, 1280), values_mapping=mapping)
 
         attributes = self.generate_attributes('beechcraft')
         at.get_vspeed_map.return_value = self.VSF0
@@ -5001,14 +4988,14 @@ class TestV2Lookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 1280, mask=True)
+        expected = np.ma.repeat(0, 1280)
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     @patch('analysis_engine.library.at')
     def test_derive__flap_without_weight__fallback(self, at):
-        array = np.ma.repeat(17.5, 1280)
         mapping = {f: str(f) for f in (0, 17.5, 35)}
-        flap = M(name='Flap', array=array, values_mapping=mapping)
+        flap = M('Flap', np.ma.repeat(17.5, 1280), values_mapping=mapping)
 
         attributes = self.generate_attributes('beechcraft')
         at.get_vspeed_map.return_value = self.VSF1
@@ -5019,9 +5006,8 @@ class TestV2Lookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 1280, mask=True)
-        expected[0:420] = 135
-        expected[540:1060] = 135
+        expected = np.ma.repeat((135, 0, 135, 0), (420, 120, 520, 220))
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
 
@@ -5033,18 +5019,18 @@ class TestVref(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = Vref
-        self.airspeed = P(name='Airspeed', array=np.ma.array([200] * 128))
+        self.airspeed = P('Airspeed', np.ma.repeat(200, 128))
         self.approaches = buildsections('Approach And Landing', (2, 42), (66, 106))
 
     def test_can_operate(self):
         # AFR:
         self.assertTrue(self.node_class.can_operate(
             ('Airspeed', 'AFR Vref', 'Approach And Landing'),
-            afr_vref=A(name='AFR Vref', value=120),
+            afr_vref=A('AFR Vref', 120),
         ))
         self.assertFalse(self.node_class.can_operate(
             ('Airspeed', 'AFR Vref', 'Approach And Landing'),
-            afr_vref=A(name='AFR Vref', value=70),
+            afr_vref=A('AFR Vref', 70),
         ))
         # Embraer:
         self.assertTrue(self.node_class.can_operate(
@@ -5054,25 +5040,24 @@ class TestVref(unittest.TestCase, NodeTest):
     def test_derive__nothing(self):
         node = self.node_class()
         node.derive(self.airspeed, None, None, self.approaches)
-        expected = np.ma.array(data=[0] * 128, mask=True)
+        expected = np.ma.repeat(0, 128)
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__afr_vref(self):
-        afr_vref = A(name='AFR Vref', value=120)
+        afr_vref = A('AFR Vref', 120)
         node = self.node_class()
         node.derive(self.airspeed, None, afr_vref, self.approaches)
-        expected = np.ma.array(data=[0] * 128, mask=True)
-        expected[2:42] = 120
-        expected[66:106] = 120
+        expected = np.ma.repeat((0, 120, 0, 120, 0), (2, 40, 24, 40, 22))
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__embraer(self):
-        v1_vref = P('V1-Vref', np.ma.array([150] * 128))
+        v1_vref = P('V1-Vref', np.ma.repeat(150, 128))
         node = self.node_class()
         node.derive(self.airspeed, v1_vref, None, self.approaches)
-        expected = np.ma.array(data=[0] * 128, mask=True)
-        expected[2:42] = 150
-        expected[66:106] = 150
+        expected = np.ma.repeat((0, 150, 0, 150, 0), (2, 40, 24, 40, 22))
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
 
@@ -5122,8 +5107,8 @@ class TestVrefLookup(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = VrefLookup
-        self.airspeed = P(name='Airspeed', array=np.ma.array([200] * 128))
-        self.weight = P(name='Gross Weight Smoothed', array=np.ma.repeat([54192.06, 44192.06], 64))
+        self.airspeed = P('Airspeed', np.ma.repeat(200, 128))
+        self.weight = P('Gross Weight Smoothed', np.ma.repeat((54192.06, 44192.06), 64))
         self.touchdowns = KTI(name='Touchdown', items=[
             KeyTimeInstance(name='Touchdown', index=7),
             KeyTimeInstance(name='Touchdown', index=71),
@@ -5160,9 +5145,8 @@ class TestVrefLookup(unittest.TestCase, NodeTest):
 
     @patch('analysis_engine.library.at')
     def test_derive__conf_with_weight__standard(self, at):
-        array = np.ma.repeat(9, 128)
         mapping = AVAILABLE_CONF_STATES
-        conf = M(name='Configuration', array=array, values_mapping=mapping)
+        conf = M('Configuration', np.ma.repeat(9, 128), values_mapping=mapping)
 
         attributes = self.generate_attributes('airbus')
         at.get_vspeed_map.return_value = self.VSC0
@@ -5173,16 +5157,14 @@ class TestVrefLookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 128, mask=True)
-        expected[2:42] = 137
-        expected[66:106] = 125
-        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+        expected = np.ma.repeat((0, 138, 0, 125, 0), (2, 40, 24, 40, 22))
+        expected[expected == 0] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
 
     @patch('analysis_engine.library.at')
     def test_derive__conf_with_weight__fallback(self, at):
-        array = np.ma.repeat(6, 128)
         mapping = AVAILABLE_CONF_STATES
-        conf = M(name='Configuration', array=array, values_mapping=mapping)
+        conf = M('Configuration', np.ma.repeat(6, 128), values_mapping=mapping)
 
         attributes = self.generate_attributes('airbus')
         at.get_vspeed_map.return_value = self.VSC0
@@ -5193,16 +5175,14 @@ class TestVrefLookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 128, mask=True)
-        expected[2:42] = 140
-        expected[66:106] = 140
-        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+        expected = np.ma.repeat((0, 140, 0, 140, 0), (2, 40, 24, 40, 22))
+        expected[expected == 0] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
 
     @patch('analysis_engine.library.at')
     def test_derive__conf_without_weight__standard(self, at):
-        array = np.ma.repeat(9, 128)
         mapping = AVAILABLE_CONF_STATES
-        conf = M(name='Configuration', array=array, values_mapping=mapping)
+        conf = M('Configuration', np.ma.repeat(9, 128), values_mapping=mapping)
 
         attributes = self.generate_attributes('airbus')
         at.get_vspeed_map.return_value = self.VSC0
@@ -5213,14 +5193,14 @@ class TestVrefLookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 128, mask=True)
-        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+        expected = np.ma.repeat(0, 128)
+        expected[expected == 0] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
 
     @patch('analysis_engine.library.at')
     def test_derive__conf_without_weight__fallback(self, at):
-        array = np.ma.repeat(9, 128)
         mapping = AVAILABLE_CONF_STATES
-        conf = M(name='Configuration', array=array, values_mapping=mapping)
+        conf = M('Configuration', np.ma.repeat(9, 128), values_mapping=mapping)
 
         attributes = self.generate_attributes('airbus')
         at.get_vspeed_map.return_value = self.VSC1
@@ -5231,16 +5211,14 @@ class TestVrefLookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 128, mask=True)
-        expected[2:42] = 135
-        expected[66:106] = 135
-        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+        expected = np.ma.repeat((0, 135, 0, 135, 0), (2, 40, 24, 40, 22))
+        expected[expected == 0] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
 
     @patch('analysis_engine.library.at')
     def test_derive__flap_with_weight__standard(self, at):
-        array = np.ma.repeat(40, 128)
         mapping = {f: str(f) for f in (0, 1, 2, 5, 10, 15, 25, 30, 40)}
-        flap = M(name='Flap', array=array, values_mapping=mapping)
+        flap = M('Flap', np.ma.repeat(40, 128), values_mapping=mapping)
 
         attributes = self.generate_attributes('boeing')
         at.get_vspeed_map.return_value = self.VSF0
@@ -5251,16 +5229,14 @@ class TestVrefLookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 128, mask=True)
-        expected[2:42] = 137
-        expected[66:106] = 125
-        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+        expected = np.ma.repeat((0, 138, 0, 125, 0), (2, 40, 24, 40, 22))
+        expected[expected == 0] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
 
     @patch('analysis_engine.library.at')
     def test_derive__flap_with_weight__fallback(self, at):
-        array = np.ma.repeat(30, 128)
         mapping = {f: str(f) for f in (0, 1, 2, 5, 10, 15, 25, 30, 40)}
-        flap = M(name='Flap', array=array, values_mapping=mapping)
+        flap = M('Flap', np.ma.repeat(30, 128), values_mapping=mapping)
 
         attributes = self.generate_attributes('boeing')
         at.get_vspeed_map.return_value = self.VSF0
@@ -5271,16 +5247,14 @@ class TestVrefLookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 128, mask=True)
-        expected[2:42] = 140
-        expected[66:106] = 140
-        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+        expected = np.ma.repeat((0, 140, 0, 140, 0), (2, 40, 24, 40, 22))
+        expected[expected == 0] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
 
     @patch('analysis_engine.library.at')
     def test_derive__flap_without_weight__standard(self, at):
-        array = np.ma.repeat(35, 128)
         mapping = {f: str(f) for f in (0, 17.5, 35)}
-        flap = M(name='Flap', array=array, values_mapping=mapping)
+        flap = M('Flap', np.ma.repeat(35, 128), values_mapping=mapping)
 
         attributes = self.generate_attributes('beechcraft')
         at.get_vspeed_map.return_value = self.VSF0
@@ -5291,14 +5265,14 @@ class TestVrefLookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 128, mask=True)
+        expected = np.ma.repeat(0, 128)
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     @patch('analysis_engine.library.at')
     def test_derive__flap_without_weight__fallback(self, at):
-        array = np.ma.repeat(35, 128)
         mapping = {f: str(f) for f in (0, 17.5, 35)}
-        flap = M(name='Flap', array=array, values_mapping=mapping)
+        flap = M('Flap', np.ma.repeat(35, 128), values_mapping=mapping)
 
         attributes = self.generate_attributes('beechcraft')
         at.get_vspeed_map.return_value = self.VSF1
@@ -5309,10 +5283,9 @@ class TestVrefLookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 128, mask=True)
-        expected[2:42] = 135
-        expected[66:106] = 135
-        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+        expected = np.ma.repeat((0, 135, 0, 135, 0), (2, 40, 24, 40, 22))
+        expected[expected == 0] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
 
 
 ########################################
@@ -5359,7 +5332,7 @@ class TestVMOLookup(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = VMOLookup
-        self.altitude = P(name='Altitude', array=np.ma.arange(0, 50000, 1000))
+        self.altitude = P('Altitude', np.ma.arange(0, 50000, 1000))
 
     @patch('analysis_engine.library.at')
     def test_can_operate(self, at):
@@ -5384,8 +5357,9 @@ class TestVMOLookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 50, mask=True)
-        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+        expected = np.ma.repeat(0, 50)
+        expected[expected == 0] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
 
     @patch('analysis_engine.library.at')
     def test_derive__fixed(self, at):
@@ -5398,7 +5372,7 @@ class TestVMOLookup(unittest.TestCase, NodeTest):
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
         expected = np.ma.repeat(350, 50)
-        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+        ma_test.assert_masked_array_equal(node.array, expected)
 
     @patch('analysis_engine.library.at')
     def test_derive__linear(self, at):
@@ -5410,11 +5384,14 @@ class TestVMOLookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 50, mask=True, dtype=float)
-        expected[0:16] = 350
-        expected[16:26] = np.ma.arange(345, 295, -5)
-        expected[26:41] = 300
-        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+        expected = np.ma.concatenate((
+            np.ma.repeat(350, 16),
+            np.ma.arange(345, 295, -5),
+            np.ma.repeat(300, 15),
+            np.ma.repeat(000, 9),
+        ))
+        expected[expected == 0] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
 
     @patch('analysis_engine.library.at')
     def test_derive__stepped(self, at):
@@ -5426,10 +5403,13 @@ class TestVMOLookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 50, mask=True)
-        expected[0:20] = 350
-        expected[20:41] = 300
-        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+        expected = np.ma.concatenate((
+            np.ma.repeat(350, 20),
+            np.ma.repeat(300, 21),
+            np.ma.repeat(000, 9),
+        ))
+        expected[expected == 0] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
 
 
 ########################################
@@ -5477,7 +5457,7 @@ class TestMMOLookup(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = MMOLookup
-        self.altitude = P(name='Altitude', array=np.ma.arange(0, 50000, 1000))
+        self.altitude = P('Altitude', np.ma.arange(0, 50000, 1000))
 
     @patch('analysis_engine.library.at')
     def test_can_operate(self, at):
@@ -5502,8 +5482,9 @@ class TestMMOLookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 50, mask=True)
-        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+        expected = np.ma.repeat(0, 50)
+        expected[expected == 0] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
 
     @patch('analysis_engine.library.at')
     def test_derive__fixed(self, at):
@@ -5516,7 +5497,7 @@ class TestMMOLookup(unittest.TestCase, NodeTest):
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
         expected = np.ma.repeat(0.850, 50)
-        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+        ma_test.assert_masked_array_equal(node.array, expected)
 
     @patch('analysis_engine.library.at')
     def test_derive__linear(self, at):
@@ -5528,11 +5509,14 @@ class TestMMOLookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 50, mask=True, dtype=float)
-        expected[0:16] = 0.850
-        expected[16:26] = np.ma.arange(0.845, 0.795, -0.005)
-        expected[26:41] = 0.800
-        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+        expected = np.ma.concatenate((
+            np.ma.repeat(0.850, 16),
+            np.ma.arange(0.845, 0.795, -0.005),
+            np.ma.repeat(0.800, 15),
+            np.ma.repeat(0.000, 9),
+        ))
+        expected[expected == 0] = np.ma.masked
+        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=3)
 
     @patch('analysis_engine.library.at')
     def test_derive__stepped(self, at):
@@ -5544,10 +5528,13 @@ class TestMMOLookup(unittest.TestCase, NodeTest):
 
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.array(data=[0] * 50, mask=True)
-        expected[0:20] = 0.850
-        expected[20:41] = 0.800
-        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+        expected = np.ma.concatenate((
+            np.ma.repeat(0.850, 20),
+            np.ma.repeat(0.800, 21),
+            np.ma.repeat(0.000, 9),
+        ))
+        expected[expected == 0] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
 
 
 ########################################
@@ -5647,8 +5634,8 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = FlapManoeuvreSpeed
-        self.airspeed = P(name='Airspeed', array=np.ma.array([200] * 90))
-        self.weight = P(name='Gross Weight Smoothed', array=np.ma.repeat([50000, 60000], 45))
+        self.airspeed = P('Airspeed', np.ma.repeat(200, 90))
+        self.weight = P('Gross Weight Smoothed', np.ma.repeat((50000, 60000), 45))
         self.descents = buildsections('Descent To Flare', (2, 42), (47, 87))
         self.flap_lever = M(
             name='Flap Lever',
@@ -5711,20 +5698,12 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
         attributes = [a.value for a in attributes]
         at0.get_vspeed_map.assert_called_once_with(*attributes)
         at1.get_fms_map.assert_called_once_with(*attributes[:3])
-        expected = np.ma.array(data=[0] * 90, mask=True, dtype=np.float)
-        expected[00:10] = 131 + 70
-        expected[10:20] = 131 + 50
-        expected[20:30] = np.ma.masked
-        expected[30:40] = 131 + 30
-        expected[40:45] = 131 + 30
-        expected[45:50] = 146 + 30
-        expected[50:60] = 146 + 20
-        expected[60:70] = 146 + 10
-        expected[70:80] = 147 + 0
-        expected[80:90] = 146 + 0
-        expected[0:2] = np.ma.masked
-        expected[42:47] = np.ma.masked
-        expected[87:90] = np.ma.masked
+        expected = np.ma.repeat(
+            (201, 181, 0, 161, 161, 176, 166, 156, 147, 146),
+            (10, 10, 10, 10, 5, 5, 10, 10, 10, 10)
+        )
+        for s in slice(0, 2), slice(20, 30), slice(42, 47), slice(87, 90):
+            expected[s] = np.ma.masked
         ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
 
     @patch('analysis_engine.derived_parameters.at')
@@ -5751,20 +5730,12 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
         attributes = [a.value for a in attributes]
         at0.get_vspeed_map.assert_called_once_with(*attributes)
         at1.get_fms_map.assert_called_once_with(*attributes[:3])
-        expected = np.ma.array(data=[0] * 90, mask=True, dtype=np.float)
-        expected[00:10] = 210
-        expected[10:20] = 190
-        expected[20:30] = np.ma.masked
-        expected[30:40] = 170
-        expected[40:45] = 160
-        expected[45:50] = 170
-        expected[50:60] = 160
-        expected[60:70] = 150
-        expected[70:80] = 147 + 0
-        expected[80:90] = 146 + 0
-        expected[0:2] = np.ma.masked
-        expected[42:47] = np.ma.masked
-        expected[87:90] = np.ma.masked
+        expected = np.ma.repeat(
+            (210, 190, 0, 170, 160, 170, 160, 150, 147, 146),
+            (10, 10, 10, 10, 5, 5, 10, 10, 10, 10)
+        )
+        for s in slice(0, 2), slice(20, 30), slice(42, 47), slice(87, 90):
+            expected[s] = np.ma.masked
         ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
 
 
@@ -5784,20 +5755,17 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
         }
 
         # We need to change some of the test data:
-        self.airspeed = P(name='Airspeed', array=np.ma.array([200] * 70))
-        self.weight = P(name='Gross Weight Smoothed', array=np.ma.repeat([50000, 60000], 35))
-        self.descents = S(name='Descent To Flare', items=[
-            Section(name='Descent To Flare', slice=slice(2, 32), start_edge=2, stop_edge=32),
-            Section(name='Descent To Flare', slice=slice(37, 67), start_edge=37, stop_edge=67),
-        ])
+        self.airspeed = P('Airspeed', np.ma.repeat(200, 70))
+        self.weight = P('Gross Weight Smoothed', np.ma.repeat((50000, 60000), 35))
+        self.descents = buildsections('Descent To Flare', (2, 32), (37, 67))
         self.flap_lever = M(
             name='Flap Lever',
             array=np.ma.repeat((0, 1, 5, 15, 20, 25, 30), 10),
             values_mapping={f: str(f) for f in (0, 1, 5, 15, 20, 25, 30)},
         )
         self.flap_lever.array.mask = np.repeat(False, 70)  # expand mask.
-        self.vref_25 = P(name='Vref (25)', array=np.ma.array([155] * 70))
-        self.vref_30 = P(name='Vref (30)', array=np.ma.array([150] * 70))
+        self.vref_25 = P('Vref (25)', np.ma.repeat(155, 70))
+        self.vref_30 = P('Vref (30)', np.ma.repeat(150, 70))
 
         node = self.node_class()
         node.derive(self.airspeed, self.flap_lever, None, self.weight,
@@ -5806,18 +5774,10 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
         attributes = [a.value for a in attributes]
         at0.get_vspeed_map.assert_called_once_with(*attributes)
         at1.get_fms_map.assert_called_once_with(*attributes[:3])
-        expected = np.ma.array(data=[0] * 70, mask=True, dtype=np.float)
-        expected[00:10] = 150 + 80
-        expected[10:20] = 150 + 60
-        expected[20:30] = 150 + 40
-        expected[30:40] = 150 + 20
-        expected[40:50] = 150 + 20
-        expected[50:60] = 155 + 0
-        expected[60:70] = 150 + 0
-        expected[0:2] = np.ma.masked
-        expected[32:37] = np.ma.masked
-        expected[67:70] = np.ma.masked
-        ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
+        expected = np.ma.repeat((230, 210, 190, 170, 170, 155, 150), 10)
+        for s in slice(0, 2), slice(32, 37), slice(67, 70):
+            expected[s] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
 
 
 ##############################################################################
@@ -5850,34 +5810,30 @@ class TestAirspeedMinusV2(unittest.TestCase, NodeTest):
     def test_derive__record_only(self):
         node = self.node_class()
         node.derive(self.airspeed, self.v2_record, None, self.liftoffs, self.climbs)
-        expected = np.ma.array([0] * 180 + [12] * 820 + [0] * 1000)
-        expected[:180] = np.ma.masked
-        expected[1000:] = np.ma.masked
+        expected = np.ma.repeat((0, 12, 0), (180, 820, 1000))
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__lookup_only(self):
         node = self.node_class()
         node.derive(self.airspeed, None, self.v2_lookup, self.liftoffs, self.climbs)
-        expected = np.ma.array([0] * 180 + [7] * 820 + [0] * 1000)
-        expected[:180] = np.ma.masked
-        expected[1000:] = np.ma.masked
+        expected = np.ma.repeat((0, 7, 0), (180, 820, 1000))
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__prefer_record(self):
         node = self.node_class()
         node.derive(self.airspeed, self.v2_record, self.v2_lookup, self.liftoffs, self.climbs)
-        expected = np.ma.array([0] * 180 + [12] * 820 + [0] * 1000)
-        expected[:180] = np.ma.masked
-        expected[1000:] = np.ma.masked
+        expected = np.ma.repeat((0, 12, 0), (180, 820, 1000))
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__record_masked(self):
         self.v2_record.array.mask = True
         node = self.node_class()
         node.derive(self.airspeed, self.v2_record, self.v2_lookup, self.liftoffs, self.climbs)
-        expected = np.ma.array([0] * 180 + [7] * 820 + [0] * 1000)
-        expected[:180] = np.ma.masked
-        expected[1000:] = np.ma.masked
+        expected = np.ma.repeat((0, 7, 0), (180, 820, 1000))
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__both_masked(self):
@@ -5885,16 +5841,16 @@ class TestAirspeedMinusV2(unittest.TestCase, NodeTest):
         self.v2_lookup.array.mask = True
         node = self.node_class()
         node.derive(self.airspeed, self.v2_record, self.v2_lookup, self.liftoffs, self.climbs)
-        expected = np.ma.array(data=[0] * 2000, mask=[True] * 2000)
+        expected = np.ma.repeat(0, 2000)
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__masked_within_phase(self):
         self.v2_record.array[:-1] = np.ma.masked
         node = self.node_class()
         node.derive(self.airspeed, self.v2_record, self.v2_lookup, self.liftoffs, self.climbs)
-        expected = np.ma.array([0] * 180 + [7] * 820 + [0] * 1000)
-        expected[:180] = np.ma.masked
-        expected[1000:] = np.ma.masked
+        expected = np.ma.repeat((0, 7, 0), (180, 820, 1000))
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__superframe(self):
@@ -5902,9 +5858,8 @@ class TestAirspeedMinusV2(unittest.TestCase, NodeTest):
         self.v2_record.frequency = 1 / 64.0
         node = self.node_class()
         node.get_derived([self.airspeed, self.v2_record, None, self.liftoffs, self.climbs])
-        expected = np.ma.array([0] * 180 + [2] * 820 + [0] * 1000)
-        expected[:180] = np.ma.masked
-        expected[1000:] = np.ma.masked
+        expected = np.ma.repeat((0, 2, 0), (180, 820, 1000))
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
 
@@ -5917,14 +5872,14 @@ class TestAirspeedMinusV2For3Sec(unittest.TestCase, NodeTest):
         ]
         self.airspeed = P(
             name='Airspeed Minus V2',
-            array=np.ma.array([100.0] * 6 + [110] * 7 + [120] + [100] * 6),
+            array=np.ma.repeat((100, 110, 120, 100), (6, 7, 1, 6)),
             frequency=2,
         )
 
     def test_derive__basic(self):
         node = self.node_class()
         node.get_derived([self.airspeed])
-        expected = np.ma.array([100.0] * 6 + [110] * 8 + [100] * 6)
+        expected = np.ma.repeat((100, 110, 100), (6, 8, 6))
         expected[-3:] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
@@ -5932,7 +5887,7 @@ class TestAirspeedMinusV2For3Sec(unittest.TestCase, NodeTest):
         self.airspeed.frequency = 1
         node = self.node_class()
         node.get_derived([self.airspeed])
-        expected = np.ma.array([100.0] * 11 + [105] + [110] * 16 + [100] * 12)
+        expected = np.ma.repeat((100, 105, 110, 100), (11, 1, 16, 12))
         expected[-4:] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
@@ -5959,24 +5914,21 @@ class TestAirspeedMinusVref(unittest.TestCase, NodeTest):
         node = self.node_class()
         node.derive(self.airspeed, self.vref_record, None, self.approaches)
         expected = np.ma.repeat((0, 12, 0, 0), 500)
-        expected[:500] = np.ma.masked
-        expected[1000:] = np.ma.masked
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__lookup_only(self):
         node = self.node_class()
         node.derive(self.airspeed, None, self.vref_lookup, self.approaches)
         expected = np.ma.repeat((0, 7, 0, 0), 500)
-        expected[:500] = np.ma.masked
-        expected[1000:] = np.ma.masked
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__prefer_record(self):
         node = self.node_class()
         node.derive(self.airspeed, self.vref_record, self.vref_lookup, self.approaches)
         expected = np.ma.repeat((0, 12, 0, 0), 500)
-        expected[:500] = np.ma.masked
-        expected[1000:] = np.ma.masked
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__record_masked(self):
@@ -5984,8 +5936,7 @@ class TestAirspeedMinusVref(unittest.TestCase, NodeTest):
         node = self.node_class()
         node.derive(self.airspeed, self.vref_record, self.vref_lookup, self.approaches)
         expected = np.ma.repeat((0, 7, 0, 0), 500)
-        expected[:500] = np.ma.masked
-        expected[1000:] = np.ma.masked
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__both_masked(self):
@@ -5993,7 +5944,8 @@ class TestAirspeedMinusVref(unittest.TestCase, NodeTest):
         self.vref_lookup.array.mask = True
         node = self.node_class()
         node.derive(self.airspeed, self.vref_record, self.vref_lookup, self.approaches)
-        expected = np.ma.array(data=[0] * 2000, mask=[True] * 2000)
+        expected = np.ma.repeat(0, 2000)
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__masked_within_phase(self):
@@ -6001,8 +5953,7 @@ class TestAirspeedMinusVref(unittest.TestCase, NodeTest):
         node = self.node_class()
         node.derive(self.airspeed, self.vref_record, self.vref_lookup, self.approaches)
         expected = np.ma.repeat((0, 7, 0, 0), 500)
-        expected[:500] = np.ma.masked
-        expected[1000:] = np.ma.masked
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__superframe(self):
@@ -6011,8 +5962,7 @@ class TestAirspeedMinusVref(unittest.TestCase, NodeTest):
         node = self.node_class()
         node.get_derived([self.airspeed, self.vref_record, None, self.approaches])
         expected = np.ma.repeat((0, 2, 0, 0), 500)
-        expected[:500] = np.ma.masked
-        expected[1000:] = np.ma.masked
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
 
@@ -6025,14 +5975,14 @@ class TestAirspeedMinusVrefFor3Sec(unittest.TestCase, NodeTest):
         ]
         self.airspeed = P(
             name='Airspeed Minus Vref',
-            array=np.ma.array([100.0] * 6 + [110] * 7 + [120] + [100] * 6),
+            array=np.ma.repeat((100, 110, 120, 100), (6, 7, 1, 6)),
             frequency=2,
         )
 
     def test_derive__basic(self):
         node = self.node_class()
         node.get_derived([self.airspeed])
-        expected = np.ma.array([100.0] * 6 + [110] * 8 + [100] * 6)
+        expected = np.ma.repeat((100, 110, 100), (6, 8, 6))
         expected[-3:] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
@@ -6041,6 +5991,7 @@ class TestAirspeedMinusVrefFor3Sec(unittest.TestCase, NodeTest):
         node = self.node_class()
         node.get_derived([self.airspeed])
         expected = np.ma.array([100.0] * 11 + [105] + [110] * 16 + [100] * 12)
+        expected = np.ma.repeat((100, 105, 110, 100), (11, 1, 16, 12))
         expected[-4:] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
@@ -6067,24 +6018,21 @@ class TestAirspeedMinusVapp(unittest.TestCase, NodeTest):
         node = self.node_class()
         node.derive(self.airspeed, self.vapp_record, None, self.approaches)
         expected = np.ma.repeat((0, 12, 0, 0), 500)
-        expected[:500] = np.ma.masked
-        expected[1000:] = np.ma.masked
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__lookup_only(self):
         node = self.node_class()
         node.derive(self.airspeed, None, self.vapp_lookup, self.approaches)
         expected = np.ma.repeat((0, 7, 0, 0), 500)
-        expected[:500] = np.ma.masked
-        expected[1000:] = np.ma.masked
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__prefer_record(self):
         node = self.node_class()
         node.derive(self.airspeed, self.vapp_record, self.vapp_lookup, self.approaches)
         expected = np.ma.repeat((0, 12, 0, 0), 500)
-        expected[:500] = np.ma.masked
-        expected[1000:] = np.ma.masked
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__record_masked(self):
@@ -6092,8 +6040,7 @@ class TestAirspeedMinusVapp(unittest.TestCase, NodeTest):
         node = self.node_class()
         node.derive(self.airspeed, self.vapp_record, self.vapp_lookup, self.approaches)
         expected = np.ma.repeat((0, 7, 0, 0), 500)
-        expected[:500] = np.ma.masked
-        expected[1000:] = np.ma.masked
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__both_masked(self):
@@ -6101,7 +6048,8 @@ class TestAirspeedMinusVapp(unittest.TestCase, NodeTest):
         self.vapp_lookup.array.mask = True
         node = self.node_class()
         node.derive(self.airspeed, self.vapp_record, self.vapp_lookup, self.approaches)
-        expected = np.ma.array(data=[0] * 2000, mask=[True] * 2000)
+        expected = np.ma.repeat(0, 2000)
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__masked_within_phase(self):
@@ -6109,8 +6057,7 @@ class TestAirspeedMinusVapp(unittest.TestCase, NodeTest):
         node = self.node_class()
         node.derive(self.airspeed, self.vapp_record, self.vapp_lookup, self.approaches)
         expected = np.ma.repeat((0, 7, 0, 0), 500)
-        expected[:500] = np.ma.masked
-        expected[1000:] = np.ma.masked
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__superframe(self):
@@ -6119,8 +6066,7 @@ class TestAirspeedMinusVapp(unittest.TestCase, NodeTest):
         node = self.node_class()
         node.get_derived([self.airspeed, self.vapp_record, None, self.approaches])
         expected = np.ma.repeat((0, 2, 0, 0), 500)
-        expected[:500] = np.ma.masked
-        expected[1000:] = np.ma.masked
+        expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
 
@@ -6133,14 +6079,14 @@ class TestAirspeedMinusVappFor3Sec(unittest.TestCase, NodeTest):
         ]
         self.airspeed = P(
             name='Airspeed Minus Vapp',
-            array=np.ma.array([100.0] * 6 + [110] * 7 + [120] + [100] * 6),
+            array=np.ma.repeat((100, 110, 120, 100), (6, 7, 1, 6)),
             frequency=2,
         )
 
     def test_derive__basic(self):
         node = self.node_class()
         node.get_derived([self.airspeed])
-        expected = np.ma.array([100.0] * 6 + [110] * 8 + [100] * 6)
+        expected = np.ma.repeat((100, 110, 100), (6, 8, 6))
         expected[-3:] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
@@ -6148,7 +6094,7 @@ class TestAirspeedMinusVappFor3Sec(unittest.TestCase, NodeTest):
         self.airspeed.frequency = 1
         node = self.node_class()
         node.get_derived([self.airspeed])
-        expected = np.ma.array([100.0] * 11 + [105] + [110] * 16 + [100] * 12)
+        expected = np.ma.repeat((100, 105, 110, 100), (11, 1, 16, 12))
         expected[-4:] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
@@ -6193,14 +6139,14 @@ class TestAirspeedMinusMinimumAirspeedFor3Sec(unittest.TestCase, NodeTest):
         ]
         self.airspeed = P(
             name='Airspeed Minus Minimum Airspeed',
-            array=np.ma.array([100.0] * 6 + [110] * 7 + [120] + [100] * 6),
+            array=np.ma.repeat((100, 110, 120, 100), (6, 7, 1, 6)),
             frequency=2,
         )
 
     def test_derive__basic(self):
         node = self.node_class()
         node.get_derived([self.airspeed])
-        expected = np.ma.array([100.0] * 6 + [110] * 8 + [100] * 6)
+        expected = np.ma.repeat((100, 110, 100), (6, 8, 6))
         expected[-3:] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
@@ -6208,7 +6154,7 @@ class TestAirspeedMinusMinimumAirspeedFor3Sec(unittest.TestCase, NodeTest):
         self.airspeed.frequency = 1
         node = self.node_class()
         node.get_derived([self.airspeed])
-        expected = np.ma.array([100.0] * 11 + [105] + [110] * 16 + [100] * 12)
+        expected = np.ma.repeat((100, 105, 110, 100), (11, 1, 16, 12))
         expected[-4:] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
@@ -6253,14 +6199,14 @@ class TestAirspeedMinusFlapManoeuvreSpeedFor3Sec(unittest.TestCase, NodeTest):
         ]
         self.airspeed = P(
             name='Airspeed Minus Flap Manoeuvre Speed',
-            array=np.ma.array([100.0] * 6 + [110] * 7 + [120] + [100] * 6),
+            array=np.ma.repeat((100, 110, 120, 100), (6, 7, 1, 6)),
             frequency=2,
         )
 
     def test_derive__basic(self):
         node = self.node_class()
         node.get_derived([self.airspeed])
-        expected = np.ma.array([100.0] * 6 + [110] * 8 + [100] * 6)
+        expected = np.ma.repeat((100, 110, 100), (6, 8, 6))
         expected[-3:] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
@@ -6268,7 +6214,7 @@ class TestAirspeedMinusFlapManoeuvreSpeedFor3Sec(unittest.TestCase, NodeTest):
         self.airspeed.frequency = 1
         node = self.node_class()
         node.get_derived([self.airspeed])
-        expected = np.ma.array([100.0] * 11 + [105] + [110] * 16 + [100] * 12)
+        expected = np.ma.repeat((100, 105, 110, 100), (11, 1, 16, 12))
         expected[-4:] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
@@ -6286,8 +6232,8 @@ class TestAirspeedRelative(unittest.TestCase, NodeTest):
             ('Airspeed Minus Vref',),
             ('Airspeed Minus Vapp', 'Airspeed Minus Vref'),
         ]
-        self.vapp = P(name='Airspeed Minus Vapp', array=np.ma.arange(100, 200))
-        self.vref = P(name='Airspeed Minus Vref', array=np.ma.arange(200, 300))
+        self.vapp = P('Airspeed Minus Vapp', np.ma.arange(100, 200))
+        self.vref = P('Airspeed Minus Vref', np.ma.arange(200, 300))
 
     def test_derive__vapp(self):
         node = self.node_class()
@@ -6314,10 +6260,8 @@ class TestAirspeedRelativeFor3Sec(unittest.TestCase, NodeTest):
             ('Airspeed Minus Vref For 3 Sec',),
             ('Airspeed Minus Vapp For 3 Sec', 'Airspeed Minus Vref For 3 Sec'),
         ]
-        self.vapp = P(name='Airspeed Minus Vapp For 3 Sec',
-                      array=np.ma.arange(100, 200), frequency=2)
-        self.vref = P(name='Airspeed Minus Vref For 3 Sec',
-                      array=np.ma.arange(200, 300), frequency=2)
+        self.vapp = P('Airspeed Minus Vapp For 3 Sec', np.ma.arange(100, 200), frequency=2)
+        self.vref = P('Airspeed Minus Vref For 3 Sec', np.ma.arange(200, 300), frequency=2)
 
     def test_derive__vapp(self):
         node = self.node_class()
