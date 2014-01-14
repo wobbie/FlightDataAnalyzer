@@ -134,7 +134,7 @@ def _segment_type_and_slice(airspeed, frequency, heading, start, stop):
 
 def _get_normalised_split_params(hdf):
     '''
-    Get split parameters (currently only engine power) from hdf, normalise
+    Get split parameters (currently engine power and Groundspeed) from hdf, normalise
     them on a scale from 0-1.0 and return the minimum.
 
     :param hdf: hdf_file object.
@@ -146,13 +146,14 @@ def _get_normalised_split_params(hdf):
     first_split_param = None
     for param_name in ('Eng (1) N1', 'Eng (2) N1', 'Eng (3) N1', 'Eng (4) N1',
                        'Eng (1) N2', 'Eng (2) N2', 'Eng (3) N2', 'Eng (4) N2',
-                       'Eng (1) Np', 'Eng (2) Np', 'Eng (3) Np', 'Eng (4) Np'):
+                       'Eng (1) Np', 'Eng (2) Np', 'Eng (3) Np', 'Eng (4) Np',
+                       'Groundspeed', 'Groundspeed (1)', 'Groundspeed (2)'):
         try:
             param = hdf[param_name]
         except KeyError:
             continue
         if first_split_param:
-            # Align all other parameters to first available.
+            # Align all other parameters to first available.  #Q: Why not force to 1Hz?
             param.array = align(param, first_split_param)
         else:
             first_split_param = param
@@ -164,7 +165,7 @@ def _get_normalised_split_params(hdf):
     # normalise the parameters we'll use for splitting the data
     stacked_params = vstack_params(*params)
     normalised_params = normalise(stacked_params, scale_max=100)
-    split_params_min = np.ma.min(normalised_params, axis=0)
+    split_params_min = np.ma.average(normalised_params, axis=0)
     return split_params_min, first_split_param.frequency
 
 

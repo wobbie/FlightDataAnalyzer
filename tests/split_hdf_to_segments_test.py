@@ -7,6 +7,7 @@ from datetime import datetime
 
 from analysis_engine.split_hdf_to_segments import (
     _calculate_start_datetime,
+    _get_normalised_split_params,
     _mask_invalid_years,
     append_segment_info,
     split_segments,
@@ -340,6 +341,33 @@ class TestSplitSegments(unittest.TestCase):
                           'START_AND_STOP',
                           'START_AND_STOP',
                           'START_ONLY'))
+        
+    def test__get_normalised_split_params(self):
+        hdf = mock.Mock()
+        hdf.get = mock.Mock()
+        hdf.get.return_value = None
+        hdf.reliable_frame_counter = False
+        
+        arrays = {
+            'Eng (1) N1': np.load(os.path.join(
+                            test_data_path, 'split_segments_eng_1_n1_slowslice.npy')),
+            'Eng (2) N1': np.load(os.path.join(
+                            test_data_path, 'split_segments_eng_2_n1_slowslice.npy')),
+            'Groundspeed': np.load(os.path.join(
+                                test_data_path, 'split_segments_groundspeed_slowslice.npy'))
+            }
+        
+        def hdf_getitem(self, key, **kwargs):
+            return Parameter(key, array=arrays[key], frequency=1)
+        
+        hdf.__getitem__ = hdf_getitem
+        
+        norm_array, freq = _get_normalised_split_params(hdf)
+        # find split which without Groundspeed and averaging of the
+        # normalised parameters would not work properly due to a single
+        # engine taxi. Before using groundspeed and averaging, the minimum of
+        # the engine only parameters would split too early, during the taxi_in
+        self.assertEqual(np.ma.argmin(norm_array), 715)
 
 
 class mocked_hdf(object):
