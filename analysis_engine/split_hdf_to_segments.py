@@ -735,33 +735,86 @@ def split_hdf_to_segments(hdf_path, aircraft_info, fallback_dt=None,
     return segments
 
 
-def main():
-    print 'FlightDataSplitter (c) Copyright 2013 Flight Data Services, Ltd.'
-    print '  - Powered by POLARIS'
-    print '  - http://www.flightdatacommunity.com'
-    print ''
+def parse_cmdline():
     import argparse
-    import pprint
-    import tempfile
-    from analysis_engine.utils import get_aircraft_info
-    from flightdatautilities.filesystem_tools import copy_file
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
 
     parser = argparse.ArgumentParser(description="Process a flight.")
     parser.add_argument('file', type=str,
                         help='Path of file to process.')
-    parser.add_argument('-tail', dest='tail_number', type=str, default='G-FDSL',
+    parser.add_argument('-tail', dest='tail_number', type=str,
+                        default='G-FDSL',
                         help='Aircraft Tail Number for processing.')
+    parser.add_argument(
+        '--fallback-datetime', '-t',
+        help='Date and time at the beginning of the data, '
+        'used in case the data does not contain reliable time parameters. '
+        'Format YYY-MM-DD hh:mm'
+    )
+    parser.add_argument('-L', '--log-level', default=None, help='Log level')
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help="Don't output messages")
+
     args = parser.parse_args()
+
+    if args.log_level:
+        log_level = args.log_level.upper()
+        # Convert log level name to value
+        if not hasattr(logging, log_level):
+            raise parser.error('Invalid log level `%s`' % log_level)
+        args.log_level_number = getattr(logging, log_level)
+    else:
+        args.log_level_number = logging.WARNING
+
+    if args.quiet:
+        args.log_level_number = 1000
+
+    if args.fallback_datetime:
+        args.fallback_datetime = datetime.strptime(
+            args.fallback_datetime, '%Y-%m-%d %H:%M')
+    else:
+        args.fallback_datetime = datetime.now()
+
+    return args, parser
+
+
+def main():
+    args, parser = parse_cmdline()
+
+    if not args.quiet:
+        print 'FlightDataSplitter (c) Copyright 2013 Flight Data Services, ' \
+            'Ltd.'
+        print '  - Powered by POLARIS'
+        print '  - http://www.flightdatacommunity.com'
+        print
+
+    import os
+    from analysis_engine.utils import get_aircraft_info
+    from flightdatautilities.filesystem_tools import copy_file
+
+    logger = logging.getLogger()
+    logger.setLevel(args.log_level_number)
+
     ac_info = get_aircraft_info(args.tail_number)
-    hdf_copy = copy_file(args.file, dest_dir=tempfile.gettempdir(), postfix='_split')
+    hdf_copy = copy_file(args.file, postfix='_split')
     logger.info("Working on copy: %s", hdf_copy)
-    segs = split_hdf_to_segments(hdf_copy,
-                                 ac_info,
-                                 fallback_dt=datetime(2012,12,12,12,12,12),
-                                 draw=False)
-    pprint.pprint(segs)
+    segments = split_hdf_to_segments(
+        hdf_copy,
+        ac_info,
+        fallback_dt=args.fallback_datetime,
+        draw=False)
+
+    # Rename the segment filenames to be able to use glob()
+    for segment in segments:
+        dir, fn = os.path.split(segment.path)
+        name, ext = os.path.splitext(fn)
+        new_fn = '-'.join((name, 'SEGMENT', segment.type)) + ext
+        new_path = os.path.join(dir, new_fn)
+        os.rename(segment.path, new_path)
+        segment.path = new_path
+
+    if not args.quiet:
+        import pprint
+        pprint.pprint(segments)
 
 
 if __name__ == '__main__':
