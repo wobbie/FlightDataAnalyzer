@@ -741,7 +741,7 @@ def parse_cmdline():
     parser = argparse.ArgumentParser(description="Process a flight.")
     parser.add_argument('file', type=str,
                         help='Path of file to process.')
-    parser.add_argument('-tail', dest='tail_number', type=str,
+    parser.add_argument('-tail', '--tail', dest='tail_number', type=str,
                         default='G-FDSL',
                         help='Aircraft Tail Number for processing.')
     parser.add_argument(
