@@ -9,9 +9,12 @@ You can view the differences in tagged versions as follows:
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
 
-?v0.5.3?
---------
+v0.6.0???
+-------
  - Thrust Asymmetry now supports EPR asymmetry as a percentage value.
+ - Split Segments splits the average of the normalised engine params (and Groundspeed)
+   rather than the minimum of any of the individual params to fix early splits on 
+   single engine taxi in.
 
 
 v0.5.2
