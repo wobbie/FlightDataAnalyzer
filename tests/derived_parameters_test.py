@@ -620,7 +620,7 @@ class TestAirspeedReferenceLookup(unittest.TestCase):
     def test_airspeed_reference__boeing_lookup(self):
         model = A('Model', value='B737-333')
         series = A('Series', value='B737-300')
-        family = A('Family', value='B737 Classic')
+        family = A('Family', value='B737-Classic')
         approaches = App('Approach Information', items=[
             ApproachItem('TOUCH_AND_GO', slice(3346, 3540)),
             ApproachItem('LANDING', slice(5502, 5795)),
@@ -3187,7 +3187,7 @@ class TestV2Lookup(unittest.TestCase):
     def test_derive__boeing(self):
         model = A('Model', value='B737-333')
         series = A('Series', value='B737-300')
-        family = A('Family', value='B737 Classic')
+        family = A('Family', value='B737-Classic')
         gw = KPV(name='Gross Weight At Liftoff', items=[
             KeyPointValue(index=451, value=54192.06),
         ])

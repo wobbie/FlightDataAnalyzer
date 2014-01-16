@@ -318,7 +318,7 @@ class TestILSGlideslopeEstablished(unittest.TestCase):
             'Frame': {'doubled': False, 'name': '737-3C'},
             'id': 1,
             'Identifier': '1000',
-            'Model': {'family': 'B737 NG',
+            'Model': {'family': 'B737-NG',
                       'interpolate_vspeeds': True,
                       'manufacturer': 'Boeing',
                       'model': 'B737-86N',

@@ -71,7 +71,7 @@ class TestProcessSpecimenFlight(unittest.TestCase):
             'Tail Number': 'G-ABCD',
             'Model': 'B737-301',
             'Series': 'B737-300',
-            'Family': 'B737 Classic',
+            'Family': 'B737-Classic',
             'Manufacturer': 'Boeing',
             'Precise Positioning': False,
             'Frame': '737-5',
