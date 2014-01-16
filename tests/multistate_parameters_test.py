@@ -300,7 +300,7 @@ class TestConfiguration(unittest.TestCase, NodeTest):
         self.assertFalse(self.node_class.can_operate(
             ['Flap', 'Slat', 'Model', 'Series', 'Family'],
             manufacturer=Attribute('Manufacturer', 'Boeing'),
-            family=Attribute('Family', 'B737-Classic')))
+            family=Attribute('Family', 'B737 Classic')))
         # A300 and A310 should not be able to create configuration:
         lookups = (
             ('A300', 'A300-600', None),
@@ -748,7 +748,7 @@ class TestFlap(unittest.TestCase):
             ('Flap Angle', 'Model', 'Series', 'Family'),
             model=Attribute('Model', 'B737-333'),
             series=Attribute('Series', 'B737-300'),
-            family=Attribute('Family', 'B737-Classic')))
+            family=Attribute('Family', 'B737 Classic')))
 
     def test_flap_using_md82_settings(self):
         # Note: Using flap detents for MD-82 of (0, 13, 20, 25, 30, 40)
@@ -818,7 +818,7 @@ class TestFlapExcludingTransition(unittest.TestCase):
             ('Flap Angle', 'Model', 'Series', 'Family'),
             model=Attribute('Model', 'B737-333'),
             series=Attribute('Series', 'B737-300'),
-            family=Attribute('Family', 'B737-Classic')))
+            family=Attribute('Family', 'B737 Classic')))
 
 
 class TestFlapIncludingTransition(unittest.TestCase):
@@ -828,7 +828,7 @@ class TestFlapIncludingTransition(unittest.TestCase):
             ('Flap Angle', 'Model', 'Series', 'Family'),
             model=Attribute('Model', 'B737-333'),
             series=Attribute('Series', 'B737-300'),
-            family=Attribute('Family', 'B737-Classic')))
+            family=Attribute('Family', 'B737 Classic')))
 
 
 class TestFlapLever(unittest.TestCase):
@@ -838,7 +838,7 @@ class TestFlapLever(unittest.TestCase):
             ('Flap Lever Angle', 'Model', 'Series', 'Family'),
             model=Attribute('Model', 'B737-333'),
             series=Attribute('Series', 'B737-300'),
-            family=Attribute('Family', 'B737-Classic')))
+            family=Attribute('Family', 'B737 Classic')))
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
@@ -865,13 +865,13 @@ class TestFlapLeverSynthetic(unittest.TestCase):
             ('Flap', 'Model', 'Series', 'Family'),
             model=Attribute('Model', 'B737-333'),
             series=Attribute('Series', 'B737-300'),
-            family=Attribute('Family', 'B737-Classic')))
+            family=Attribute('Family', 'B737 Classic')))
         # Test we can operate even though the above *has* a slat.
         self.assertTrue(FlapLeverSynthetic.can_operate(
             ('Flap', 'Slat', 'Model', 'Series', 'Family'),
             model=Attribute('Model', 'B737-333'),
             series=Attribute('Series', 'B737-300'),
-            family=Attribute('Family', 'B737-Classic')))
+            family=Attribute('Family', 'B737 Classic')))
         # Test we can operate with Flaperons
         self.assertTrue(FlapLeverSynthetic.can_operate(
             ('Flap', 'Slat', 'Flaperon', 'Model', 'Series', 'Family'),
@@ -924,7 +924,7 @@ class TestFlapLeverSynthetic(unittest.TestCase):
         flaperon = None
         model = A('Model', 'B737-333')
         series = A('Series', 'B737-300')
-        family = A('Family', 'B737-Classic')
+        family = A('Family', 'B737 Classic')
         node = FlapLeverSynthetic()
         node.derive(flap, slat, flaperon, model, series, family)
 
@@ -1354,7 +1354,7 @@ class TestSlat(unittest.TestCase):
             ('Slat Angle', 'Model', 'Series', 'Family'),
             A('Model', 'B737-333'),
             A('Series', 'B737-300'),
-            A('Family', 'B737-Classic')))
+            A('Family', 'B737 Classic')))
 
     def test_derive_A300B4F(self):
         model = A('Model', None)

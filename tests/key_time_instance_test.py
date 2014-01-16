@@ -1487,9 +1487,9 @@ class TestAutoland(unittest.TestCase):
         node.derive(ap, td, None)
         expected = [KeyTimeInstance(index=5, name='Autoland')]
         self.assertEqual(node, expected)
-        # test with B737-Classic creates no autoland as requires Triple mode
+        # test with B737 Classic creates no autoland as requires Triple mode
         node = Autoland()
-        node.derive(ap, td, A('Family', 'B737-Classic'))
+        node.derive(ap, td, A('Family', 'B737 Classic'))
         self.assertEqual(node, [])
 
     def test_derive_autoland(self):

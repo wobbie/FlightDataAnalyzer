@@ -6876,7 +6876,7 @@ class TestGroundspeedStabilizerOutOfTrimDuringTakeoffMax(unittest.TestCase,
 
         model = A(name='Model', value=None)
         series = A(name='Series', value='B737-600')
-        family = A(name='Family', value='B737-NG')
+        family = A(name='Family', value='B737 NG')
 
         node = self.node_class()
         node.derive(gspd, stab, phase, model, series, family)

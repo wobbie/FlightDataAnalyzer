@@ -1421,8 +1421,8 @@ class Autoland(KeyTimeInstanceNode):
     all three AutoPilot channels to be engaged.
     '''
     TRIPLE_FAMILIES = (
-        'B737-Classic',
-        'B737-NG',
+        'B737 Classic',
+        'B737 NG',
         'B757',
         'B767',
     )
