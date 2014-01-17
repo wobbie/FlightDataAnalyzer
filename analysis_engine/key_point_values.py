@@ -22,7 +22,8 @@ from analysis_engine.settings import (ACCEL_LAT_OFFSET_LIMIT,
                                       NAME_VALUES_ENGINE,
                                       NAME_VALUES_FLAP,
                                       NAME_VALUES_LEVER,
-                                      REVERSE_THRUST_EFFECTIVE,
+                                      REVERSE_THRUST_EFFECTIVE_EPR,
+                                      REVERSE_THRUST_EFFECTIVE_N1,
                                       SPOILER_DEPLOYED,
                                       VERTICAL_SPEED_FOR_LEVEL_FLIGHT)
 
@@ -169,11 +170,12 @@ class FlapOrConfigurationMaxOrMin(object):
 # Helpers
 
 
-def thrust_reversers_working(landing, pwr, tr):
+def thrust_reversers_working(landing, pwr, tr, threshold):
     '''
-    Thrust reversers are deployed and average N1 over REVERSE_THRUST_EFFECTIVE (nominally 65% N1).
+    Thrust reversers are deployed and maximum engine power is over
+    REVERSE_THRUST_EFFECTIVE for EPR or N1 (nominally 65% N1, 1.25% EPR).
     '''
-    high_power = np.ma.masked_less(pwr.array, REVERSE_THRUST_EFFECTIVE)
+    high_power = np.ma.masked_less(pwr.array, threshold)
     high_power_slices = np.ma.clump_unmasked(high_power)
     high_power_landing_slices = slices_and(high_power_slices, [landing.slice])
     return clump_multistate(tr.array, 'Deployed', high_power_landing_slices)
@@ -2146,20 +2148,34 @@ class AirspeedWithSpeedbrakeDeployedMax(KeyPointValueNode):
 
 class AirspeedWithThrustReversersDeployedMin(KeyPointValueNode):
     '''
-    Minimum airspeed measured with Thrust Reversers deployed and the average 
-    of Eng N1 measurements above %s%%
-    ''' % REVERSE_THRUST_EFFECTIVE
+    Minimum true airspeed measured with Thrust Reversers deployed and the 
+    maximum of either engine's EPR measurements above %.2f%% or N1 measurements 
+    above %d%%
+    ''' % (REVERSE_THRUST_EFFECTIVE_EPR, REVERSE_THRUST_EFFECTIVE_N1)
 
     units = ut.KT
+    
+    @classmethod
+    def can_operate(self, available):
+        return all_of(('Airspeed True', 'Thrust Reversers', 'Landing'), 
+                      available) and \
+               any_of(('Eng (*) EPR Max', 'Eng (*) N1 Max'), available)
 
     def derive(self,
                air_spd=P('Airspeed True'),
                tr=M('Thrust Reversers'),
-               power=P('Eng (*) N1 Avg'),
+               eng_epr=P('Eng (*) EPR Max'),
+               eng_n1=P('Eng (*) N1 Max'),
                landings=S('Landing')):
 
         for landing in landings:
-            high_rev = thrust_reversers_working(landing, power, tr)
+            if eng_epr:
+                power = eng_epr
+                threshold = REVERSE_THRUST_EFFECTIVE_EPR
+            else:
+                power = eng_n1
+                threshold = REVERSE_THRUST_EFFECTIVE_N1
+            high_rev = thrust_reversers_working(landing, power, tr, threshold)
             self.create_kpvs_within_slices(air_spd.array, high_rev, min_value)
 
 
@@ -7770,18 +7786,34 @@ class GroundspeedAtTOGA(KeyPointValueNode):
 
 class GroundspeedWithThrustReversersDeployedMin(KeyPointValueNode):
     '''
-    '''
+    Minimum groundspeed measured with Thrust Reversers deployed and the maximum 
+    of either engine's EPR measurements above %.2f%% or N1 measurements 
+    above %d%%
+    ''' % (REVERSE_THRUST_EFFECTIVE_EPR, REVERSE_THRUST_EFFECTIVE_N1)
 
     units = ut.KT
 
+    @classmethod
+    def can_operate(self, available):
+        return all_of(('Groundspeed', 'Thrust Reversers', 'Landing'), 
+                      available) and \
+               any_of(('Eng (*) EPR Max', 'Eng (*) N1 Max'), available)
+    
     def derive(self,
                gnd_spd=P('Groundspeed'),
                tr=M('Thrust Reversers'),
-               power=P('Eng (*) N1 Max'),
+               eng_epr=P('Eng (*) EPR Max'),
+               eng_n1=P('Eng (*) N1 Max'),
                landings=S('Landing')):
 
         for landing in landings:
-            high_rev = thrust_reversers_working(landing, power, tr)
+            if eng_epr:
+                power = eng_epr
+                threshold = REVERSE_THRUST_EFFECTIVE_EPR
+            else:
+                power = eng_n1
+                threshold = REVERSE_THRUST_EFFECTIVE_N1
+            high_rev = thrust_reversers_working(landing, power, tr, threshold)
             self.create_kpvs_within_slices(gnd_spd.array, high_rev, min_value)
 
 

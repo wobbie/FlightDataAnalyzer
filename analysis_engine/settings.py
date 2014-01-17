@@ -340,7 +340,8 @@ RATE_OF_TURN_FOR_TAXI_TURNS = 5.0  # deg per second
 REPAIR_DURATION = 10  # seconds
 
 # Minimum engine speed for reverse thrust to be considered effective.
-REVERSE_THRUST_EFFECTIVE = 65 # %N1
+REVERSE_THRUST_EFFECTIVE_EPR = 1.25 # %EPR
+REVERSE_THRUST_EFFECTIVE_N1 = 65 # %N1
 
 # Threshold for spoiler deployment when operating as speedbrake in flight.
 # See KPV "AirspeedWithSpoilerDeployedMax"
