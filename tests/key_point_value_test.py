@@ -512,7 +512,7 @@ class NodeTest(object):
         with tempfile.NamedTemporaryFile() as temp_file:
             shutil.copy(hdf_path, temp_file.name)
 
-            with hdf_file(hdf_path) as hdf:
+            with hdf_file(temp_file.name) as hdf:
                 for param_name in param_names:
                     p = hdf.get(param_name)
                     if p is not None:
