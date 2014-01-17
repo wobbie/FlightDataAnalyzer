@@ -3236,15 +3236,20 @@ class TestV2Lookup(unittest.TestCase):
 
 class TestHeadwind(unittest.TestCase):
     def test_can_operate(self):
-        opts=Headwind.get_operational_combinations()
-        self.assertTrue(('Wind Speed', 'Wind Direction Continuous', 'Heading True Continuous') in opts)
+        opts = Headwind.get_operational_combinations()
+        self.assertEqual(opts, [
+            ('Wind Speed', 'Wind Direction Continuous', 'Heading True Continuous', 'Altitude AAL'),
+            ('Airspeed True', 'Wind Speed', 'Wind Direction Continuous', 'Heading True Continuous', 'Altitude AAL'),
+            ('Wind Speed', 'Wind Direction Continuous', 'Heading True Continuous', 'Altitude AAL', 'Groundspeed'),
+            ('Airspeed True', 'Wind Speed', 'Wind Direction Continuous', 'Heading True Continuous', 'Altitude AAL', 'Groundspeed'),
+        ])            
     
     def test_real_example(self):
         ws = P('Wind Speed', np.ma.array([84.0]))
         wd = P('Wind Direction Continuous', np.ma.array([-21]))
         head=P('Heading True Continuous', np.ma.array([30]))
         hw = Headwind()
-        hw.derive(None, ws,wd,head)
+        hw.derive(None, ws, wd, head, None, None)
         expected = np.ma.array([52.8629128481863])
         self.assertAlmostEqual(hw.array.data, expected.data)
         
@@ -3253,9 +3258,29 @@ class TestHeadwind(unittest.TestCase):
         wd = P('Wind Direction Continuous', np.ma.array([0, 90, 180, -180, -90, 360, 23, -23], dtype=float))
         head=P('Heading True Continuous', np.ma.array([-180, -90, 0, 180, 270, 360*15, 361*23, 359*23], dtype=float))
         hw = Headwind()
-        hw.derive(None, ws,wd,head)
+        hw.derive(None, ws, wd, head, None, None)
         expected = np.ma.array([-20]*3+[20]*5)
         ma_test.assert_almost_equal(hw.array, expected)
+        
+    def test_headwind_below_100ft(self):
+        # create consistent 20 kt windspeed on the tail
+        wspd = P('Wind Speed', np.ma.array([20]*20))
+        wdir = P('Wind Direction Continuous', np.ma.array([180]*20))
+        head = P('Heading True Continuous', np.ma.array([0]*20))
+        # create a 40 kt difference between Airspeed and speed over ground
+        gspd = P('Groundspeed', np.ma.array([220]*20))
+        aspd = P('Airpseed True', np.ma.array([180]*20))
+        # first 5 and last 5 samples are below 100ft
+        alt = P('Altitude AAL', np.ma.array([50]*5 + [5000]*10 + [40]*5))
+        hw = Headwind()
+        hw.derive(aspd, wspd, wdir, head, alt, gspd)
+        # below 100ft
+        np.testing.assert_equal(hw.array[:5], [-40]*5)
+        # above 100ft
+        np.testing.assert_equal(hw.array[5:15], [-20]*10)
+        # below 100ft
+        np.testing.assert_equal(hw.array[15:], [-40]*5)
+    
         
 
 

@@ -43,39 +43,24 @@ class DeterminePilot(object):
     def _control_column_in_use(self, cc_capt, cc_fo, phase):
         '''
         Check if control column is used by Captain or FO.
+        
+        The forces are typically 2 or 3 lbf at takeoff, 6 or 7 at landing.
+        Find the larger force of the two, checking they are at least a bit
+        different as both move together on the B737-NG.
         '''
-        capt_force = cc_capt[phase.slice].ptp() > \
-            settings.CONTROL_COLUMN_IN_USE_TOLERANCE
-        fo_force = cc_fo[phase.slice].ptp() > \
-            settings.CONTROL_COLUMN_IN_USE_TOLERANCE
-
-        if capt_force and fo_force:
-            self.warning(
-                "Cannot determine whether captain or first officer was at the "
-                "controls because both control columns are in use during '%s' "
-                "slice.", phase.name)
-            return None
-
-        if capt_force:
-            return 'Captain'
-        elif fo_force:
-            return 'First Officer'
-        
-        # The forces are typically 2 or 3 lbf at takeoff, so nowhere near the
-        # threshold. Also both move on the 737NG, so we just look for the
-        # larger of the two.
         force_ratio = cc_capt[phase.slice].ptp() / cc_fo[phase.slice].ptp()
-        if force_ratio > 1.3:
-            print 'Found Captain with force_ratio of %f' %force_ratio
+        if force_ratio > settings.CONTROL_COLUMN_IN_USE_RATIO:
+            self.info('Found Captain with force_ratio of %f', force_ratio)
             return 'Captain'
-        elif (1.0/force_ratio) > 1.3:
-            print 'Found First Officer with force_ratio of %f' %(1.0/force_ratio)
+        elif (1.0/force_ratio) > settings.CONTROL_COLUMN_IN_USE_RATIO:
+            self.info('Found First Officer with force_ratio of %f',
+                      1.0/force_ratio)
             return 'First Officer'
-        
-        # 4. No change in captain or first officer control columns:
-        self.warning("Neither captain's nor first officer's control column "
-                     "changes during '%s' slice.", phase.name)
-        return None
+        else:
+            # No change in captain or first officer control columns:
+            self.warning("Neither captain's nor first officer's control column "
+                         "changes during '%s' slice.", phase.name)
+            return None
 
     def _controls_in_use(self, pitch_capt, pitch_fo, roll_capt, roll_fo, phase):
         capt_flying = self._controls_changed(phase.slice, pitch_capt, roll_capt)

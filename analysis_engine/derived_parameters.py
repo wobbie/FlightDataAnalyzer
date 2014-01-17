@@ -5260,44 +5260,48 @@ class WindDirectionTrueContinuous(DerivedParameterNode):
 
 class Headwind(DerivedParameterNode):
     '''
-    This is the headwind, negative values are tailwind.
+    Headwind calculates the headwind component based upon the Wind Speed and
+    Wind Direction compared to the Heading to get the direct Headwind
+    component.
+    
+    If Airspeed True and Groundspeed are available, below 100ft AAL the
+    difference between the two is used, ignoring the Wind Speed / Direction
+    component which become erroneous.
+    
+    Negative values of this Headwind component are a Tailwind.
     '''
 
     units = ut.KT
 
     @classmethod
     def can_operate(cls, available):
-
         return all_of((
             'Wind Speed',
             'Wind Direction Continuous',
             'Heading True Continuous',
+            'Altitude AAL',
         ), available)
 
     def derive(self, aspd=P('Airspeed True'),
                windspeed=P('Wind Speed'),
                wind_dir=P('Wind Direction Continuous'),
                head=P('Heading True Continuous'),
-               toffs=S('Takeoff'),
                alt_aal=P('Altitude AAL'),
                gspd=P('Groundspeed')):
 
-        rad_scale = radians(1.0)
         if aspd:
             # mask windspeed data while going slow
             windspeed.array[aspd.array.mask] = np.ma.masked
+        rad_scale = radians(1.0)
         headwind = windspeed.array * np.ma.cos((wind_dir.array-head.array)*rad_scale)
 
         # If we have airspeed and groundspeed, overwrite the values for the
-        # first hundred feet after takeoff. Note this is done in a
+        # altitudes below one hundred feet. Note this is done in a
         # deliberately crude manner so that the different computations may be
         # identified easily by the analyst.
-        if gspd and aspd and alt_aal and toffs:
-            # We merge takeoff slices with altitude slices to extend the takeoff phase to 100ft.
-            for climb in slices_or(alt_aal.slices_from_to(0, 100),
-                                   [s.slice for s in toffs]):
-                headwind[climb] = aspd.array[climb] - gspd.array[climb]
-
+        if aspd and gspd:
+            for below_100ft in alt_aal.slices_below(100):
+                headwind[below_100ft] = aspd.array[below_100ft] - gspd.array[below_100ft]
         self.array = headwind
 
 

@@ -158,7 +158,8 @@ CLIMB_OR_DESCENT_MIN_DURATION = 10  # sec
 # Used when trying determine which pilot is actively using the controls.
 CONTROLS_IN_USE_TOLERANCE = 1
 
-CONTROL_COLUMN_IN_USE_TOLERANCE = 20
+# Pilot in control - difference between each control force as a ratio
+CONTROL_COLUMN_IN_USE_RATIO = 1.30  # %
 
 # Change in altitude to create a Descent Low Climb phase, from which
 # approaches, go-around and touch-and-go phases and instances derive.
@@ -340,7 +341,8 @@ RATE_OF_TURN_FOR_TAXI_TURNS = 5.0  # deg per second
 REPAIR_DURATION = 10  # seconds
 
 # Minimum engine speed for reverse thrust to be considered effective.
-REVERSE_THRUST_EFFECTIVE = 65 # %N1
+REVERSE_THRUST_EFFECTIVE_EPR = 1.25 # %EPR
+REVERSE_THRUST_EFFECTIVE_N1 = 65 # %N1
 
 # Threshold for spoiler deployment when operating as speedbrake in flight.
 # See KPV "AirspeedWithSpoilerDeployedMax"
