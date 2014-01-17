@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import unittest
 
@@ -9,6 +10,7 @@ from analysis_engine.library import align
 from analysis_engine.api_handler import NotFoundError
 from analysis_engine.node import (
     A, KPV, KTI, P, S,
+    load,
     KeyPointValue,
     KeyTimeInstance,
     Section,
@@ -36,6 +38,9 @@ from analysis_engine.flight_attribute import (
     TakeoffRunway,
     Version,
 )
+
+test_data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              'test_data')
 
 
 def setUpModule():
@@ -445,13 +450,20 @@ class TestFlightNumber(unittest.TestCase):
         self.assertEqual(FlightNumber.get_operational_combinations(),
                          [('Flight Number',)])
 
-    def test_derive(self):
+    def test_derive_basic(self):
         flight_number_param = P('Flight Number',
                                 array=np.ma.masked_array([103, 102,102]))
         flight_number = FlightNumber()
         flight_number.set_flight_attr = Mock()
         flight_number.derive(flight_number_param)
         flight_number.set_flight_attr.assert_called_with('102')
+    
+    def test_derive(self):
+        flight_number = load(os.path.join(test_data_path,
+                                          'FDRFlightNumber_FlightNumber.nod'))
+        node = FlightNumber()
+        node.derive(flight_number)
+        self.assertEqual(node.value, '805')
 
     def test_derive_ascii(self):
         flight_number_param = P('Flight Number',
@@ -612,7 +624,7 @@ class TestLandingDatetime(unittest.TestCase):
         touchdown.frequency = 0.5
         landing_datetime.derive(start_datetime, touchdown)
         expected_datetime = datetime(1970, 1, 1, 0, 1)
-        landing_datetime.set_flight_attr.assert_called_once_with(\
+        landing_datetime.set_flight_attr.assert_called_once_with(
             expected_datetime)
         touchdown = KTI('Touchdown')
         landing_datetime.set_flight_attr = Mock()

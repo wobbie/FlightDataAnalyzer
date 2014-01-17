@@ -130,12 +130,12 @@ class ApproachInformation(ApproachNode):
                 if ils_freq:
                     kwargs['ils_freq'] = ils_freq.value
 
-            # We already have latitude and longitude in kwargs from looking up
-            # the airport. If the measurments are not precise, remove them.
-            if not precise:
-                kwargs['hint'] = hint
-                del kwargs['latitude']
-                del kwargs['longitude']
+                # We already have latitude and longitude in kwargs from looking up
+                # the airport. If the measurments are not precise, remove them.
+                if not precise:
+                    kwargs['hint'] = hint
+                    del kwargs['latitude']
+                    del kwargs['longitude']
 
             try:
                 runway = api.get_nearest_runway(airport_id, lowest_hdg,

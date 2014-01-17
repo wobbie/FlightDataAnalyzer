@@ -948,38 +948,43 @@ class Liftoff(KeyTimeInstanceNode):
             timebase=np.linspace(-dt_pre*hz, dt_pre*hz, 2*dt_pre*hz+1)
             plot_period = slice(floor(air.slice.start-dt_pre*hz), floor(air.slice.start-dt_pre*hz+len(timebase)))
             plt.figure()
+            plt.plot(0, 13.0,'vb', markersize=8)
             if vert_spd:
-                plt.plot(timebase, np.ma.masked_greater(vert_spd.array[plot_period],400.0)/20.0, 'o-g')
+                plt.plot(timebase, np.ma.masked_greater(vert_spd.array[plot_period],600.0)/20.0, 'o-g')
             else:
-                plt.plot(timebase, np.ma.masked_greater(vert_spd_baro.array[plot_period],400.0)/20.0, 'o-c')
+                #plt.plot(timebase, np.ma.masked_greater(vert_spd_baro.array[plot_period],600.0)/20.0, 'o-c')
                 if acc_norm:
-                    plt.plot(timebase, acc_norm.array[plot_period]*10.0, 'o-g')
+                    plt.plot(timebase, acc_norm.array[plot_period]*10.0, 'o-c')
                 if index_acc:
-                    plt.plot(index_acc-air.slice.start, 15.0,'dg', markersize=8)
+                    plt.plot(index_acc-air.slice.start, 15.0,'vc', markersize=8)
                     
             if index_vs:
-                plt.plot(index_vs-air.slice.start, 22.5,'dg', markersize=8)
+                plt.plot(index_vs-air.slice.start, 15,'vg', markersize=8)
                 
             if alt_rad:
-                plt.plot(timebase, np.ma.masked_greater(alt_rad.array[plot_period],40.0), 'o-r')
+                plt.plot(timebase, np.ma.masked_greater(alt_rad.array[plot_period],30.0), 'o-r')
             if index_rad:
-                plt.plot(index_rad-air.slice.start, 25.0,'dr', markersize=8)
+                plt.plot(index_rad-air.slice.start, 17.0,'vr', markersize=8)
                 
             if gog:
                 plt.plot(timebase, gog.array[plot_period]*10, 'o-k')
             if index_gog:
-                plt.plot(index_gog-air.slice.start, 20.0,'dk', markersize=8)
+                plt.plot(index_gog-air.slice.start, 19.0,'vk', markersize=8)
                 
             if vert_spd_baro:
-                plt.plot(timebase, vert_spd_baro.array[plot_period]/20.0, 'o-b')
+                plt.plot(timebase, np.ma.masked_greater(vert_spd_baro.array[plot_period]/20.0, 30.0), 'o-b')
 
             if index_lift:
-                plt.plot(index_lift-air.slice.start, -5.0,'db', markersize=14)
+                plt.plot(index_lift-air.slice.start, -5.0,'^m', markersize=14)
 
             plt.title(name)
             plt.grid()
+            plt.ylim(-10,30)
             filename = name
             print name
+            # Two lines to quickly make this work.
+            import os
+            WORKING_DIR = 'C:\Temp'
             output_dir = os.path.join(WORKING_DIR, 'Liftoff_graphs')
             if not os.path.exists(output_dir):
                 os.mkdir(output_dir)
