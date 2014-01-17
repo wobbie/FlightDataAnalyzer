@@ -1027,7 +1027,7 @@ class Mobile(FlightPhaseNode):
             return # for the case where nothing happened
 
         if gspd:
-            # We need to be outside the range where groundspeeds are detected.1
+            # We need to be outside the range where groundspeeds are detected.
             move_gspd = np.ma.flatnotmasked_edges(np.ma.masked_less\
                                                   (np.ma.abs(gspd.array),
                                                    GROUNDSPEED_FOR_MOBILE))
