@@ -189,6 +189,7 @@ class FlightNumber(FlightAttributeNode):
     """
     "Airline route flight number"
     name = 'FDR Flight Number'
+    
     def derive(self, num=P('Flight Number')):
         # Q: Should we validate the flight number?
         if num.array.dtype.type is np.string_:
@@ -216,7 +217,7 @@ class FlightNumber(FlightAttributeNode):
         else:
             self.warning("Only %d out of %d flight numbers were the same."\
                          " Flight Number attribute will be set as None.",
-                         count, len(num.array))
+                         count or 0, len(num.array))
             self.set_flight_attr(None)
             return
 
