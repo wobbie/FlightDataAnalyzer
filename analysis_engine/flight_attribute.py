@@ -201,13 +201,16 @@ class FlightNumber(FlightAttributeNode):
         _, minvalue = min_value(num.array)
         if minvalue < 0:
             self.warning("'%s' only supports unsigned (positive) values",
-                            self.name)
+                         self.name)
             self.set_flight_attr(None)
             return
 
         # TODO: Fill num.array masked values (as there is no np.ma.bincount) - perhaps with 0.0 and then remove all 0 values?
         # note reverse of value, index from max_value due to bincount usage.
-        compressed_array = num.array.compressed()
+        
+        array = np.ma.masked_less_equal(num.array, 0)
+        compressed_array = array.compressed()
+        
         value, count = \
             max_value(np.bincount(compressed_array.astype(np.integer)))
         if count > len(compressed_array) * 0.45:
