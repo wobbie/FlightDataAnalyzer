@@ -264,16 +264,26 @@ Colours are used to represent the different types of parameters.
 
 .. warning::
 
-    A RuntimeError will be raised if there is a circular dependency found
-    within the digraph.
-    
-    .. digraph:: circular
-    
-        "Mach Max" -> "Mach" -> "Airspeed";
-        "Airspeed" -> "Mach Max";
+    Circular dependencies are complicated to comprehend, so try to avoid creating them!
+    Example:
 
-    Although DiGraphs support edges from A -> B and B -> A, this will cause
-    infinite recursion when resolving the processing order. It is not
-    programatically possible for a parameter to depend upon itself!
 
-How to view / identify problems
+Circular Dependencies
+~~~~~~~~~~~~~~~~~~~~~
+
+.. digraph:: circular
+
+    "Heading True" -> "Magnetic Variation"
+    "Heading True" -> "Heading"
+    "Heading" -> "Heading True"
+    "Heading" -> "Magnetic Variation"
+    
+DiGraphs support edges from A -> B and B -> A, this would normally cause
+infinite recursion when resolving the processing order using depth first
+searches. The dependency tree resolves this by keeping track of nodes it has
+seen already in the depth first traversal, when encountering a node already
+seen it will declare a warning of a circular dependency and declare the node
+as inoperable.
+
+
+.. How to view / identify problems
