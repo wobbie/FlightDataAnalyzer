@@ -5974,7 +5974,8 @@ class ApproachRange(DerivedParameterNode):
             reg_slice = shift_slice(app_slices[0], this_app_slice.start)
             
             gs_est = approach.gs_est
-            if gs_est:
+            # Check we have valid glideslope data for the regression slice.
+            if gs_est and np.ma.count(glide.array[reg_slice]):
                 # Compute best fit glidepath. The term (1-0.13 x glideslope
                 # deviation) caters for the aircraft deviating from the
                 # planned flightpath. 1 dot low is about 7% of a 3 degree

@@ -2164,7 +2164,7 @@ class AirspeedWithThrustReversersDeployedMin(KeyPointValueNode):
     def derive(self,
                air_spd=P('Airspeed True'),
                tr=M('Thrust Reversers'),
-               eng_epr=P('Eng (*) EPR Max'),
+               eng_epr=P('Eng (*) EPR Max'),  # must come before N1 where available
                eng_n1=P('Eng (*) N1 Max'),
                landings=S('Landing')):
 
@@ -7802,7 +7802,7 @@ class GroundspeedWithThrustReversersDeployedMin(KeyPointValueNode):
     def derive(self,
                gnd_spd=P('Groundspeed'),
                tr=M('Thrust Reversers'),
-               eng_epr=P('Eng (*) EPR Max'),
+               eng_epr=P('Eng (*) EPR Max'),  # must come before N1 where available
                eng_n1=P('Eng (*) N1 Max'),
                landings=S('Landing')):
 
