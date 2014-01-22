@@ -6982,6 +6982,112 @@ class EngTorqueWhileDescendingMax(KeyPointValueNode):
 
 
 ##############################################################################
+# Engine Torque [%]
+
+
+class EngTorquePercentDuringTaxiMax(KeyPointValueNode):
+    '''
+    '''
+
+    units = ut.PERCENT
+
+    def derive(self,
+               eng_trq_max=P('Eng (*) Torque [%] Max'),
+               taxiing=S('Taxiing')):
+
+        self.create_kpv_from_slices(eng_trq_max.array, taxiing, max_value)
+
+
+class EngTorquePercentDuringTakeoff5MinRatingMax(KeyPointValueNode):
+    '''
+    '''
+
+    units = ut.PERCENT
+
+    def derive(self,
+               eng_trq_max=P('Eng (*) Torque [%] Max'),
+               ratings=S('Takeoff 5 Min Rating')):
+
+        self.create_kpvs_within_slices(eng_trq_max.array, ratings, max_value)
+
+
+class EngTorquePercentDuringGoAround5MinRatingMax(KeyPointValueNode):
+    '''
+    '''
+
+    units = ut.PERCENT
+
+    def derive(self,
+               eng_trq_max=P('Eng (*) Torque [%] Max'),
+               ratings=S('Go Around 5 Min Rating')):
+
+        self.create_kpvs_within_slices(eng_trq_max.array, ratings, max_value)
+
+
+class EngTorquePercentDuringMaximumContinuousPowerMax(KeyPointValueNode):
+    '''
+    '''
+
+    units = ut.PERCENT
+
+    def derive(self,
+               eng_trq_max=P('Eng (*) Torque [%] Max'),
+               to_ratings=S('Takeoff 5 Min Rating'),
+               ga_ratings=S('Go Around 5 Min Rating'),
+               grounded=S('Grounded')):
+
+        slices = to_ratings + ga_ratings + grounded
+        self.create_kpv_outside_slices(eng_trq_max.array, slices, max_value)
+
+
+class EngTorquePercent500To50FtMax(KeyPointValueNode):
+    '''
+    '''
+
+    units = ut.PERCENT
+
+    def derive(self,
+               eng_trq_max=P('Eng (*) Torque [%] Max'),
+               alt_aal=P('Altitude AAL For Flight Phases')):
+
+        self.create_kpvs_within_slices(
+            eng_trq_max.array,
+            alt_aal.slices_from_to(500, 50),
+            max_value,
+        )
+
+
+class EngTorquePercent500To50FtMin(KeyPointValueNode):
+    '''
+    '''
+
+    units = ut.PERCENT
+
+    def derive(self,
+               eng_trq_min=P('Eng (*) Torque [%] Min'),
+               alt_aal=P('Altitude AAL For Flight Phases')):
+
+        self.create_kpvs_within_slices(
+            eng_trq_min.array,
+            alt_aal.slices_from_to(500, 50),
+            min_value,
+        )
+
+
+class EngTorquePercentWhileDescendingMax(KeyPointValueNode):
+    '''
+    '''
+
+    units = ut.PERCENT
+
+    def derive(self,
+               eng_trq_max=P('Eng (*) Torque [%] Max'),
+               descending=S('Descending')):
+
+        self.create_kpv_from_slices(eng_trq_max.array, descending, max_value)
+
+
+##############################################################################
 # Engine Vibrations (N*)
 
 

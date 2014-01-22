@@ -3088,6 +3088,78 @@ class Eng_TorqueMin(DerivedParameterNode):
         self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
 
 
+class Eng_TorquePercentAvg(DerivedParameterNode):
+    '''
+    '''
+
+    name = 'Eng (*) Torque [%] Avg'
+    align = False
+    units = ut.PERCENT
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               eng1=P('Eng (1) Torque [%]'),
+               eng2=P('Eng (2) Torque [%]'),
+               eng3=P('Eng (3) Torque [%]'),
+               eng4=P('Eng (4) Torque [%]')):
+
+        engines = vstack_params(eng1, eng2, eng3, eng4)
+        self.array = np.ma.average(engines, axis=0)
+        self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
+
+
+class Eng_TorquePercentMax(DerivedParameterNode):
+    '''
+    '''
+
+    name = 'Eng (*) Torque [%] Max'
+    align = False
+    units = ut.PERCENT
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               eng1=P('Eng (1) Torque [%]'),
+               eng2=P('Eng (2) Torque [%]'),
+               eng3=P('Eng (3) Torque [%]'),
+               eng4=P('Eng (4) Torque [%]')):
+
+        engines = vstack_params(eng1, eng2, eng3, eng4)
+        self.array = np.ma.max(engines, axis=0)
+        self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
+
+
+class Eng_TorquePercentMin(DerivedParameterNode):
+    '''
+    '''
+
+    name = 'Eng (*) Torque [%] Min'
+    align = False
+    units = ut.PERCENT
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               eng1=P('Eng (1) Torque [%]'),
+               eng2=P('Eng (2) Torque [%]'),
+               eng3=P('Eng (3) Torque [%]'),
+               eng4=P('Eng (4) Torque [%]')):
+
+        engines = vstack_params(eng1, eng2, eng3, eng4)
+        self.array = np.ma.min(engines, axis=0)
+        self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
+
+
 ################################################################################
 # Engine Vibration (N1)
 
