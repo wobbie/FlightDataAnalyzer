@@ -27,7 +27,6 @@ from analysis_engine.node import A, KTI, KPV, FlightAttributeNode, M, P, S
 class DeterminePilot(object):
     '''
     '''
-
     def _autopilot_engaged(self, ap1, ap2):
         if ap1 and (not ap2):
             return 'Captain'
@@ -189,6 +188,7 @@ class FlightNumber(FlightAttributeNode):
     """
     "Airline route flight number"
     name = 'FDR Flight Number'
+    
     def derive(self, num=P('Flight Number')):
         # Q: Should we validate the flight number?
         if num.array.dtype.type is np.string_:
@@ -198,28 +198,28 @@ class FlightNumber(FlightAttributeNode):
             if value is not np.ma.masked and count > len(num.array) * 0.45:
                 self.set_flight_attr(value)
             return
-        _, minvalue = min_value(num.array)
+        # Values of 0 are invalid flight numbers
+        array = np.ma.masked_less_equal(num.array, 0)
+        # Ignore masked values
+        compressed_array = array.compressed()
+        _, minvalue = min_value(compressed_array)
         if minvalue < 0:
-            self.warning("'%s' only supports unsigned (positive) values",
+            self.warning("'%s' only supports unsigned (positive) values > 0, "\
+                         "but none were found. Cannot determine flight number",
                          self.name)
             self.set_flight_attr(None)
             return
 
-        # TODO: Fill num.array masked values (as there is no np.ma.bincount) - perhaps with 0.0 and then remove all 0 values?
         # note reverse of value, index from max_value due to bincount usage.
-        
-        array = np.ma.masked_less_equal(num.array, 0)
-        compressed_array = array.compressed()
-        
-        value, count = \
-            max_value(np.bincount(compressed_array.astype(np.integer)))
+        value, count = max_value(
+            np.bincount(compressed_array.astype(np.integer)))
         if count > len(compressed_array) * 0.45:
             # this value accounts for at least 45% of the values in the array
             self.set_flight_attr(str(int(value)))
         else:
             self.warning("Only %d out of %d flight numbers were the same."\
                          " Flight Number attribute will be set as None.",
-                         count, len(num.array))
+                         count or 0, len(num.array))
             self.set_flight_attr(None)
             return
 
