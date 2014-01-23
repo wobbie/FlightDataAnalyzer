@@ -178,6 +178,19 @@ class TestAirborne(unittest.TestCase):
         air.derive(alt_aal, fast)
         expected = buildsection('Airborne', 5, None)
         self.assertEqual(list(air), list(expected))
+        
+    def test_airborne_fast_with_gaps(self):
+        alt_aal = P('Altitude AAL For Flight Phases',
+                    np.ma.array([10000]*60),frequency=0.1)
+        fast = buildsections('Fast', [1,10],[15,24],[30,36],[40,50],[55,59])
+        fast.frequency = 0.1
+        air = Airborne()
+        air.derive(alt_aal, fast)
+        self.assertEqual(len(air), 2)
+        self.assertEqual(air[0].slice.start, 1)
+        self.assertEqual(air[0].slice.stop, 24)
+        self.assertEqual(air[1].slice.start, 30)
+        self.assertEqual(air[1].slice.stop, 59)
 
 
 class TestApproachAndLanding(unittest.TestCase):
