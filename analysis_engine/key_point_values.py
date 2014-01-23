@@ -6989,6 +6989,7 @@ class EngTorquePercentDuringTaxiMax(KeyPointValueNode):
     '''
     '''
 
+    name = 'Eng Torque [%] During Taxi Max'
     units = ut.PERCENT
 
     def derive(self,
@@ -7002,6 +7003,7 @@ class EngTorquePercentDuringTakeoff5MinRatingMax(KeyPointValueNode):
     '''
     '''
 
+    name = 'Eng Torque [%] During Takeoff 5 Min Rating Max'
     units = ut.PERCENT
 
     def derive(self,
@@ -7015,6 +7017,7 @@ class EngTorquePercentDuringGoAround5MinRatingMax(KeyPointValueNode):
     '''
     '''
 
+    name = 'Eng Torque [%] During Go Around 5 Min Rating Max'
     units = ut.PERCENT
 
     def derive(self,
@@ -7028,6 +7031,7 @@ class EngTorquePercentDuringMaximumContinuousPowerMax(KeyPointValueNode):
     '''
     '''
 
+    name = 'Eng Torque [%] During Maximum Continuous Power Max'
     units = ut.PERCENT
 
     def derive(self,
@@ -7044,6 +7048,7 @@ class EngTorquePercent500To50FtMax(KeyPointValueNode):
     '''
     '''
 
+    name = 'Eng Torque [%] 500 To 50 Ft Max'
     units = ut.PERCENT
 
     def derive(self,
@@ -7061,6 +7066,7 @@ class EngTorquePercent500To50FtMin(KeyPointValueNode):
     '''
     '''
 
+    name = 'Eng Torque [%] 500 To 50 Ft Min'
     units = ut.PERCENT
 
     def derive(self,
@@ -7078,6 +7084,7 @@ class EngTorquePercentWhileDescendingMax(KeyPointValueNode):
     '''
     '''
 
+    name = 'Eng Torque [%] While Descending Max'
     units = ut.PERCENT
 
     def derive(self,
