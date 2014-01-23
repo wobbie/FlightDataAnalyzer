@@ -2651,6 +2651,14 @@ class TestHeadingContinuous(unittest.TestCase, NodeTest):
         # The smoothing algorithm will leave two samples masked at the beginning and end of the array.
         self.assertEqual(np.ma.count(con_hdg.array), 56)
         
+    def test_heading_continuous_starting_north(self):
+        hdg_ca = P('Heading (Capt)',np.ma.array([358,358,0.0,1.0]))
+        hdg_fo = P('Heading (FO)',np.ma.array([0.0,1.0,359,357]),offset=0.5)
+        node = self.node_class()
+        node.derive(None, hdg_ca, hdg_fo, None)
+        expected = np.ma.array([359,359,359.25,360,360,359.75,359.5,359 ])
+        ma_test.assert_equal(node.array, expected)
+
 
 class TestTrack(unittest.TestCase, NodeTest):
 
