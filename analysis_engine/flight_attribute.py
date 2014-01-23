@@ -10,13 +10,14 @@ from operator import itemgetter
 
 from analysis_engine import __version__, settings
 from analysis_engine.api_handler import get_api_handler, NotFoundError
-from analysis_engine.library import (all_of,
-                                     datetime_of_index,
-                                     min_value,
-                                     max_value,
-                                     most_common_value,
-                                     value_at_index,
-                                     )
+from analysis_engine.library import (
+    all_of,
+    any_of,
+    datetime_of_index,
+    min_value,
+    max_value,
+    most_common_value,
+)
 from analysis_engine.node import A, KTI, KPV, FlightAttributeNode, M, P, S
 
 
@@ -157,6 +158,44 @@ class AnalysisDatetime(FlightAttributeNode):
         dependency as it will always be present, though it is unused.
         '''
         self.set_flight_attr(datetime.now())
+
+
+class DestinationAirport(FlightAttributeNode):
+    "Datetime flight was analysed (local datetime)"
+    name = 'FDR Destination Airport'
+    
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(['Destination', 'AFR Destination Airport'], available)
+    
+    def derive(self, dest=P('Destination'),
+               afr_dest=A('AFR Destination Airport')):
+        '''
+        Requires an ASCII destination parameter recording either the airport's
+        ICAO or IATA code.
+        '''
+        if not dest or dest.array.dtype.type is not np.string_:
+            if afr_dest:
+                self.set_flight_attr(afr_dest.value)
+            return
+        
+        # XXX: Slow, but Destination should be sampled infrequently.
+        value, count = next(reversed(sorted(Counter(dest.array).items(),
+                                            key=itemgetter(1))))
+        # Q: Should we validate that the value is 3-4 characters long?
+        if value is np.ma.masked or count < len(dest.array) * 0.45:
+            return
+        
+        api = get_api_handler(settings.API_HANDLER)
+        try:
+            airport = api.get_airport(value)
+        except NotFoundError:
+            self.warning('No destination airport found for %s.', airport)
+            return
+        
+        self.debug('Detected destination airport: %s', airport)
+        self.set_flight_attr(airport)
+
 
 
 class Duration(FlightAttributeNode):

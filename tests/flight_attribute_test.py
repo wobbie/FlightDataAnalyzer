@@ -17,6 +17,7 @@ from analysis_engine.node import (
 )
 from analysis_engine.flight_attribute import (
     DeterminePilot,
+    DestinationAirport,
     Duration,
     FlightID,
     FlightNumber,
@@ -415,6 +416,38 @@ class TestDeterminePilot(unittest.TestCase):
         for fn, to_pilot, ld_pilot, to, ld in items:
             test_from_file(fn, to, 'Takeoff', to_pilot)
             test_from_file(fn, ld, 'Landing', ld_pilot)
+
+
+class TestDestinationAirport(unittest.TestCase):
+    def test_can_operate(self):
+        self.assertEqual(DestinationAirport.get_operational_combinations(),
+                         [('Destination',),
+                          ('AFR Destination Airport',),
+                          ('Destination', 'AFR Destination Airport')])
+    
+    def setUp(self):
+        dest_array = np.ma.array(
+            ['FDSL', 'FDSL', 'FDSL', 'FDSL', 'ABCD', 'ABCD'],
+            mask=[True, False, False, False, False, True])
+        self.dest = P('Destination', array=dest_array)
+        self.afr_dest = A('AFR Destination Airport', value={'id': 2000})
+        self.node = DestinationAirport()
+
+    @patch('analysis_engine.api_handler_analysis_engine.AnalysisEngineAPIHandlerLocal.get_airport')
+    def test_derive_dest(self, get_airport):
+        self.node.derive(self.dest, None)
+        self.assertEqual(self.node.value, get_airport.return_value)
+        get_airport.assert_called_once_with('FDSL')
+    
+    def test_derive_afr_dest(self):
+        self.node.derive(None, self.afr_dest)
+        self.assertEqual(self.node.value, self.afr_dest.value)
+    
+    @patch('analysis_engine.api_handler_analysis_engine.AnalysisEngineAPIHandlerLocal.get_airport')
+    def test_derive_both(self, get_airport):
+        self.node.derive(self.dest, self.afr_dest)
+        self.assertEqual(self.node.value, get_airport.return_value)
+        get_airport.assert_called_once_with('FDSL')
 
 
 class TestDuration(unittest.TestCase):
