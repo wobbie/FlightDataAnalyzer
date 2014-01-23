@@ -11,6 +11,10 @@ You can view the differences in tagged versions as follows:
 v0.7.0
 ------
 
+v0.6.3
+-----
+ - Fix to allow takeoff sections to start at the beginning of the data.
+
 v0.6.2
 ------
  - Fix to flight number determination to ignore zero values.

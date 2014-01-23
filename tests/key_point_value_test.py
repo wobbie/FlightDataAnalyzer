@@ -232,6 +232,13 @@ from analysis_engine.key_point_values import (
     EngTorqueDuringTakeoff5MinRatingMax,
     EngTorqueDuringTaxiMax,
     EngTorqueWhileDescendingMax,
+    EngTorquePercent500To50FtMax,
+    EngTorquePercent500To50FtMin,
+    EngTorquePercentDuringGoAround5MinRatingMax,
+    EngTorquePercentDuringMaximumContinuousPowerMax,
+    EngTorquePercentDuringTakeoff5MinRatingMax,
+    EngTorquePercentDuringTaxiMax,
+    EngTorquePercentWhileDescendingMax,
     EngVibAMax,
     EngVibBMax,
     EngVibBroadbandMax,
@@ -5544,6 +5551,95 @@ class TestEngTorqueWhileDescendingMax(unittest.TestCase, CreateKPVFromSlicesTest
     def setUp(self):
         self.node_class = EngTorqueWhileDescendingMax
         self.operational_combinations = [('Eng (*) Torque Max', 'Descending')]
+        self.function = max_value
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+
+##############################################################################
+# Engine Torque [%]
+
+
+class TestEngTorquePercentDuringTaxiMax(unittest.TestCase, CreateKPVFromSlicesTest):
+
+    def setUp(self):
+        self.node_class = EngTorquePercentDuringTaxiMax
+        self.operational_combinations = [('Eng (*) Torque [%] Max', 'Taxiing')]
+        self.function = max_value
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestEngTorquePercentDuringTakeoff5MinRatingMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
+
+    def setUp(self):
+        self.node_class = EngTorquePercentDuringTakeoff5MinRatingMax
+        self.operational_combinations = [('Eng (*) Torque [%] Max', 'Takeoff 5 Min Rating')]
+        self.function = max_value
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test Not Implemented')
+
+
+class TestEngTorquePercentDuringGoAround5MinRatingMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
+
+    def setUp(self):
+        self.node_class = EngTorquePercentDuringGoAround5MinRatingMax
+        self.operational_combinations = [('Eng (*) Torque [%] Max', 'Go Around 5 Min Rating')]
+        self.function = max_value
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestEngTorquePercentMaximumContinuousPowerMax(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = EngTorquePercentDuringMaximumContinuousPowerMax
+        self.operational_combinations = [('Eng (*) Torque [%] Max', 'Takeoff 5 Min Rating', 'Go Around 5 Min Rating', 'Grounded')]
+        self.function = max_value
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestEngTorquePercent500To50FtMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
+
+    def setUp(self):
+        self.node_class = EngTorquePercent500To50FtMax
+        self.operational_combinations = [('Eng (*) Torque [%] Max', 'Altitude AAL For Flight Phases')]
+        self.function = max_value
+        self.second_param_method_calls = [('slices_from_to', (500, 50), {})]
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestEngTorquePercent500To50FtMin(unittest.TestCase, CreateKPVsWithinSlicesTest):
+
+    def setUp(self):
+        self.node_class = EngTorquePercent500To50FtMin
+        self.operational_combinations = [('Eng (*) Torque [%] Min', 'Altitude AAL For Flight Phases')]
+        self.function = min_value
+        self.second_param_method_calls = [('slices_from_to', (500, 50), {})]
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test Not Implemented')
+
+
+class TestEngTorquePercentWhileDescendingMax(unittest.TestCase, CreateKPVFromSlicesTest):
+
+    def setUp(self):
+        self.node_class = EngTorquePercentWhileDescendingMax
+        self.operational_combinations = [('Eng (*) Torque [%] Max', 'Descending')]
         self.function = max_value
 
     @unittest.skip('Test Not Implemented')
