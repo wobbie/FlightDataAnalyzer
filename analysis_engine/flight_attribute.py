@@ -195,7 +195,7 @@ class DestinationAirport(FlightAttributeNode):
         try:
             airport = api.get_airport(value)
         except NotFoundError:
-            self.warning('No destination airport found for %s.', airport)
+            self.warning('No destination airport found for %s.', value)
             return
         
         self.debug('Detected destination airport: %s', airport)
