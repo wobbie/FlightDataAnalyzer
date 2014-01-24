@@ -241,9 +241,17 @@ naming error).
 Visualising the Tree
 ~~~~~~~~~~~~~~~~~~~~
 
-The graph can be visualised using the
-**:py:func:`~analysis_engine.dependency_graph.draw_graph`** function. This
-requires `pygraphviz` and therefore `Graphviz` to be installed.
+The graph can be visualised in a few ways. 
+
+**print_tree()** - A simple textual. output printed to screen which uses
+`indent_tree` to structure the node hierarchy in a tree-like view. The
+starting node can be selected, providing the ability to print subsets of the
+tree.
+
+:py:func:`~analysis_engine.dependency_graph.print_tree`
+
+**draw_graph()** - This requires `pygraphviz` and therefore `Graphviz` to be
+installed.
 
 :py:func:`analysis_engine.dependency_graph.draw_graph`
 
