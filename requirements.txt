@@ -6,7 +6,6 @@ networkx>=1.7
 matplotlib
 simplekml
 simplejson
-argparse
 geomag>=0.9
 PyYAML
 FlightDataUtilities

@@ -1246,10 +1246,13 @@ class Takeoff(FlightPhaseNode):
             takeoff_end = index_at_value(alt_aal.array, INITIAL_CLIMB_THRESHOLD,
                                          slice(takeoff_run, last))
 
+            if takeoff_end <= 0:
+                # catches if None or zero
+                continue
+
             #-------------------------------------------------------------------
             # Create a phase for this takeoff
-            if takeoff_begin and takeoff_end:
-                self.create_phases([slice(takeoff_begin, takeoff_end)])
+            self.create_phase(slice(takeoff_begin, takeoff_end))
 
 
 class TakeoffRoll(FlightPhaseNode):
