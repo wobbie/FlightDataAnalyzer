@@ -195,7 +195,7 @@ class TestDeterminePilot(unittest.TestCase):
         reset_all_mocks()
         pilot = determine_pilot._determine_pilot(
             None, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo,
-            None, None, None, None, None)
+            None, None, None)
         self.assertFalse(determine_pilot._autopilot_engaged.called)
         self.assertFalse(determine_pilot._controls_in_use.called)
         self.assertEqual(pilot, None)
@@ -204,8 +204,8 @@ class TestDeterminePilot(unittest.TestCase):
         determine_pilot._controls_in_use.return_value = None
         determine_pilot._control_column_in_use.return_value = None
         pilot = determine_pilot._determine_pilot(
-            None, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo, phase,
-            None, None, None, None)
+            None, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo, 
+            phase, None, None)
         self.assertFalse(determine_pilot._autopilot_engaged.called)
         determine_pilot._controls_in_use.assert_called_once_with(
             pitch_capt.array, pitch_fo.array, roll_capt.array, roll_fo.array,
@@ -218,14 +218,15 @@ class TestDeterminePilot(unittest.TestCase):
         determine_pilot._controls_in_use.return_value = 'Captain'
         pilot = determine_pilot._determine_pilot(
             None, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo, phase,
-            None, None, None, None)
+            None, None)
         self.assertFalse(determine_pilot._autopilot_engaged.called)
         determine_pilot._controls_in_use.assert_called_once_with(pitch_capt.array, pitch_fo.array, roll_capt.array, roll_fo.array, phase)
         self.assertEqual(pilot, determine_pilot._controls_in_use.return_value)
         # Only Autopilot.
         reset_all_mocks()
         determine_pilot._autopilot_engaged.return_value = 'Captain'
-        pilot = determine_pilot._determine_pilot(None, None, None, None, None, None, None, None, ap1, ap2, None, None)
+        pilot = determine_pilot._determine_pilot(None, None, None, None, None, 
+                                                 None, None, None, ap1, ap2)
         determine_pilot._autopilot_engaged.assert_called_once_with(ap1, ap2)
         self.assertFalse(determine_pilot._controls_in_use.called)
         self.assertEqual(pilot, determine_pilot._autopilot_engaged.return_value)
@@ -234,10 +235,11 @@ class TestDeterminePilot(unittest.TestCase):
         determine_pilot._controls_in_use.return_value = 'Captain'
         determine_pilot._autopilot_engaged.return_value = 'First Officer'
         pilot = determine_pilot._determine_pilot(
-            None, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo, phase,
-            ap1, ap2, None, None)
+            None, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo, 
+            phase, ap1, ap2)
         self.assertFalse(determine_pilot._autopilot_engaged.called)
-        determine_pilot._controls_in_use.assert_called_once_with(pitch_capt.array, pitch_fo.array, roll_capt.array, roll_fo.array, phase)
+        determine_pilot._controls_in_use.assert_called_once_with(
+            pitch_capt.array, pitch_fo.array, roll_capt.array, roll_fo.array, phase)
         self.assertEqual(pilot, determine_pilot._controls_in_use.return_value)
         # Autopilot is used when Controls in Use does not provide an answer.
         reset_all_mocks()
@@ -246,7 +248,7 @@ class TestDeterminePilot(unittest.TestCase):
         determine_pilot._control_column_in_use.return_value = None
         pilot = determine_pilot._determine_pilot(
             None, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo, phase,
-            ap1, ap2, None, None)
+            ap1, ap2)
         determine_pilot._autopilot_engaged.assert_called_once_with(ap1, ap2)
         determine_pilot._controls_in_use.assert_called_once_with(
             pitch_capt.array, pitch_fo.array, roll_capt.array, roll_fo.array,
@@ -254,33 +256,6 @@ class TestDeterminePilot(unittest.TestCase):
         self.assertEqual(pilot,
                          determine_pilot._autopilot_engaged.return_value)
 
-    def test__key_vhf_in_use(self):
-        # Neither Capt or FO changes.
-        key_vhf_capt = np.ma.array([0] * 20)
-        key_vhf_fo = np.ma.array([0] * 20)
-        phase = Section('Landing', slice(10, 20), 10, 20)
-        determine_pilot = DeterminePilot()
-        self.assertEqual(determine_pilot._key_vhf_in_use(key_vhf_capt,
-                                                         key_vhf_fo, phase),
-                         None)
-        # Both Capt and FO change.
-        key_vhf_capt = np.ma.array([0, 1] * 10)
-        key_vhf_fo = np.ma.array([0, 1] * 10)
-        self.assertEqual(determine_pilot._key_vhf_in_use(key_vhf_capt,
-                                                         key_vhf_fo, phase),
-                         None)
-        # Capt changes.
-        key_vhf_capt = np.ma.array(([0] * 15) + [1] + ([0] * 4))
-        key_vhf_fo = np.ma.array([0] * 20)
-        self.assertEqual(determine_pilot._key_vhf_in_use(key_vhf_capt,
-                                                         key_vhf_fo, phase),
-                         'First Officer')
-        # Capt changes.
-        key_vhf_capt = np.ma.array([0] * 20)
-        key_vhf_fo = np.ma.array(([0] * 15) + [1] + ([0] * 4))
-        self.assertEqual(determine_pilot._key_vhf_in_use(key_vhf_capt,
-                                                         key_vhf_fo, phase),
-                         'Captain')
 
     def get_params(self, hdf_path, _slice, phase_name):
         import shutil
@@ -295,13 +270,11 @@ class TestDeterminePilot(unittest.TestCase):
                 pitch_fo = hdf.get('Pitch (FO)')
                 roll_capt = hdf.get('Roll (Capt)')
                 roll_fo = hdf.get('Roll (FO)')
-                vhf_capt = hdf.get('Key VHF (1)')
-                vhf_fo = hdf.get('Key VHF (2)')
                 cc_capt = hdf.get('Control Column Force (Capt)')
                 cc_fo = hdf.get('Control Column Force (FO)')
 
                 for par in pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, \
-                        cc_fo, vhf_capt, vhf_fo:
+                        cc_fo:
                     if par is not None:
                         ref_par = par
                         break
@@ -317,8 +290,7 @@ class TestDeterminePilot(unittest.TestCase):
             par.array = align(par, ref_par)
             par.hz = ref_par.hz
 
-        return (pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo,
-                vhf_capt, vhf_fo, phase)
+        return pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo, phase
 
     def test_determine_pilot_from_hdf_control_column(self):
         '''
@@ -334,19 +306,18 @@ class TestDeterminePilot(unittest.TestCase):
 
         def test_from_file(hdf_path, _slice, phase_name, expected_pilot):
             (pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo,
-             vhf_capt, vhf_fo, phase) = self.get_params(hdf_path, _slice,
-                                                        phase_name)
+             phase) = self.get_params(hdf_path, _slice, phase_name)
 
             pilot = determine_pilot._determine_pilot(
                 None, pitch_capt, pitch_fo, roll_capt, roll_fo, None, None,
-                phase, None, None, vhf_capt, vhf_fo)
+                phase, None, None)
 
             # pitch and roll are not enough to determine the pilot
             self.assertIsNone(pilot)
 
             pilot = determine_pilot._determine_pilot(
                 None, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt,
-                cc_fo, phase, None, None, vhf_capt, vhf_fo)
+                cc_fo, phase, None, None)
 
             # control column force should allow to determine the pilot
             self.assertEqual(pilot, expected_pilot)
@@ -365,50 +336,6 @@ class TestDeterminePilot(unittest.TestCase):
                 'First Officer',
                 slice(1015, 1162),
                 slice(41451, 41511)
-            ],
-        ]
-
-        for fn, to_pilot, ld_pilot, to, ld in items:
-            test_from_file(fn, to, 'Takeoff', to_pilot)
-            test_from_file(fn, ld, 'Landing', ld_pilot)
-
-    def test_determine_pilot_from_hdf_key_vhf(self):
-        '''
-        Use Key VHF (*) to determine the flying pilot
-        '''
-        import logging
-
-        determine_pilot = DeterminePilot()
-        # warning method is normally initialised with Node superclass in one of
-        # the DeterminePilot's ancestors
-        determine_pilot.warning = logging.warning
-
-        def test_from_file(hdf_path, _slice, phase_name, expected_pilot):
-            (pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo,
-             vhf_capt, vhf_fo, phase) = self.get_params(hdf_path, _slice,
-                                                        phase_name)
-
-            pilot = determine_pilot._determine_pilot(
-                None, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt,
-                cc_fo, phase, None, None, None, None)
-
-            # controls are not enough to determine the pilot
-            self.assertIsNone(pilot)
-
-            pilot = determine_pilot._determine_pilot(
-                None, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt,
-                cc_fo, phase, None, None, vhf_capt, vhf_fo)
-
-            # Key VHF (*) should allow to determine the pilot
-            self.assertEqual(pilot, expected_pilot)
-
-        items = [
-            [
-                'test_data/identify_pilot_03.hdf5',
-                None,
-                'First Officer',
-                slice(503, 555),
-                slice(19136, 19228)
             ],
         ]
 

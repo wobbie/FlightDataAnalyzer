@@ -15,7 +15,6 @@ from analysis_engine.library import (all_of,
                                      min_value,
                                      max_value,
                                      most_common_value,
-                                     value_at_index,
                                      )
 from analysis_engine.node import A, KTI, KPV, FlightAttributeNode, M, P, S
 
@@ -85,20 +84,8 @@ class DeterminePilot(object):
             "during '%s' slice.", phase.name)
         return None
     
-    def _key_vhf_in_use(self, key_vhf_capt, key_vhf_fo, phase):
-        key_vhf_capt_changed = key_vhf_capt[phase.slice].ptp()
-        key_vhf_fo_changed = key_vhf_fo[phase.slice].ptp()
-        if key_vhf_capt_changed and not key_vhf_fo_changed:
-            return 'First Officer'
-        elif key_vhf_fo_changed and not key_vhf_capt_changed:
-            return 'Captain'
-        
-        # Either both Capt and FO Key VHF change or neither.
-        return None
-    
     def _determine_pilot(self, pilot_flying, pitch_capt, pitch_fo, roll_capt,
-                         roll_fo, cc_capt, cc_fo, phase, ap1, ap2, 
-                         key_vhf_capt, key_vhf_fo):
+                         roll_fo, cc_capt, cc_fo, phase, ap1, ap2):
         
         if pilot_flying:
             # this is the most reliable measurement, use this and no other
@@ -119,13 +106,6 @@ class DeterminePilot(object):
         if all((cc_capt, cc_fo, phase)):
             pilot = self._control_column_in_use(cc_capt.array, cc_fo.array,
                                                 phase)
-            if pilot:
-                return pilot
-
-        # Check for change in VHF controls during the phase:
-        if all((key_vhf_capt, key_vhf_fo, phase)):
-            pilot = self._key_vhf_in_use(key_vhf_capt.array, key_vhf_fo.array,
-                                         phase)
             if pilot:
                 return pilot
 
@@ -581,9 +561,7 @@ class TakeoffPilot(FlightAttributeNode, DeterminePilot):
             'Liftoff',
             # Optional: 'AP (3) Engaged'
             ), available)
-        key_vhf = all_of(('Key VHF (1)', 'Key VHF (2)', 'Takeoff'),
-                                 available)
-        return pilot_flying or controls or autopilot or key_vhf
+        return pilot_flying or controls or autopilot
 
     def derive(self,
                pilot_flying=M('Pilot Flying'),
@@ -595,8 +573,6 @@ class TakeoffPilot(FlightAttributeNode, DeterminePilot):
                cc_fo=P('Control Column Force (FO)'),
                ap1_eng=M('AP (1) Engaged'),
                ap2_eng=M('AP (2) Engaged'),
-               key_vhf_capt=M('Key VHF (1)'),
-               key_vhf_fo=M('Key VHF (2)'),
                takeoffs=S('Takeoff'),
                liftoffs=KTI('Liftoff')):
 
@@ -609,7 +585,7 @@ class TakeoffPilot(FlightAttributeNode, DeterminePilot):
         else:
             ap1 = ap2 = None
         args = (pilot_flying, pitch_capt, pitch_fo, roll_capt, roll_fo, 
-                cc_capt, cc_fo, phase, ap1, ap2, key_vhf_capt, key_vhf_fo)
+                cc_capt, cc_fo, phase, ap1, ap2)
         self.set_flight_attr(self._determine_pilot(*args))
 
 
@@ -886,9 +862,7 @@ class LandingPilot(FlightAttributeNode, DeterminePilot):
             'Touchdown',
             # Optional: 'AP (3) Engaged'
             ), available)
-        key_vhf = all_of(('Key VHF (1)', 'Key VHF (2)', 'Landing'),
-                                 available)
-        return pilot_flying or controls or autopilot or key_vhf
+        return pilot_flying or controls or autopilot
 
     def derive(self,
                pilot_flying=M('Pilot Flying'),
@@ -900,8 +874,6 @@ class LandingPilot(FlightAttributeNode, DeterminePilot):
                cc_fo=P('Control Column Force (FO)'),
                ap1_eng=M('AP (1) Engaged'),
                ap2_eng=M('AP (2) Engaged'),
-               key_vhf_capt=M('Key VHF (1)'),
-               key_vhf_fo=M('Key VHF (2)'),
                landings=S('Landing'),
                touchdowns=KTI('Touchdown')):
 
@@ -914,7 +886,7 @@ class LandingPilot(FlightAttributeNode, DeterminePilot):
         else:
             ap1 = ap2 = None
         args = (pilot_flying, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo,
-                phase, ap1, ap2, key_vhf_capt, key_vhf_fo)
+                phase, ap1, ap2)
         self.set_flight_attr(self._determine_pilot(*args))
 
 
