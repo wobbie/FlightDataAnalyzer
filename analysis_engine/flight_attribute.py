@@ -30,27 +30,28 @@ class DeterminePilot(object):
     '''
     Determine the pilot flying using available parameters within a section of
     flight (expects takeoff or landing). The order is:
-    
+
     1. Pilot Flying parameter (Airbus AFPS analysis of sidestick movement)
     2. Pitch / Roll inputs where signals are recorded for Capt/FO seperately
-    3. Control Column force where one force is at least ?% greater than the other
+    3. Control Column force where one force is at least ?% greater than the
+       other
     4. Autopilot usage attributed to the Capt or FO's side
-    
-    
-    Note: Use of VHF is not used as convention is: 
-    * VHF 1/L is the primary set for ATC comms 
-    * VHF 2/R is for company use, aircraft to aircraft and secondary ATC comms 
+
+
+    Note: Use of VHF is not used as convention is:
+    * VHF 1/L is the primary set for ATC comms
+    * VHF 2/R is for company use, aircraft to aircraft and secondary ATC comms
     * VHF 3/C is for ACARS data comms / backup
     '''
-    
+
     def _autopilot_engaged(self, ap1, ap2):
         '''
         This is a best guess assuming that if AP1 is in use, the Captain is PF.
-        
+
         When the FO is PF, the right autopilot should be used. When the Capt
         is PF, the autopilot should alternate vetween Left and Center
         autopilots (to detect potential defects in center autopilot)
-        
+
         TODO: Support Center auto-pilot usage
         '''
         if ap1 and (not ap2):
@@ -62,12 +63,12 @@ class DeterminePilot(object):
     def _controls_changed(self, slice_, pitch, roll):
         # Check if either pitch or roll changed during provided slice:
         return pitch[slice_].ptp() > settings.CONTROLS_IN_USE_TOLERANCE or \
-                roll[slice_].ptp() > settings.CONTROLS_IN_USE_TOLERANCE
+            roll[slice_].ptp() > settings.CONTROLS_IN_USE_TOLERANCE
 
     def _control_column_in_use(self, cc_capt, cc_fo, phase):
         '''
         Check if control column is used by Captain or FO.
-        
+
         The forces are typically 2 or 3 lbf at takeoff, 6 or 7 at landing.
         Find the larger force of the two, checking they are at least a bit
         different as both move together on the B737-NG.
@@ -82,17 +83,21 @@ class DeterminePilot(object):
             return 'First Officer'
         else:
             # No change in captain or first officer control columns:
-            self.warning("Neither captain's nor first officer's control column "
-                         "changes during '%s' slice.", phase.name)
+            self.warning(
+                "Neither captain's nor first officer's control column "
+                "changes during '%s' slice.", phase.name)
             return None
 
-    def _controls_in_use(self, pitch_capt, pitch_fo, roll_capt, roll_fo, phase):
-        capt_flying = self._controls_changed(phase.slice, pitch_capt, roll_capt)
+    def _controls_in_use(self, pitch_capt, pitch_fo, roll_capt, roll_fo,
+                         phase):
+        capt_flying = self._controls_changed(phase.slice, pitch_capt,
+                                             roll_capt)
         fo_flying = self._controls_changed(phase.slice, pitch_fo, roll_fo)
 
         # 1. Cannot determine who is flying - both sets of controls have input:
         if capt_flying and fo_flying:
-            self.warning("Cannot determine whether captain or first officer "
+            self.warning(
+                "Cannot determine whether captain or first officer "
                 "was at the controls because both controls change during '%s' "
                 "slice.", phase.name)
             return None
@@ -106,19 +111,20 @@ class DeterminePilot(object):
             return 'First Officer'
 
         # 4. No change in captain or first officer controls:
-        self.warning("Both captain and first officer controls do not change "
+        self.warning(
+            "Both captain and first officer controls do not change "
             "during '%s' slice.", phase.name)
         return None
-    
+
     def _determine_pilot(self, pilot_flying, pitch_capt, pitch_fo, roll_capt,
                          roll_fo, cc_capt, cc_fo, phase, ap1, ap2):
-        
+
         if pilot_flying:
             # this is the most reliable measurement, use this and no other
             pf = pilot_flying.array[phase.slice]
             pf[pf == '-'] = np.ma.masked
             return most_common_value(pf)
-        
+
         #FIXME: Skip over the Pitch and Control Column parts!
         # 1. Check for change in pitch and roll controls during the phase:
         if all((pitch_capt, pitch_fo, roll_capt, roll_fo, phase)):
@@ -156,6 +162,7 @@ class InvalidFlightType(Exception):
 class AnalysisDatetime(FlightAttributeNode):
     "Datetime flight was analysed (local datetime)"
     name = 'FDR Analysis Datetime'
+
     def derive(self, start_datetime=A('Start Datetime')):
         '''
         Every derive method requires at least one dependency. Since this class
@@ -168,11 +175,11 @@ class AnalysisDatetime(FlightAttributeNode):
 class DestinationAirport(FlightAttributeNode):
     "Datetime flight was analysed (local datetime)"
     name = 'FDR Destination Airport'
-    
+
     @classmethod
     def can_operate(cls, available):
         return any_of(['Destination', 'AFR Destination Airport'], available)
-    
+
     def derive(self, dest=P('Destination'),
                afr_dest=A('AFR Destination Airport')):
         '''
@@ -183,34 +190,34 @@ class DestinationAirport(FlightAttributeNode):
             if afr_dest:
                 self.set_flight_attr(afr_dest.value)
             return
-        
+
         # XXX: Slow, but Destination should be sampled infrequently.
         value, count = next(reversed(sorted(Counter(dest.array).items(),
                                             key=itemgetter(1))))
         # Q: Should we validate that the value is 3-4 characters long?
         if value is np.ma.masked or count < len(dest.array) * 0.45:
             return
-        
+
         api = get_api_handler(settings.API_HANDLER)
         try:
             airport = api.get_airport(value)
         except NotFoundError:
             self.warning('No destination airport found for %s.', value)
             return
-        
+
         self.debug('Detected destination airport: %s', airport)
         self.set_flight_attr(airport)
-
 
 
 class Duration(FlightAttributeNode):
     "Duration of the flight (between takeoff and landing) in seconds"
     name = 'FDR Duration'
+
     def derive(self, takeoff_dt=A('FDR Takeoff Datetime'),
                landing_dt=A('FDR Landing Datetime')):
         if landing_dt.value and takeoff_dt.value:
             duration = landing_dt.value - takeoff_dt.value
-            self.set_flight_attr(duration.total_seconds()) # py2.7
+            self.set_flight_attr(duration.total_seconds())  # py2.7
         else:
             self.set_flight_attr(None)
             return
@@ -219,6 +226,7 @@ class Duration(FlightAttributeNode):
 class FlightID(FlightAttributeNode):
     "Flight ID if provided via a known input attribute"
     name = 'FDR Flight ID'
+
     def derive(self, flight_id=A('AFR Flight ID')):
         self.set_flight_attr(flight_id.value)
 
@@ -232,7 +240,7 @@ class FlightNumber(FlightAttributeNode):
     """
     "Airline route flight number"
     name = 'FDR Flight Number'
-    
+
     def derive(self, num=P('Flight Number')):
         # Q: Should we validate the flight number?
         if num.array.dtype.type is np.string_:
@@ -248,9 +256,10 @@ class FlightNumber(FlightAttributeNode):
         compressed_array = array.compressed()
         _, minvalue = min_value(compressed_array)
         if minvalue < 0:
-            self.warning("'%s' only supports unsigned (positive) values > 0, "\
-                         "but none were found. Cannot determine flight number",
-                         self.name)
+            self.warning(
+                "'%s' only supports unsigned (positive) values > 0, "
+                "but none were found. Cannot determine flight number",
+                self.name)
             self.set_flight_attr(None)
             return
 
@@ -261,7 +270,7 @@ class FlightNumber(FlightAttributeNode):
             # this value accounts for at least 45% of the values in the array
             self.set_flight_attr(str(int(value)))
         else:
-            self.warning("Only %d out of %d flight numbers were the same."\
+            self.warning("Only %d out of %d flight numbers were the same."
                          " Flight Number attribute will be set as None.",
                          count or 0, len(num.array))
             self.set_flight_attr(None)
@@ -357,14 +366,14 @@ class LandingRunway(FlightAttributeNode):
         return minimum or fallback
 
     def derive(self,
-            land_fdr_apt=A('FDR Landing Airport'),
-            land_afr_rwy=A('AFR Landing Runway'),
-            land_hdg=KPV('Heading During Landing'),
-            land_lat=KPV('Latitude At Touchdown'),
-            land_lon=KPV('Longitude At Touchdown'),
-            precision=A('Precise Positioning'),
-            approaches=S('Approach And Landing'),
-            ils_freq_on_app=KPV('ILS Frequency During Approach')):
+               land_fdr_apt=A('FDR Landing Airport'),
+               land_afr_rwy=A('AFR Landing Runway'),
+               land_hdg=KPV('Heading During Landing'),
+               land_lat=KPV('Latitude At Touchdown'),
+               land_lon=KPV('Longitude At Touchdown'),
+               precision=A('Precise Positioning'),
+               approaches=S('Approach And Landing'),
+               ils_freq_on_app=KPV('ILS Frequency During Approach')):
         '''
         '''
         fallback = False
@@ -453,6 +462,7 @@ class LandingRunway(FlightAttributeNode):
 class OffBlocksDatetime(FlightAttributeNode):
     "Datetime when moving away from Gate/Blocks"
     name = 'FDR Off Blocks Datetime'
+
     def derive(self, turning=S('Turning On Ground'),
                start_datetime=A('Start Datetime')):
         first_turning = turning.get_first()
@@ -468,6 +478,7 @@ class OffBlocksDatetime(FlightAttributeNode):
 class OnBlocksDatetime(FlightAttributeNode):
     "Datetime when moving away from Gate/Blocks"
     name = 'FDR On Blocks Datetime'
+
     def derive(self, turning=S('Turning On Ground'),
                start_datetime=A('Start Datetime')):
         last_turning = turning.get_last()
@@ -503,9 +514,9 @@ class TakeoffAirport(FlightAttributeNode):
         ))
 
     def derive(self,
-            toff_lat=KPV('Latitude At Liftoff'),
-            toff_lon=KPV('Longitude At Liftoff'),
-            toff_afr_apt=A('AFR Takeoff Airport')):
+               toff_lat=KPV('Latitude At Liftoff'),
+               toff_lon=KPV('Longitude At Liftoff'),
+               toff_afr_apt=A('AFR Takeoff Airport')):
         '''
         '''
         # 1. If we have latitude and longitude, look for the nearest airport:
@@ -547,6 +558,7 @@ class TakeoffDatetime(FlightAttributeNode):
     to be used.
     '''
     name = 'FDR Takeoff Datetime'
+
     def derive(self, liftoff=KTI('Liftoff'), start_dt=A('Start Datetime')):
         first_liftoff = liftoff.get_first()
         if not first_liftoff:
@@ -561,6 +573,7 @@ class TakeoffDatetime(FlightAttributeNode):
 class TakeoffFuel(FlightAttributeNode):
     "Weight of Fuel in KG at point of Takeoff"
     name = 'FDR Takeoff Fuel'
+
     @classmethod
     def can_operate(cls, available):
         return 'AFR Takeoff Fuel' in available or \
@@ -581,6 +594,7 @@ class TakeoffFuel(FlightAttributeNode):
 class TakeoffGrossWeight(FlightAttributeNode):
     "Aircraft Gross Weight in KG at point of Takeoff"
     name = 'FDR Takeoff Gross Weight'
+
     def derive(self, liftoff_gross_weight=KPV('Gross Weight At Liftoff')):
         first_gross_weight = liftoff_gross_weight.get_first()
         if first_gross_weight:
@@ -590,7 +604,7 @@ class TakeoffGrossWeight(FlightAttributeNode):
             # from 'Gross Weight Smoothed', gross weight at liftoff should not
             # be masked.
             self.warning("No '%s' KPVs, '%s' attribute will be None.",
-                            liftoff_gross_weight.name, self.name)
+                         liftoff_gross_weight.name, self.name)
             self.set_flight_attr(None)
 
 
@@ -611,20 +625,20 @@ class TakeoffPilot(FlightAttributeNode, DeterminePilot):
         pilot_flying = all_of((
             'Pilot Flying',
             'Takeoff',
-            ), available)
+        ), available)
         controls = all_of((
             'Pitch (Capt)',
             'Pitch (FO)',
             'Roll (Capt)',
             'Roll (FO)',
             'Takeoff',
-            ), available)
+        ), available)
         autopilot = all_of((
             'AP (1) Engaged',
             'AP (2) Engaged',
             'Liftoff',
             # Optional: 'AP (3) Engaged'
-            ), available)
+        ), available)
         return pilot_flying or controls or autopilot
 
     def derive(self,
@@ -648,7 +662,7 @@ class TakeoffPilot(FlightAttributeNode, DeterminePilot):
             ap2 = ap2_eng.array[lift.index] == 'Engaged'
         else:
             ap1 = ap2 = None
-        args = (pilot_flying, pitch_capt, pitch_fo, roll_capt, roll_fo, 
+        args = (pilot_flying, pitch_capt, pitch_fo, roll_capt, roll_fo,
                 cc_capt, cc_fo, phase, ap1, ap2)
         self.set_flight_attr(self._determine_pilot(*args))
 
@@ -681,12 +695,12 @@ class TakeoffRunway(FlightAttributeNode):
         return minimum or fallback
 
     def derive(self,
-            toff_fdr_apt=A('FDR Takeoff Airport'),
-            toff_afr_rwy=A('AFR Takeoff Runway'),
-            toff_hdg=KPV('Heading During Takeoff'),
-            toff_lat=KPV('Latitude At Liftoff'),
-            toff_lon=KPV('Longitude At Liftoff'),
-            precision=A('Precise Positioning')):
+               toff_fdr_apt=A('FDR Takeoff Airport'),
+               toff_afr_rwy=A('AFR Takeoff Runway'),
+               toff_hdg=KPV('Heading During Takeoff'),
+               toff_lat=KPV('Latitude At Liftoff'),
+               toff_lon=KPV('Longitude At Liftoff'),
+               precision=A('Precise Positioning')):
         '''
         '''
         fallback = False
@@ -808,7 +822,7 @@ class FlightType(FlightAttributeNode):
                 raise InvalidFlightType('TOUCHDOWN_BEFORE_LIFTOFF')
                 #self.set_flight_attr('TOUCHDOWN_BEFORE_LIFTOFF')
                 #return
-            last_touchdown = touchdowns.get_last() # TODO: Delete line.
+            last_touchdown = touchdowns.get_last()  # TODO: Delete line.
             if touch_and_gos:
                 last_touchdown = touchdowns.get_last()
                 last_touch_and_go = touch_and_gos.get_last()
@@ -849,6 +863,7 @@ class LandingDatetime(FlightAttributeNode):
     If no landing (incomplete flight / ground run) store None.
     """
     name = 'FDR Landing Datetime'
+
     def derive(self, start_datetime=A('Start Datetime'),
                touchdown=KTI('Touchdown')):
         last_touchdown = touchdown.get_last()
@@ -864,6 +879,7 @@ class LandingDatetime(FlightAttributeNode):
 class LandingFuel(FlightAttributeNode):
     "Weight of Fuel in KG at point of Touchdown"
     name = 'FDR Landing Fuel'
+
     @classmethod
     def can_operate(cls, available):
         return 'AFR Landing Fuel' in available or \
@@ -882,16 +898,17 @@ class LandingFuel(FlightAttributeNode):
 class LandingGrossWeight(FlightAttributeNode):
     "Aircraft Gross Weight in KG at point of Landing"
     name = 'FDR Landing Gross Weight'
+
     def derive(self, touchdown_gross_weight=KPV('Gross Weight At Touchdown')):
         last_gross_weight = touchdown_gross_weight.get_last()
         if last_gross_weight:
             self.set_flight_attr(last_gross_weight.value)
         else:
-            # There is not a 'Gross Weight At Touchdown' KPV. Since it is sourced
-            # from 'Gross Weight Smoothed', gross weight at touchdown should not
-            # be masked. Are there no Touchdown KTIs?
+            # There is not a 'Gross Weight At Touchdown' KPV. Since it is
+            # sourced from 'Gross Weight Smoothed', gross weight at touchdown
+            # should not be masked. Are there no Touchdown KTIs?
             self.warning("No '%s' KPVs, '%s' attribute will be None.",
-                            touchdown_gross_weight.name, self.name)
+                         touchdown_gross_weight.name, self.name)
             self.set_flight_attr(None)
 
 
@@ -912,20 +929,20 @@ class LandingPilot(FlightAttributeNode, DeterminePilot):
         pilot_flying = all_of((
             'Pilot Flying',
             'Landing',
-            ), available)
+        ), available)
         controls = all_of((
             'Pitch (Capt)',
             'Pitch (FO)',
             'Roll (Capt)',
             'Roll (FO)',
             'Landing',
-            ), available)
+        ), available)
         autopilot = all_of((
             'AP (1) Engaged',
             'AP (2) Engaged',
             'Touchdown',
             # Optional: 'AP (3) Engaged'
-            ), available)
+        ), available)
         return pilot_flying or controls or autopilot
 
     def derive(self,
@@ -949,14 +966,15 @@ class LandingPilot(FlightAttributeNode, DeterminePilot):
             ap2 = ap2_eng.array[tdwn.index] == 'Engaged'
         else:
             ap1 = ap2 = None
-        args = (pilot_flying, pitch_capt, pitch_fo, roll_capt, roll_fo, cc_capt, cc_fo,
-                phase, ap1, ap2)
+        args = (pilot_flying, pitch_capt, pitch_fo, roll_capt, roll_fo,
+                cc_capt, cc_fo, phase, ap1, ap2)
         self.set_flight_attr(self._determine_pilot(*args))
 
 
 class Version(FlightAttributeNode):
     "Version of code used for analysis"
     name = 'FDR Version'
+
     def derive(self, start_datetime=P('Start Datetime')):
         '''
         Every derive method requires at least one dependency. Since this class
