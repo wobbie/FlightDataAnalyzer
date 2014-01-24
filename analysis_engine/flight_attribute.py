@@ -28,8 +28,31 @@ from analysis_engine.node import A, KTI, KPV, FlightAttributeNode, M, P, S
 
 class DeterminePilot(object):
     '''
+    Determine the pilot flying using available parameters within a section of
+    flight (expects takeoff or landing). The order is:
+    
+    1. Pilot Flying parameter (Airbus AFPS analysis of sidestick movement)
+    2. Pitch / Roll inputs where signals are recorded for Capt/FO seperately
+    3. Control Column force where one force is at least ?% greater than the other
+    4. Autopilot usage attributed to the Capt or FO's side
+    
+    
+    Note: Use of VHF is not used as convention is: 
+    * VHF 1/L is the primary set for ATC comms 
+    * VHF 2/R is for company use, aircraft to aircraft and secondary ATC comms 
+    * VHF 3/C is for ACARS data comms / backup
     '''
+    
     def _autopilot_engaged(self, ap1, ap2):
+        '''
+        This is a best guess assuming that if AP1 is in use, the Captain is PF.
+        
+        When the FO is PF, the right autopilot should be used. When the Capt
+        is PF, the autopilot should alternate vetween Left and Center
+        autopilots (to detect potential defects in center autopilot)
+        
+        TODO: Support Center auto-pilot usage
+        '''
         if ap1 and (not ap2):
             return 'Captain'
         if (not ap1) and ap2:
