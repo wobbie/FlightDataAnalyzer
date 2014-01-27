@@ -3451,25 +3451,16 @@ class FuelQty(DerivedParameterNode):
 
 ################################################################################
 
-## There is no difference between the two sources, and the sample rate is so low as to make merging pointless.
-##class GrossWeight(DerivedParameterNode):
-    ##'''
-    ##Merges alternate gross weight measurements. 757-DHK frame applies.
-    ##'''
-    ##units = ut.KG
-    ##align = False
-
-    ##def derive(self,
-               ##source_L = P('Gross Weight (L)'),
-               ##source_R = P('Gross Weight (R)'),
-               ##frame = A('Frame')):
-
-        ##if frame.value in ['757-DHL']:
-            ##self.array, self.frequency, self.offset = \
-                ##blend_two_parameters(source_L, source_R)
-
-        ##else:
-            ##raise DataFrameError(self.name, frame.value)
+class GrossWeight(DerivedParameterNode):
+    '''
+    Esatablish Gross Weight by using Zero Fuel Weight from ac information
+    and Fuel Qty recorded by aircraft
+    '''
+    units = ut.KG
+    
+    def derive(self, fuel_qty=P('Fuel Qty'), 
+               zero_fuel_weight=A('Zero Fuel Weight')):
+        self.array = moving_average(fuel_qty.array + zero_fuel_weight.value)
 
 
 class GrossWeightSmoothed(DerivedParameterNode):
