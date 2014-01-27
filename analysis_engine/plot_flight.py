@@ -79,18 +79,19 @@ class TypedWriter(object):
         return res
             
             
-def add_track(kml, track_name, lat, lon, colour, alt_param=None, alt_mode=None, visible=True):
+def add_track(kml, track_name, lat, lon, colour, alt_param=None, alt_mode=None,
+              visible=True):
     '''
     alt_mode such as simplekml.constants.AltitudeMode.clamptoground
     '''
-    track_config = {'name': track_name,
-                    'visibility': 1 if visible else 0,
-                    }
+    track_config = {'visibility': 1 if visible else 0}
     if alt_param:
         track_config['altitudemode'] = alt_mode
         track_config['extrude'] = 1
-        
+    
+    tracks = []
     track_coords = []
+    count = 0
     ##scope_lon = np.ma.flatnotmasked_edges(lon.array)
     ##scope_lat = np.ma.flatnotmasked_edges(lat.array)
     ##begin = max(scope_lon[0], scope_lat[0])+1
@@ -107,11 +108,22 @@ def add_track(kml, track_name, lat, lon, colour, alt_param=None, alt_mode=None, 
         if not all(coords) or any(np.isnan(coords)):
             continue
         track_coords.append(coords)
-                
-    track_config['coords'] = track_coords
-    line = kml.newlinestring(**track_config)
-    line.style.linestyle.color = colour
-    line.style.polystyle.color = '66%s' % colour[2:] # set opacity of area fill to 40%
+        count += 1
+        # Split up tracks because Google Earth cannot extrude long LineStrings.
+        if count >= 4000:
+            tracks.append(track_coords)
+            track_coords = []
+            count = 0
+    if track_coords:
+        tracks.append(track_coords)
+    
+    for index, track_coords in enumerate(tracks, start=1):
+        track_config = track_config.copy()
+        track_config['name'] = '%s (%d)' % (track_name, index)
+        track_config['coords'] = track_coords
+        line = kml.newlinestring(**track_config)
+        line.style.linestyle.color = colour
+        line.style.polystyle.color = '66%s' % colour[2:] # set opacity of area fill to 40%
     return
 
 
