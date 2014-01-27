@@ -1032,7 +1032,7 @@ class Mobile(FlightPhaseNode):
             return # for the case where nothing happened
 
         if gspd:
-            # We need to be outside the range where groundspeeds are detected.1
+            # We need to be outside the range where groundspeeds are detected.
             move_gspd = np.ma.flatnotmasked_edges(np.ma.masked_less\
                                                   (np.ma.abs(gspd.array),
                                                    GROUNDSPEED_FOR_MOBILE))
@@ -1251,10 +1251,13 @@ class Takeoff(FlightPhaseNode):
             takeoff_end = index_at_value(alt_aal.array, INITIAL_CLIMB_THRESHOLD,
                                          slice(takeoff_run, last))
 
+            if takeoff_end <= 0:
+                # catches if None or zero
+                continue
+
             #-------------------------------------------------------------------
             # Create a phase for this takeoff
-            if takeoff_begin and takeoff_end:
-                self.create_phases([slice(takeoff_begin, takeoff_end)])
+            self.create_phase(slice(takeoff_begin, takeoff_end))
 
 
 class TakeoffRoll(FlightPhaseNode):

@@ -232,6 +232,13 @@ from analysis_engine.key_point_values import (
     EngTorqueDuringTakeoff5MinRatingMax,
     EngTorqueDuringTaxiMax,
     EngTorqueWhileDescendingMax,
+    EngTorquePercent500To50FtMax,
+    EngTorquePercent500To50FtMin,
+    EngTorquePercentDuringGoAround5MinRatingMax,
+    EngTorquePercentDuringMaximumContinuousPowerMax,
+    EngTorquePercentDuringTakeoff5MinRatingMax,
+    EngTorquePercentDuringTaxiMax,
+    EngTorquePercentWhileDescendingMax,
     EngVibAMax,
     EngVibBMax,
     EngVibBroadbandMax,
@@ -512,7 +519,7 @@ class NodeTest(object):
         with tempfile.NamedTemporaryFile() as temp_file:
             shutil.copy(hdf_path, temp_file.name)
 
-            with hdf_file(hdf_path) as hdf:
+            with hdf_file(temp_file.name) as hdf:
                 for param_name in param_names:
                     p = hdf.get(param_name)
                     if p is not None:
@@ -2304,40 +2311,55 @@ class TestAirspeedWithThrustReversersDeployedMin(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = AirspeedWithThrustReversersDeployedMin
-        self.operational_combinations = [('Airspeed True', 'Thrust Reversers', 'Eng (*) N1 Avg', 'Landing')]
+        self.operational_combinations = [
+            ('Airspeed True', 'Thrust Reversers', 'Eng (*) EPR Max', 'Eng (*) N1 Max', 'Landing'),
+            ('Airspeed True', 'Thrust Reversers', 'Eng (*) N1 Max', 'Landing'),
+            ('Airspeed True', 'Thrust Reversers', 'Eng (*) EPR Max', 'Landing')]
 
     def test_derive_basic(self):
-        air_spd=P('Airspeed True',array = np.ma.arange(100,0,-10))
+        air_spd=P('Airspeed True', array = np.ma.arange(100,0,-10))
         tr=M('Thrust Reversers', array=np.ma.array([0]*3+[1]+[2]*4+[1,0]), 
              values_mapping = {0: 'Stowed', 1: 'In Transit', 2: 'Deployed'})
-        power=P('Eng (*) N1 Avg', array=np.ma.array([40]*5+[70]*5))
+        n1=P('Eng (*) N1 Max', array=np.ma.array([40]*5+[70]*5))
         landings=buildsection('Landing', 2, 9)
         node = AirspeedWithThrustReversersDeployedMin()
-        node.derive(air_spd, tr, power, landings)
+        node.derive(air_spd, tr, None, n1, landings)
         self.assertEqual(len(node), 1)
-        self.assertEqual(node[0], KeyPointValue(index=7,
-                                                value=30.0,
-                                                name='Airspeed With Thrust Reversers Deployed Min'))
+        self.assertEqual(node[0], KeyPointValue(
+            index=7, value=30.0, name='Airspeed With Thrust Reversers Deployed Min'))
 
+    def test_derive_with_epr(self):
+        air_spd = P('Airspeed True', array = np.ma.arange(100,0,-10))
+        tr = M('Thrust Reversers', array=np.ma.array([0]*3+[1]+[2]*4+[1,0]), 
+             values_mapping = {0: 'Stowed', 1: 'In Transit', 2: 'Deployed'})
+        epr = P('Eng (*) EPR Max', array=np.ma.array([1.0]*5+[1.26]*3+[1.0]*2))
+        landings=buildsection('Landing', 2, 9)
+        node = AirspeedWithThrustReversersDeployedMin()
+        node.derive(air_spd, tr, epr, None, landings)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0], KeyPointValue(
+            index=7, value=30.0, name='Airspeed With Thrust Reversers Deployed Min'))
+        
     def test_derive_inadequate_power(self):
         air_spd=P('Airspeed True',array = np.ma.arange(100,0,-10))
         tr=M('Thrust Reversers', array=np.ma.array([0]*3+[1]+[2]*4+[1,0]), 
              values_mapping = {0: 'Stowed', 1: 'In Transit', 2: 'Deployed'})
-        power=P('Eng (*) N1 Avg', array=np.ma.array([40]*10))
+        n1=P('Eng (*) N1 Max', array=np.ma.array([40]*10))
         landings=buildsection('Landing', 2, 9)
         node = AirspeedWithThrustReversersDeployedMin()
-        node.derive(air_spd, tr, power, landings)
+        node.derive(air_spd, tr, None, n1, landings)
         self.assertEqual(len(node), 0)
 
     def test_derive_not_deployed(self):
         air_spd=P('Airspeed True',array = np.ma.arange(100,0,-10))
         tr=M('Thrust Reversers', array=np.ma.array([0]*3+[1]*6+[0]), 
              values_mapping = {0: 'Stowed', 1: 'In Transit', 2: 'Deployed'})
-        power=P('Eng (*) N1 Avg', array=np.ma.array([40]*5+[70]*5))
+        n1=P('Eng (*) N1 Max', array=np.ma.array([40]*5+[70]*5))
         landings=buildsection('Landing', 2, 9)
         node = AirspeedWithThrustReversersDeployedMin()
-        node.derive(air_spd, tr, power, landings)
+        node.derive(air_spd, tr, None, n1, landings)
         self.assertEqual(len(node), 0)
+
 
 class TestAirspeedAtThrustReversersSelection(unittest.TestCase, NodeTest):
 
@@ -5535,6 +5557,95 @@ class TestEngTorqueWhileDescendingMax(unittest.TestCase, CreateKPVFromSlicesTest
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
 
+##############################################################################
+# Engine Torque [%]
+
+
+class TestEngTorquePercentDuringTaxiMax(unittest.TestCase, CreateKPVFromSlicesTest):
+
+    def setUp(self):
+        self.node_class = EngTorquePercentDuringTaxiMax
+        self.operational_combinations = [('Eng (*) Torque [%] Max', 'Taxiing')]
+        self.function = max_value
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestEngTorquePercentDuringTakeoff5MinRatingMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
+
+    def setUp(self):
+        self.node_class = EngTorquePercentDuringTakeoff5MinRatingMax
+        self.operational_combinations = [('Eng (*) Torque [%] Max', 'Takeoff 5 Min Rating')]
+        self.function = max_value
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test Not Implemented')
+
+
+class TestEngTorquePercentDuringGoAround5MinRatingMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
+
+    def setUp(self):
+        self.node_class = EngTorquePercentDuringGoAround5MinRatingMax
+        self.operational_combinations = [('Eng (*) Torque [%] Max', 'Go Around 5 Min Rating')]
+        self.function = max_value
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestEngTorquePercentMaximumContinuousPowerMax(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = EngTorquePercentDuringMaximumContinuousPowerMax
+        self.operational_combinations = [('Eng (*) Torque [%] Max', 'Takeoff 5 Min Rating', 'Go Around 5 Min Rating', 'Grounded')]
+        self.function = max_value
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestEngTorquePercent500To50FtMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
+
+    def setUp(self):
+        self.node_class = EngTorquePercent500To50FtMax
+        self.operational_combinations = [('Eng (*) Torque [%] Max', 'Altitude AAL For Flight Phases')]
+        self.function = max_value
+        self.second_param_method_calls = [('slices_from_to', (500, 50), {})]
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestEngTorquePercent500To50FtMin(unittest.TestCase, CreateKPVsWithinSlicesTest):
+
+    def setUp(self):
+        self.node_class = EngTorquePercent500To50FtMin
+        self.operational_combinations = [('Eng (*) Torque [%] Min', 'Altitude AAL For Flight Phases')]
+        self.function = min_value
+        self.second_param_method_calls = [('slices_from_to', (500, 50), {})]
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test Not Implemented')
+
+
+class TestEngTorquePercentWhileDescendingMax(unittest.TestCase, CreateKPVFromSlicesTest):
+
+    def setUp(self):
+        self.node_class = EngTorquePercentWhileDescendingMax
+        self.operational_combinations = [('Eng (*) Torque [%] Max', 'Descending')]
+        self.function = max_value
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+
 
 ##############################################################################
 # Engine Vibration
@@ -6848,11 +6959,34 @@ class TestGroundspeedWithThrustReversersDeployedMin(unittest.TestCase, NodeTest)
 
     def setUp(self):
         self.node_class = GroundspeedWithThrustReversersDeployedMin
-        self.operational_combinations = [('Groundspeed', 'Thrust Reversers', 'Eng (*) N1 Max', 'Landing')]
+        self.operational_combinations = [
+            ('Groundspeed', 'Thrust Reversers', 'Eng (*) EPR Max', 'Eng (*) N1 Max', 'Landing'),
+            ('Groundspeed', 'Thrust Reversers', 'Eng (*) EPR Max', 'Landing'),
+            ('Groundspeed', 'Thrust Reversers', 'Eng (*) N1 Max', 'Landing')]
+        
+    def test_derive_basic(self):
+        spd=P('Groundspeed True', array = np.ma.arange(100,0,-10))
+        tr=M('Thrust Reversers', array=np.ma.array([0]*3+[1]+[2]*4+[1,0]), 
+             values_mapping = {0: 'Stowed', 1: 'In Transit', 2: 'Deployed'})
+        n1=P('Eng (*) N1 Max', array=np.ma.array([40]*5+[70]*5))
+        landings=buildsection('Landing', 2, 9)
+        node = GroundspeedWithThrustReversersDeployedMin()
+        node.derive(spd, tr, None, n1, landings)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0], KeyPointValue(
+            index=7, value=30.0, name='Groundspeed With Thrust Reversers Deployed Min'))
 
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+    def test_derive_with_epr(self):
+        spd = P('Groundspeed True', array = np.ma.arange(100,0,-10))
+        tr = M('Thrust Reversers', array=np.ma.array([0]*3+[1]+[2]*4+[1,0]), 
+             values_mapping = {0: 'Stowed', 1: 'In Transit', 2: 'Deployed'})
+        epr = P('Eng (*) EPR Max', array=np.ma.array([1.0]*5+[1.26]*3+[1.0]*2))
+        landings=buildsection('Landing', 2, 9)
+        node = GroundspeedWithThrustReversersDeployedMin()
+        node.derive(spd, tr, epr, None, landings)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0], KeyPointValue(
+            index=7, value=30.0, name='Groundspeed With Thrust Reversers Deployed Min'))
 
 
 class TestGroundspeedStabilizerOutOfTrimDuringTakeoffMax(unittest.TestCase,

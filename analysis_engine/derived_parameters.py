@@ -3088,6 +3088,78 @@ class Eng_TorqueMin(DerivedParameterNode):
         self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
 
 
+class Eng_TorquePercentAvg(DerivedParameterNode):
+    '''
+    '''
+
+    name = 'Eng (*) Torque [%] Avg'
+    align = False
+    units = ut.PERCENT
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               eng1=P('Eng (1) Torque [%]'),
+               eng2=P('Eng (2) Torque [%]'),
+               eng3=P('Eng (3) Torque [%]'),
+               eng4=P('Eng (4) Torque [%]')):
+
+        engines = vstack_params(eng1, eng2, eng3, eng4)
+        self.array = np.ma.average(engines, axis=0)
+        self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
+
+
+class Eng_TorquePercentMax(DerivedParameterNode):
+    '''
+    '''
+
+    name = 'Eng (*) Torque [%] Max'
+    align = False
+    units = ut.PERCENT
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               eng1=P('Eng (1) Torque [%]'),
+               eng2=P('Eng (2) Torque [%]'),
+               eng3=P('Eng (3) Torque [%]'),
+               eng4=P('Eng (4) Torque [%]')):
+
+        engines = vstack_params(eng1, eng2, eng3, eng4)
+        self.array = np.ma.max(engines, axis=0)
+        self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
+
+
+class Eng_TorquePercentMin(DerivedParameterNode):
+    '''
+    '''
+
+    name = 'Eng (*) Torque [%] Min'
+    align = False
+    units = ut.PERCENT
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               eng1=P('Eng (1) Torque [%]'),
+               eng2=P('Eng (2) Torque [%]'),
+               eng3=P('Eng (3) Torque [%]'),
+               eng4=P('Eng (4) Torque [%]')):
+
+        engines = vstack_params(eng1, eng2, eng3, eng4)
+        self.array = np.ma.min(engines, axis=0)
+        self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
+
+
 ################################################################################
 # Engine Vibration (N1)
 
@@ -3379,25 +3451,16 @@ class FuelQty(DerivedParameterNode):
 
 ################################################################################
 
-## There is no difference between the two sources, and the sample rate is so low as to make merging pointless.
-##class GrossWeight(DerivedParameterNode):
-    ##'''
-    ##Merges alternate gross weight measurements. 757-DHK frame applies.
-    ##'''
-    ##units = ut.KG
-    ##align = False
-
-    ##def derive(self,
-               ##source_L = P('Gross Weight (L)'),
-               ##source_R = P('Gross Weight (R)'),
-               ##frame = A('Frame')):
-
-        ##if frame.value in ['757-DHL']:
-            ##self.array, self.frequency, self.offset = \
-                ##blend_two_parameters(source_L, source_R)
-
-        ##else:
-            ##raise DataFrameError(self.name, frame.value)
+class GrossWeight(DerivedParameterNode):
+    '''
+    Esatablish Gross Weight by using Zero Fuel Weight from ac information
+    and Fuel Qty recorded by aircraft
+    '''
+    units = ut.KG
+    
+    def derive(self, fuel_qty=P('Fuel Qty'), 
+               zero_fuel_weight=A('Zero Fuel Weight')):
+        self.array = moving_average(fuel_qty.array + zero_fuel_weight.value)
 
 
 class GrossWeightSmoothed(DerivedParameterNode):
@@ -3758,6 +3821,14 @@ class HeadingContinuous(DerivedParameterNode):
             if head_capt and head_fo and (head_capt.hz==head_fo.hz):
                 head_capt.array = repair_mask(straighten_headings(head_capt.array))
                 head_fo.array = repair_mask(straighten_headings(head_fo.array))
+
+                # If two compasses start up aligned east and west of North,
+                # the blend_two_parameters can give a result 180 deg out. The
+                # next three lines correct this error condition.
+                diff = np.ma.mean(head_capt.array) - np.ma.mean(head_fo.array)
+                corr = ((int(diff)+180)/360)*360.0
+                head_fo.array += corr
+
                 self.array, self.frequency, self.offset = blend_two_parameters(head_capt, head_fo)
             else:
                 self.array = repair_mask(straighten_headings(head_mag.array))
@@ -5260,44 +5331,48 @@ class WindDirectionTrueContinuous(DerivedParameterNode):
 
 class Headwind(DerivedParameterNode):
     '''
-    This is the headwind, negative values are tailwind.
+    Headwind calculates the headwind component based upon the Wind Speed and
+    Wind Direction compared to the Heading to get the direct Headwind
+    component.
+    
+    If Airspeed True and Groundspeed are available, below 100ft AAL the
+    difference between the two is used, ignoring the Wind Speed / Direction
+    component which become erroneous.
+    
+    Negative values of this Headwind component are a Tailwind.
     '''
 
     units = ut.KT
 
     @classmethod
     def can_operate(cls, available):
-
         return all_of((
             'Wind Speed',
             'Wind Direction Continuous',
             'Heading True Continuous',
+            'Altitude AAL',
         ), available)
 
     def derive(self, aspd=P('Airspeed True'),
                windspeed=P('Wind Speed'),
                wind_dir=P('Wind Direction Continuous'),
                head=P('Heading True Continuous'),
-               toffs=S('Takeoff'),
                alt_aal=P('Altitude AAL'),
                gspd=P('Groundspeed')):
 
-        rad_scale = radians(1.0)
         if aspd:
             # mask windspeed data while going slow
             windspeed.array[aspd.array.mask] = np.ma.masked
+        rad_scale = radians(1.0)
         headwind = windspeed.array * np.ma.cos((wind_dir.array-head.array)*rad_scale)
 
         # If we have airspeed and groundspeed, overwrite the values for the
-        # first hundred feet after takeoff. Note this is done in a
+        # altitudes below one hundred feet. Note this is done in a
         # deliberately crude manner so that the different computations may be
         # identified easily by the analyst.
-        if gspd and aspd and alt_aal and toffs:
-            # We merge takeoff slices with altitude slices to extend the takeoff phase to 100ft.
-            for climb in slices_or(alt_aal.slices_from_to(0, 100),
-                                   [s.slice for s in toffs]):
-                headwind[climb] = aspd.array[climb] - gspd.array[climb]
-
+        if aspd and gspd:
+            for below_100ft in alt_aal.slices_below(100):
+                headwind[below_100ft] = aspd.array[below_100ft] - gspd.array[below_100ft]
         self.array = headwind
 
 
@@ -5970,7 +6045,8 @@ class ApproachRange(DerivedParameterNode):
             reg_slice = shift_slice(app_slices[0], this_app_slice.start)
             
             gs_est = approach.gs_est
-            if gs_est:
+            # Check we have valid glideslope data for the regression slice.
+            if gs_est and np.ma.count(glide.array[reg_slice]):
                 # Compute best fit glidepath. The term (1-0.13 x glideslope
                 # deviation) caters for the aircraft deviating from the
                 # planned flightpath. 1 dot low is about 7% of a 3 degree
