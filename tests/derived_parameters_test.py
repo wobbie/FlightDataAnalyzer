@@ -102,6 +102,9 @@ from analysis_engine.derived_parameters import (
     Eng_NpAvg,
     Eng_NpMax,
     Eng_NpMin,
+    Eng_TorquePercentAvg,
+    Eng_TorquePercentMax,
+    Eng_TorquePercentMin,
     Eng_VibBroadbandMax,
     Eng_VibN1Max,
     Eng_VibN2Max,
@@ -2670,6 +2673,14 @@ class TestHeadingContinuous(unittest.TestCase, NodeTest):
         # The smoothing algorithm will leave two samples masked at the beginning and end of the array.
         self.assertEqual(np.ma.count(con_hdg.array), 56)
         
+    def test_heading_continuous_starting_north(self):
+        hdg_ca = P('Heading (Capt)',np.ma.array([358,358,0.0,1.0]))
+        hdg_fo = P('Heading (FO)',np.ma.array([0.0,1.0,359,357]),offset=0.5)
+        node = self.node_class()
+        node.derive(None, hdg_ca, hdg_fo, None)
+        expected = np.ma.array([359,359,359.25,360,360,359.75,359.5,359 ])
+        ma_test.assert_equal(node.array, expected)
+
 
 class TestTrack(unittest.TestCase, NodeTest):
 
@@ -3258,15 +3269,20 @@ class TestV2Lookup(unittest.TestCase):
 
 class TestHeadwind(unittest.TestCase):
     def test_can_operate(self):
-        opts=Headwind.get_operational_combinations()
-        self.assertTrue(('Wind Speed', 'Wind Direction Continuous', 'Heading True Continuous') in opts)
+        opts = Headwind.get_operational_combinations()
+        self.assertEqual(opts, [
+            ('Wind Speed', 'Wind Direction Continuous', 'Heading True Continuous', 'Altitude AAL'),
+            ('Airspeed True', 'Wind Speed', 'Wind Direction Continuous', 'Heading True Continuous', 'Altitude AAL'),
+            ('Wind Speed', 'Wind Direction Continuous', 'Heading True Continuous', 'Altitude AAL', 'Groundspeed'),
+            ('Airspeed True', 'Wind Speed', 'Wind Direction Continuous', 'Heading True Continuous', 'Altitude AAL', 'Groundspeed'),
+        ])            
     
     def test_real_example(self):
         ws = P('Wind Speed', np.ma.array([84.0]))
         wd = P('Wind Direction Continuous', np.ma.array([-21]))
         head=P('Heading True Continuous', np.ma.array([30]))
         hw = Headwind()
-        hw.derive(None, ws,wd,head)
+        hw.derive(None, ws, wd, head, None, None)
         expected = np.ma.array([52.8629128481863])
         self.assertAlmostEqual(hw.array.data, expected.data)
         
@@ -3275,9 +3291,29 @@ class TestHeadwind(unittest.TestCase):
         wd = P('Wind Direction Continuous', np.ma.array([0, 90, 180, -180, -90, 360, 23, -23], dtype=float))
         head=P('Heading True Continuous', np.ma.array([-180, -90, 0, 180, 270, 360*15, 361*23, 359*23], dtype=float))
         hw = Headwind()
-        hw.derive(None, ws,wd,head)
+        hw.derive(None, ws, wd, head, None, None)
         expected = np.ma.array([-20]*3+[20]*5)
         ma_test.assert_almost_equal(hw.array, expected)
+        
+    def test_headwind_below_100ft(self):
+        # create consistent 20 kt windspeed on the tail
+        wspd = P('Wind Speed', np.ma.array([20]*20))
+        wdir = P('Wind Direction Continuous', np.ma.array([180]*20))
+        head = P('Heading True Continuous', np.ma.array([0]*20))
+        # create a 40 kt difference between Airspeed and speed over ground
+        gspd = P('Groundspeed', np.ma.array([220]*20))
+        aspd = P('Airpseed True', np.ma.array([180]*20))
+        # first 5 and last 5 samples are below 100ft
+        alt = P('Altitude AAL', np.ma.array([50]*5 + [5000]*10 + [40]*5))
+        hw = Headwind()
+        hw.derive(aspd, wspd, wdir, head, alt, gspd)
+        # below 100ft
+        np.testing.assert_equal(hw.array[:5], [-40]*5)
+        # above 100ft
+        np.testing.assert_equal(hw.array[5:15], [-20]*10)
+        # below 100ft
+        np.testing.assert_equal(hw.array[15:], [-40]*5)
+    
         
 
 
@@ -3819,6 +3855,98 @@ class TestEng_TorqueMin(unittest.TestCase):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestEng_TorquePercentAvg(unittest.TestCase):
+    
+    def setUp(self):
+        self.node_class = Eng_TorquePercentAvg
+
+    def test_can_operate(self):
+        poss_combs = self.node_class.get_operational_combinations()
+        self.assertTrue(('Eng (1) Torque [%]',) in poss_combs)
+        self.assertTrue(('Eng (2) Torque [%]',) in poss_combs)
+        self.assertTrue(('Eng (3) Torque [%]',) in poss_combs)
+        self.assertTrue(('Eng (4) Torque [%]',) in poss_combs)
+
+    def test_derive(self):
+        eng_1_array =    [0, 30, 50, 80, 100,   100, 70, 70, 70, 50, 50, 10,  0,  0, 0]
+        eng_3_array =    [0,  0, 30, 60,  85,   100, 70, 70, 70, 50, 50, 30, 10, 10, 0]
+        expected_array = [0, 15, 40, 70,  92.5, 100, 70, 70, 70, 50, 50, 20,  5,  5, 0]
+
+        eng_1 = P(name='Eng (1) Torque [%]', array=eng_1_array, frequency=1,
+                 offset=0.1)
+
+        eng_3 = P(name='Eng (3) Torque [%]', array=eng_3_array, frequency=1,
+                         offset=0.5)
+
+        node = self.node_class()
+        node.derive(eng_1, None, eng_3, None)
+
+        np.testing.assert_array_equal(node.array, expected_array)
+        self.assertEqual(node.offset, 0.3)
+
+
+class TestEng_TorquePercentMax(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = Eng_TorquePercentMax
+
+    def test_can_operate(self):
+        poss_combs = self.node_class.get_operational_combinations()
+        self.assertTrue(('Eng (1) Torque [%]',) in poss_combs)
+        self.assertTrue(('Eng (2) Torque [%]',) in poss_combs)
+        self.assertTrue(('Eng (3) Torque [%]',) in poss_combs)
+        self.assertTrue(('Eng (4) Torque [%]',) in poss_combs)
+
+
+    def test_derive(self):
+        eng_1_array =    [0, 30, 50, 80, 100, 100, 70, 70, 70, 50, 50, 10,  0,  0, 0]
+        eng_3_array =    [0,  0, 30, 60,  85, 100, 70, 70, 70, 50, 50, 30, 10, 10, 0]
+        expected_array = [0, 30, 50, 80, 100, 100, 70, 70, 70, 50, 50, 30, 10, 10, 0]
+
+        eng_1 = P(name='Eng (1) Torque [%]', array=eng_1_array, frequency=1,
+                 offset=0.1)
+
+        eng_3 = P(name='Eng (3) Torque [%]', array=eng_3_array, frequency=1,
+                offset=0.5)
+
+        node = self.node_class()
+        node.derive(eng_1, None, eng_3, None)
+
+        np.testing.assert_array_equal(node.array, expected_array)
+        self.assertEqual(node.offset, 0.3)
+
+
+class TestEng_TorquePercentMin(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = Eng_TorquePercentMin
+
+    def test_can_operate(self):
+        poss_combs = self.node_class.get_operational_combinations()
+        self.assertTrue(('Eng (1) Torque [%]',) in poss_combs)
+        self.assertTrue(('Eng (2) Torque [%]',) in poss_combs)
+        self.assertTrue(('Eng (3) Torque [%]',) in poss_combs)
+        self.assertTrue(('Eng (4) Torque [%]',) in poss_combs)
+
+
+    def test_derive(self):
+        eng_1_array =    [0, 30, 50, 80, 100, 100, 70, 70, 70, 50, 50, 10,  0,  0, 0]
+        eng_3_array =    [0,  0, 30, 60,  85, 100, 70, 70, 70, 50, 50, 30, 10, 10, 0]
+        expected_array = [0,  0, 30, 60,  85, 100, 70, 70, 70, 50, 50, 10,  0,  0, 0]
+
+        eng_1 = P(name='Eng (1) Torque [%]', array=eng_1_array, frequency=1,
+                 offset=0.1)
+
+        eng_3 = P(name='Eng (3) Torque [%]', array=eng_3_array, frequency=1,
+                         offset=0.5)
+
+        node = self.node_class()
+        node.derive(eng_1, None, eng_3, None)
+
+        np.testing.assert_array_equal(node.array, expected_array)
+        self.assertEqual(node.offset, 0.3)
 
 
 class TestEng_VibBroadbandMax(unittest.TestCase, NodeTest):
