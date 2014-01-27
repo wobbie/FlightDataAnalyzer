@@ -116,6 +116,7 @@ from analysis_engine.derived_parameters import (
     EngTPRLimitDifference,
     FlapAngle,
     FuelQty,
+    GrossWeight,
     GrossWeightSmoothed,
     Groundspeed,
     #GroundspeedAlongTrack,
@@ -2362,6 +2363,27 @@ class TestFuelQty(unittest.TestCase):
         np.testing.assert_array_equal(fuel_qty_node.array,
                                       np.ma.array([1, 2, 3]))    
 
+class TestGrossWeight(unittest.TestCase):
+    def test_using_zero_fuel_weight(self):
+        zfw = A('Zero Fuel Weight', 17400 )
+        
+        fuel_qty_array = np.ma.arange(10000, 4000, -100)
+        fuel_qty_array[10] *= 0.9
+        fuel_qty = P('Fuel Qty', array=fuel_qty_array)
+        
+        gw = GrossWeight()
+        gw.derive(fuel_qty, zfw)
+        
+        self.assertEquals(len(gw.array), 60)
+        self.assertEqual(gw.array[4], (10000-(4*100)+17400))
+        
+        # check fuel quantity decrease at liftoff by 90% 
+        # only has limited 2% effect on array
+        self.assertLess( gw.array[10], (10000-(10*100)+17400))
+        self.assertGreater( gw.array[10], (10000-(10*100)+17400)*0.98) 
+        self.assertEqual(gw.array[25], (10000-(25*100)+17400))
+        
+        
 
 class TestGrossWeightSmoothed(unittest.TestCase):
     def test_gw_real_data_1(self):
