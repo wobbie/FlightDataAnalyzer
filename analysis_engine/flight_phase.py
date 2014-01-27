@@ -78,14 +78,19 @@ class Airborne(FlightPhaseNode):
     '''
     def derive(self, alt_aal=P('Altitude AAL For Flight Phases'),
                fast=S('Fast')):
+        
+        # Remove short gaps in going fast to account for aerobatic manoeuvres 
+        speedy_slices = slices_remove_small_gaps(fast.get_slices(),
+                                                 time_limit=60, hz=fast.frequency)
+        
         # Just find out when altitude above airfield is non-zero.
-        for speedy in fast:
+        for speedy in speedy_slices:
             # Stop here if the aircraft never went fast.
-            if speedy.slice.start is None and speedy.slice.stop is None:
+            if speedy.start is None and speedy.stop is None:
                 break
 
-            start_point = speedy.slice.start or 0
-            stop_point = speedy.slice.stop or len(alt_aal.array)
+            start_point = speedy.start or 0
+            stop_point = speedy.stop or len(alt_aal.array)
             # Restrict data to the fast section (it's already been repaired)
             working_alt = alt_aal.array[start_point:stop_point]
 
