@@ -23,6 +23,7 @@ from analysis_engine.key_point_values import (
     AOADuringGoAroundMax,
     AOAWithFlapMax,
     APDisengagedDuringCruiseDuration,
+    APUOnDuringFlightDuration,
     APUFireWarningDuration,
     AccelerationLateralAtTouchdown,
     AccelerationLateralDuringLandingMax,
@@ -4655,6 +4656,49 @@ class TestEngFireWarningDuration(unittest.TestCase, CreateKPVsWhereTest):
 
         self.basic_setup()
 
+
+##############################################################################
+# APU On
+
+
+class TestAPUOnDuringFlightDuration(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = APUOnDuringFlightDuration
+
+    def test_can_operate(self):
+        opts = self.node_class.get_operational_combinations()
+
+    def test_derive__start_before_liftoff(self):
+        apu = MultistateDerivedParameterNode(
+            name='APU On',
+            array=np.ma.array([0] * 5 + [1] * 10 + [0] * 15),
+            values_mapping={0: '-', 1: 'On'}
+        )
+        airborne = S(items=[Section('Airborne',
+                                    slice(13, 20), 10, 20)])
+        node = self.node_class()
+        node.derive(apu, airborne)
+        # The APU On started 3 seconds before the liftoff and lasted 5 seconds,
+        # which means there were 2 seconds of APU On in air
+        self.assertEqual(node[0].value, 2)
+        # The index of the LAST sample where apu.array == 'On'
+        self.assertEqual(node[0].index, 15)
+
+    def test_derive__start_in_flight(self):
+        apu = MultistateDerivedParameterNode(
+            name='APU On',
+            array=np.ma.array([0] * 15 + [1] * 10 + [0] * 5),
+            values_mapping={0: '-', 1: 'On'}
+        )
+        airborne = S(items=[Section('Airborne',
+                                    slice(13, 20), 10, 20)])
+        node = self.node_class()
+        node.derive(apu, airborne)
+        # The APU On started mid flight and lasted 5 seconds
+        self.assertEqual(node[0].value, 5)
+        # The index of the FIRST sample where apu.array == 'On'
+        self.assertEqual(node[0].index, 15)
 
 ##############################################################################
 # APU Fire

@@ -5812,6 +5812,36 @@ class EngFireWarningDuration(KeyPointValueNode):
 
 
 ##############################################################################
+# APU On
+
+
+class APUOnDuringFlightDuration(KeyPointValueNode):
+    '''
+    Duration of APU On during flight.
+
+    If APU On started before takeoff, we want to record the last index of the
+    state duration.
+
+    If APU On started in air, we want to record the first index of the state
+    duration (default behaviour of create_kpvs_where()).
+    '''
+    name = 'APU On During Flight Duration'
+    units = ut.SECOND
+
+    def derive(self,
+               apu=P('APU On'),
+               airborne=S('Airborne')):
+        self.create_kpvs_where(apu.array == 'On', apu.hz, phase=airborne)
+        for kpv in list(self):
+            for in_air in airborne:
+                last_index = kpv.index + kpv.value * apu.hz
+                if kpv.index == in_air.slice.start:
+                    # if APU On was On during liftoff, we want to use the index
+                    # of the last sample
+                    kpv.index = last_index
+
+
+##############################################################################
 # APU Fire
 
 
