@@ -3301,7 +3301,8 @@ def slices_remove_small_gaps(slice_list, time_limit=10, hz=1):
         return slice_list
     new_list = [slice_list[0]]
     for each_slice in slice_list[1:]:
-        if each_slice.start - new_list[-1].stop < sample_limit:
+        if each_slice.start and new_list[-1].stop  and \
+           each_slice.start - new_list[-1].stop < sample_limit:
             new_list[-1] = slice(new_list[-1].start, each_slice.stop)
         else:
             new_list.append(each_slice)

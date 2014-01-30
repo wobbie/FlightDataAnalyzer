@@ -4496,6 +4496,12 @@ class TestSlicesRemoveSmallGaps(unittest.TestCase):
         expected = []
         self.assertEqual(expected, newlist)
 
+    def test_slice_none_within_slices(self):
+        slicelist = [slice(1, None), slice(4,6), slice(None, 8)]
+        newlist = slices_remove_small_gaps(slicelist)
+        self.assertEqual(len(newlist), 3)
+
+
 
 class TestSlicesRemoveSmallSlices(unittest.TestCase):
     def test_slice_removal(self):
