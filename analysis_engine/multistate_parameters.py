@@ -347,7 +347,9 @@ class DualInputWarning(MultistateDerivedParameterNode):
         array = np_ma_zeros_like(pilot.array)
         array[pilot.array == 'Captain'] = stick_fo.array[pilot.array == 'Captain']
         array[pilot.array == 'First Officer'] = stick_capt.array[pilot.array == 'First Officer']
-        array = np.ma.array(array > 0.5, mask=array.mask, dtype=int)
+        # Due to the poor resolution of the A330/A340 sidesticks, a threshold
+        # increase was required to ensure reliable operation.
+        array = np.ma.array(array > 1.5, mask=array.mask, dtype=int)
 
         slices = runs_of_ones(array)
         slices = slices_remove_small_slices(slices, 3, self.hz)
