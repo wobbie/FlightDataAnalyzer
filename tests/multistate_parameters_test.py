@@ -425,6 +425,34 @@ class TestDualInputWarning(unittest.TestCase, NodeTest):
         expected_array[177:212] = 'Dual'
         np.testing.assert_array_equal(node.array, expected_array)
 
+    def test_not_triggered_at_minimum_resolution(self):
+        pilot_map = {0: '-', 1: 'Captain', 2: 'First Officer'}
+        pilot_array = MappedArray([1] * 20,
+                                  values_mapping=pilot_map)
+        capt_array = np.ma.array([10.0]*20)
+        fo_array = np.ma.array([0.0]*20)
+        # Dual input
+        
+        # The resolution of the signals on some Airbus types is given by:
+        resolution = 0.703129
+        # So the sidesticks can sit with one bit offset in pitch and roll at
+        # this angle (given 10% increase for safety):
+        min_res = ((resolution*resolution)*2*1.1)**0.5
+
+        fo_array[5:10] = min_res
+        pilot = M('Pilot Flying', np.ma.array([1]*20), values_mapping=pilot_map)
+        capt = P('Sidestick Angle (Capt)', capt_array)
+        fo = P('Sidestick Angle (FO)', fo_array)
+        node = self.node_class()
+        node.derive(pilot, capt, fo)
+
+        expected_array = MappedArray(
+            np.ma.zeros(capt_array.size),
+            values_mapping=self.node_class.values_mapping)
+        expected_array[5:10] = '-'
+        np.testing.assert_array_equal(node.array, expected_array)
+
+
 
 class TestEng_1_Fire(unittest.TestCase, NodeTest):
 
