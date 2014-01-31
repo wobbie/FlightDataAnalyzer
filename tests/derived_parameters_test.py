@@ -116,6 +116,7 @@ from analysis_engine.derived_parameters import (
     EngTPRLimitDifference,
     FlapAngle,
     FuelQty,
+    GrossWeight,
     GrossWeightSmoothed,
     Groundspeed,
     #GroundspeedAlongTrack,
@@ -4818,8 +4819,20 @@ class TestApproachRange(TemporaryFileTest, unittest.TestCase):
         self.assertEqual(len(chunks),2)
         self.assertEqual(chunks,[slice(3198, 3422, None), 
                                  slice(12928, 13440, None)])
-        
-        
+
+
+class TestGrossWeight(unittest.TestCase):
+    def test_can_operate(self):
+        self.assertEqual(GrossWeight.get_operational_combinations(),
+                         [('Zero Fuel Weight', 'Fuel Qty')])
+    
+    def test_derive(self, zfw=KPV('Zero Fuel Weight'), fq=P('Fuel Qty')):
+        fq = P('Fuel Qty', array=np.ma.array([40,30,20,10]))
+        zfw = KPV('Zero Fuel Weight', items=[KeyPointValue(0, 1000)])
+        node = GrossWeight()
+        node.derive(zfw, fq)
+        self.assertEqual(node.array.tolist(), [1040, 1030, 1020, 1010])
+
 
 
 if __name__ == '__main__':

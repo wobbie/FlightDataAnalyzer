@@ -3399,6 +3399,15 @@ class FuelQty(DerivedParameterNode):
         ##else:
             ##raise DataFrameError(self.name, frame.value)
 
+class GrossWeight(DerivedParameterNode):
+    '''
+    Derive gross weight from Zero Fuel Weight and Fuel Qty.
+    '''
+    units = ut.KG
+    
+    def derive(self, zfw=KPV('Zero Fuel Weight'), fq=P('Fuel Qty')):
+        self.array = fq.array + zfw.get_first().value
+
 
 class GrossWeightSmoothed(DerivedParameterNode):
     '''
