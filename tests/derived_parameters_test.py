@@ -4947,15 +4947,46 @@ class TestApproachRange(TemporaryFileTest, unittest.TestCase):
 
 class TestGrossWeight(unittest.TestCase):
     def test_can_operate(self):
-        self.assertEqual(GrossWeight.get_operational_combinations(),
-                         [('Zero Fuel Weight', 'Fuel Qty')])
+        combinations = GrossWeight.get_operational_combinations()
+        self.assertTrue(('Zero Fuel Weight', 'Fuel Qty') in combinations)
+        self.assertTrue(('HDF Duration', 'AFR Landing Gross Weight',) in combinations)
+        self.assertTrue(('HDF Duration',
+                         'AFR Landing Gross Weight',
+                         'AFR Takeoff Gross Weight',
+                         'Touchdown',
+                         'Liftoff') in combinations)
     
-    def test_derive(self, zfw=KPV('Zero Fuel Weight'), fq=P('Fuel Qty')):
+    def test_derive_fuel_qty_zfw(self):
         fq = P('Fuel Qty', array=np.ma.array([40,30,20,10]))
         zfw = KPV('Zero Fuel Weight', items=[KeyPointValue(0, 1000)])
         node = GrossWeight()
-        node.derive(zfw, fq)
+        node.derive(zfw, fq, None, None, None, None, None)
         self.assertEqual(node.array.tolist(), [1040, 1030, 1020, 1010])
+    
+    def test_derive_afr_land_wgt(self):
+        duration = A('HDF Duration', 100)
+        afr_land_wgt = A('AFR Landing Gross Weight', 1000)
+        
+        node = GrossWeight()
+        node.derive(None, None, duration, afr_land_wgt, None, None, None)
+        
+        self.assertEqual(node.array.tolist(), [1000] * 100)
+    
+    def test_derive_afr_interpolated_wgt(self):
+        duration = A('HDF Duration', 100)
+        afr_takeoff_wgt = A('AFR Takeoff Gross Weight', 2000)
+        afr_land_wgt = A('AFR Landing Gross Weight', 1000)
+        liftoffs = KTI('Liftoff', items=[KeyTimeInstance(10)])
+        touchdowns = KTI('Touchdown', items=[KeyTimeInstance(90)])
+        
+        
+        
+        node = GrossWeight()
+        node.derive(None, None, duration, afr_land_wgt, afr_takeoff_wgt,
+                    touchdowns, liftoffs)
+        
+        result = node.array.tolist()
+        #self.assertEqual(, [None] * 10)
 
 
 
