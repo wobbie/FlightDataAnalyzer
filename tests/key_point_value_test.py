@@ -9594,15 +9594,42 @@ class TestZeroFuelWeight(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = ZeroFuelWeight
-        self.operational_combinations = [('Fuel Qty', 'Gross Weight')]
+        self.operational_combinations = [('Fuel Qty', 'Gross Weight'),
+                                         ('Dry Operating Weight',),
+                                         ('Dry Operating Weight', 'Payload')]
 
-    def test_derive(self):
+    def test_derive_fuel_qty_gross_wgt(self):
         fuel_qty = P('Fuel Qty', np.ma.array([1, 2, 3, 4]))
         gross_wgt = P('Gross Weight', np.ma.array([11, 12, 13, 14]))
         zfw = ZeroFuelWeight()
-        zfw.derive(fuel_qty, gross_wgt)
+        zfw.derive(fuel_qty, gross_wgt, None, None)
+        self.assertEqual(len(zfw), 1)
         self.assertEqual(zfw[0].index, 0)  # Note: Index should always be 0!
         self.assertEqual(zfw[0].value, 10.0)
+    
+    def test_derive_dry_operating_wgt(self):
+        dry_operating_wgt = A('Dry Operating Weight', 100000)
+        zfw = ZeroFuelWeight()
+        zfw.derive(None, None, dry_operating_wgt, None)
+        self.assertEqual(len(zfw), 1)
+        self.assertEqual(zfw[0].index, 0)  # Note: Index should always be 0!
+        self.assertEqual(zfw[0].value, dry_operating_wgt.value)
+    
+    def test_derive_dry_operating_wgt_payload(self):
+        dry_operating_wgt = A('Dry Operating Weight', 100000)
+        payload = A('Payload', None)
+        zfw = ZeroFuelWeight()
+        zfw.derive(None, None, dry_operating_wgt, payload)
+        self.assertEqual(len(zfw), 1)
+        self.assertEqual(zfw[0].index, 0)  # Note: Index should always be 0!
+        self.assertEqual(zfw[0].value, dry_operating_wgt.value)
+        
+        payload = A('Payload', 1000)
+        zfw = ZeroFuelWeight()
+        zfw.derive(None, None, dry_operating_wgt, payload)
+        self.assertEqual(len(zfw), 1)
+        self.assertEqual(zfw[0].index, 0)  # Note: Index should always be 0!
+        self.assertEqual(zfw[0].value, 101000)
 
 
 ##############################################################################

@@ -20,7 +20,6 @@ from analysis_engine.settings import (ACCEL_LAT_OFFSET_LIMIT,
                                       KTS_TO_MPS,
                                       NAME_VALUES_CONF,
                                       NAME_VALUES_ENGINE,
-                                      NAME_VALUES_FLAP,
                                       NAME_VALUES_LEVER,
                                       REVERSE_THRUST_EFFECTIVE_EPR,
                                       REVERSE_THRUST_EFFECTIVE_N1,
@@ -36,7 +35,6 @@ from analysis_engine.library import (ambiguous_runway,
                                      any_of,
                                      bearings_and_distances,
                                      bump,
-                                     clip,
                                      closest_unmasked_value,
                                      clump_multistate,
                                      coreg,
@@ -81,7 +79,6 @@ from analysis_engine.library import (ambiguous_runway,
                                      valid_slices_within_array,
                                      value_at_index,
                                      vspeed_lookup,
-                                     vstack_params,
                                      vstack_params_where_state)
 
 
@@ -10567,14 +10564,12 @@ class TouchdownTo60KtsDuration(KeyPointValueNode):
 
     @classmethod
     def can_operate(cls, available):
-
         return all_of(('Airspeed', 'Touchdown'), available)
 
     def derive(self,
                airspeed=P('Airspeed'),
                groundspeed=P('Groundspeed'),
                tdwns=KTI('Touchdown')):
-
         if groundspeed:
             speed=groundspeed.array
             freq=groundspeed.frequency
@@ -10754,12 +10749,30 @@ class ZeroFuelWeight(KeyPointValueNode):
     See also the GrossWeightSmoothed calculation which uses fuel flow data to
     obtain a higher sample rate solution to the aircraft weight calculation,
     with a best fit to the available weight data.
+    
+    TODO: Move to a FlightAttribute which is stored in the database.
     '''
 
     units = ut.KG
-
-    def derive(self, fuel_qty=P('Fuel Qty'), gross_wgt=P('Gross Weight')):
-        self.create_kpv(0, np.ma.median(gross_wgt.array - fuel_qty.array))
+    # Force align for cases when only attribute dependencies are available.
+    align_frequency = 1
+    align_offset = 0
+    
+    @classmethod
+    def can_operate(cls, available):
+        return ('Dry Operating Weight' in available or 
+                all_of(('Fuel Qty', 'Gross Weight'), available))
+    
+    def derive(self, fuel_qty=P('Fuel Qty'), gross_wgt=P('Gross Weight'),
+               dry_operating_wgt=A('Dry Operating Weight'),
+               payload=A('Payload')):
+        if gross_wgt and fuel_qty:
+            weight = np.ma.median(gross_wgt.array - fuel_qty.array)
+        else:
+            weight = dry_operating_wgt.value
+            if payload and payload.value:
+                weight += payload.value
+        return self.create_kpv(0, weight)
 
 
 class GrossWeightDelta60SecondsInFlightMax(KeyPointValueNode):

@@ -3462,6 +3462,15 @@ class GrossWeight(DerivedParameterNode):
                zero_fuel_weight=A('Zero Fuel Weight')):
         self.array = moving_average(fuel_qty.array + zero_fuel_weight.value)
 
+class GrossWeight(DerivedParameterNode):
+    '''
+    Derive gross weight from Zero Fuel Weight and Fuel Qty.
+    '''
+    units = ut.KG
+    
+    def derive(self, zfw=KPV('Zero Fuel Weight'), fq=P('Fuel Qty')):
+        self.array = fq.array + zfw.get_first().value
+
 
 class GrossWeightSmoothed(DerivedParameterNode):
     '''
