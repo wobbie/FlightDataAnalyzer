@@ -116,7 +116,6 @@ from analysis_engine.derived_parameters import (
     EngTPRLimitDifference,
     FlapAngle,
     FuelQty,
-    GrossWeight,
     GrossWeightSmoothed,
     Groundspeed,
     #GroundspeedAlongTrack,
@@ -4868,7 +4867,6 @@ class TestGrossWeight(unittest.TestCase):
         self.assertEqual(result[-11], 90)
         self.assertEqual(result[:10], [None] * 10)
         self.assertAlmostEqual(result[50], 50.5, 1)
-
 
 
 if __name__ == '__main__':

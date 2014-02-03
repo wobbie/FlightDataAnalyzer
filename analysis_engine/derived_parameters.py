@@ -3399,6 +3399,7 @@ class FuelQty(DerivedParameterNode):
         ##else:
             ##raise DataFrameError(self.name, frame.value)
 
+
 class GrossWeight(DerivedParameterNode):
     '''
     Derive gross weight from Zero Fuel Weight and Fuel Qty.
