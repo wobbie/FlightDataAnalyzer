@@ -4986,7 +4986,12 @@ class TestGrossWeight(unittest.TestCase):
                     touchdowns, liftoffs)
         
         result = node.array.tolist()
-        #self.assertEqual(, [None] * 10)
+        self.assertEqual(result[:10], [None] * 10)
+        self.assertEqual(result[-10:], [None] * 10)
+        self.assertEqual(result[10], 10)
+        self.assertEqual(result[-11], 90)
+        self.assertEqual(result[:10], [None] * 10)
+        self.assertAlmostEqual(result[50], 50.5, 1)
 
 
 
