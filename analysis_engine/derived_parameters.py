@@ -6661,6 +6661,8 @@ class FlapManoeuvreSpeed(DerivedParameterNode):
                     # Use recorded vref if available else use lookup tables:
                     if vref_recorded is not None:
                         vref = vref_recorded.array[s]
+                    elif gw.array[s].mask.all():
+                        continue  # If the slice is all masked, skip...
                     else:
                         vref = table.vref(setting, gw.array[s])
                     self.array[s] = vref + offset
