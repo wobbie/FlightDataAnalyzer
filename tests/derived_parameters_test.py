@@ -5636,6 +5636,7 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
         self.node_class = FlapManoeuvreSpeed
         self.airspeed = P('Airspeed', np.ma.repeat(200, 90))
         self.weight = P('Gross Weight Smoothed', np.ma.repeat((50000, 60000), 45))
+        self.altitude = P('Altitude STD', np.ma.arange(20010, 19920, -1))
         self.descents = buildsections('Descent To Flare', (2, 42), (47, 87))
         self.flap_lever = M(
             name='Flap Lever',
@@ -5647,8 +5648,9 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
     @patch('analysis_engine.derived_parameters.at')
     @patch('analysis_engine.library.at')
     def test_can_operate(self, at0, at1):
-        nodes = ('Airspeed', 'Descent To Flare', 'Gross Weight Smoothed',
-                 'Model', 'Series', 'Family', 'Engine Series', 'Engine Type')
+        nodes = ('Airspeed', 'Altitude STD', 'Descent To Flare',
+                 'Gross Weight Smoothed', 'Model', 'Series', 'Family',
+                 'Engine Series', 'Engine Type')
         attrs = dict(izip(
             ('model', 'series', 'family', 'engine_type', 'engine_series'),
             self.generate_attributes('boeing'),
@@ -5693,7 +5695,7 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
 
         node = self.node_class()
         node.derive(self.airspeed, self.flap_lever, None, self.weight,
-                    None, None, self.descents, *attributes)
+                    None, None, self.altitude, self.descents, *attributes)
 
         attributes = [a.value for a in attributes]
         at0.get_vspeed_map.assert_called_once_with(*attributes)
@@ -5702,7 +5704,7 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
             (201, 181, 0, 161, 161, 176, 166, 156, 147, 146),
             (10, 10, 10, 10, 5, 5, 10, 10, 10, 10)
         )
-        for s in slice(0, 2), slice(20, 30), slice(42, 47), slice(87, 90):
+        for s in slice(0, 10), slice(20, 30), slice(42, 47), slice(87, 90):
             expected[s] = np.ma.masked
         ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
 
@@ -5725,7 +5727,7 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
 
         node = self.node_class()
         node.derive(self.airspeed, self.flap_lever, None, self.weight,
-                    None, None, self.descents, *attributes)
+                    None, None, self.altitude, self.descents, *attributes)
 
         attributes = [a.value for a in attributes]
         at0.get_vspeed_map.assert_called_once_with(*attributes)
@@ -5734,7 +5736,7 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
             (210, 190, 0, 170, 160, 170, 160, 150, 147, 146),
             (10, 10, 10, 10, 5, 5, 10, 10, 10, 10)
         )
-        for s in slice(0, 2), slice(20, 30), slice(42, 47), slice(87, 90):
+        for s in slice(0, 10), slice(20, 30), slice(42, 47), slice(87, 90):
             expected[s] = np.ma.masked
         ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
 
@@ -5769,13 +5771,14 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
 
         node = self.node_class()
         node.derive(self.airspeed, self.flap_lever, None, self.weight,
-                    self.vref_25, self.vref_30, self.descents, *attributes)
+                    self.vref_25, self.vref_30, self.altitude, self.descents,
+                    *attributes)
 
         attributes = [a.value for a in attributes]
         at0.get_vspeed_map.assert_called_once_with(*attributes)
         at1.get_fms_map.assert_called_once_with(*attributes[:3])
         expected = np.ma.repeat((230, 210, 190, 170, 170, 155, 150), 10)
-        for s in slice(0, 2), slice(32, 37), slice(67, 70):
+        for s in slice(0, 10), slice(32, 37), slice(67, 70):
             expected[s] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
