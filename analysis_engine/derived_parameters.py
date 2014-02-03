@@ -3405,8 +3405,33 @@ class GrossWeight(DerivedParameterNode):
     '''
     units = ut.KG
     
-    def derive(self, zfw=KPV('Zero Fuel Weight'), fq=P('Fuel Qty')):
-        self.array = fq.array + zfw.get_first().value
+    @classmethod
+    def can_operate(cls, available):
+        return (all_of(('AFR Landing Gross Weight', 'HDF Duration'), available) or
+                all_of(('Zero Fuel Weight', 'Fuel Qty'), available))
+    
+    def derive(self, zfw=KPV('Zero Fuel Weight'), fq=P('Fuel Qty'),
+               duration=A('HDF Duration'),
+               afr_land_wgt=A('AFR Landing Gross Weight'),
+               afr_takeoff_wgt=A('AFR Takeoff Gross Weight'),
+               touchdowns=KTI('Touchdown'),
+               liftoffs=KTI('Liftoff')):
+        if afr_land_wgt and afr_land_wgt.value and duration and duration.value:
+            self.array = np.ma.zeros(duration.value)
+            if (liftoffs and touchdowns and
+                afr_takeoff_wgt and afr_takeoff_wgt.value):
+                liftoff_index = int(liftoffs.get_first().index)
+                touchdown_index = int(touchdowns.get_last().index)
+                self.array[:liftoff_index] = np.ma.masked
+                self.array[touchdown_index:] = np.ma.masked
+                index_difference = touchdown_index - liftoff_index
+                self.array[liftoff_index:touchdown_index] = \
+                    np.linspace(liftoff_index, touchdown_index,
+                                index_difference)
+            else:
+                self.array.fill(afr_land_wgt.value)
+        else:
+            self.array = fq.array + zfw.get_first().value
 
 
 class GrossWeightSmoothed(DerivedParameterNode):
