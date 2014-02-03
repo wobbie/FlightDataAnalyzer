@@ -178,7 +178,7 @@ def _rate_of_turn(heading):
     '''
     heading.array = repair_mask(straighten_headings(heading.array),
                                 repair_duration=None)
-    rate_of_turn = np.ma.abs(rate_of_change(heading, 8))
+    rate_of_turn = np.ma.abs(rate_of_change(heading, 2))
     rate_of_turn_masked = \
         np.ma.masked_greater(rate_of_turn,
                              settings.RATE_OF_TURN_SPLITTING_THRESHOLD)
