@@ -46,10 +46,15 @@ class BottomOfDescent(KeyTimeInstanceNode):
     '''
     Bottom of a descent phase, which may be a go-around, touch and go or landing.
     '''
+    @classmethod
+    def can_operate(cls, available):
+        return ('HDF Duration' in available and
+                any_of(('Climb Cruise Descent', 'Airborne'), available))
+    
     def derive(self, ccds=S('Climb Cruise Descent'),
-               airs=S('Airborne')):
-        air_list = [a.stop_edge for a in airs] if airs else []
-        climb_list = [c.stop_edge for c in ccds] if ccds else []
+               airs=S('Airborne'), duration=A('HDF Duration')):
+        air_list = [a.stop_edge or duration.value for a in airs] if airs else []
+        climb_list = [c.stop_edge or duration.value for c in ccds] if ccds else []
         ends = sorted(air_list+climb_list)
         index = 0
         while index<len(ends)-1:
@@ -62,8 +67,10 @@ class BottomOfDescent(KeyTimeInstanceNode):
             else:
                 self.create_kti(ends[index])
                 index += 1
-        self.create_kti(ends[-1])
-                
+        if ends:
+            # Ends may not exist for non-START_AND_STOP segments.
+            self.create_kti(ends[-1])
+
 
 # TODO: Determine an altitude peak per climb.
 class AltitudePeak(KeyTimeInstanceNode):
