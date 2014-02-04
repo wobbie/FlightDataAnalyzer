@@ -10772,7 +10772,7 @@ class ZeroFuelWeight(KeyPointValueNode):
             weight = dry_operating_wgt.value
             if payload and payload.value:
                 weight += payload.value
-        return self.create_kpv(0, weight)
+        self.create_kpv(0, weight)
 
 
 class GrossWeightDelta60SecondsInFlightMax(KeyPointValueNode):
