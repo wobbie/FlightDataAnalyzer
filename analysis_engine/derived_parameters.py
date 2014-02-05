@@ -6167,16 +6167,16 @@ class V2Lookup(DerivedParameterNode):
         ), available)
 
         flap = any_of((
-            'Configuration',
-            'Flap',
+            'Flap Lever',
+            'Flap Lever (Synthetic)',
         ), available)
 
         attrs = (model, series, family, engine_type, engine_series)
         return core and flap and lookup_table(cls, 'v2', *attrs)
 
     def derive(self,
-               flap=M('Flap'),
-               conf=M('Configuration'),
+               flap_lever=M('Flap Lever'),
+               flap_synth=M('Flap Lever (Synthetic)'),
                airspeed=P('Airspeed'),
                weight_liftoffs=KPV('Gross Weight At Liftoff'),
                liftoffs=KTI('Liftoff'),
@@ -6213,7 +6213,7 @@ class V2Lookup(DerivedParameterNode):
             if index is None:
                 continue
 
-            detent = (conf or flap).array[index]
+            detent = (flap_lever or flap_synth).array[index]
 
             try:
                 self.array[phase] = table.v2(detent, weight)
@@ -6324,8 +6324,8 @@ class VrefLookup(DerivedParameterNode):
         ), available)
 
         flap = any_of((
-            'Configuration',
-            'Flap',
+            'Flap Lever',
+            'Flap Lever (Synthetic)',
         ), available)
 
         weight = any_of((
@@ -6337,8 +6337,8 @@ class VrefLookup(DerivedParameterNode):
         return core and flap and weight and lookup_table(cls, 'vref', *attrs)
 
     def derive(self,
-               flap=M('Flap'),
-               conf=M('Configuration'),
+               flap_lever=M('Flap Lever'),
+               flap_synth=M('Flap Lever (Synthetic)'),
                air_spd=P('Airspeed'),
                gw=P('Gross Weight Smoothed'),
                approaches=S('Approach And Landing'),
@@ -6372,7 +6372,7 @@ class VrefLookup(DerivedParameterNode):
                 return
 
         # Determine the maximum detent in advance to avoid multiple lookups:
-        parameter = conf or flap
+        parameter = flap_lever or flap_synth
         max_detent = max(table.vref_detents, key=lambda x: parameter.state.get(x, -1))
 
         for phase in phases:
