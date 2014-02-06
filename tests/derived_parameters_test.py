@@ -4792,16 +4792,16 @@ class TestV2Lookup(unittest.TestCase, NodeTest):
         weight_unit = ut.TONNE
         tables = {'v2': {
             'weight': ( 35,  40,  45,  50,  55,  60,  65),
-               '1+F': (113, 119, 126, 132, 139, 145, 152),
+           'Lever 1': (113, 119, 126, 132, 139, 145, 152),
         }}
-        fallback = {'v2': {'2': 140}}
+        fallback = {'v2': {'Lever 2': 140}}
 
     class VSC1(VelocitySpeed):
         '''
         Table for aircraft with configuration and fallback tables only.
         '''
         weight_unit = None
-        fallback = {'v2': {'1+F': 135}}
+        fallback = {'v2': {'Lever 1': 135}}
 
     class VSF0(VelocitySpeed):
         '''
@@ -5003,16 +5003,16 @@ class TestVrefLookup(unittest.TestCase, NodeTest):
         weight_unit = ut.TONNE
         tables = {'vref': {
             'weight': ( 35,  40,  45,  50,  55,  60,  65),
-              'Full': (113, 119, 126, 132, 139, 145, 152),
+        'Lever Full': (113, 119, 126, 132, 139, 145, 152),
         }}
-        fallback = {'vref': {'3': 140}}
+        fallback = {'vref': {'Lever 3': 140}}
 
     class VSC1(VelocitySpeed):
         '''
         Table for aircraft with configuration and fallback tables only.
         '''
         weight_unit = None
-        fallback = {'vref': {'Full': 135}}
+        fallback = {'vref': {'Lever Full': 135}}
 
     class VSF0(VelocitySpeed):
         '''

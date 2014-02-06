@@ -6141,7 +6141,7 @@ class V2Lookup(DerivedParameterNode):
     In cases where values cannot be derived solely from recorded parameters, we
     can make use of a look-up table to determine values for velocity speeds.
 
-    For V2, looking up a value requires the weight and flap (surface detents)
+    For V2, looking up a value requires the weight and flap (lever detents)
     at liftoff.
 
     Flap is used as the first dependency to avoid interpolation of flap detents
@@ -6299,7 +6299,7 @@ class VrefLookup(DerivedParameterNode):
     In cases where values cannot be derived solely from recorded parameters, we
     can make use of a look-up table to determine values for velocity speeds.
 
-    For Vref, looking up a value requires the weight and flap (surface detents)
+    For Vref, looking up a value requires the weight and flap (lever detents)
     at touchdown or the lowest point in a go-around.
 
     Flap is used as the first dependency to avoid interpolation of flap detents
@@ -6382,9 +6382,9 @@ class VrefLookup(DerivedParameterNode):
             weight = repaired_gw[index] if gw is not None else None
 
             if touchdowns.get(within_slice=phase) or detent in table.vref_detents:
-                # We either touched down, so use the touchdown flap/conf
-                # detent, or we had reached a maximum flap detent during the
-                # approach which is in the vref table.
+                # We either touched down, so use the touchdown flap lever
+                # detent, or we had reached a maximum flap lever detent during
+                # the approach which is in the vref table.
                 pass
             else:
                 # Not the final landing and max detent not in vspeed table,
