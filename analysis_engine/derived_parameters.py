@@ -6407,6 +6407,72 @@ class VrefLookup(DerivedParameterNode):
 
 
 ########################################
+# Approach Speed (Vapp)
+
+
+class Vapp(DerivedParameterNode):
+    '''
+    Approach Speed (Vapp) can be derived for different aircraft.
+
+    If the value is provided in an achieved flight record (AFR), we use this in
+    preference. This allows us to cater for operators that use improved
+    performance tables so that they can provide the values that they used.
+
+    Some other aircraft types record multiple parameters in the same location
+    within data frames. We need to select only the data that we are interested
+    in, i.e. the Vapp values.
+
+    The value is restricted to the approach and landing phases which includes
+    all approaches that result in landings and go-arounds.
+    '''
+
+    units = ut.KT
+
+    @classmethod
+    def can_operate(cls, available, afr_vapp=A('AFR Vapp')):
+
+        afr = all_of((
+            'Airspeed',
+            'AFR Vapp',
+            'Approach And Landing',
+        ), available) and afr_vapp and afr_vapp.value >= AIRSPEED_THRESHOLD
+
+        embraer = all_of((
+            'Airspeed',
+            'VR-Vapp',
+            'Approach And Landing',
+        ), available)
+
+        return afr or embraer
+
+    def derive(self,
+               airspeed=P('Airspeed'),
+               vr_vapp=A('VR-Vapp'),
+               afr_vapp=A('AFR Vapp'),
+               approaches=S('Approach And Landing')):
+
+        # Prepare a zeroed, masked array based on the airspeed:
+        self.array = np_ma_masked_zeros_like(airspeed.array, np.int)
+
+        # Determine the sections of flight to populate:
+        phases = [approach.slice for approach in approaches]
+
+        # 1. Use value provided in achieved flight record (if available):
+        if afr_vapp and afr_vapp.value >= AIRSPEED_THRESHOLD:
+            for phase in phases:
+                self.array[phase] = round(afr_vapp.value)
+            return
+
+        # 2. Derive parameter for Embraer 170/190:
+        if vr_vapp:
+            for phase in phases:
+                value = most_common_value(vr_vapp.array[phase].astype(np.int))
+                if value is not None:
+                    self.array[phase] = value
+            return
+
+
+########################################
 # Maximum Operating Speed (VMO)
 
 

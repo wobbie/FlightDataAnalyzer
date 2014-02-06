@@ -178,6 +178,7 @@ from analysis_engine.derived_parameters import (
     MinimumAirspeed,
     V2,
     V2Lookup,
+    Vapp,
     Vref,
     VrefLookup,
     VMOLookup,
@@ -5139,6 +5140,56 @@ class TestVrefLookup(unittest.TestCase, NodeTest):
         attributes = (a.value for a in attributes)
         at.get_vspeed_map.assert_called_once_with(*attributes)
         expected = np.ma.repeat((0, 135, 0, 135, 0), (2, 40, 24, 40, 22))
+        expected[expected == 0] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+
+########################################
+# Approach Speed (VAPP)
+
+
+class TestVapp(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = Vapp
+        self.airspeed = P('Airspeed', np.ma.repeat(200, 128))
+        self.approaches = buildsections('Approach And Landing', (2, 42), (66, 106))
+
+    def test_can_operate(self):
+        # AFR:
+        self.assertTrue(self.node_class.can_operate(
+            ('Airspeed', 'AFR Vapp', 'Approach And Landing'),
+            afr_vapp=A('AFR Vapp', 120),
+        ))
+        self.assertFalse(self.node_class.can_operate(
+            ('Airspeed', 'AFR Vapp', 'Approach And Landing'),
+            afr_vapp=A('AFR Vapp', 70),
+        ))
+        # Embraer:
+        self.assertTrue(self.node_class.can_operate(
+            ('Airspeed', 'VR-Vapp', 'Approach And Landing'),
+        ))
+
+    def test_derive__nothing(self):
+        node = self.node_class()
+        node.derive(self.airspeed, None, None, self.approaches)
+        expected = np.ma.repeat(0, 128)
+        expected[expected == 0] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__afr_vapp(self):
+        afr_vapp = A('AFR Vapp', 120)
+        node = self.node_class()
+        node.derive(self.airspeed, None, afr_vapp, self.approaches)
+        expected = np.ma.repeat((0, 120, 0, 120, 0), (2, 40, 24, 40, 22))
+        expected[expected == 0] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive__embraer(self):
+        vr_vapp = P('VR-Vapp', np.ma.repeat(150, 128))
+        node = self.node_class()
+        node.derive(self.airspeed, vr_vapp, None, self.approaches)
+        expected = np.ma.repeat((0, 150, 0, 150, 0), (2, 40, 24, 40, 22))
         expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
