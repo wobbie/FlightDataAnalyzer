@@ -9,6 +9,11 @@ You can view the differences in tagged versions as follows:
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
 
+v0.6.4
+------
+ - Airbus sidestick threshold increased to accommodate aircraft with one bit offsets on the inactive stick.
+ - Pilot Flying identification by means of VHF usage removed
+
 v0.6.3
 ------
  - Fix to allow takeoff sections to start at the beginning of the data.
