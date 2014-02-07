@@ -43,6 +43,7 @@ from analysis_engine.library import (ambiguous_runway,
                                      cycle_select,
                                      find_edges,
                                      find_edges_on_state_change,
+                                     first_valid_parameter,
                                      hysteresis,
                                      index_at_value,
                                      index_of_first_start,
@@ -78,7 +79,6 @@ from analysis_engine.library import (ambiguous_runway,
                                      trim_slices,
                                      valid_slices_within_array,
                                      value_at_index,
-                                     vspeed_lookup,
                                      vstack_params_where_state)
 
 
@@ -1312,6 +1312,73 @@ class AirspeedMinusV2For3Sec35To1000FtMin(KeyPointValueNode):
 
 
 ########################################
+# Airspeed: Minus Minimum Airspeed
+
+
+class AirspeedMinusMinimumAirspeedAbove10000FtMin(KeyPointValueNode):
+    '''
+    Minimum difference between airspeed and the minimum airspeed above 10,000
+    ft. A positive value measured ensures that the aircraft is above the speed
+    limit below which there is a reduced manoeuvring capability.
+    '''
+
+    def derive(self,
+               air_spd=P('Airspeed Minus Minimum Airspeed'),
+               alt_std=P('Altitude STD')):
+
+        self.create_kpvs_within_slices(air_spd.array,
+                                       alt_std.slices_above(10000),
+                                       min_value)
+
+
+class AirspeedMinusMinimumAirspeed35To10000FtMin(KeyPointValueNode):
+    '''
+    Minimum difference between airspeed and the minimum airspeed from 35 to
+    10,000 ft. A positive value measured ensures that the aircraft is above the
+    speed limit below which there is a reduced manoeuvring capability.
+    '''
+
+    def derive(self,
+               air_spd=P('Airspeed Minus Minimum Airspeed'),
+               alt_std=P('Altitude STD')):
+
+        self.create_kpvs_within_slices(air_spd.array,
+                                       alt_std.slices_from_to(35, 10000),
+                                       min_value)
+
+
+class AirspeedMinusMinimumAirspeed10000To50FtMin(KeyPointValueNode):
+    '''
+    Minimum difference between airspeed and the minimum airspeed from 10,000 to
+    50 ft. A positive value measured ensures that the aircraft is above the
+    speed limit below which there is a reduced manoeuvring capability.
+    '''
+
+    def derive(self,
+               air_spd=P('Airspeed Minus Minimum Airspeed'),
+               alt_std=P('Altitude STD')):
+
+        self.create_kpvs_within_slices(air_spd.array,
+                                       alt_std.slices_from_to(10000, 50),
+                                       min_value)
+
+
+class AirspeedMinusMinimumAirspeedDuringGoAroundMin(KeyPointValueNode):
+    '''
+    Minimum difference between airspeed and the minimum airspeed during
+    go-around and the climbout phase. A positive value measured ensures that
+    the aircraft is above the speed limit below which there is a reduced
+    manoeuvring capability.
+    '''
+
+    def derive(self,
+               air_spd=P('Airspeed Minus Minimum Airspeed'),
+               phases=S('Go Around And Climbout')):
+
+        self.create_kpvs_within_slices(air_spd.array, phases, min_value)
+
+
+########################################
 # Airspeed: Relative
 
 
@@ -1546,18 +1613,6 @@ class AirspeedRelativeFor3Sec20FtToTouchdownMin(KeyPointValueNode):
                         self.frequency, duration.value),
             min_value,
         )
-
-
-class AirspeedMinusMinManeouvringSpeedMin(KeyPointValueNode):
-    '''
-    '''
-
-    units = ut.KT
-
-    def derive(self, spd_rel=P('Airspeed Minus Min Maneouvring Speed'),
-               airborne=S('Airborne')):
-
-        self.create_kpvs_within_slices(spd_rel.array, airborne, min_value)
 
 
 ########################################
@@ -1924,24 +1979,39 @@ class AirspeedWithFlapDuringDescentMin(KeyPointValueNode, FlapOrConfigurationMax
             self.create_kpv(index, value, flap=detent)
 
 
-class AirspeedRelativeWithFlapDuringDescentMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
+class AirspeedMinusFlapManoeuvreSpeedWithFlapDuringDescentMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
+    Airspeed relative to the flap manoeuvre speed during the descent phase for
+    each flap setting.
+
+    Based on Flap Lever for safety based investigations which primarily
+    depend upon the pilot actions, rather than maintenance investigations
+    which depend upon the actual flap surface position. Uses Flap Lever if
+    available otherwise falls back to Flap Lever (Synthetic) which is
+    established from other sources.
     '''
 
-    NAME_FORMAT = 'Airspeed Relative With Flap %(flap)s During Descent Min'
+    NAME_FORMAT = 'Airspeed Minus Flap Manoeuvre Speed With Flap %(flap)s During Descent Min'
     NAME_VALUES = NAME_VALUES_LEVER
     units = ut.KT
 
     @classmethod
     def can_operate(cls, available):
 
-        return any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available) \
-            and all_of(('Airspeed Relative', 'Descent To Flare'), available)
+        core = all_of((
+            'Airspeed Minus Flap Manoeuvre Speed',
+            'Descent To Flare',
+        ), available)
+        flap = any_of((
+            'Flap Lever',
+            'Flap Lever (Synthetic)',
+        ), available)
+        return core and flap
 
     def derive(self,
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
-               airspeed=P('Airspeed Relative'),
+               airspeed=P('Airspeed Minus Flap Manoeuvre Speed'),
                scope=S('Descent To Flare')):
 
         flap = flap_lever or flap_synth
@@ -3084,8 +3154,7 @@ class AltitudeAtFirstFlapExtensionAfterLiftoff(KeyPointValueNode):
 
 class AltitudeAtFlapExtensionWithGearDown(KeyPointValueNode):
     '''
-    Prepared to cover one customer's SOP relating to selection of Flap 20 on
-    the approach.
+    Altitude at flap extensions while gear is down and aircraft is airborne.
     '''
 
     NAME_FORMAT = 'Altitude At Flap %(flap)s Extension With Gear Down'
@@ -3110,8 +3179,12 @@ class AltitudeAtFlapExtensionWithGearDown(KeyPointValueNode):
         # Raw flap values must increase to detect extensions.
         extend = np.ma.diff(flap.array.raw) > 0
 
-        for air_down in slices_and((a.slice for a in airborne),
-                                   (g.slice for g in gear_ext)):
+        slices = slices_and(
+            (a.slice for a in airborne),
+            (g.slice for g in gear_ext),
+        )
+
+        for air_down in slices:
             for index in np.ma.where(extend[air_down])[0]:
                 # The flap we are moving to is +1 from the diff index
                 index = (air_down.start or 0) + index + 1
@@ -3121,8 +3194,7 @@ class AltitudeAtFlapExtensionWithGearDown(KeyPointValueNode):
 
 class AirspeedAtFlapExtensionWithGearDown(KeyPointValueNode):
     '''
-    Prepared to cover one customer's SOP relating to selection of Flap 20 on
-    the approach.
+    Airspeed at flap extensions while gear is down and aircraft is airborne.
     '''
 
     NAME_FORMAT = 'Airspeed At Flap %(flap)s Extension With Gear Down'
@@ -3147,8 +3219,12 @@ class AirspeedAtFlapExtensionWithGearDown(KeyPointValueNode):
         # Raw flap values must increase to detect extensions.
         extend = np.ma.diff(flap.array.raw) > 0
 
-        for air_down in slices_and((a.slice for a in airborne),
-                                   (g.slice for g in gear_ext)):
+        slices = slices_and(
+            (a.slice for a in airborne),
+            (g.slice for g in gear_ext),
+        )
+
+        for air_down in slices:
             for index in np.ma.where(extend[air_down])[0]:
                 # The flap we are moving to is +1 from the diff index
                 index = (air_down.start or 0) + index + 1
@@ -3169,98 +3245,6 @@ class AltitudeRadioCleanConfigurationMin(KeyPointValueNode):
 
         alt_rad_noflap = np.ma.masked_where(flap.array != '0', alt_rad.array)
         self.create_kpvs_within_slices(alt_rad_noflap, gear_retr, min_value)
-
-
-##########################################################################
-# Speeds relative to Vref Flap 30 + 80 kts (Boeing procedures for 757/767).
-##########################################################################
-
-
-class AirspeedRelativeAtFirstFlapRetraction(KeyPointValueNode):
-    '''
-    Specific to certain 757/767 operations, this is the speed relative to the
-    Vref for flap 30 plus 80kts, at the point of first flap retraction.
-    '''
-    
-    name = 'Airspeed Relative To Vref30+80 At First Flap Retraction'
-    units = ut.KT
-
-    def derive(self,
-               airspeed=P('Airspeed'),
-               gw=P('Gross Weight Smoothed'),
-               alt_retract=KPV('Altitude At First Flap Change After Liftoff'),
-               series=A('Series'),
-               engine=A('Engine Type')):
-
-        if series.value not in ['B757-200(F)', 'B767-300F(ER)']:
-            return
-        if alt_retract:
-            index = alt_retract[0].index
-            speed_ret = value_at_index(airspeed.array, index)
-            gw_ret = value_at_index(gw.array, index)
-            # Get the Vref speed for flap 30 and the current weight.
-            vref = vspeed_lookup('Vref', series.value, engine.value, '30', gw_ret)
-            self.create_kpv(index, speed_ret - (vref + 80.0))
-
-
-class AirspeedRelativeAtFirstFlapExtensionWithGearDown(KeyPointValueNode):
-    '''
-    Specific to certain 757/767 operations, this is the speed relative to the
-    Vref at the landing weight, assuming a flap 30 landing, plus 80kts.
-    '''
-    
-    name = 'Airspeed Relative To Vref30+80 At First Flap Extension With Gear Down'
-    units = ut.KT
-
-    def derive(self,
-               speed=KPV('Airspeed At Flap Extension With Gear Down'),
-               gw_ldg=KPV('Gross Weight At Touchdown'),
-               series=A('Series'),
-               engine=A('Engine Type')):
-
-        if series.value not in ['B757-200(F)', 'B767-300F(ER)']:
-            return
-        kpv_20 = [k for k in speed if '20' in k.name]
-        if not kpv_20:
-            # The crew did not select flap 20 with gear down on this flight.
-            return
-        # If there were multiple flap deployments, we'll just use the last one.
-        index = kpv_20[-1].index
-        speed_20 = kpv_20[-1].value
-        # Get the Vref speed for a landing at flap 30 and the projected weight.
-        vref_ldg = vspeed_lookup('Vref', series.value, engine.value, '30', gw_ldg[0].value)
-        self.create_kpv(index, speed_20 - (vref_ldg + 80.0))
-
-
-class AirspeedRelativeAtFlap20SelectionWithGearDown(KeyPointValueNode):
-    '''
-    Specific to certain 757/767 operations, this is the speed relative to the
-    Vref at the landing weight, assuming a flap 30 landing, plus 80kts.
-    '''
-
-    name = 'Airspeed Relative To Vref30+80 At Flap 20 Selection With Gear Down'
-    units = ut.KT
-
-    def derive(self,
-               speed=KPV('Airspeed At Flap Extension With Gear Down'),
-               gw_ldg=KPV('Gross Weight At Touchdown'),
-               series=A('Series'), engine=A('Engine Type'),):
-
-        if series.value not in ['B757-200(F)', 'B767-300F(ER)']:
-            return
-        kpv_20 = speed.get_ordered_by_index()
-        if not kpv_20:
-            # The crew did not extend flap with gear down on this flight.
-            return
-        # We are only interested in the first one.
-        index = kpv_20[0].index
-        speed_20 = kpv_20[0].value
-        # Get the Vref speed for a landing at flap 30 and the projected weight.
-        vref_ldg = vspeed_lookup('Vref', series.value, engine.value, '30', gw_ldg[0].value)
-        self.create_kpv(index, speed_20 - (vref_ldg + 80.0))
-
-
-##########################################################################
 
 
 class AltitudeAtFirstFlapChangeAfterLiftoff(KeyPointValueNode):
@@ -10707,36 +10691,46 @@ class WindAcrossLandingRunwayAt50Ft(KeyPointValueNode):
 
 class GrossWeightAtLiftoff(KeyPointValueNode):
     '''
-    The gross weight (based on smoothed data for better accuracy) at Liftoff
+    Gross weight of the aircraft at liftoff.
+
+    We use smoothed gross weight data for better accuracy.
     '''
 
     units = ut.KG
 
-    def derive(self, gross_wgt=P('Gross Weight Smoothed'),
-               liftoffs=KTI('Liftoff')):
+    def derive(self, gw=P('Gross Weight Smoothed'), liftoffs=KTI('Liftoff')):
         try:
-            #Q: Is this repair required for GWSmoothed?
-            array = repair_mask(gross_wgt.array, repair_duration=None)
+            # TODO: Things to consider related to gross weight:
+            #       - Does smoothed gross weight need to be repaired?
+            #       - What should the duration be? Vref Lookup uses 130...
+            #       - Should we extrapolate values as we do for Vref Lookup?
+            array = repair_mask(gw.array, repair_duration=None)
         except ValueError:
-            # No valid data to repair. 
+            self.warning("KPV '%s' will not be created because '%s' array "
+                         "could not be repaired.", self.name, gw.name)
             return
         self.create_kpvs_at_ktis(array, liftoffs)
 
 
 class GrossWeightAtTouchdown(KeyPointValueNode):
     '''
-    The gross weight (based on smoothed data for better accuracy) at Touchdown
+    Gross weight of the aircraft at touchdown.
+
+    We use smoothed gross weight data for better accuracy.
     '''
 
     units = ut.KG
 
-    def derive(self, gross_wgt=P('Gross Weight Smoothed'),
-               touchdowns=KTI('Touchdown')):
+    def derive(self, gw=P('Gross Weight Smoothed'), touchdowns=KTI('Touchdown')):
         try:
-            #Q: Is this repair required for GWSmoothed?
-            array = repair_mask(gross_wgt.array, repair_duration=None)
+            # TODO: Things to consider related to gross weight:
+            #       - Does smoothed gross weight need to be repaired?
+            #       - What should the duration be? Vref Lookup uses 130...
+            #       - Should we extrapolate values as we do for Vref Lookup?
+            array = repair_mask(gw.array, repair_duration=None)
         except ValueError:
-            # No valid data to repair. 
+            self.warning("KPV '%s' will not be created because '%s' array "
+                         "could not be repaired.", self.name, gw.name)
             return
         self.create_kpvs_at_ktis(array, touchdowns)
 
@@ -11036,7 +11030,15 @@ class LastFlapChangeToTakeoffRollEndDuration(KeyPointValueNode):
 
 class AirspeedMinusVMOMax(KeyPointValueNode):
     '''
-    Maximum VMO exceeding.
+    Maximum value of Airspeed relative to the Maximum Operating Speed (VMO).
+
+    Values of VMO are taken from recorded or derived values if available,
+    otherwise we fall back to using a value from a lookup table.
+
+    We also check to ensure that we have some valid samples in any recorded or
+    derived parameter, otherwise, again, we fall back to lookup tables. To
+    avoid issues with small samples of invalid data, we check that the area of
+    data we are interested in has no masked values.
     '''
 
     name = 'Airspeed Minus VMO Max'
@@ -11050,11 +11052,18 @@ class AirspeedMinusVMOMax(KeyPointValueNode):
 
     def derive(self,
                airspeed=P('Airspeed'),
-               vmo=P('VMO'),
+               vmo_record=P('VMO'),
                vmo_lookup=P('VMO Lookup'),
                airborne=S('Airborne')):
 
-        vmo = vmo or vmo_lookup
+        phases = airborne.get_slices()
+
+        vmo = first_valid_parameter(vmo_record, vmo_lookup, phases=phases)
+
+        if vmo is None:
+            self.array = np_ma_masked_zeros_like(airspeed.array)
+            return
+
         self.create_kpvs_within_slices(
             airspeed.array - vmo.array,
             airborne,
@@ -11064,7 +11073,15 @@ class AirspeedMinusVMOMax(KeyPointValueNode):
 
 class MachMinusMMOMax(KeyPointValueNode):
     '''
-    Maximum MMO exceeding.
+    Maximum value of Mach relative to the Maximum Operating Mach (MMO).
+
+    Values of MMO are taken from recorded or derived values if available,
+    otherwise we fall back to using a value from a lookup table.
+
+    We also check to ensure that we have some valid samples in any recorded or
+    derived parameter, otherwise, again, we fall back to lookup tables. To
+    avoid issues with small samples of invalid data, we check that the area of
+    data we are interested in has no masked values.
     '''
 
     name = 'Mach Minus MMO Max'
@@ -11078,11 +11095,18 @@ class MachMinusMMOMax(KeyPointValueNode):
 
     def derive(self,
                mach=P('Mach'),
-               mmo=P('MMO'),
+               mmo_record=P('MMO'),
                mmo_lookup=P('MMO Lookup'),
                airborne=S('Airborne')):
 
-        mmo = mmo or mmo_lookup
+        phases = airborne.get_slices()
+
+        mmo = first_valid_parameter(mmo_record, mmo_lookup, phases=phases)
+
+        if mmo is None:
+            self.array = np_ma_masked_zeros_like(mach.array)
+            return
+
         self.create_kpvs_within_slices(
             mach.array - mmo.array,
             airborne,

@@ -73,7 +73,11 @@ from analysis_engine.key_point_values import (
     AirspeedDuringRejectedTakeoffMax,
     AirspeedGustsDuringFinalApproach,
     AirspeedMax,
-    AirspeedMinusMinManeouvringSpeedMin,
+    AirspeedMinusFlapManoeuvreSpeedWithFlapDuringDescentMin,
+    AirspeedMinusMinimumAirspeedAbove10000FtMin,
+    AirspeedMinusMinimumAirspeed35To10000FtMin,
+    AirspeedMinusMinimumAirspeed10000To50FtMin,
+    AirspeedMinusMinimumAirspeedDuringGoAroundMin,
     AirspeedMinusV235To1000FtMax,
     AirspeedMinusV235To1000FtMin,
     AirspeedMinusV2At35FtDuringTakeoff,
@@ -95,7 +99,6 @@ from analysis_engine.key_point_values import (
     AirspeedRelativeFor3Sec500To20FtMax,
     AirspeedRelativeFor3Sec500To20FtMin,
     AirspeedRelativeWithConfigurationDuringDescentMin,
-    AirspeedRelativeWithFlapDuringDescentMin,
     AirspeedTopOfDescentTo10000FtMax,
     AirspeedTopOfDescentTo4000FtMax,
     AirspeedTopOfDescentTo4000FtMin,
@@ -1742,17 +1745,89 @@ class TestAirspeedMinusV2For3Sec35To1000FtMin(unittest.TestCase, NodeTest):
         self.assertTrue(False, msg='Test Not Implemented')
 
 
+########################################
+# Airspeed: Minus Minimum Airspeed
 
-class TestAirspeedMinusMinManeouvringSpeedMin(unittest.TestCase, NodeTest):
-    
+
+class TestAirspeedMinusMinimumAirspeedAbove10000FtMin(unittest.TestCase, CreateKPVsWithinSlicesTest):
+
     def setUp(self):
-        self.node_class = AirspeedMinusMinManeouvringSpeedMin
-        self.operational_combinations = [('Airspeed Minus Min Maneouvring Speed',
-                                          'Airborne')]
+        self.node_class = AirspeedMinusMinimumAirspeedAbove10000FtMin
+        self.operational_combinations = [('Airspeed Minus Minimum Airspeed', 'Altitude STD')]
+        self.function = min_value
+        self.second_param_method_calls = [('slices_above', (10000,), {})]
+
+    def test_derive(self):
+        air_spd = P('Airspeed Minus Minimum Airspeed', np.ma.arange(200, 241))
+        alt_std = P('Altitude STD', np.ma.array(range(20) + range(20, -1, -1)) * 1000)
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(air_spd, alt_std)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(name=name, index=10, value=210),
+        ]))
+
+
+class TestAirspeedMinusMinimumAirspeed35To10000FtMin(unittest.TestCase, CreateKPVsWithinSlicesTest):
+
+    def setUp(self):
+        self.node_class = AirspeedMinusMinimumAirspeed35To10000FtMin
+        self.operational_combinations = [('Airspeed Minus Minimum Airspeed', 'Altitude STD')]
+        self.function = min_value
+        self.second_param_method_calls = [('slices_from_to', (35, 10000), {})]
+
+    def test_derive(self):
+        air_spd = P('Airspeed Minus Minimum Airspeed', np.ma.arange(200, 241))
+        alt_std = P('Altitude STD', np.ma.array(range(20) + range(20, -1, -1)) * 1000)
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(air_spd, alt_std)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(name=name, index=1, value=201),
+        ]))
+
+
+class TestAirspeedMinusMinimumAirspeed10000To50FtMin(unittest.TestCase, CreateKPVsWithinSlicesTest):
+
+    def setUp(self):
+        self.node_class = AirspeedMinusMinimumAirspeed10000To50FtMin
+        self.operational_combinations = [('Airspeed Minus Minimum Airspeed', 'Altitude STD')]
+        self.function = min_value
+        self.second_param_method_calls = [('slices_from_to', (10000, 50), {})]
+
+    def test_derive(self):
+        air_spd = P('Airspeed Minus Minimum Airspeed', np.ma.arange(200, 241))
+        alt_std = P('Altitude STD', np.ma.array(range(20) + range(20, -1, -1)) * 1000)
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(air_spd, alt_std)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(name=name, index=31, value=231),
+        ]))
+
+
+class TestAirspeedMinusMinimumAirspeedDuringGoAroundMin(unittest.TestCase, CreateKPVsWithinSlicesTest):
+
+    def setUp(self):
+        self.node_class = AirspeedMinusMinimumAirspeedDuringGoAroundMin
+        self.operational_combinations = [('Airspeed Minus Minimum Airspeed', 'Go Around And Climbout')]
+        self.function = min_value
+
+    def test_derive(self):
+        air_spd = P('Airspeed Minus Minimum Airspeed', np.ma.arange(200, 241))
+        go_around = buildsections('Go Around And Climbout', [10, 15], [35, 40])
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(air_spd, go_around)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(name=name, index=10, value=210),
+            KeyPointValue(name=name, index=35, value=235),
+        ]))
 
 
 ########################################
 # Airspeed: Relative
+
 
 class TestAirspeedRelativeAtTouchdown(unittest.TestCase, CreateKPVsAtKTIsTest):
 
@@ -2213,19 +2288,29 @@ class TestAirspeedWithFlapDuringDescentMin(unittest.TestCase, NodeTest):
         pass
 
 
-class TestAirspeedRelativeWithFlapDuringDescentMin(unittest.TestCase, NodeTest):
+class TestAirspeedMinusFlapManoeuvreSpeedWithFlapDuringDescentMin(unittest.TestCase, NodeTest):
 
     def setUp(self):
-        self.node_class = AirspeedRelativeWithFlapDuringDescentMin
+        self.node_class = AirspeedMinusFlapManoeuvreSpeedWithFlapDuringDescentMin
         self.operational_combinations = [
-            ('Flap Lever', 'Airspeed Relative', 'Descent To Flare'),
-            ('Flap Lever (Synthetic)', 'Airspeed Relative', 'Descent To Flare'),
-            ('Flap Lever', 'Flap Lever (Synthetic)', 'Airspeed Relative', 'Descent To Flare'),
+            ('Flap Lever', 'Airspeed Minus Flap Manoeuvre Speed', 'Descent To Flare'),
+            ('Flap Lever (Synthetic)', 'Airspeed Minus Flap Manoeuvre Speed', 'Descent To Flare'),
+            ('Flap Lever', 'Flap Lever (Synthetic)', 'Airspeed Minus Flap Manoeuvre Speed', 'Descent To Flare'),
         ]
 
-    @unittest.skip('Test not implemented.')
     def test_derive(self):
-        pass
+        array = np.ma.array((0, 0, 5, 10, 10, 10, 15, 15, 15, 35))
+        mapping = {int(f): str(f) for f in np.ma.unique(array)}
+        flap = M('Flap Lever', array, values_mapping=mapping)
+        airspeed = P('Airspeed', np.ma.arange(100, 0, -10))
+        descents = buildsection('Descent To Flare', 2, 8)
+        node = self.node_class()
+        node.derive(flap, None, airspeed, descents)
+        self.assertEqual(node.get_ordered_by_index(), [
+            KeyPointValue(index=2, value=80, name='Airspeed Minus Flap Manoeuvre Speed With Flap 5 During Descent Min'),
+            KeyPointValue(index=5, value=50, name='Airspeed Minus Flap Manoeuvre Speed With Flap 10 During Descent Min'),
+            KeyPointValue(index=8, value=20, name='Airspeed Minus Flap Manoeuvre Speed With Flap 15 During Descent Min'),
+        ])
 
 
 ########################################
@@ -3805,7 +3890,7 @@ class TestILSGlideslopeDeviation500To200FtMax(unittest.TestCase, ILSTest):
     # FIXME: Need to amend the test data as it produces no key point value for
     #        the 500-200ft altitude range. Originally this was not a problem
     #        before we split the 1000-250ft range in two.
-    @unittest.expectedFailure
+    @unittest.skip('Test does not work... Need to amend test data.')
     def test_derive_four_peaks(self):
         kpv = ILSGlideslopeDeviation500To200FtMax()
         kpv.derive(*self.prepare__glideslope__four_peaks())
@@ -9298,22 +9383,29 @@ class TestWindAcrossLandingRunwayAt50Ft(unittest.TestCase, NodeTest):
 # Weight
 
 
-class TestGrossWeightAtLiftoff(unittest.TestCase):
+class TestGrossWeightAtLiftoff(unittest.TestCase, NodeTest):
 
-    def test_can_operate(self):
-        opts = GrossWeightAtLiftoff.get_operational_combinations()
-        self.assertEqual(opts, [('Gross Weight Smoothed', 'Liftoff')])
+    def setUp(self):
+        self.node_class = GrossWeightAtLiftoff
+        self.operational_combinations = [('Gross Weight Smoothed', 'Liftoff')]
+        self.gw = P(name='Gross Weight Smoothed', array=np.ma.array((1, 2, 3)))
+        self.liftoffs = KTI(name='Liftoff', items=[
+            KeyTimeInstance(name='Liftoff', index=1),
+        ])
 
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test Not Implemented')
-        
-    def test_fully_masked_weight(self):
-        gwl = GrossWeightAtLiftoff()
-        gwl.derive(P(array=np.ma.array([1,2,3], mask=[1,1,1])),
-                   KTI(items=[KeyTimeInstance('', 1)]))
-        self.assertEqual(len(gwl), 0)
-        
+    def test_derive__basic(self):
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.gw, self.liftoffs)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(name=name, index=1, value=2),
+        ]))
+
+    def test_derive__masked(self):
+        self.gw.array.mask = True
+        node = self.node_class()
+        node.derive(self.gw, self.liftoffs)
+        self.assertEqual(len(node), 0)
 
 
 class TestGrossWeightAtTouchdown(unittest.TestCase, NodeTest):
@@ -9321,10 +9413,24 @@ class TestGrossWeightAtTouchdown(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = GrossWeightAtTouchdown
         self.operational_combinations = [('Gross Weight Smoothed', 'Touchdown')]
+        self.gw = P(name='Gross Weight Smoothed', array=np.ma.array((1, 2, 3)))
+        self.touchdowns = KTI(name='Touchdown', items=[
+            KeyTimeInstance(name='Touchdown', index=1),
+        ])
 
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test Not Implemented')
+    def test_derive__basic(self):
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.gw, self.touchdowns)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(name=name, index=1, value=2),
+        ]))
+
+    def test_derive__masked(self):
+        self.gw.array.mask = True
+        node = self.node_class()
+        node.derive(self.gw, self.touchdowns)
+        self.assertEqual(len(node), 0)
 
 
 class TestGrossWeightDelta60SecondsInFlightMax(unittest.TestCase):
@@ -9701,50 +9807,130 @@ class TestLastFlapChangeToTakeoffRollEndDuration(unittest.TestCase, NodeTest):
 
 
 class TestAirspeedMinusVMOMax(unittest.TestCase, NodeTest):
+
     def setUp(self):
         self.node_class = AirspeedMinusVMOMax
         self.operational_combinations = [
             ('VMO', 'Airspeed', 'Airborne'),
             ('VMO Lookup', 'Airspeed', 'Airborne'),
         ]
+        array = [300 + 40 * math.sin(n / (2 * math.pi)) for n in range(20)]
+        self.airspeed = P('Airspeed', np.ma.array(array))
+        self.vmo_record = P('VMO', np.ma.repeat(330, 20))
+        self.vmo_lookup = P('VMO Lookup', np.ma.repeat(335, 20))
+        self.airborne = buildsection('Airborne', 5, 15)
 
-    def test_derive(self):
-        vmo_array = np.ma.array([330] * 20)
-        airspeed_array = np.ma.array(
-            [300 + 40 * math.sin(n / (2 * math.pi)) for n in range(20)]
-        )
-        vmo = P('VMO', array=vmo_array)
-        airspeed = P('Airspeed', array=airspeed_array)
-        airborne = buildsection('Airborne', 5, 15)
+    def test_derive__record_only(self):
+        name = self.node_class.get_name()
         node = self.node_class()
-        node.derive(airspeed, vmo, None, airborne)
-        expected = [
-            KeyPointValue(index=10, value=9.991386482538246,
-                          name='Airspeed Minus VMO Max')
-        ]
-        self.assertEqual(node,  expected)
+        node.derive(self.airspeed, self.vmo_record, None, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=10, value=9.991386482538246, name=name),
+        ]))
+
+    def test_derive__lookup_only(self):
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.airspeed, None, self.vmo_lookup, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=10, value=4.991386482538246, name=name),
+        ]))
+
+    def test_derive__prefer_record(self):
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.airspeed, self.vmo_record, self.vmo_lookup, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=10, value=9.991386482538246, name=name),
+        ]))
+
+    def test_derive__record_masked(self):
+        self.vmo_record.array.mask = True
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.airspeed, self.vmo_record, self.vmo_lookup, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=10, value=4.991386482538246, name=name),
+        ]))
+
+    def test_derive__both_masked(self):
+        self.vmo_record.array.mask = True
+        self.vmo_lookup.array.mask = True
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.airspeed, self.vmo_record, self.vmo_lookup, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[]))
+
+    def test_derive__masked_within_phase(self):
+        self.vmo_record.array[:-1] = np.ma.masked
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.airspeed, self.vmo_record, self.vmo_lookup, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=10, value=4.991386482538246, name=name),
+        ]))
 
 
 class TestMachMinusMMOMax(unittest.TestCase, NodeTest):
+
     def setUp(self):
         self.node_class = MachMinusMMOMax
         self.operational_combinations = [
             ('MMO', 'Mach', 'Airborne'),
             ('MMO Lookup', 'Mach', 'Airborne'),
         ]
+        array = [0.8 + 0.04 * math.sin(n / (2 * math.pi)) for n in range(20)]
+        self.mach = P('Mach', np.ma.array(array))
+        self.mmo_record = P('MMO', np.ma.repeat(0.83, 20))
+        self.mmo_lookup = P('MMO Lookup', np.ma.repeat(0.82, 20))
+        self.airborne = buildsection('Airborne', 5, 15)
 
-    def test_derive(self):
-        mmo_array = np.ma.array([0.83] * 20)
-        airspeed_array = np.ma.array(
-            [0.8 + 0.04 * math.sin(n / (2 * math.pi)) for n in range(20)]
-        )
-        mmo = P('MMO', array=mmo_array)
-        airspeed = P('Airspeed', array=airspeed_array)
-        airborne = buildsection('Airborne', 5, 15)
+    def test_derive__record_only(self):
+        name = self.node_class.get_name()
         node = self.node_class()
-        node.derive(airspeed, mmo, None, airborne)
-        expected = [
-            KeyPointValue(index=10, value=0.009991386482538389,
-                          name='Mach Minus MMO Max')
-        ]
-        self.assertEqual(node,  expected)
+        node.derive(self.mach, self.mmo_record, None, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=10, value=0.009991386482538389, name=name),
+        ]))
+
+    def test_derive__lookup_only(self):
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.mach, None, self.mmo_lookup, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=10, value=0.019991386482538398, name=name),
+        ]))
+
+    def test_derive__prefer_record(self):
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.mach, self.mmo_record, self.mmo_lookup, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=10, value=0.009991386482538389, name=name),
+        ]))
+
+    def test_derive__record_masked(self):
+        self.mmo_record.array.mask = True
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.mach, self.mmo_record, self.mmo_lookup, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=10, value=0.019991386482538398, name=name),
+        ]))
+
+    def test_derive__both_masked(self):
+        self.mmo_record.array.mask = True
+        self.mmo_lookup.array.mask = True
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.mach, self.mmo_record, self.mmo_lookup, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[]))
+
+    def test_derive__masked_within_phase(self):
+        self.mmo_record.array[:-1] = np.ma.masked
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(self.mach, self.mmo_record, self.mmo_lookup, self.airborne)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=10, value=0.019991386482538398, name=name),
+        ]))

@@ -1,5 +1,5 @@
-import os
 import numpy as np
+import os
 import unittest
 
 from datetime import datetime, timedelta
@@ -325,14 +325,14 @@ class TestDeterminePilot(unittest.TestCase):
 
         items = [
             [
-                'test_data/identify_pilot_01.hdf5',
+                os.path.join(test_data_path, 'identify_pilot_01.hdf5'),
                 'Captain',
                 'Captain',
                 slice(686, 751),
                 slice(40773, 40872)
             ],
             [
-                'test_data/identify_pilot_02.hdf5',
+                os.path.join(test_data_path, 'identify_pilot_02.hdf5'),
                 'First Officer',
                 'First Officer',
                 slice(1015, 1162),

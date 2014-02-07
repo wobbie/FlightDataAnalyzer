@@ -1742,6 +1742,36 @@ def find_edges_on_state_change(state, array, change='entering', phase=None):
     return edge_list
 
 
+def first_valid_parameter(*parameters, **kwargs):
+    '''
+    Returns the first valid parameter from the provided list.
+
+    A parameter is valid if it has an array that is not fully masked.
+
+    Optionally, a list of phases can be provided during which the parameter
+    must be valid. We only require the parameter to be valid during one of the
+    phases.
+
+    :param *parameters: parameters to check for validity/availability.
+    :type *parameters: Parameter
+    :param phases: a list of slices where the parameter must be valid.
+    :type phases: list of slice
+    :returns: the first valid parameter from those provided.
+    :rtype: Parameter or None
+    '''
+    phases = kwargs.get('phases')
+    if not phases:
+        phases = [slice(None)]
+    for parameter in parameters:
+        if not parameter:
+            continue
+        for phase in phases:
+            if not parameter.array[phase].mask.all():
+                return parameter
+    else:
+        return None
+
+
 def first_valid_sample(array, start_index=0):
     '''
     Returns the first valid sample of data from a point in an array.
@@ -4967,6 +4997,28 @@ def runs_of_ones(bits):
     return np.ma.clump_unmasked(np.ma.masked_not_equal(bits, 1))
 
 
+def slices_of_runs(array):
+    '''
+    Provides a list of slices of runs of each value in the array.
+
+    If the provided array is a mapped array used for multi-states, we return the
+    string representation of the value. This function works as a generator which
+    yields a tuple of the value and a list of slices of each run of that value
+    in the provided array.
+
+    Note that the masked constant value is excluded from the returned data.
+
+    :param array: a numpy masked array or mapped array.
+    :type array: np.ma.array
+    '''
+    for value in np.ma.sort(np.ma.unique(array)):
+        if value is np.ma.masked:
+            continue
+        if hasattr(array, 'values_mapping'):
+            value = array.values_mapping[value]
+        yield value, runs_of_ones(array == value)
+
+
 def shift_slice(this_slice, offset):
     """
     This function shifts a slice by an offset. The need for this arises when
@@ -6271,31 +6323,6 @@ def value_at_index(array, index, interpolate=True):
         return r*high_value + (1-r) * low_value
 
 
-def vspeed_lookup(vspeed, aircraft, engine, flap, gw):
-    '''
-    Single point lookup for the vspeed tables.
-    
-    :param vspeed: Selection of "V2" or "Vref"
-    :type vspeed: string
-    :param aircraft: Aircraft series identifier.
-    :type aircraft: string
-    :param engine: Engine Type identifier.
-    :type engine: string
-    :param flap: Flap/conf detent
-    :type flap: string
-    :param gw: Gross Weight in kg
-    :type gw: float
-    
-    :returns: Vspeed in knots
-    :type: float
-    '''
-    vspeed_table = at.get_vspeed_map(series=aircraft, engine_type=engine)()
-    if vspeed.lower() == 'v2':
-        return vspeed_table.v2(flap, gw)
-    else:
-        return vspeed_table.vref(flap, gw)
-
-
 def vstack_params(*params):
     '''
     Create a multi-dimensional masked array with a dimension per param.
@@ -6662,3 +6689,44 @@ def is_day(when, latitude, longitude, twilight='civil'):
         return True # It is Day
     else:
         return False # It is Night
+
+
+##### TODO: Add memoize caching... Currently breaks tests!
+####from flightdatautilities.cache import memoize
+####@memoize
+def lookup_table(obj, name, _am, _as, _af, _et=None, _es=None):
+    '''
+    Fetch a lookup table by name for the specified aircraft.
+
+    Handles logging on the passed object if the lookup table is not found.
+
+    :param obj: the node class or instance calling this function.
+    :type obj: Node
+    :param name: the name of the table to lookup.
+    :type name: string
+    :param _am: the aircraft model attribute.
+    :type _am: Attribute
+    :param _as: the aircraft series attribute.
+    :type _as: Attribute
+    :param _af: the aircraft family attribute.
+    :type _af: Attribute
+    :param _et: the engine type attribute.
+    :type _et: Attribute
+    :param _es: the engine series attribute.
+    :type _es: Attribute
+    :returns: the instantiated velocity speed table.
+    :rtype: VelocitySpeed or None
+    '''
+    attributes = (_am, _as, _af, _et, _es)
+    attributes = [(a.value if a else None) for a in attributes]
+    try:
+        _vs = at.get_vspeed_map(*attributes)()
+    except KeyError:
+        pass
+    else:
+        if name in _vs.tables or name in _vs.fallback:
+            return _vs
+    message = 'No %s table available for '
+    message += ', '.join("'%s'" for i in range(len(attributes)))
+    obj.warning(message, name, *attributes)
+    return None
