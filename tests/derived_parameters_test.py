@@ -132,8 +132,10 @@ from analysis_engine.derived_parameters import (
     #ILSGlideslope,
     #ILSLocalizer,
     #ILSLocalizerRange,
+    Latitude,
     LatitudePrepared,
     LatitudeSmoothed,
+    Longitude,
     LongitudePrepared,
     LongitudeSmoothed,
     Mach,
@@ -4139,7 +4141,6 @@ class TestILSGlideslope(unittest.TestCase):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
-
 
 
 class TestILSLocalizer(unittest.TestCase):
