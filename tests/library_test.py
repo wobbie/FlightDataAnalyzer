@@ -102,6 +102,41 @@ class TestAlignSlices(unittest.TestCase):
                                   slice(None, None, None)])
 
 
+class TestFindSlicesOverlap(unittest.TestCase):
+    def test_find_slices_overlap(self):
+        slice1 = slice(None, 100)
+        slice2 = slice(90, None)
+        expected = slice(90, 100)
+        res = find_slices_overlap(slice1, slice2)
+        self.assertEqual(res, expected)
+
+        slice1 = slice(50, 100)
+        slice2 = slice(90, 150)
+        expected = slice(90, 100)
+        res = find_slices_overlap(slice1, slice2)
+        self.assertEqual(res, expected)
+
+        slice1 = slice(50, 90)
+        slice2 = slice(100, 150)
+        expected = None
+        res = find_slices_overlap(slice1, slice2)
+        self.assertEqual(res, expected)
+
+        slice1 = slice(50, 100, None)
+        slice2 = slice(90, 150, 1)
+        expected = slice(90, 100)
+        res = find_slices_overlap(slice1, slice2)
+        self.assertEqual(res, expected)
+
+        slice1 = slice(50, 100, -1)
+        slice2 = slice(90, 150, 1)
+        self.assertRaises(ValueError, find_slices_overlap, slice1, slice2)
+
+        slice1 = slice(50, 100)
+        slice2 = slice(90, 150, 2)
+        self.assertRaises(ValueError, find_slices_overlap, slice1, slice2)
+
+
 class TestAlignSlice(unittest.TestCase):
     @mock.patch('analysis_engine.library.align_slices')
     def test_align_slice(self, align_slices):
