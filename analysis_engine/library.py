@@ -4348,7 +4348,7 @@ def np_ma_zeros_like(array, mask=False, dtype=float):
     return np.ma.array(np.zeros_like(array.data), mask=mask, dtype=dtype)
 
 
-def np_ma_ones_like(array):
+def np_ma_ones_like(array, **kwargs):
     """
     Creates a masked array filled with ones. See also np_ma_zeros_like.
 
@@ -4357,7 +4357,7 @@ def np_ma_ones_like(array):
 
     :returns: Numpy masked array of unmasked 1.0 float values, length same as input array.
     """
-    return np_ma_zeros_like(array) + 1.0
+    return np_ma_zeros_like(array, **kwargs) + 1.0
 
 
 def np_ma_ones(length):
