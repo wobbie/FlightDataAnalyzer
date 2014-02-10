@@ -4524,7 +4524,7 @@ def offset_select(mode, param_list):
     raise ValueError ("offset_select called with unrecognised mode")
 
 
-def overflow_correction(param, fast=None, max_val=4095):
+def overflow_correction(param, fast=None, max_val=8191):
     '''
     Overflow Correction postprocessing procedure. Tested on Altitude Radio
     signals where only 12 bits are used for a signal that can reach over 8000.

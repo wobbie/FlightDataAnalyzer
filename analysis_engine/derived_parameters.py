@@ -922,6 +922,9 @@ class AltitudeRadio(DerivedParameterNode):
                 # correct for overflow, aligning the fast slice to each source
                 source.array = overflow_correction(
                     source, fast.get_aligned(source))
+                # Mask values less than 20. These values were left unmasked 
+                # previously for overflow_correction.
+                source.array = np.ma.masked_less(source.array, -20)
                 osources.append(source)
             sources = osources
 
