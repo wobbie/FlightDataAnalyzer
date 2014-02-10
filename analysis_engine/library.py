@@ -2894,6 +2894,22 @@ def interpolate(array, extrapolate=True):
     return array
 
 
+def interpolate_coarse(array):
+    '''
+    Interpolate a coarse array which changes infrequently, e.g.
+    [56, 56, 56, 57] -> [56, 56.333, 56.666, 57]
+    
+    :param array: Coarse array.
+    :type array: numpy masked array
+    :returns: Array interpolated between changing values.
+    :rtype: numpy masked array
+    '''
+    array = array.copy()
+    array.mask[1:] = np.ma.masked_equal(np.ma.diff(array.data), 0).mask | array.mask[1:]
+    # Q: Use interpolate function instead?
+    return repair_mask(array, repair_duration=None)
+
+
 def interleave(param_1, param_2):
     """
     Interleaves two parameters (usually from different sources) into one

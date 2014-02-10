@@ -2441,6 +2441,24 @@ class TestInterpolate(unittest.TestCase):
         np.testing.assert_array_equal(result, expected)
 
 
+class TestInterpolateCoarse(unittest.TestCase):
+    def test_interpolate_coarse_1(self):
+        lat_c_array = np.ma.array(
+            [1000, 1000, 56, 56, 56, 57, 57, 58, 57, 57, 2000, 2000, 2000],
+            mask=[True] * 2 + [False] * 8 + [True] * 3, dtype=np.float_)
+        interpolated = interpolate_coarse(lat_c_array)
+        self.assertEqual([('%.1f' % x) if x else None for x in interpolated.tolist()],
+                         [None, None, '56.0', '56.3', '56.7', '57.0', '57.5', '58.0', '57.0', None, None, None, None])
+        
+    def test_interpolate_coarse_2(self):
+        lon_c_array = np.ma.array(
+            [1000, 1000, 60, 60, 60, 61, 61, 61, 62, 63, 2000, 2000, 2000],
+            mask=[True] * 2 + [False] * 8 + [True] * 3, dtype=np.float_)
+        interpolated = interpolate_coarse(lon_c_array)
+        self.assertEqual([('%.1f' % x) if x else None for x in interpolated.tolist()],
+                         [None, None, '60.0', '60.3', '60.7', '61.0', '61.3', '61.7', '62.0', '63.0', None, None, None])
+
+
 class TestIndexOfDatetime(unittest.TestCase):
     def test_index_of_datetime(self):
         start_datetime = datetime.now()
