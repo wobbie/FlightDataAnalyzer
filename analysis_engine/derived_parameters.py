@@ -936,7 +936,7 @@ class AltitudeRadio(DerivedParameterNode):
         #TODO: Implement this type of correction on other types and embed
         #coefficients in a database table.
             
-        if family and family.value in ['CL-600']:
+        if family and family.value in ['CL-600'] and pitch:
 
             assert pitch.frequency == 4.0 
             # There is no alignment process for this small correction term,
