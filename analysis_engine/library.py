@@ -3170,7 +3170,7 @@ def find_slices_overlap(first_slice, second_slice):
 
     if first_slice.step is not None and first_slice.step < 1 \
        or second_slice.step is not None and second_slice.step < 1:
-        raise ValueError("Negative step not supported")
+        raise ValueError("Negative step is not supported")
 
     if slice_step(first_slice) != slice_step(second_slice):
         raise ValueError("Use the same step to find slice overlap")
