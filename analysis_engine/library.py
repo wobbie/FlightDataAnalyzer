@@ -3154,6 +3154,45 @@ def is_slice_within_slice(inner_slice, outer_slice, within_use='slice'):
         return slices_overlap(inner_slice, outer_slice)
 
 
+def find_slices_overlap(first_slice, second_slice):
+    '''
+    Return slice representing common elements of slice1 and slice2.
+
+    :param slice1: First slice
+    :type slice1: Python slice
+    :param slice2: Second slice
+    :type slice2: Python slice
+
+    :returns slice
+    '''
+    def slice_step(sl):
+        return sl.step if sl.step is not None else 1
+
+    if first_slice.step is not None and first_slice.step < 1 \
+       or second_slice.step is not None and second_slice.step < 1:
+        raise ValueError("Negative step is not supported")
+
+    if slice_step(first_slice) != slice_step(second_slice):
+        raise ValueError("Use the same step to find slice overlap")
+    else:
+        step = first_slice.step
+
+    if second_slice.start is None or first_slice.start > second_slice.start:
+        start = first_slice.start
+    else:
+        start = second_slice.start
+
+    if second_slice.stop is None or first_slice.stop < second_slice.stop:
+        stop = first_slice.stop
+    else:
+        stop = second_slice.stop
+
+    if start < stop:
+        return slice(start, stop, step)
+    else:
+        return None
+
+
 def slices_overlap(first_slice, second_slice):
     '''
     Logical check for an overlap existing between two slices.
