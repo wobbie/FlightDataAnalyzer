@@ -4573,6 +4573,9 @@ def overflow_correction(param, fast=None, max_val=8191):
     overflow: we detect value changes bigger than 75% and modify the result
     ranges.
 
+    We attempt to cater for noisy signal as well, trying to get rid of narrow
+    spikes before applying the correction.
+
     :param param: Parameter object
     :type param: Node
     :param hz: Frequency of array (used for repairing gaps)
@@ -4591,7 +4594,7 @@ def overflow_correction(param, fast=None, max_val=8191):
 
     def pin_to_ground(array, good_slices, fast_slices):
         '''
-        Fix the altitude within given the slice based on takeoff and landing
+        Fix the altitude within given slice based on takeoff and landing
         information.
 
         We assume that at takeoff and landing the altitude radio is zero, so we
@@ -4628,8 +4631,9 @@ def overflow_correction(param, fast=None, max_val=8191):
 
         return array
 
-    # We are removing small masks (up to 10 samples) related to the
+    # remove small masks (up to 10 samples) which may be related to the
     # overflow.
+    old_mask = array.mask
     good_slices = slices_remove_small_gaps(
         np.ma.clump_unmasked(array), time_limit=10.0 / hz,
         hz=hz)
@@ -4653,6 +4657,9 @@ def overflow_correction(param, fast=None, max_val=8191):
     if fast:
         pin_to_ground(array, good_slices, fast.get_slices())
 
+    # reapply the original mask as it may contain genuine spikes unrelated to
+    # the overflow
+    array.mask = old_mask
     return array
 
 
