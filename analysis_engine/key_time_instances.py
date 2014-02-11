@@ -395,8 +395,8 @@ class EngStop(KeyTimeInstanceNode):
 
 class LastEngStopAfterTouchdown(KeyTimeInstanceNode):
     '''
-    Check for the first engine start before liftoff. The index will be the first
-    time an engine is started and remains on before liftoff.
+    Check for the last engine stop after touchdown. The index will be the last
+    time an engine is stopped and remains off after liftoff.
     '''
     
     def derive(self, eng_stops=KTI('Eng Stop'), eng_count=A('Engine Count'),
