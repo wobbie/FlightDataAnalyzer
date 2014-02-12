@@ -33,6 +33,7 @@ from analysis_engine.node import (
 from analysis_engine.multistate_parameters import (
     APEngaged,
     APChannelsEngaged,
+    APUGeneratorLoaded,
     APURunning,
     Configuration,
     Daylight,
@@ -216,6 +217,19 @@ class TestAPURunning(unittest.TestCase):
         run.derive(n1)
         expected=['-']*2+['Running']*3+['-']*2
         np.testing.assert_array_equal(run.array, expected)
+        
+
+class TestAPUGeneratorLoaded(unittest.TestCase):
+    def test_can_operate(self):
+        opts = APUGeneratorLoaded.get_operational_combinations()
+        self.assertTrue(('APU Generator AC Load',) in opts)
+
+    def test_apu_basic(self):
+        apu_load=P('APU Generator AC Load', array=np.ma.array([0, 5, 15, 20, 15, 6, 0.0]))
+        node = APUGeneratorLoaded()
+        node.derive(apu_load)
+        expected = ['-']*2+['Loaded']*3+['-']*2
+        np.testing.assert_array_equal(node.array, expected)
 
 
 class TestAPChannelsEngaged(unittest.TestCase, NodeTest):

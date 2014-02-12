@@ -90,7 +90,7 @@ from analysis_engine.library import (#actuator_mismatch,
                                      #second_window,
                                      #track_linking,
                                      #value_at_index,
-                                     vstack_params,
+                                     #vstack_params,
                                      vstack_params_where_state,
                                      )
 
@@ -174,6 +174,19 @@ class APChannelsEngaged(MultistateDerivedParameterNode):
         self.offset = offset_select('mean', [ap1, ap2, ap3])
 
 
+class APUGeneratorLoaded(MultistateDerivedParameterNode):
+    '''
+    APU Generator AC Load > 10.0%
+    '''
+    
+    name = 'APU Generator Loaded'
+    
+    values_mapping = {0 : '-',  1 : 'Loaded'}
+    
+    def derive(self, apu_load=P('APU Generator AC Load')):
+        self.array = np.ma.where(apu_load.array > 10.0, 'Loaded', '-')
+
+
 class APURunning(MultistateDerivedParameterNode):
     '''
     Simple measure of APU status, suitable for plotting if you want an on/off
@@ -183,10 +196,6 @@ class APURunning(MultistateDerivedParameterNode):
     name = 'APU Running'
 
     values_mapping = {0 : '-',  1 : 'Running'}
-
-    @classmethod
-    def can_operate(cls, available):
-        return 'APU N1' in available
 
     def derive(self, apu_n1=P('APU N1')):
         self.array = np.ma.where(apu_n1.array > 50.0, 'Running', '-')
