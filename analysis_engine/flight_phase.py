@@ -11,7 +11,6 @@ from analysis_engine.library import (
     cycle_finder,
     cycle_match,
     find_dlcs,
-    find_edges,
     first_order_washout,
     first_valid_sample,
     index_at_value,
@@ -22,15 +21,15 @@ from analysis_engine.library import (
     last_valid_sample,
     moving_average,
     nearest_neighbour_mask_repair,
-    peak_curvature,
     rate_of_change,
     rate_of_change_array,
     repair_mask,
     runs_of_ones,
     shift_slice,
     shift_slices,
-    slice_duration,
+    slices_after,
     slices_and,
+    slices_before,
     slices_from_to,
     slices_not,
     slices_or,
@@ -60,7 +59,6 @@ from analysis_engine.settings import (
     LANDING_THRESHOLD_HEIGHT,
     RATE_OF_TURN_FOR_FLIGHT_PHASES,
     RATE_OF_TURN_FOR_TAXI_TURNS,
-    REJECTED_TAKEOFF_THRESHOLD,
     TAKEOFF_ACCELERATION_THRESHOLD,
     VERTICAL_SPEED_FOR_CLIMB_PHASE,
     VERTICAL_SPEED_FOR_DESCENT_PHASE,
@@ -1111,7 +1109,6 @@ class Landing(FlightPhaseNode):
             new_phase = [slice(landing_begin, landing_end)]
             phases = slices_or(phases, new_phase)
         self.create_phases(phases)
-        
 
 
 class LandingRoll(FlightPhaseNode):
@@ -1391,6 +1388,32 @@ class Taxiing(FlightPhaseNode):
         taxi_slices = slices_or(t_out.get_slices(), t_in.get_slices())
         if taxi_slices:
             self.create_phases(taxi_slices)
+
+
+class TaxiOutBeforeLiftoff(FlightPhaseNode):
+    def derive(self, taxi_out=S('Taxi Out'),
+               first_eng_starts=KTI("First Eng Start Before Liftoff"),
+               liftoffs=KTI('Liftoff')):
+        first_eng_start = first_eng_starts.get_first()
+        after_eng_start = slices_after(
+            taxi_out.get_slices(),
+            first_eng_start.index if first_eng_start else 0)
+        before_liftoff = slices_before(after_eng_start,
+                                       liftoffs.get_first().index)
+        self.create_phases(before_liftoff)
+
+
+class TaxiInAfterTouchdown(FlightPhaseNode):
+    def derive(self, taxi_in=S('Taxi In'),
+               last_eng_stops=KTI('Last Eng Stop After Touchdown'),
+               touchdowns=KTI('Touchdown')):
+        last_eng_stop = last_eng_stops.get_last()
+        before_eng_stop = slices_before(
+            taxi_in.get_slices(), 
+            last_eng_stop.index if last_eng_stop else 0)
+        after_touchdown = slices_after(before_eng_stop,
+                                       touchdowns.get_last().index)
+        self.create_phases(after_touchdown)
 
 
 class TurningInAir(FlightPhaseNode):

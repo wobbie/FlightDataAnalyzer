@@ -4,50 +4,53 @@ import unittest
 
 from flightdatautilities.filesystem_tools import copy_file
 
-from analysis_engine.flight_phase import (Airborne,
-                                          Approach,
-                                          ApproachAndLanding,
-                                          BouncedLanding,
-                                          #CombinedClimb,
-                                          ClimbCruiseDescent,
-                                          Climbing,
-                                          #CombinedClimb,
-                                          Cruise,
-                                          Descending,
-                                          DescentLowClimb,
-                                          DescentToFlare,
-                                          EngHotelMode,
-                                          Fast,
-                                          FinalApproach,
-                                          GearExtended,
-                                          GearExtending,
-                                          GearRetracted,
-                                          GearRetracting,
-                                          GoAroundAndClimbout,
-                                          GoAround5MinRating,
-                                          Grounded,
-                                          Holding,
-                                          ILSGlideslopeEstablished,
-                                          ILSLocalizerEstablished,
-                                          InitialApproach,
-                                          InitialCruise,
-                                          Landing,
-                                          LandingRoll,
-                                          LevelFlight,
-                                          Mobile,
-                                          RejectedTakeoff,
-                                          StraightAndLevel,
-                                          Takeoff,
-                                          Takeoff5MinRating,
-                                          TakeoffRoll,
-                                          TakeoffRotation,
-                                          Taxiing,
-                                          TaxiIn,
-                                          TaxiOut,
-                                          TurningInAir,
-                                          TurningOnGround,
-                                          TwoDegPitchTo35Ft,
-                                          )
+from analysis_engine.flight_phase import (
+    Airborne,
+    Approach,
+    ApproachAndLanding,
+    BouncedLanding,
+    #CombinedClimb,
+    ClimbCruiseDescent,
+    Climbing,
+    #CombinedClimb,
+    Cruise,
+    Descending,
+    DescentLowClimb,
+    DescentToFlare,
+    EngHotelMode,
+    Fast,
+    FinalApproach,
+    GearExtended,
+    GearExtending,
+    GearRetracted,
+    GearRetracting,
+    GoAroundAndClimbout,
+    GoAround5MinRating,
+    Grounded,
+    Holding,
+    ILSGlideslopeEstablished,
+    ILSLocalizerEstablished,
+    InitialApproach,
+    InitialCruise,
+    Landing,
+    LandingRoll,
+    LevelFlight,
+    Mobile,
+    RejectedTakeoff,
+    StraightAndLevel,
+    Takeoff,
+    Takeoff5MinRating,
+    TakeoffRoll,
+    TakeoffRotation,
+    Taxiing,
+    TaxiIn,
+    TaxiInAfterTouchdown,
+    TaxiOut,
+    TaxiOutBeforeLiftoff,
+    TurningInAir,
+    TurningOnGround,
+    TwoDegPitchTo35Ft,
+)
 from analysis_engine.multistate_parameters import Gear_RedWarning
 from analysis_engine.key_time_instances import TopOfClimb, TopOfDescent
 from analysis_engine.library import integrate
@@ -1464,6 +1467,7 @@ class TestTaxiOut(unittest.TestCase):
         expected = buildsection('Taxi Out',4, 5)
         self.assertEqual(tout, expected)
 
+
 class TestTaxiIn(unittest.TestCase):
     def test_can_operate(self):
         expected = [('Mobile', 'Landing')]
@@ -1475,6 +1479,40 @@ class TestTaxiIn(unittest.TestCase):
         t_in = TaxiIn()
         t_in.derive(gnd, toff)
         expected = buildsection('Taxi In',12,14)
+        self.assertEqual(t_in,expected)
+
+
+class TestTaxiOutBeforeLiftoff(unittest.TestCase):
+    def test_can_operate(self):
+        expected = [('Taxi Out', 'First Eng Start Before Liftoff', 'Liftoff')]
+        self.assertEqual(TaxiOutBeforeLiftoff.get_operational_combinations(), expected)
+
+    def test_taxi_out(self):
+        taxi_out = buildsection('Taxi Out', 5, 10)
+        eng_starts = KTI('First Eng Start Before Liftoff', items=[
+            KeyTimeInstance(6, 'First Eng Start Before Liftoff')])
+        liftoffs = KTI('Liftoff', items=[
+            KeyTimeInstance(9, 'Liftoff')])
+        tout = TaxiOutBeforeLiftoff()
+        tout.derive(taxi_out, eng_starts, liftoffs)
+        expected = buildsection('Taxi Out Before Liftoff', 6, 9)
+        self.assertEqual(tout, expected)
+
+
+class TestTaxiInAfterTouchdown(unittest.TestCase):
+    def test_can_operate(self):
+        expected = [('Taxi In', 'Last Eng Stop After Touchdown', 'Touchdown')]
+        self.assertEqual(TaxiInAfterTouchdown.get_operational_combinations(), expected)
+
+    def test_taxi_in(self):
+        taxi_in = buildsections('Taxi In', [2,5], [7,10], [12,15], [17, 20])
+        eng_stops = KTI('Last Eng Stop After Touchdown', items=[
+            KeyTimeInstance(14, 'Last Eng Stop After Touchdown')])
+        touchdowns = KTI('Touchdown', items=[
+            KeyTimeInstance(8, 'Touchdown')])
+        t_in = TaxiInAfterTouchdown()
+        t_in.derive(taxi_in, eng_stops, touchdowns)
+        expected = buildsections('Taxi In After Touchdown', [8,10], [12,14])
         self.assertEqual(t_in,expected)
 
 
