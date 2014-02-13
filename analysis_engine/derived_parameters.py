@@ -51,6 +51,7 @@ from analysis_engine.library import (actuator_mismatch,
                                      mask_outside_slices,
                                      match_altitudes,
                                      max_value,
+                                     merge_masks,
                                      most_common_value,
                                      moving_average,
                                      np_ma_ones_like,
@@ -3094,7 +3095,8 @@ class FuelQty(DerivedParameterNode):
     Sum of fuel in left, right and middle tanks where available.
     '''
 
-    align = False
+    # XXX: Enabling alignment because different frequency 
+    #align = False
     units = ut.KG
 
     @classmethod
@@ -3135,6 +3137,7 @@ class FuelQty(DerivedParameterNode):
         try:
             stacked_params = vstack_params(*params)
             self.array = np.ma.sum(stacked_params, axis=0)
+            self.array.mask = merge_masks([p.array.mask for p in params])
             self.offset = offset_select('mean', params)
         except:
             # In the case where params are all invalid or empty, return an
