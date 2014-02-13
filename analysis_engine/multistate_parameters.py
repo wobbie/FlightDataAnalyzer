@@ -1617,10 +1617,14 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         x = available
         if family and family.value == 'BD-100':
             return 'Speedbrake Handle' in x and 'Spoiler Ground Armed' in x
-        return 'Speedbrake Deployed' in x \
-               or ('Family' in x and 'Spoiler Switch' in x)\
-               or ('Family' in x and 'Speedbrake Handle' in x)\
-               or ('Family' in x and 'Speedbrake' in x)
+        elif family and family.value in ['Global', 'CRJ 100/200', 'ERJ-135/145',
+                                         'ERJ-170/175', 'ERJ-190/195']:
+            return 'Speedbrake Handle' in x
+        else:
+            return ('Speedbrake Deployed' in x or
+                    ('Family' in x and 'Spoiler Switch' in x) or
+                    ('Family' in x and 'Speedbrake Handle' in x) or
+                    ('Family' in x and 'Speedbrake' in x))
 
     @classmethod
     def derive_from_handle(cls, handle_array, deployed=1, armed=None):
@@ -1813,7 +1817,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         elif family_name == 'Learjet':
             self.array = self.learjet_speedbrake(spdsw)
 
-        elif family_name in ['G-V', 'CL-600'] and spdbrk:
+        elif family_name in ['G-V', 'CL-600', 'BAE 146'] and spdbrk:
             # On the test aircraft SE-RDY the Speedbrake stored 0 at all
             # times and Speedbrake Handle was unresponsive with small numeric
             # variation. The Speedbrake (L) & (R) responded normally so we
@@ -1823,7 +1827,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
                                      'Deployed/Cmd Up')
 
         elif family_name in ['Global', 'CRJ 100/200', 'ERJ-135/145',
-                             'ERJ-170/175', 'ERJ-190/195', 'CL-600'] and handle:
+                             'ERJ-170/175', 'ERJ-190/195']:
             # No valid data seen for this type to date....
             logger.warning(
                 'SpeedbrakeSelected: algorithm for family `%s` is undecided, '
