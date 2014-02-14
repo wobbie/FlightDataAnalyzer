@@ -3150,17 +3150,6 @@ class FuelQty(DerivedParameterNode):
 
 class GrossWeight(DerivedParameterNode):
     '''
-    Esatablish Gross Weight by using Zero Fuel Weight from ac information
-    and Fuel Qty recorded by aircraft
-    '''
-    units = ut.KG
-    
-    def derive(self, fuel_qty=P('Fuel Qty'), 
-               zero_fuel_weight=A('Zero Fuel Weight')):
-        self.array = moving_average(fuel_qty.array + zero_fuel_weight.value)
-
-class GrossWeight(DerivedParameterNode):
-    '''
     Derive gross weight from Zero Fuel Weight and Fuel Qty.
     '''
     align_frequency = 1
