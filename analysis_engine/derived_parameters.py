@@ -3163,6 +3163,8 @@ class GrossWeight(DerivedParameterNode):
     '''
     Derive gross weight from Zero Fuel Weight and Fuel Qty.
     '''
+    align_frequency = 1
+    align_offset = 0
     units = ut.KG
     
     @classmethod
