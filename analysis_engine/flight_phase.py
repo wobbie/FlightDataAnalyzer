@@ -1406,11 +1406,12 @@ class TaxiOutBeforeLiftoff(FlightPhaseNode):
 class TaxiInAfterTouchdown(FlightPhaseNode):
     def derive(self, taxi_in=S('Taxi In'),
                last_eng_stops=KTI('Last Eng Stop After Touchdown'),
-               touchdowns=KTI('Touchdown')):
+               touchdowns=KTI('Touchdown'),
+               duration=A('HDF Duration')):
         last_eng_stop = last_eng_stops.get_last()
         before_eng_stop = slices_before(
             taxi_in.get_slices(), 
-            last_eng_stop.index if last_eng_stop else 0)
+            last_eng_stop.index if last_eng_stop else duration.value)
         after_touchdown = slices_after(before_eng_stop,
                                        touchdowns.get_last().index)
         self.create_phases(after_touchdown)
