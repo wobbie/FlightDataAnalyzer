@@ -1484,7 +1484,8 @@ class TestTaxiIn(unittest.TestCase):
 
 class TestTaxiOutBeforeLiftoff(unittest.TestCase):
     def test_can_operate(self):
-        expected = [('Taxi Out', 'First Eng Start Before Liftoff', 'Liftoff')]
+        expected = [('Taxi Out', 'First Eng Start Before Liftoff', 'Liftoff',
+                     'HDF Duration')]
         self.assertEqual(TaxiOutBeforeLiftoff.get_operational_combinations(), expected)
 
     def test_taxi_out(self):
@@ -1493,8 +1494,9 @@ class TestTaxiOutBeforeLiftoff(unittest.TestCase):
             KeyTimeInstance(6, 'First Eng Start Before Liftoff')])
         liftoffs = KTI('Liftoff', items=[
             KeyTimeInstance(9, 'Liftoff')])
+        hdf_duration = A('HDF Duration', 100)
         tout = TaxiOutBeforeLiftoff()
-        tout.derive(taxi_out, eng_starts, liftoffs)
+        tout.derive(taxi_out, eng_starts, liftoffs, hdf_duration)
         expected = buildsection('Taxi Out Before Liftoff', 6, 9)
         self.assertEqual(tout, expected)
 
