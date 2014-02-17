@@ -44,14 +44,11 @@ from analysis_engine.flight_phase import (
     TakeoffRotation,
     Taxiing,
     TaxiIn,
-    TaxiInAfterTouchdown,
     TaxiOut,
-    TaxiOutBeforeLiftoff,
     TurningInAir,
     TurningOnGround,
     TwoDegPitchTo35Ft,
 )
-from analysis_engine.multistate_parameters import Gear_RedWarning
 from analysis_engine.key_time_instances import TopOfClimb, TopOfDescent
 from analysis_engine.library import integrate
 from analysis_engine.node import (Attribute, KTI, KeyTimeInstance, M, Parameter,
@@ -1456,80 +1453,109 @@ class TestTakeoff(unittest.TestCase):
 
 class TestTaxiOut(unittest.TestCase):
     def test_can_operate(self):
-        expected = [('Mobile', 'Takeoff')]
+        expected = [('Mobile', 'Takeoff', 'First Eng Start Before Liftoff')]
         self.assertEqual(TaxiOut.get_operational_combinations(), expected)
 
     def test_taxi_out(self):
-        gnd = buildsection('Mobile',3, 8)
-        toff = buildsection('Takeoff', 6, 12)
+        gnd = buildsections('Mobile', [0, 2], [3, 9])
+        toff = buildsection('Takeoff', 8, 12)
+        first_eng_starts = KTI(
+            'First Eng Start Before Liftoff',
+            items=[KeyTimeInstance(2, 'First Eng Start Before Liftoff')])
         tout = TaxiOut()
-        tout.derive(gnd, toff)
-        expected = buildsection('Taxi Out',4, 5)
+        tout.derive(gnd, toff, first_eng_starts)
+        expected = buildsection('Taxi Out', 4, 7)
+        self.assertEqual(tout, expected)
+        first_eng_starts = KTI(
+            'First Eng Start Before Liftoff',
+            items=[KeyTimeInstance(5, 'First Eng Start Before Liftoff')])
+        tout = TaxiOut()
+        tout.derive(gnd, toff, first_eng_starts)
+        expected = buildsection('Taxi Out', 5, 7)
         self.assertEqual(tout, expected)
 
 
 class TestTaxiIn(unittest.TestCase):
     def test_can_operate(self):
-        expected = [('Mobile', 'Landing')]
+        expected = [('Mobile', 'Landing', 'Last Eng Stop After Touchdown')]
         self.assertEqual(TaxiIn.get_operational_combinations(), expected)
 
-    def test_taxi_in(self):
-        gnd = buildsection('Mobile',7,14)
-        toff = buildsection('Landing', 5,12)
+    def test_taxi_in_1(self):
+        gnd = buildsections('Mobile', [7, 14], [16, 18])
+        landing = buildsection('Landing', 5, 12)
+        last_eng_stops = KTI(
+            'Last Eng Stop After Touchdown',
+            items=[KeyTimeInstance(15, 'Last Eng Stop After Touchdown')])
         t_in = TaxiIn()
-        t_in.derive(gnd, toff)
-        expected = buildsection('Taxi In',12,14)
+        t_in.derive(gnd, landing, last_eng_stops)
+        expected = buildsection('Taxi In', 12, 14)
         self.assertEqual(t_in,expected)
-
-
-class TestTaxiOutBeforeLiftoff(unittest.TestCase):
-    def test_can_operate(self):
-        expected = [('Taxi Out', 'First Eng Start Before Liftoff', 'Liftoff',
-                     'HDF Duration')]
-        self.assertEqual(TaxiOutBeforeLiftoff.get_operational_combinations(), expected)
-
-    def test_taxi_out(self):
-        taxi_out = buildsection('Taxi Out', 5, 10)
-        eng_starts = KTI('First Eng Start Before Liftoff', items=[
-            KeyTimeInstance(6, 'First Eng Start Before Liftoff')])
-        liftoffs = KTI('Liftoff', items=[
-            KeyTimeInstance(9, 'Liftoff')])
-        hdf_duration = A('HDF Duration', 100)
-        tout = TaxiOutBeforeLiftoff()
-        tout.derive(taxi_out, eng_starts, liftoffs, hdf_duration)
-        expected = buildsection('Taxi Out Before Liftoff', 6, 9)
-        self.assertEqual(tout, expected)
-
-
-class TestTaxiInAfterTouchdown(unittest.TestCase):
-    def test_can_operate(self):
-        expected = [('Taxi In', 'Last Eng Stop After Touchdown', 'Touchdown')]
-        self.assertEqual(TaxiInAfterTouchdown.get_operational_combinations(), expected)
-
-    def test_taxi_in(self):
-        taxi_in = buildsections('Taxi In', [2,5], [7,10], [12,15], [17, 20])
-        eng_stops = KTI('Last Eng Stop After Touchdown', items=[
-            KeyTimeInstance(14, 'Last Eng Stop After Touchdown')])
-        touchdowns = KTI('Touchdown', items=[
-            KeyTimeInstance(8, 'Touchdown')])
-        t_in = TaxiInAfterTouchdown()
-        t_in.derive(taxi_in, eng_stops, touchdowns)
-        expected = buildsections('Taxi In After Touchdown', [8,10], [12,14])
-        self.assertEqual(t_in,expected)
+    
+    def test_taxi_in_2(self):
+        gnd = buildsection('Mobile', 488, 7008)
+        landing = buildsection('Landing', 3389, 3438)
+        last_eng_stops = KTI(
+            'Last Eng Stop After Touchdown',
+            items=[KeyTimeInstance(3734, 'Last Eng Stop After Touchdown')])
+        t_in = TaxiIn()
+        t_in.derive(gnd, landing, last_eng_stops)
+        self.assertEqual(len(t_in), 1)
+        self.assertEqual(t_in[0].slice.start, 3438)
+        self.assertEqual(t_in[0].slice.stop, 3734)
 
 
 class TestTaxiing(unittest.TestCase):
     def test_can_operate(self):
-        expected=[('Taxi Out', 'Taxi In')]
-        self.assertEqual(Taxiing.get_operational_combinations(), expected)
+        combinations = Taxiing.get_operational_combinations()
+        self.assertTrue(('Mobile', 'Airborne') in combinations)
+        self.assertTrue(('Mobile', 'Takeoff', 'Landing') in combinations)
+        self.assertTrue(('Mobile', 'Groundspeed', 'Airborne') in combinations)
+        self.assertTrue(
+            ('Mobile', 'Groundspeed', 'Takeoff', 'Landing', 'Airborne')
+            in combinations)
 
-    def test_taxiing(self):
-        tout = buildsection('Taxi Out', 2,  5)
-        t_in = buildsection('Taxi In',  8, 11)
-        ting = Taxiing()
-        ting.derive(tout, t_in)
-        expected = buildsections('Taxiing', [2,5],[8,11])
-        self.assertEqual(ting, expected)
+    def test_taxiing_mobile_airborne(self):
+        mobiles = buildsection('Mobile', 10, 90)
+        airs = buildsection('Airborne', 20, 80)
+        node = Taxiing()
+        node.derive(mobiles, None, None, None, airs)
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].slice.start, 10)
+        self.assertEqual(node[0].slice.stop, 20)
+        self.assertEqual(node[1].slice.start, 80)
+        self.assertEqual(node[1].slice.stop, 90)
+    
+    def test_taxiing_mobile_takeoff_landing(self):
+        mobiles = buildsection('Mobile', 10, 90)
+        toffs = buildsection('Takeoff', 20, 30)
+        lands = buildsection('Landing', 70, 80)
+        node = Taxiing()
+        node.derive(mobiles, None, toffs, lands, None)
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].slice.start, 10)
+        self.assertEqual(node[0].slice.stop, 20)
+        self.assertEqual(node[1].slice.start, 80)
+        self.assertEqual(node[1].slice.stop, 90)
+    
+    def test_taxiing_mobile_takeoff_landing(self):
+        mobiles = buildsection('Mobile', 10, 100)
+        gspd_array = np.ma.array([0] * 15 +
+                                 [10] * 70 +
+                                 [0] * 5 +
+                                 [10] * 5 +
+                                 [0] * 5)
+        gspd = P('Groundspeed', array=gspd_array)
+        toffs = buildsection('Takeoff', 20, 30)
+        lands = buildsection('Landing', 60, 70)
+        node = Taxiing()
+        node.derive(mobiles, gspd, toffs, lands, None)
+        self.assertEqual(len(node), 3)
+        self.assertEqual(node[0].slice.start, 15)
+        self.assertEqual(node[0].slice.stop, 20)
+        self.assertEqual(node[1].slice.start, 70)
+        self.assertEqual(node[1].slice.stop, 85)
+        self.assertEqual(node[2].slice.start, 90)
+        self.assertEqual(node[2].slice.stop, 95)
 
 
 class TestTurningInAir(unittest.TestCase):
@@ -1621,20 +1647,18 @@ class TestEngHotelMode(unittest.TestCase):
         self.assertFalse(self.node_class.can_operate(available, family=family))
 
     def test_derive(self):
-        eng2_n1_array = np.arange(0, 50, 5)
+        range_array = np.arange(0, 50, 5)
         eng2_n1 = Parameter('Eng (2) N1',
                             array=np.ma.concatenate((
-                                eng2_n1_array,
+                                range_array,
                                 [50] * 40,
-                                eng2_n1_array[::-1],)))
-        eng1_n1_array = np.arange(0, 50, 5)
-        eng1_n1 = Parameter('Eng (1) N1',
-                            array=np.ma.concatenate((
-                                [0] * 10,
-                                eng2_n1_array,
-                                [50] * 20,
-                                eng2_n1_array[::-1],
-                                [0] * 10,)))
+                                range_array[::-1],)))
+        eng1_n1 = Parameter('Eng (1) N1', array=np.ma.concatenate(
+            ([0] * 10,
+             range_array,
+             [50] * 20,
+             range_array[::-1],
+             [0] * 10,)))
         eng2_np = Parameter('Eng (1) N1',
                             array=np.ma.concatenate((
                                 [0] * 20,
