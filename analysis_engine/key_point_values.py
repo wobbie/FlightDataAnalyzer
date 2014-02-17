@@ -9226,9 +9226,9 @@ class RollCyclesNotDuringFinalApproach(KeyPointValueNode):
                fin_apps=S('Final Approach'),
                landings=S('Landing')):
 
-        not_fas = slices_and_not(airborne, fin_apps)
+        not_fas = slices_and_not(airborne.get_slices(), fin_apps.get_slices())
         # TODO: Fix this:
-        #not_fas = slices_and_not(not_fas, landings)
+        #not_fas = slices_and_not(not_fas.get_slices(), landings.get_slices())
         for not_fa in not_fas:
             self.create_kpv(*cycle_counter(
                 roll.array[not_fa],

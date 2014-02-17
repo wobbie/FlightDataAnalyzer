@@ -3249,23 +3249,24 @@ def slices_and(first_list, second_list):
                 result_list.append(slice(slice_start,slice_stop))
     return result_list
 
+
 def slices_and_not(first, second):
     '''
     It is surprisingly common to need one condition but not a second.
     Airborne but not Approach And Landing, for example. This little routine
     makes this simple.
 
-    :param first: First Section - values to be included
-    :type first: Section
-    :param second: Second Section - values to be excluded
-    :type second: Section
+    :param first: First list of slices- values to be included
+    :type first: [slice]
+    :param second: Second list of slices- values to be excluded
+    :type second: [sliec]
 
     :returns: List of slices in the first but outside the second lists.
     '''
-    return slices_and([s.slice for s in first],
-                      slices_not([s.slice for s in second],
-                                 begin_at=min([s.slice.start for s in first]),
-                                 end_at=max([s.slice.stop for s in first])))
+    return slices_and(first,
+                      slices_not(second,
+                                 begin_at=min([s.start for s in first]),
+                                 end_at=max([s.stop for s in first])))
 
 
 def slices_not(slice_list, begin_at=None, end_at=None):
