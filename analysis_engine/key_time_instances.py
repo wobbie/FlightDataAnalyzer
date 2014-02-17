@@ -332,6 +332,8 @@ class FirstEngStartBeforeLiftoff(KeyTimeInstanceNode):
         if eng_starts_before_liftoff:
             self.create_kti(min(eng_starts_before_liftoff))
         else:
+            # Q: Should we be creating a KTI if the first engine start cannot
+            # be found? 
             self.create_kti(0)
 
 
@@ -414,7 +416,9 @@ class LastEngStopAfterTouchdown(KeyTimeInstanceNode):
         if eng_stops_after_touchdown:
             self.create_kti(max(eng_stops_after_touchdown))
         else:
-            self.create_kti(duration.value)
+            # Q: Should we be creating a KTI if the last engine stop cannot
+            # be found?
+            self.create_kti(duration.value - 1)
 
 
 class EnterHold(KeyTimeInstanceNode):
