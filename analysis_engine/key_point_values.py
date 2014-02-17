@@ -1126,6 +1126,27 @@ class AirspeedAtTouchdown(KeyPointValueNode):
         self.create_kpvs_at_ktis(air_spd.array, touchdowns)
 
 
+class AirspeedMinsToTouchdown(KeyPointValueNode):
+    '''
+    '''
+
+    # TODO: Review and improve this technique of building KPVs on KTIs.
+    from analysis_engine.key_time_instances import MinsToTouchdown
+
+    NAME_FORMAT = 'Airspeed ' + MinsToTouchdown.NAME_FORMAT
+    NAME_VALUES = MinsToTouchdown.NAME_VALUES
+    units = ut.KT
+
+    def derive(self,
+               air_spd=P('Airspeed'),
+               mtt_kti=KTI('Mins To Touchdown')):
+
+        for mtt in mtt_kti:
+            # XXX: Assumes that the number will be the first part of the name:
+            time = int(mtt.name.split(' ')[0])
+            self.create_kpv(mtt.index, air_spd.array[mtt.index], time=time)
+
+
 class AirspeedTrueAtTouchdown(KeyPointValueNode):
     '''
     Airspeed True at the point of Touchdown.

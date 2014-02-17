@@ -73,6 +73,7 @@ from analysis_engine.key_point_values import (
     AirspeedDuringRejectedTakeoffMax,
     AirspeedGustsDuringFinalApproach,
     AirspeedMax,
+    AirspeedMinsToTouchdown,
     AirspeedMinusFlapManoeuvreSpeedWithFlapDuringDescentMin,
     AirspeedMinusMinimumAirspeedAbove10000FtMin,
     AirspeedMinusMinimumAirspeed35To10000FtMin,
@@ -1658,6 +1659,16 @@ class TestAirspeedAtTouchdown(unittest.TestCase, CreateKPVsAtKTIsTest):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test Not Implemented')
+
+
+class TestAirspeedMinsToTouchdown(unittest.TestCase, NodeTest):
+    def setUp(self):
+        self.node_class = AirspeedMinsToTouchdown
+        self.operational_combinations = [('Airspeed', 'Mins To Touchdown')]
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
 
 
 class TestAirspeedTrueAtTouchdown(unittest.TestCase, CreateKPVsAtKTIsTest):
