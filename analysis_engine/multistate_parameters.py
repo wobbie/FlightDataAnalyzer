@@ -174,17 +174,171 @@ class APChannelsEngaged(MultistateDerivedParameterNode):
         self.offset = offset_select('mean', [ap1, ap2, ap3])
 
 
-class APUGeneratorLoaded(MultistateDerivedParameterNode):
+class APLateralMode(MultistateDerivedParameterNode):
     '''
-    APU Generator AC Load > 10.0%
     '''
+    name = 'AP Lateral Mode'
+    # Values and states match X-Plane visualisation model documentation.
+    values_mapping = {
+        0: '-',
+        2: 'RWY',
+        4: 'RWY TRK',
+        6: 'NAV',
+        14: 'LOC CAPT',
+        16: 'LOC',
+        20: 'APP NAV',
+        22: 'ROLL OUT',
+        24: 'LAND',
+        64: 'HDG',
+    }
     
-    name = 'APU Generator Loaded'
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(('Lateral Mode Selected',
+                       'Runway Mode Active',
+                       'NAV Mode Active',
+                       'ILS Localizer Capture Active',
+                       'ILS Localizer Track Active',
+                       'Roll Go Around Mode Active',
+                       'Land Track Active',
+                       'Heading Mode Active'), available)
     
-    values_mapping = {0 : '-',  1 : 'Loaded'}
+    def derive(self,
+               lateral_mode_selected=M('Lateral Mode Selected'),
+               runway_mode_active=M('Runway Mode Active'),
+               nav_mode_active=M('NAV Mode Active'),
+               ils_localizer_capture_active=M('ILS Localizer Capture Active'),
+               ils_localizer_track_active=M('ILS Localizer Track Active'),
+               roll_go_around_mode_active=M('Roll Go Around Mode Active'),
+               land_track_active=M('Land Track Active'),
+               heading_mode_active=M('Heading Mode Active')):
+        parameter = next(p for p in (lateral_mode_selected,
+                                     runway_mode_active,
+                                     nav_mode_active,
+                                     ils_localizer_capture_active,
+                                     ils_localizer_track_active,
+                                     roll_go_around_mode_active,
+                                     land_track_active,
+                                     heading_mode_active) if p)
+        self.array = np_ma_zeros_like(parameter.array)
+        
+        if lateral_mode_selected:
+            self.array[lateral_mode_selected.array == 'Runway Mode Active'] = 'RWY'
+            self.array[lateral_mode_selected.array == 'NAV Mode Active'] = 'NAV'
+            self.array[lateral_mode_selected.array == 'ILS Localizer Capture Active'] = 'LOC CAPT',
+        if runway_mode_active:
+            self.array[runway_mode_active.array == 'Activated'] = 'RWY'
+        if nav_mode_active:
+            self.array[nav_mode_active.array == 'Activated'] = 'NAV'
+        if ils_localizer_capture_active:
+            self.array[ils_localizer_capture_active.array == 'Activated'] = 'LOC CAPT'
+        if ils_localizer_track_active:
+            self.array[ils_localizer_track_active.array == 'Activated'] = 'LOC'
+        if roll_go_around_mode_active:
+            self.array[roll_go_around_mode_active.array == 'Activated'] = 'ROLL OUT'
+        if land_track_active:
+            self.array[land_track_active.array == 'Activated'] = 'LAND'
+        if heading_mode_active:
+            self.array[heading_mode_active.array == 'Activated'] = 'HDG'
+
+
+class APVerticalMode(MultistateDerivedParameterNode):
+    '''
+    '''
+    name = 'AP Vertical Mode'
+    # Values and states match X-Plane visualisation model documentation.
+    values_mapping = {
+        0: '-',
+        2: 'SRS',
+        4: 'CLB',
+        6: 'DES',
+        8: 'ALT CSTR CAPT',
+        10: 'ALT CSTR',
+        14: 'GS CAPT',
+        16: 'GS',
+        18: 'FINAL',
+        22: 'FLARE',
+        24: 'LAND',
+        26: 'DES', # geo path, A/THR mode SPEED
+        64: 'OP CLB',
+        66: 'OP DES',
+        68: 'ALT CAPT',
+        70: 'ALT',
+        72: 'ALT CRZ',
+        76: 'V/S',
+        86: 'EXPED CLB',
+        88: 'EXPED DES',
+    }
     
-    def derive(self, apu_load=P('APU Generator AC Load')):
-        self.array = np.ma.where(apu_load.array > 10.0, 'Loaded', '-')
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(('Climb Active',
+                       'Longitudinal Mode Selected',
+                       'ILS Glideslope Capture Active',
+                       'ILS Glideslope Active',
+                       'Flare Mode',
+                       'AT Active',
+                       'Open Climb Mode',
+                       'Open Descent Mode',
+                       'Altitude Capture Mode',
+                       'Altitude Mode',
+                       'Expedite Climb Mode',
+                       'Expedite Descent Mode'), available)
+    
+    def derive(self,
+               climb_active=M('Climb Active'),
+               longitudinal_mode_selected=M('Longitudinal Mode Selected'),
+               ils_glideslope_capture_active=M('ILS Glideslope Capture Active'),
+               ils_glideslope_active=M('ILS Glideslope Active'),
+               flare_mode=M('Flare Mode'),
+               at_active=M('AT Active'),
+               open_climb_mode=M('Open Climb Mode'),
+               open_descent_mode=M('Open Descent Mode'),
+               altitude_capture_mode=M('Altitude Capture Mode'),
+               altitude_mode=M('Altitude Mode'),
+               expedite_climb_mode=M('Expedite Climb Mode'),
+               expedite_descent_mode=M('Expedite Descent Mode')):
+        parameter = next(p for p in (climb_active,
+                                     longitudinal_mode_selected,
+                                     ils_glideslope_capture_active,
+                                     ils_glideslope_active,
+                                     at_active,
+                                     open_climb_mode,
+                                     open_descent_mode,
+                                     altitude_capture_mode,
+                                     altitude_mode,
+                                     expedite_climb_mode,
+                                     expedite_descent_mode) if p)
+        self.array = np_ma_zeros_like(parameter.array)
+        
+        if climb_active:
+            self.array[climb_active.array == 'Activated'] = 'CLB'
+        if longitudinal_mode_selected:
+            self.array[longitudinal_mode_selected.array == 'Altitude'] = 'ALT CSTR'
+            self.array[longitudinal_mode_selected.array == 'Final Descent Mode'] = 'FINAL'
+            self.array[longitudinal_mode_selected.array == 'Flare Mode'] = 'FLARE'
+            self.array[longitudinal_mode_selected.array == 'Land Track Active'] = 'LAND'
+            self.array[longitudinal_mode_selected.array == 'Vertical Speed Engaged'] = 'V/S'
+        if ils_glideslope_capture_active:
+            self.array[ils_glideslope_capture_active.array == 'Activated'] = 'GS CAPT'
+        if ils_glideslope_active:
+            self.array[ils_glideslope_active.array == 'Activated'] = 'GS'
+        if flare_mode:
+            self.array[flare_mode.array == 'Engaged'] = 'FLARE'
+        if at_active:
+            self.array[at_active.array == 'Activated'] = 'DES'
+        if open_climb_mode:
+            self.array[open_climb_mode.array == 'Activated'] = 'OP CLB'
+        if open_descent_mode:
+            self.array[open_descent_mode.array == 'Activated'] = 'OP DES'
+        if altitude_capture_mode:
+            self.array[altitude_capture_mode.array == 'Activated'] = 'ALT CAPT'
+        if altitude_mode:
+            self.array[altitude_mode.array == 'Activated'] = 'ALT'
+        if expedite_climb_mode:
+            self.array[expedite_climb_mode.array == 'Expedite Climb Mode'] = 'EXPED CLB'
+        if expedite_descent_mode:
+            self.array[expedite_descent_mode.array == 'Expedite Descent Mode'] = 'EXPED DES'
 
 
 class APURunning(MultistateDerivedParameterNode):
