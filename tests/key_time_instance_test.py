@@ -26,6 +26,7 @@ from analysis_engine.key_time_instances import (
     EngStop,
     EnterHold,
     ExitHold,
+    FirstEngStartBeforeLiftoff,
     FirstFlapExtensionWhileAirborne,
     FlapExtensionWhileAirborne,
     FlapLeverSet,
@@ -41,6 +42,7 @@ from analysis_engine.key_time_instances import (
     LandingDecelerationEnd,
     LandingStart,
     LandingTurnOffRunway,
+    LastEngStopAfterTouchdown,
     Liftoff,
     LocalizerEstablishedEnd,
     LocalizerEstablishedStart,
@@ -916,6 +918,34 @@ class TestEngStart(unittest.TestCase):
         self.assertEqual(es[0].index, 1.5)
 
 
+class TestFirstEngStartBeforeLiftoff(unittest.TestCase):
+    
+    def test_can_operate(self):
+        combinations = FirstEngStartBeforeLiftoff.get_operational_combinations()
+        self.assertEqual(combinations,
+                         [('Eng Start', 'Engine Count', 'Liftoff'),])
+    
+    def test_derive_basic(self):
+        eng_count = A('Engine Count', 3)
+        eng_starts = EngStart('Eng Start',
+                              items=[KeyTimeInstance(10, name='Eng (1) Start'),
+                                     KeyTimeInstance(20, name='Eng (2) Start'),
+                                     KeyTimeInstance(30, name='Eng (3) Start'),
+                                     KeyTimeInstance(40, name='Eng (1) Start'),
+                                     KeyTimeInstance(50, name='Eng (2) Start'),
+                                     KeyTimeInstance(60, name='Eng (3) Start'),
+                                     KeyTimeInstance(70, name='Eng (1) Start'),
+                                     KeyTimeInstance(80, name='Eng (2) Start'),
+                                     KeyTimeInstance(360, name='Eng (1) Start'),
+                                     KeyTimeInstance(370, name='Eng (1) Start'),
+                                     KeyTimeInstance(380, name='Eng (2) Start'),])
+        liftoffs = KTI('Liftoff', items=[KeyTimeInstance(100, 'Liftoff')])
+        node = FirstEngStartBeforeLiftoff()
+        node.derive(eng_starts, eng_count, liftoffs)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 60)
+
+
 class TestEngStop(unittest.TestCase):
     
     def test_can_operate(self):
@@ -937,6 +967,37 @@ class TestEngStop(unittest.TestCase):
         self.assertEqual(es[0].index, 2)
         self.assertEqual(es[1].name, 'Eng (2) Stop')
         self.assertEqual(es[1].index, 1.5)
+
+
+class TestLastEngStopAfterTouchdown(unittest.TestCase):
+    
+    def test_can_operate(self):
+        combinations = LastEngStopAfterTouchdown.get_operational_combinations()
+        self.assertEqual(
+            combinations,
+            [('Eng Stop', 'Engine Count', 'Touchdown', 'HDF Duration'),])
+    
+    def test_derive_basic(self):
+        eng_count = A('Engine Count', 3)
+        eng_stops = EngStop('Eng Stop',
+                            items=[KeyTimeInstance(10, name='Eng (1) Stop'),
+                                   KeyTimeInstance(20, name='Eng (2) Stop'),
+                                   KeyTimeInstance(30, name='Eng (3) Stop'),
+                                   KeyTimeInstance(110, name='Eng (1) Stop'),
+                                   KeyTimeInstance(120, name='Eng (2) Stop'),
+                                   KeyTimeInstance(130, name='Eng (3) Stop'),
+                                   KeyTimeInstance(140, name='Eng (1) Stop'),
+                                   KeyTimeInstance(150, name='Eng (2) Stop'),
+                                   KeyTimeInstance(160, name='Eng (1) Stop'),
+                                   KeyTimeInstance(170, name='Eng (1) Stop'),
+                                   KeyTimeInstance(180, name='Eng (2) Stop'),])
+        touchdowns = KTI('Touchdown', items=[KeyTimeInstance(100, 'Touchdown')])
+        duration = A('HDF Duration', 200)
+        node = LastEngStopAfterTouchdown()
+        node.derive(eng_stops, eng_count, touchdowns)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 130)
+
 
 class TestEnterHold(unittest.TestCase):
     def test_can_operate(self):

@@ -11,7 +11,6 @@ from analysis_engine.library import (
     cycle_finder,
     cycle_match,
     find_dlcs,
-    find_edges,
     first_order_washout,
     first_valid_sample,
     index_at_value,
@@ -22,15 +21,16 @@ from analysis_engine.library import (
     last_valid_sample,
     moving_average,
     nearest_neighbour_mask_repair,
-    peak_curvature,
     rate_of_change,
     rate_of_change_array,
     repair_mask,
     runs_of_ones,
     shift_slice,
     shift_slices,
-    slice_duration,
+    slices_after,
     slices_and,
+    slices_and_not,
+    slices_before,
     slices_from_to,
     slices_not,
     slices_or,
@@ -60,7 +60,6 @@ from analysis_engine.settings import (
     LANDING_THRESHOLD_HEIGHT,
     RATE_OF_TURN_FOR_FLIGHT_PHASES,
     RATE_OF_TURN_FOR_TAXI_TURNS,
-    REJECTED_TAKEOFF_THRESHOLD,
     TAKEOFF_ACCELERATION_THRESHOLD,
     VERTICAL_SPEED_FOR_CLIMB_PHASE,
     VERTICAL_SPEED_FOR_DESCENT_PHASE,
@@ -991,8 +990,6 @@ class StraightAndLevel(FlightPhaseNode):
             self.create_phases(shift_slices(straight_and_level_slices, level.slice.start))
 
 
-
-
 class Grounded(FlightPhaseNode):
     '''
     Includes start of takeoff run and part of landing run.
@@ -1010,6 +1007,47 @@ class Grounded(FlightPhaseNode):
                 gnd_phases = [slice(0,data_end,None)]
 
         self.create_phases(gnd_phases)
+
+
+class Taxiing(FlightPhaseNode):
+    '''
+    TODO: Update docstring.
+    
+    This finds the first and last signs of movement to provide endpoints to
+    the taxi phases. As Rate Of Turn is derived directly from heading, this
+    phase is guaranteed to be operable for very basic aircraft.
+    '''
+    @classmethod
+    def can_operate(cls, available):
+        constraint = (all_of(('Takeoff', 'Landing'), available) or 
+                      'Airborne' in available)
+        return constraint and ('Mobile' in available)
+    
+    def derive(self, mobiles=S('Mobile'), gspd=P('Groundspeed'),
+               toffs=S('Takeoff'), lands=S('Landing'),
+               airs=S('Airborne')):
+        # XXX: There should only be one Mobile slice.
+        if gspd:
+            # Limit to where Groundspeed is above GROUNDSPEED_FOR_MOBILE.
+            taxiing_slices = np.ma.clump_unmasked(np.ma.masked_less
+                                                  (np.ma.abs(gspd.array),
+                                                   GROUNDSPEED_FOR_MOBILE))
+            taxiing_slices = slices_and(mobiles.get_slices(), taxiing_slices)
+        else:
+            taxiing_slices = mobiles.get_slices()
+        
+        if toffs and lands:
+            # Exclude Takeoffs and Landings.
+            flight_slice = slice(toffs.get_first().slice.start,
+                                 lands.get_last().slice.stop)
+        elif airs:
+            # Exclude Airbornes.
+            flight_slice = slice(airs.get_first().slice.start,
+                                 airs.get_last().slice.stop)
+        
+        taxiing_slices = slices_and_not(taxiing_slices, [flight_slice])
+        
+        self.create_phases(taxiing_slices)
 
 
 class Mobile(FlightPhaseNode):
@@ -1111,7 +1149,6 @@ class Landing(FlightPhaseNode):
             new_phase = [slice(landing_begin, landing_end)]
             phases = slices_or(phases, new_phase)
         self.create_phases(phases)
-        
 
 
 class LandingRoll(FlightPhaseNode):
@@ -1354,11 +1391,11 @@ class GoAround5MinRating(FlightPhaseNode):
 
 class TaxiIn(FlightPhaseNode):
     """
-    This takes the period from start of data to start of takeoff as the taxi
-    out, and the end of the landing to the end of the data as taxi in. Could
-    be improved to include engines running condition at a later date.
+    This takes the period from the end of landing to either the last engine
+    stop after touchdown or the end of the mobile section.
     """
-    def derive(self, gnds=S('Mobile'), lands=S('Landing')):
+    def derive(self, gnds=S('Mobile'), lands=S('Landing'),
+               last_eng_stops=KTI('Last Eng Stop After Touchdown')):
         land = lands.get_last()
         if not land:
             return
@@ -1366,6 +1403,12 @@ class TaxiIn(FlightPhaseNode):
             if slices_overlap(gnd.slice, land.slice):
                 taxi_start = land.slice.stop
                 taxi_stop = gnd.slice.stop
+                # Use Last Eng Stop After Touchdown if available.
+                if last_eng_stops:
+                    last_eng_stop = last_eng_stops.get_next(taxi_start)
+                    if last_eng_stop:
+                        taxi_stop = min(last_eng_stop.index,
+                                        taxi_stop)
                 self.create_phase(slice(taxi_start, taxi_stop),
                                   name="Taxi In")
 
@@ -1375,22 +1418,21 @@ class TaxiOut(FlightPhaseNode):
     This takes the period from start of data to start of takeoff as the taxi
     out, and the end of the landing to the end of the data as taxi in.
     """
-    def derive(self, gnds=S('Mobile'), toffs=S('Takeoff')):
+    def derive(self, gnds=S('Mobile'), toffs=S('Takeoff'),
+               first_eng_starts=KTI('First Eng Start Before Liftoff')):
         if toffs:
             toff = toffs[0]
             for gnd in gnds:
                 if slices_overlap(gnd.slice, toff.slice):
                     taxi_start = gnd.slice.start + 1
                     taxi_stop = toff.slice.start - 1
+                    if first_eng_starts:
+                        first_eng_start = first_eng_starts.get_next(taxi_start)
+                        if first_eng_start:
+                            taxi_start = max(first_eng_start.index,
+                                             taxi_start)
                     self.create_phase(slice(taxi_start, taxi_stop),
                                       name="Taxi Out")
-
-
-class Taxiing(FlightPhaseNode):
-    def derive(self, t_out=S('Taxi Out'), t_in=S('Taxi In')):
-        taxi_slices = slices_or(t_out.get_slices(), t_in.get_slices())
-        if taxi_slices:
-            self.create_phases(taxi_slices)
 
 
 class TurningInAir(FlightPhaseNode):
@@ -1418,7 +1460,7 @@ class TurningOnGround(FlightPhaseNode):
     
     Rate of Turn is greater than +/- RATE_OF_TURN_FOR_TAXI_TURNS (%.2f) on the ground
     """ % RATE_OF_TURN_FOR_TAXI_TURNS
-    def derive(self, rate_of_turn=P('Rate Of Turn'), taxi=S('Taxiing')):
+    def derive(self, rate_of_turn=P('Rate Of Turn'), taxi=S('Taxiing')): # Q: Use Mobile?
         turning = np.ma.masked_inside(repair_mask(rate_of_turn.array),
                                       -RATE_OF_TURN_FOR_TAXI_TURNS,
                                       RATE_OF_TURN_FOR_TAXI_TURNS)

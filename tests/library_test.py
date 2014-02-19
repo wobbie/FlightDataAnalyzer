@@ -102,6 +102,41 @@ class TestAlignSlices(unittest.TestCase):
                                   slice(None, None, None)])
 
 
+class TestFindSlicesOverlap(unittest.TestCase):
+    def test_find_slices_overlap(self):
+        slice1 = slice(None, 100)
+        slice2 = slice(90, None)
+        expected = slice(90, 100)
+        res = find_slices_overlap(slice1, slice2)
+        self.assertEqual(res, expected)
+
+        slice1 = slice(50, 100)
+        slice2 = slice(90, 150)
+        expected = slice(90, 100)
+        res = find_slices_overlap(slice1, slice2)
+        self.assertEqual(res, expected)
+
+        slice1 = slice(50, 90)
+        slice2 = slice(100, 150)
+        expected = None
+        res = find_slices_overlap(slice1, slice2)
+        self.assertEqual(res, expected)
+
+        slice1 = slice(50, 100, None)
+        slice2 = slice(90, 150, 1)
+        expected = slice(90, 100)
+        res = find_slices_overlap(slice1, slice2)
+        self.assertEqual(res, expected)
+
+        slice1 = slice(50, 100, -1)
+        slice2 = slice(90, 150, 1)
+        self.assertRaises(ValueError, find_slices_overlap, slice1, slice2)
+
+        slice1 = slice(50, 100)
+        slice2 = slice(90, 150, 2)
+        self.assertRaises(ValueError, find_slices_overlap, slice1, slice2)
+
+
 class TestAlignSlice(unittest.TestCase):
     @mock.patch('analysis_engine.library.align_slices')
     def test_align_slice(self, align_slices):
@@ -2439,6 +2474,24 @@ class TestInterpolate(unittest.TestCase):
                           mask=[0, 0, 0, 0, 0, 0, 0,  0,  0,  0,  0,  0, 0, 1, 1, 1])
         result = interpolate(array, extrapolate=False)
         np.testing.assert_array_equal(result, expected)
+
+
+class TestInterpolateCoarse(unittest.TestCase):
+    def test_interpolate_coarse_1(self):
+        lat_c_array = np.ma.array(
+            [1000, 1000, 56, 56, 56, 57, 57, 58, 57, 57, 2000, 2000, 2000],
+            mask=[True] * 2 + [False] * 8 + [True] * 3, dtype=np.float_)
+        interpolated = interpolate_coarse(lat_c_array)
+        self.assertEqual([('%.1f' % x) if x else None for x in interpolated.tolist()],
+                         [None, None, '56.0', '56.3', '56.7', '57.0', '57.5', '58.0', '57.0', None, None, None, None])
+        
+    def test_interpolate_coarse_2(self):
+        lon_c_array = np.ma.array(
+            [1000, 1000, 60, 60, 60, 61, 61, 61, 62, 63, 2000, 2000, 2000],
+            mask=[True] * 2 + [False] * 8 + [True] * 3, dtype=np.float_)
+        interpolated = interpolate_coarse(lon_c_array)
+        self.assertEqual([('%.1f' % x) if x else None for x in interpolated.tolist()],
+                         [None, None, '60.0', '60.3', '60.7', '61.0', '61.3', '61.7', '62.0', '63.0', None, None, None])
 
 
 class TestIndexOfDatetime(unittest.TestCase):

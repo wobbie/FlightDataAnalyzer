@@ -1,6 +1,5 @@
 import datetime
 import numpy as np
-import operator
 import os
 import unittest
 
@@ -25,7 +24,6 @@ from analysis_engine.node import (
     #KTI,
     load,
     M,
-    Parameter,
     P,
     Section,
     S,
@@ -33,6 +31,8 @@ from analysis_engine.node import (
 from analysis_engine.multistate_parameters import (
     APEngaged,
     APChannelsEngaged,
+    APLateralMode,
+    APVerticalMode,
     APURunning,
     Configuration,
     Daylight,
@@ -133,6 +133,240 @@ class NodeTest(object):
         return params, phase
 
 
+
+class TestAPLateralMode(unittest.TestCase):
+    
+    def test_can_operate(self):
+        # Avoid exploding long list of combinations.
+        self.assertTrue(APLateralMode.can_operate(['Lateral Mode Selected']))
+        self.assertTrue(APLateralMode.can_operate(['Runway Mode Active']))
+        self.assertTrue(APLateralMode.can_operate([
+            'Lateral Mode Selected',
+            'Runway Mode Active',
+            'NAV Mode Active',
+            'ILS Localizer Capture Active',
+            'ILS Localizer Track Active',
+            'Roll Go Around Mode Active',
+            'Land Track Active',
+            'Heading Mode Active']))
+    
+    def test_derive_lateral_mode_selected(self):
+        lateral_mode_selected_values_mapping = {
+            0: '-',
+            1: 'Runway Mode Active',
+            2: 'NAV Mode Active',
+            3: 'ILS Localizer Capture Active',
+            4: 'Unused Mode',
+        }
+        lateral_mode_selected_array = np.ma.array(
+            [0, 0, 1, 1, 2, 2, 3, 3, 4, 4])
+        lateral_mode_selected = M(
+            'Lateral Mode Selected',
+            array=lateral_mode_selected_array,
+            values_mapping=lateral_mode_selected_values_mapping)
+        node = APLateralMode()
+        node.derive(
+            lateral_mode_selected, None, None, None, None, None, None, None)
+        self.assertTrue(
+            all(node.array ==
+                ['-', '-', 'RWY', 'RWY', 'NAV', 'NAV', 'LOC CAPT', 'LOC CAPT', '-', '-']))
+    
+    def test_derive_all(self):
+        activated_values_mapping = {0: '-', 1: 'Activated'}
+        runway_mode_active = M(
+            'Runway Mode Active',
+            array=np.ma.array([0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            values_mapping=activated_values_mapping,
+        )
+        nav_mode_active = M(
+            'NAV Mode Active',
+            array=np.ma.array([0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            values_mapping=activated_values_mapping,
+        )
+        ils_localizer_capture_active = M(
+            'ILS Localizer Capture Active',
+            array=np.ma.array([0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            values_mapping=activated_values_mapping,
+        )
+        ils_localizer_track_active = M(
+            'ILS Localizer Track Active',
+            array=np.ma.array([0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0]),
+            values_mapping=activated_values_mapping,
+        )
+        roll_go_around_mode_active = M(
+            'Roll Go Around Mode Active',
+            array=np.ma.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0]),
+            values_mapping=activated_values_mapping,
+        )
+        land_track_active = M(
+            'Land Track Active',
+            array=np.ma.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]),
+            values_mapping=activated_values_mapping,
+        )
+        heading_mode_active = M(
+            'Heading Mode Active',
+            array=np.ma.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0]),
+            values_mapping=activated_values_mapping,
+        )
+        node = APLateralMode()
+        node.derive(
+            None, runway_mode_active, nav_mode_active,
+            ils_localizer_capture_active, ils_localizer_track_active,
+            roll_go_around_mode_active, land_track_active, heading_mode_active)
+        self.assertTrue(
+            all(node.array == ['-', '-',
+                               'RWY', 'RWY',
+                               'NAV', 'NAV',
+                               'LOC CAPT', 'LOC CAPT',
+                               'LOC', 'LOC',
+                               'ROLL OUT', 'ROLL OUT',
+                               'LAND', 'LAND',
+                               'HDG', 'HDG',
+                               '-', '-']))
+
+
+class TestAPVerticalMode(unittest.TestCase):
+    
+    def setUp(self):
+        self._longitudinal_mode_selected_values_mapping = {
+            0: '-',
+            1: 'Altitude',
+            2: 'Final Descent Mode',
+            3: 'Flare Mode',
+            4: 'Land Track Active',
+            5: 'Vertical Speed Engaged',
+            6: 'Unused Mode',
+        }
+    
+    def test_can_operate(self):
+        # Avoid exploding long list of combinations.
+        self.assertTrue(APVerticalMode.can_operate(['Climb Active']))
+        self.assertTrue(APVerticalMode.can_operate(['Longitudinal Mode Selected']))
+        self.assertTrue(APVerticalMode.can_operate([
+            'Climb Active',
+            'Longitudinal Mode Selected',
+            'ILS Glideslope Capture Active',
+            'ILS Glideslope Active',
+            'Flare Mode',
+            'AT Active',
+            'Open Climb Mode',
+            'Open Descent Mode',
+            'Altitude Capture Mode',
+            'Altitude Mode',
+            'Expedite Climb Mode',
+            'Expedite Descent Mode']))
+    
+    def test_derive_longitudinal_mode_selected(self):
+        longitudinal_mode_selected_array = np.ma.array(
+            [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6])
+        longitudinal_mode_selected = M(
+            'Longitudinal Mode Selected',
+            array=longitudinal_mode_selected_array,
+            values_mapping=self._longitudinal_mode_selected_values_mapping,
+        )
+        node = APVerticalMode()
+        node.derive(
+            None, longitudinal_mode_selected, None, None, None, None, None,
+            None, None, None, None, None)
+        self.assertTrue(
+            all(node.array ==
+                ['-', '-',
+                 'ALT CSTR', 'ALT CSTR',
+                 'FINAL', 'FINAL',
+                 'FLARE', 'FLARE',
+                 'LAND', 'LAND',
+                 'V/S', 'V/S',
+                 '-', '-']))
+    
+    def test_derive_all(self):
+        activated_values_mapping = {0: '-', 1: 'Activated'}
+        climb_active = M(
+            'Climb Active',
+            array=np.ma.array([0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            values_mapping=activated_values_mapping,
+        )
+        ils_glideslope_capture_active = M(
+            'ILS Glideslope Capture Active',
+            array=np.ma.array([0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            values_mapping=activated_values_mapping,
+        )
+        ils_glideslope_active = M(
+            'ILS Glideslope Active',
+            array=np.ma.array([0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            values_mapping=activated_values_mapping,
+        )
+        flare_mode = M(
+            'Flare Mode',
+            array=np.ma.array([0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            values_mapping={0: '-', 1: 'Engaged'},
+        )
+        at_active = M(
+            'AT Active',
+            array=np.ma.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            values_mapping=activated_values_mapping,
+        )
+        open_climb_mode = M(
+            'Open Climb Mode',
+            array=np.ma.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            values_mapping=activated_values_mapping,
+        )
+        open_descent_mode = M(
+            'Open Descent Mode',
+            array=np.ma.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            values_mapping=activated_values_mapping,
+        )
+        altitude_capture_mode = M(
+            'Altitude Capture Mode',
+            array=np.ma.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            values_mapping=activated_values_mapping,
+        )
+        altitude_mode = M(
+            'Altitude Capture Mode',
+            array=np.ma.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            values_mapping=activated_values_mapping,
+        )
+        expedite_climb_mode = M(
+            'Expedite Climb Mode',
+            array=np.ma.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            values_mapping={0: '-', 1: 'Expedite Climb Mode'},
+        )
+        expedite_descent_mode = M(
+            'Expedite Descent Mode',
+            array=np.ma.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            values_mapping={0: '-', 1: 'Expedite Descent Mode'},
+        )
+        longitudinal_mode_selected = M(
+            'Longitudinal Mode Selected',
+            array=np.ma.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 4, 4, 5, 5, 0, 0]),
+            values_mapping=self._longitudinal_mode_selected_values_mapping,
+        )
+        node = APVerticalMode()
+        node.derive(climb_active, longitudinal_mode_selected,
+                    ils_glideslope_capture_active, ils_glideslope_active,
+                    flare_mode, at_active, open_climb_mode, open_descent_mode,
+                    altitude_capture_mode, altitude_mode,
+                    expedite_climb_mode, expedite_descent_mode)
+        self.assertTrue(
+            all(node.array ==
+                ['-', '-',
+                 'CLB', 'CLB',
+                 'GS CAPT', 'GS CAPT',
+                 'GS', 'GS',
+                 'FLARE', 'FLARE',
+                 'DES', 'DES',
+                 'OP CLB', 'OP CLB',
+                 'OP DES', 'OP DES',
+                 'ALT CAPT', 'ALT CAPT',
+                 'ALT', 'ALT',
+                 'EXPED CLB', 'EXPED CLB',
+                 'EXPED DES', 'EXPED DES',
+                 'ALT CSTR', 'ALT CSTR',
+                 'FINAL', 'FINAL',
+                 'LAND', 'LAND',
+                 'V/S', 'V/S',
+                 '-', '-']))
+
+
 class TestAPEngaged(unittest.TestCase, NodeTest):
 
     def setUp(self):
@@ -209,12 +443,20 @@ class TestAPURunning(unittest.TestCase):
     def test_can_operate(self):
         opts = APURunning.get_operational_combinations()
         self.assertTrue(('APU N1',) in opts)
+        self.assertTrue(('APU Generator AC Voltage',) in opts)
 
-    def test_apu_basic(self):
-        n1=P('APU N1', array=np.ma.array([0, 40, 80, 100, 70, 30, 0.0]))
-        run=APURunning()
-        run.derive(n1)
-        expected=['-']*2+['Running']*3+['-']*2
+    def test_derive_apu_n1(self):
+        apu_n1 = P('APU N1', array=np.ma.array([0, 40, 80, 100, 70, 30, 0.0]))
+        run = APURunning()
+        run.derive(apu_n1, None)
+        expected = ['-'] * 2 + ['Running'] * 3 + ['-'] * 2
+        np.testing.assert_array_equal(run.array, expected)
+    
+    def test_derive_apu_voltage(self):
+        apu_voltage = P('APU Generator AC Voltage', array=np.ma.array([0, 115, 115, 115, 114, 0, 0]))
+        run = APURunning()
+        run.derive(None, apu_voltage)
+        expected= ['-'] + ['Running'] * 4 + ['-'] * 2
         np.testing.assert_array_equal(run.array, expected)
 
 

@@ -74,6 +74,7 @@ from analysis_engine.library import (ambiguous_runway,
                                      slices_from_to,
                                      slices_not,
                                      slices_overlap,
+                                     slices_or,
                                      slices_and,
                                      slices_remove_small_slices,
                                      trim_slices,
@@ -1126,6 +1127,27 @@ class AirspeedAtTouchdown(KeyPointValueNode):
         self.create_kpvs_at_ktis(air_spd.array, touchdowns)
 
 
+class AirspeedMinsToTouchdown(KeyPointValueNode):
+    '''
+    '''
+
+    # TODO: Review and improve this technique of building KPVs on KTIs.
+    from analysis_engine.key_time_instances import MinsToTouchdown
+
+    NAME_FORMAT = 'Airspeed ' + MinsToTouchdown.NAME_FORMAT
+    NAME_VALUES = MinsToTouchdown.NAME_VALUES
+    units = ut.KT
+
+    def derive(self,
+               air_spd=P('Airspeed'),
+               mtt_kti=KTI('Mins To Touchdown')):
+
+        for mtt in mtt_kti:
+            # XXX: Assumes that the number will be the first part of the name:
+            time = int(mtt.name.split(' ')[0])
+            self.create_kpv(mtt.index, air_spd.array[mtt.index], time=time)
+
+
 class AirspeedTrueAtTouchdown(KeyPointValueNode):
     '''
     Airspeed True at the point of Touchdown.
@@ -1340,11 +1362,21 @@ class AirspeedMinusMinimumAirspeed35To10000FtMin(KeyPointValueNode):
 
     def derive(self,
                air_spd=P('Airspeed Minus Minimum Airspeed'),
-               alt_std=P('Altitude STD')):
-
-        self.create_kpvs_within_slices(air_spd.array,
-                                       alt_std.slices_from_to(35, 10000),
-                                       min_value)
+               alt_aal=P('Altitude AAL For Flight Phases'),
+               alt_std=P('Altitude STD Smoothed'),
+               init_climbs=S('Initial Climb'),
+               climbs=S('Climb')):
+        std = np.ma.clump_unmasked(np.ma.masked_greater(alt_std.array, 10000.0))
+        aal = np.ma.clump_unmasked(np.ma.masked_less(alt_aal.array, 35.0))
+        alt_bands = slices_and(std, aal)
+        combined_climb = slices_or(climbs.get_slices(),
+                                    init_climbs.get_slices())
+        scope = slices_and(alt_bands, combined_climb)
+        self.create_kpv_from_slices(
+            air_spd.array,
+            scope,
+            min_value
+        )
 
 
 class AirspeedMinusMinimumAirspeed10000To50FtMin(KeyPointValueNode):
@@ -1356,11 +1388,18 @@ class AirspeedMinusMinimumAirspeed10000To50FtMin(KeyPointValueNode):
 
     def derive(self,
                air_spd=P('Airspeed Minus Minimum Airspeed'),
-               alt_std=P('Altitude STD')):
-
-        self.create_kpvs_within_slices(air_spd.array,
-                                       alt_std.slices_from_to(10000, 50),
-                                       min_value)
+               alt_aal=P('Altitude AAL For Flight Phases'),
+               alt_std=P('Altitude STD Smoothed'),
+               descents=S('Combined Descent')):
+        std = np.ma.clump_unmasked(np.ma.masked_greater(alt_std.array, 10000.0))
+        aal = np.ma.clump_unmasked(np.ma.masked_less(alt_aal.array, 50.0))
+        alt_bands = slices_and(std, aal)
+        scope = slices_and(alt_bands, descents.get_slices())
+        self.create_kpv_from_slices(
+            air_spd.array,
+            scope,
+            min_value
+        )
 
 
 class AirspeedMinusMinimumAirspeedDuringGoAroundMin(KeyPointValueNode):
@@ -9205,9 +9244,9 @@ class RollCyclesNotDuringFinalApproach(KeyPointValueNode):
                fin_apps=S('Final Approach'),
                landings=S('Landing')):
 
-        not_fas = slices_and_not(airborne, fin_apps)
+        not_fas = slices_and_not(airborne.get_slices(), fin_apps.get_slices())
         # TODO: Fix this:
-        #not_fas = slices_and_not(not_fas, landings)
+        #not_fas = slices_and_not(not_fas.get_slices(), landings.get_slices())
         for not_fa in not_fas:
             self.create_kpv(*cycle_counter(
                 roll.array[not_fa],
