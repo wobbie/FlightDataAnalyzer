@@ -1779,41 +1779,44 @@ class TestAirspeedMinusMinimumAirspeedAbove10000FtMin(unittest.TestCase, CreateK
         ]))
 
 
-class TestAirspeedMinusMinimumAirspeed35To10000FtMin(unittest.TestCase, CreateKPVsWithinSlicesTest):
+class TestAirspeedMinusMinimumAirspeed35To10000FtMin(unittest.TestCase):
 
     def setUp(self):
         self.node_class = AirspeedMinusMinimumAirspeed35To10000FtMin
-        self.operational_combinations = [('Airspeed Minus Minimum Airspeed', 'Altitude STD')]
-        self.function = min_value
-        self.second_param_method_calls = [('slices_from_to', (35, 10000), {})]
 
     def test_derive(self):
         air_spd = P('Airspeed Minus Minimum Airspeed', np.ma.arange(200, 241))
-        alt_std = P('Altitude STD', np.ma.array(range(20) + range(20, -1, -1)) * 1000)
+        array_start = range(0, 100, 20) + range(100, 9000, 600)
+        alt_array = np.ma.array(array_start + array_start[-1:None:-1] + [0])
+        alt_std = P('Altitude STD Smoothed', alt_array + 500)
+        alt_aal = P('Altitude AAL For Flight Phases', alt_array)
+        init_climbs = buildsection('Initial Climb', 1.75, 6.5)
+        climbs = buildsection('Climb', 6.5, 20)
         name = self.node_class.get_name()
         node = self.node_class()
-        node.derive(air_spd, alt_std)
+        node.derive(air_spd, alt_aal, alt_std, init_climbs, climbs)
         self.assertEqual(node, KPV(name=name, items=[
-            KeyPointValue(name=name, index=1, value=201),
+            KeyPointValue(name=name, index=2, value=202),
         ]))
 
 
-class TestAirspeedMinusMinimumAirspeed10000To50FtMin(unittest.TestCase, CreateKPVsWithinSlicesTest):
+class TestAirspeedMinusMinimumAirspeed10000To50FtMin(unittest.TestCase):
 
     def setUp(self):
         self.node_class = AirspeedMinusMinimumAirspeed10000To50FtMin
-        self.operational_combinations = [('Airspeed Minus Minimum Airspeed', 'Altitude STD')]
-        self.function = min_value
-        self.second_param_method_calls = [('slices_from_to', (10000, 50), {})]
 
     def test_derive(self):
         air_spd = P('Airspeed Minus Minimum Airspeed', np.ma.arange(200, 241))
-        alt_std = P('Altitude STD', np.ma.array(range(20) + range(20, -1, -1)) * 1000)
+        array_start = range(0, 100, 20) + range(100, 9000, 600)
+        alt_array = np.ma.array(array_start + array_start[-1:None:-1] + [0])
+        alt_std = P('Altitude STD Smoothed', alt_array + 500)
+        alt_aal = P('Altitude AAL For Flight Phases', alt_array)
+        descents = buildsection('Combined Descent', 21, 39)
         name = self.node_class.get_name()
         node = self.node_class()
-        node.derive(air_spd, alt_std)
+        node.derive(air_spd, alt_aal, alt_std, descents)
         self.assertEqual(node, KPV(name=name, items=[
-            KeyPointValue(name=name, index=31, value=231),
+            KeyPointValue(name=name, index=21, value=221),
         ]))
 
 
