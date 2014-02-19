@@ -1048,8 +1048,6 @@ class Taxiing(FlightPhaseNode):
         taxiing_slices = slices_and_not(taxiing_slices, [flight_slice])
         
         self.create_phases(taxiing_slices)
-        
-        return taxiing_slices
 
 
 class Mobile(FlightPhaseNode):

@@ -80,6 +80,7 @@ from analysis_engine.library import (actuator_mismatch,
                                      slices_from_to,
                                      slices_not,
                                      slices_or,
+                                     slices_remove_small_slices,
                                      smooth_track,
                                      straighten_headings,
                                      track_linking,
@@ -4465,6 +4466,10 @@ class VerticalSpeedInertial(DerivedParameterNode):
             # Between 100ft and the ground, replace the computed data with a
             # purely inertial computation to avoid ground effect.
             climbs = slices_from_to(alt_rad_repair, 0, 100)[1]
+            # Exclude small slices (< 50ft rate of change for 2 seconds).
+            # TODO: Exclude insignificant rate of change.
+            climbs = slices_remove_small_slices(climbs, time_limit=2,
+                                                hz=frequency)
             for climb in climbs:
                 # From 5 seconds before lift to 100ft
                 lift_m5s = max(0, climb.start - 5*hz)
@@ -4488,6 +4493,10 @@ class VerticalSpeedInertial(DerivedParameterNode):
                 '''
                 
             descents = slices_from_to(alt_rad_repair, 100, 0)[1]
+            # Exclude small slices (< 50ft rate of change for 2 seconds).
+            # TODO: Exclude insignificant rate of change.
+            descents = slices_remove_small_slices(descents, time_limit=2,
+                                                  hz=frequency)
             for descent in descents:
                 down = slice(descent.start, descent.stop+5*hz)
                 down_slope = integrate(az_washout[down], 

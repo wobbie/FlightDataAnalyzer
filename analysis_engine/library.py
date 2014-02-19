@@ -1265,23 +1265,38 @@ def closest_unmasked_value(array, index, _slice=None):
     :returns: The closest index and value of an unmasked value.
     :rtype: Value
     '''
-
-    def find_unmasked_value(_slice, array, index):
-        slice_start = (_slice.start or 0)
-        slice_stop = (_slice.stop or len(array))
-
+    # Validate _slice and index.
+    if _slice:
+        if index < 0:
+            # hard to understand what the programmer is expecting to be returned
+            raise NotImplementedError("Negative indexing on slice not supported")
+        if not is_index_within_slice(index, _slice):
+            raise IndexError('Index %s outside of slice %s' % (index, _slice))
+    else:
+        _slice = slice(None)
+    
+    slice_start = (_slice.start or 0)
+    slice_stop = (_slice.stop or len(array))
+    
+    if _slice.step > 0:
         if index >= 0 and index > slice_stop:
             raise IndexError("index is beyond length of sliced data")
         elif index < 0 and abs(index) > len(array):
-            raise IndexError("negative index goes beyond array length")
+            raise IndexError("negative index goes beyond array length")    
+    
+    value = value_at_index(array[_slice], index - slice_start)
+    if value:
+        return Value(index=index, value=value)
 
+    def find_unmasked_value(_slice, array, index):
+        
         if index < 0:
             index = abs(len(array) + index)
 
         sliced_array = array[_slice]
         # make index relative to the sliced section
         rel_index = index - slice_start
-        if not np.ma.count(sliced_array) or abs(rel_index) > len(sliced_array):
+        if not np.ma.count(sliced_array): #or abs(rel_index) > len(sliced_array):
             # slice contains no valid data or index is outside of the length of
             # the array
             #return Value(None, None)
@@ -1294,11 +1309,6 @@ def closest_unmasked_value(array, index, _slice=None):
         pos = relative_pos + slice_start
         return pos
 
-    if _slice is not None and index < 0:
-        # hard to understand what the programmer is expecting to be returned
-        raise NotImplementedError("Negative indexing on slice not supported")
-    if _slice is None:
-        _slice = slice(None)
     if (_slice.step and _slice.step == -1):
         # OK neg_pos is a crazy name. The position in the array with negative indexing.
         neg_pos = find_unmasked_value(slice(len(array)-(_slice.start or len(array)),
@@ -3069,13 +3079,23 @@ def is_index_within_slice(index, _slice):
     :returns: whether index is within the slice.
     :rtype: bool
     '''
+    negative_step = _slice.step is not None and _slice.step < 0
     if _slice.start is None and _slice.stop is None:
         return True
     elif _slice.start is None:
-        return index < _slice.stop
+        if negative_step:
+            return index > _slice.stop
+        else:
+            return index < _slice.stop
     elif _slice.stop is None:
-        return index >= _slice.start
-    return _slice.start <= index < _slice.stop
+        if negative_step:
+            return index <= _slice.start
+        else:
+            return index >= _slice.start
+    if negative_step:
+        return _slice.start >= index > _slice.stop
+    else:
+        return _slice.start <= index < _slice.stop
 
 
 def is_index_within_slices(index, slices):
