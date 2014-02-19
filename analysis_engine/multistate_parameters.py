@@ -1990,7 +1990,8 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
                                      'Deployed/Cmd Up')
 
         elif family_name in ['Global', 'CRJ 100/200', 'ERJ-135/145',
-                             'ERJ-170/175', 'ERJ-190/195', 'CL-600'] and handle:
+                             'ERJ-170/175', 'ERJ-190/195', 'CL-600',
+                             'G-IV'] and handle:
             # No valid data seen for this type to date....
             logger.warning(
                 'SpeedbrakeSelected: algorithm for family `%s` is undecided, '
