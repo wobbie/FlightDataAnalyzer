@@ -9,6 +9,10 @@ You can view the differences in tagged versions as follows:
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
 
+v0.6.5
+------
+ - Force frequency and offset in GrossWeight to avoid interpolation error
+
 v0.6.4
 ------
  - Airbus sidestick threshold increased to accommodate aircraft with one bit offsets on the inactive stick.
