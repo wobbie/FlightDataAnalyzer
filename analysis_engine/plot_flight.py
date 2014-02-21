@@ -302,7 +302,7 @@ def plot_essential(hdf_path):
         ax3 = fig.add_subplot(4,1,3,sharex=ax2)
         ax3.plot(hdf['Altitude STD'].array, 'g-')
         ax4 = fig.add_subplot(4,1,4,sharex=ax2)
-        ax4.plot(hdf['Head True'].array, 'b-')    
+        ax4.plot(hdf['Heading'].array, 'b-')    
 
 
 def plot_flight(hdf_path, kti_list, kpv_list, phase_list, aircraft_info):
