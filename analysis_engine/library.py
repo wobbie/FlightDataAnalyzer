@@ -3279,7 +3279,7 @@ def slices_and_not(first, second):
     :param first: First list of slices- values to be included
     :type first: [slice]
     :param second: Second list of slices- values to be excluded
-    :type second: [sliec]
+    :type second: [slice]
 
     :returns: List of slices in the first but outside the second lists.
     '''
