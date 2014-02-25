@@ -1044,10 +1044,12 @@ class Taxiing(FlightPhaseNode):
             # Exclude Airbornes.
             flight_slice = slice(airs.get_first().slice.start,
                                  airs.get_last().slice.stop)
+        else:
+            flight_slice = None
         
-        taxiing_slices = slices_and_not(taxiing_slices, [flight_slice])
-        
-        self.create_phases(taxiing_slices)
+        if flight_slice:
+            taxiing_slices = slices_and_not(taxiing_slices, [flight_slice])
+            self.create_phases(taxiing_slices)
 
 
 class Mobile(FlightPhaseNode):
