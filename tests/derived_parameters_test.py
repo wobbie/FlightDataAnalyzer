@@ -4117,6 +4117,9 @@ class TestSpeedbrake(unittest.TestCase):
         self.assertTrue(Speedbrake.can_operate(
             ('Spoiler (L) Inboard', 'Spoiler (L) Outboard',
              'Spoiler (R) Inboard', 'Spoiler (R) Outboard'), family=family))
+        family = A(name='Family', value='Phenom 300')
+        self.assertTrue(Speedbrake.can_operate(('Spoiler (L)', 'Spoiler (R)'),
+                                               family=family))
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
