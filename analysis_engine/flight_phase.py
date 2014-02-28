@@ -27,10 +27,8 @@ from analysis_engine.library import (
     runs_of_ones,
     shift_slice,
     shift_slices,
-    slices_after,
     slices_and,
     slices_and_not,
-    slices_before,
     slices_from_to,
     slices_not,
     slices_or,
@@ -1044,9 +1042,11 @@ class Taxiing(FlightPhaseNode):
             # Exclude Airbornes.
             flight_slice = slice(airs.get_first().slice.start,
                                  airs.get_last().slice.stop)
+        else:
+            # Incomplete flight?
+            return
         
         taxiing_slices = slices_and_not(taxiing_slices, [flight_slice])
-        
         self.create_phases(taxiing_slices)
 
 
