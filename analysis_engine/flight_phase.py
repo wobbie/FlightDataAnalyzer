@@ -652,9 +652,14 @@ class GearExtended(FlightPhaseNode):
     def derive(self, gear_down=M('Gear Down')):
         repaired = repair_mask(gear_down.array, gear_down.frequency, 
                                repair_duration=120, extrapolate=True)
-        self.create_phases(runs_of_ones(repaired == 'Down'))
-
-
+        gear_dn = runs_of_ones(repaired == 'Down')
+        # remove single sample changes from this phase
+        # note: order removes gaps before slices for Extended
+        slices_remove_small_bits = lambda g: slices_remove_small_slices(
+            slices_remove_small_gaps(g, count=2), count=2)
+        self.create_phases(slices_remove_small_bits(gear_dn))
+        
+        
 class GearRetracting(FlightPhaseNode):
     '''
     Gear extending and retracting are section nodes, as they last for a
@@ -681,7 +686,12 @@ class GearRetracted(FlightPhaseNode):
         #TODO: self = 1 - 'Gear Extended'
         repaired = repair_mask(gear_down.array, gear_down.frequency, 
                                repair_duration=120, extrapolate=True)
-        self.create_phases(runs_of_ones(repaired == 'Up'))
+        gear_up = runs_of_ones(repaired == 'Up')
+        # remove single sample changes from this phase
+        # note: order removes slices before gaps for Retracted
+        slices_remove_small_bits = lambda g: slices_remove_small_gaps(
+            slices_remove_small_slices(g, count=2), count=2)
+        self.create_phases(slices_remove_small_bits(gear_up))
 
 
 def scan_ils(beam, ils_dots, height, scan_slice, frequency, duration=10):
