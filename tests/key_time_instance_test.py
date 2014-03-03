@@ -26,6 +26,7 @@ from analysis_engine.key_time_instances import (
     EngStop,
     EnterHold,
     ExitHold,
+    FirstEngStartBeforeLiftoff,
     FirstFlapExtensionWhileAirborne,
     FlapExtensionWhileAirborne,
     FlapLeverSet,
@@ -41,6 +42,7 @@ from analysis_engine.key_time_instances import (
     LandingDecelerationEnd,
     LandingStart,
     LandingTurnOffRunway,
+    LastEngStopAfterTouchdown,
     Liftoff,
     LocalizerEstablishedEnd,
     LocalizerEstablishedStart,
@@ -108,27 +110,32 @@ class TestAltitudePeak(unittest.TestCase):
 
 class TestBottomOfDescent(unittest.TestCase):
     def test_can_operate(self):
-        expected = [('Climb Cruise Descent','Airborne')]
-        opts = BottomOfDescent.get_operational_combinations()
-        self.assertEqual(opts, expected) 
         
+        opts = BottomOfDescent.get_operational_combinations()
+        self.assertTrue(('Climb Cruise Descent', 'HDF Duration') in opts)
+        self.assertTrue(('Airborne', 'HDF Duration') in opts)
+        self.assertTrue(
+            ('Climb Cruise Descent','Airborne', 'HDF Duration') in opts)
+    
     def test_bottom_of_descent_basic(self):
         testwave = np.cos(np.arange(0,6.3,0.1))*(2500)+2560
         alt_std = Parameter('Altitude STD Smoothed', np.ma.array(testwave))
         from analysis_engine.flight_phase import ClimbCruiseDescent
         ccd = ClimbCruiseDescent()
         air = buildsection('Airborne', 0,50)
+        duration = A('HDF Duration', 63)
         ccd.derive(alt_std)
         bod = BottomOfDescent()
-        bod.derive(ccd, air)    
+        bod.derive(ccd, air, duration)
         expected = [KeyTimeInstance(index=31, name='Bottom Of Descent')]
         self.assertEqual(bod, expected)
 
     def test_bottom_of_descent_complex(self):
         airs = buildsections('Airborne', [896, 1654], [1688, 2055])
         ccds = buildsections('Climb Cruise Descent', [897, 1253], [1291, 1651], [1689, 2054])
+        duration = A('HDF Duration', 3000)
         bod = BottomOfDescent()
-        bod.derive(ccds, airs)    
+        bod.derive(ccds, airs, duration)
         expected = [KeyTimeInstance(index=1253, name='Bottom Of Descent'),
                     KeyTimeInstance(index=1651, name='Bottom Of Descent'),
                     KeyTimeInstance(index=2054, name='Bottom Of Descent')]        
@@ -136,18 +143,29 @@ class TestBottomOfDescent(unittest.TestCase):
 
     def test_bod_air_only(self):
         air = buildsection('Airborne', 0,51)
+        duration = A('HDF Duration', 100)
         bod = BottomOfDescent()
-        bod.derive(None, air)    
+        bod.derive(None, air, duration)
         expected = [KeyTimeInstance(index=51, name='Bottom Of Descent')]        
         self.assertEqual(bod, expected)
         
     def test_bod_ccd_only(self):
         ccds = buildsection('Climb Cruise Descent', 897, 1253)
+        duration = A('HDF Duration', 2000)
         bod = BottomOfDescent()
-        bod.derive(ccds, None)    
-        expected = [KeyTimeInstance(index=1253, name='Bottom Of Descent')]        
+        bod.derive(ccds, None, duration)
+        expected = [KeyTimeInstance(index=1253, name='Bottom Of Descent')]
         self.assertEqual(bod, expected)
-        
+    
+    def test_bod_duration(self):
+        ccds = buildsection('Climb Cruise Descent', 897, None)
+        airs = buildsection('Airborne', 1688, None)
+        duration = A('HDF Duration', 2000)
+        bod = BottomOfDescent()
+        bod.derive(ccds, None, duration)
+        expected = [KeyTimeInstance(index=2000, name='Bottom Of Descent')]
+        self.assertEqual(bod, expected)
+
 
 class TestClimbStart(unittest.TestCase):
     def test_can_operate(self):
@@ -900,6 +918,34 @@ class TestEngStart(unittest.TestCase):
         self.assertEqual(es[0].index, 1.5)
 
 
+class TestFirstEngStartBeforeLiftoff(unittest.TestCase):
+    
+    def test_can_operate(self):
+        combinations = FirstEngStartBeforeLiftoff.get_operational_combinations()
+        self.assertEqual(combinations,
+                         [('Eng Start', 'Engine Count', 'Liftoff'),])
+    
+    def test_derive_basic(self):
+        eng_count = A('Engine Count', 3)
+        eng_starts = EngStart('Eng Start',
+                              items=[KeyTimeInstance(10, name='Eng (1) Start'),
+                                     KeyTimeInstance(20, name='Eng (2) Start'),
+                                     KeyTimeInstance(30, name='Eng (3) Start'),
+                                     KeyTimeInstance(40, name='Eng (1) Start'),
+                                     KeyTimeInstance(50, name='Eng (2) Start'),
+                                     KeyTimeInstance(60, name='Eng (3) Start'),
+                                     KeyTimeInstance(70, name='Eng (1) Start'),
+                                     KeyTimeInstance(80, name='Eng (2) Start'),
+                                     KeyTimeInstance(360, name='Eng (1) Start'),
+                                     KeyTimeInstance(370, name='Eng (1) Start'),
+                                     KeyTimeInstance(380, name='Eng (2) Start'),])
+        liftoffs = KTI('Liftoff', items=[KeyTimeInstance(100, 'Liftoff')])
+        node = FirstEngStartBeforeLiftoff()
+        node.derive(eng_starts, eng_count, liftoffs)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 60)
+
+
 class TestEngStop(unittest.TestCase):
     
     def test_can_operate(self):
@@ -921,6 +967,37 @@ class TestEngStop(unittest.TestCase):
         self.assertEqual(es[0].index, 2)
         self.assertEqual(es[1].name, 'Eng (2) Stop')
         self.assertEqual(es[1].index, 1.5)
+
+
+class TestLastEngStopAfterTouchdown(unittest.TestCase):
+    
+    def test_can_operate(self):
+        combinations = LastEngStopAfterTouchdown.get_operational_combinations()
+        self.assertEqual(
+            combinations,
+            [('Eng Stop', 'Engine Count', 'Touchdown', 'HDF Duration'),])
+    
+    def test_derive_basic(self):
+        eng_count = A('Engine Count', 3)
+        eng_stops = EngStop('Eng Stop',
+                            items=[KeyTimeInstance(10, name='Eng (1) Stop'),
+                                   KeyTimeInstance(20, name='Eng (2) Stop'),
+                                   KeyTimeInstance(30, name='Eng (3) Stop'),
+                                   KeyTimeInstance(110, name='Eng (1) Stop'),
+                                   KeyTimeInstance(120, name='Eng (2) Stop'),
+                                   KeyTimeInstance(130, name='Eng (3) Stop'),
+                                   KeyTimeInstance(140, name='Eng (1) Stop'),
+                                   KeyTimeInstance(150, name='Eng (2) Stop'),
+                                   KeyTimeInstance(160, name='Eng (1) Stop'),
+                                   KeyTimeInstance(170, name='Eng (1) Stop'),
+                                   KeyTimeInstance(180, name='Eng (2) Stop'),])
+        touchdowns = KTI('Touchdown', items=[KeyTimeInstance(100, 'Touchdown')])
+        duration = A('HDF Duration', 200)
+        node = LastEngStopAfterTouchdown()
+        node.derive(eng_stops, eng_count, touchdowns)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 130)
+
 
 class TestEnterHold(unittest.TestCase):
     def test_can_operate(self):

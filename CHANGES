@@ -11,6 +11,15 @@ You can view the differences in tagged versions as follows:
 v0.7.0
 ------
 
+v0.6.5
+------
+ - Force frequency and offset in GrossWeight to avoid interpolation error
+
+v0.6.4
+------
+ - Airbus sidestick threshold increased to accommodate aircraft with one bit offsets on the inactive stick.
+ - Pilot Flying identification by means of VHF usage removed
+
 v0.6.3
 -----
  - Fix to allow takeoff sections to start at the beginning of the data.

@@ -90,7 +90,7 @@ from analysis_engine.library import (#actuator_mismatch,
                                      #second_window,
                                      #track_linking,
                                      #value_at_index,
-                                     vstack_params,
+                                     #vstack_params,
                                      vstack_params_where_state,
                                      )
 
@@ -174,6 +174,173 @@ class APChannelsEngaged(MultistateDerivedParameterNode):
         self.offset = offset_select('mean', [ap1, ap2, ap3])
 
 
+class APLateralMode(MultistateDerivedParameterNode):
+    '''
+    '''
+    name = 'AP Lateral Mode'
+    # Values and states match X-Plane visualisation model documentation.
+    values_mapping = {
+        0: '-',
+        2: 'RWY',
+        4: 'RWY TRK',
+        6: 'NAV',
+        14: 'LOC CAPT',
+        16: 'LOC',
+        20: 'APP NAV',
+        22: 'ROLL OUT',
+        24: 'LAND',
+        64: 'HDG',
+    }
+    
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(('Lateral Mode Selected',
+                       'Runway Mode Active',
+                       'NAV Mode Active',
+                       'ILS Localizer Capture Active',
+                       'ILS Localizer Track Active',
+                       'Roll Go Around Mode Active',
+                       'Land Track Active',
+                       'Heading Mode Active'), available)
+    
+    def derive(self,
+               lateral_mode_selected=M('Lateral Mode Selected'),
+               runway_mode_active=M('Runway Mode Active'),
+               nav_mode_active=M('NAV Mode Active'),
+               ils_localizer_capture_active=M('ILS Localizer Capture Active'),
+               ils_localizer_track_active=M('ILS Localizer Track Active'),
+               roll_go_around_mode_active=M('Roll Go Around Mode Active'),
+               land_track_active=M('Land Track Active'),
+               heading_mode_active=M('Heading Mode Active')):
+        parameter = next(p for p in (lateral_mode_selected,
+                                     runway_mode_active,
+                                     nav_mode_active,
+                                     ils_localizer_capture_active,
+                                     ils_localizer_track_active,
+                                     roll_go_around_mode_active,
+                                     land_track_active,
+                                     heading_mode_active) if p)
+        self.array = np_ma_zeros_like(parameter.array)
+        
+        if lateral_mode_selected:
+            self.array[lateral_mode_selected.array == 'Runway Mode Active'] = 'RWY'
+            self.array[lateral_mode_selected.array == 'NAV Mode Active'] = 'NAV'
+            self.array[lateral_mode_selected.array == 'ILS Localizer Capture Active'] = 'LOC CAPT',
+        if runway_mode_active:
+            self.array[runway_mode_active.array == 'Activated'] = 'RWY'
+        if nav_mode_active:
+            self.array[nav_mode_active.array == 'Activated'] = 'NAV'
+        if ils_localizer_capture_active:
+            self.array[ils_localizer_capture_active.array == 'Activated'] = 'LOC CAPT'
+        if ils_localizer_track_active:
+            self.array[ils_localizer_track_active.array == 'Activated'] = 'LOC'
+        if roll_go_around_mode_active:
+            self.array[roll_go_around_mode_active.array == 'Activated'] = 'ROLL OUT'
+        if land_track_active:
+            self.array[land_track_active.array == 'Activated'] = 'LAND'
+        if heading_mode_active:
+            self.array[heading_mode_active.array == 'Activated'] = 'HDG'
+
+
+class APVerticalMode(MultistateDerivedParameterNode):
+    '''
+    '''
+    name = 'AP Vertical Mode'
+    # Values and states match X-Plane visualisation model documentation.
+    values_mapping = {
+        0: '-',
+        2: 'SRS',
+        4: 'CLB',
+        6: 'DES',
+        8: 'ALT CSTR CAPT',
+        10: 'ALT CSTR',
+        14: 'GS CAPT',
+        16: 'GS',
+        18: 'FINAL',
+        22: 'FLARE',
+        24: 'LAND',
+        26: 'DES', # geo path, A/THR mode SPEED
+        64: 'OP CLB',
+        66: 'OP DES',
+        68: 'ALT CAPT',
+        70: 'ALT',
+        72: 'ALT CRZ',
+        76: 'V/S',
+        86: 'EXPED CLB',
+        88: 'EXPED DES',
+    }
+    
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(('Climb Active',
+                       'Longitudinal Mode Selected',
+                       'ILS Glideslope Capture Active',
+                       'ILS Glideslope Active',
+                       'Flare Mode',
+                       'AT Active',
+                       'Open Climb Mode',
+                       'Open Descent Mode',
+                       'Altitude Capture Mode',
+                       'Altitude Mode',
+                       'Expedite Climb Mode',
+                       'Expedite Descent Mode'), available)
+    
+    def derive(self,
+               climb_active=M('Climb Active'),
+               longitudinal_mode_selected=M('Longitudinal Mode Selected'),
+               ils_glideslope_capture_active=M('ILS Glideslope Capture Active'),
+               ils_glideslope_active=M('ILS Glideslope Active'),
+               flare_mode=M('Flare Mode'),
+               at_active=M('AT Active'),
+               open_climb_mode=M('Open Climb Mode'),
+               open_descent_mode=M('Open Descent Mode'),
+               altitude_capture_mode=M('Altitude Capture Mode'),
+               altitude_mode=M('Altitude Mode'),
+               expedite_climb_mode=M('Expedite Climb Mode'),
+               expedite_descent_mode=M('Expedite Descent Mode')):
+        parameter = next(p for p in (climb_active,
+                                     longitudinal_mode_selected,
+                                     ils_glideslope_capture_active,
+                                     ils_glideslope_active,
+                                     at_active,
+                                     open_climb_mode,
+                                     open_descent_mode,
+                                     altitude_capture_mode,
+                                     altitude_mode,
+                                     expedite_climb_mode,
+                                     expedite_descent_mode) if p)
+        self.array = np_ma_zeros_like(parameter.array)
+        
+        if climb_active:
+            self.array[climb_active.array == 'Activated'] = 'CLB'
+        if longitudinal_mode_selected:
+            self.array[longitudinal_mode_selected.array == 'Altitude'] = 'ALT CSTR'
+            self.array[longitudinal_mode_selected.array == 'Final Descent Mode'] = 'FINAL'
+            self.array[longitudinal_mode_selected.array == 'Flare Mode'] = 'FLARE'
+            self.array[longitudinal_mode_selected.array == 'Land Track Active'] = 'LAND'
+            self.array[longitudinal_mode_selected.array == 'Vertical Speed Engaged'] = 'V/S'
+        if ils_glideslope_capture_active:
+            self.array[ils_glideslope_capture_active.array == 'Activated'] = 'GS CAPT'
+        if ils_glideslope_active:
+            self.array[ils_glideslope_active.array == 'Activated'] = 'GS'
+        if flare_mode:
+            self.array[flare_mode.array == 'Engaged'] = 'FLARE'
+        if at_active:
+            self.array[at_active.array == 'Activated'] = 'DES'
+        if open_climb_mode:
+            self.array[open_climb_mode.array == 'Activated'] = 'OP CLB'
+        if open_descent_mode:
+            self.array[open_descent_mode.array == 'Activated'] = 'OP DES'
+        if altitude_capture_mode:
+            self.array[altitude_capture_mode.array == 'Activated'] = 'ALT CAPT'
+        if altitude_mode:
+            self.array[altitude_mode.array == 'Activated'] = 'ALT'
+        if expedite_climb_mode:
+            self.array[expedite_climb_mode.array == 'Expedite Climb Mode'] = 'EXPED CLB'
+        if expedite_descent_mode:
+            self.array[expedite_descent_mode.array == 'Expedite Descent Mode'] = 'EXPED DES'
+
+
 class APURunning(MultistateDerivedParameterNode):
     '''
     Simple measure of APU status, suitable for plotting if you want an on/off
@@ -183,13 +350,18 @@ class APURunning(MultistateDerivedParameterNode):
     name = 'APU Running'
 
     values_mapping = {0 : '-',  1 : 'Running'}
-
+    
     @classmethod
     def can_operate(cls, available):
-        return 'APU N1' in available
+        return any_of(('APU N1', 'APU Generator AC Voltage'), available)
 
-    def derive(self, apu_n1=P('APU N1')):
-        self.array = np.ma.where(apu_n1.array > 50.0, 'Running', '-')
+    def derive(self, apu_n1=P('APU N1'),
+               apu_voltage=P('APU Generator AC Voltage')):
+        if apu_n1:
+            self.array = np.ma.where(apu_n1.array > 50.0, 'Running', '-')
+        else:
+            # XXX: APU Generator AC Voltage > 100 volts.
+            self.array = np.ma.where(apu_voltage.array > 100.0, 'Running', '-')
 
 
 class Configuration(MultistateDerivedParameterNode):
@@ -347,7 +519,9 @@ class DualInputWarning(MultistateDerivedParameterNode):
         array = np_ma_zeros_like(pilot.array)
         array[pilot.array == 'Captain'] = stick_fo.array[pilot.array == 'Captain']
         array[pilot.array == 'First Officer'] = stick_capt.array[pilot.array == 'First Officer']
-        array = np.ma.array(array > 0.5, mask=array.mask, dtype=int)
+        # Due to the poor resolution of the A330/A340 sidesticks, a threshold
+        # increase was required to ensure reliable operation.
+        array = np.ma.array(array > 1.7, mask=array.mask, dtype=int)
 
         slices = runs_of_ones(array)
         slices = slices_remove_small_slices(slices, 3, self.hz)
@@ -1606,10 +1780,14 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         x = available
         if family and family.value == 'BD-100':
             return 'Speedbrake Handle' in x and 'Spoiler Ground Armed' in x
-        return 'Speedbrake Deployed' in x \
-               or ('Family' in x and 'Spoiler Switch' in x)\
-               or ('Family' in x and 'Speedbrake Handle' in x)\
-               or ('Family' in x and 'Speedbrake' in x)
+        elif family and family.value in ['Global', 'CRJ 100/200', 'ERJ-135/145',
+                                         'ERJ-170/175', 'ERJ-190/195']:
+            return 'Speedbrake Handle' in x
+        else:
+            return ('Speedbrake Deployed' in x or
+                    ('Family' in x and 'Spoiler Switch' in x) or
+                    ('Family' in x and 'Speedbrake Handle' in x) or
+                    ('Family' in x and 'Speedbrake' in x))
 
     @classmethod
     def derive_from_handle(cls, handle_array, deployed=1, armed=None):
@@ -1802,7 +1980,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         elif family_name == 'Learjet':
             self.array = self.learjet_speedbrake(spdsw)
 
-        elif family_name in ['G-V', 'CL-600'] and spdbrk:
+        elif family_name in ['G-V', 'CL-600', 'BAE 146', 'Phenom 300'] and spdbrk:
             # On the test aircraft SE-RDY the Speedbrake stored 0 at all
             # times and Speedbrake Handle was unresponsive with small numeric
             # variation. The Speedbrake (L) & (R) responded normally so we
@@ -1811,8 +1989,9 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
                                      'Stowed',
                                      'Deployed/Cmd Up')
 
-        elif family_name in['Global', 'CRJ 100/200', 'ERJ-135/145',
-                            'ERJ-190/195', 'CL-600'] and handle:
+        elif family_name in ['Global', 'CRJ 100/200', 'ERJ-135/145',
+                             'ERJ-170/175', 'ERJ-190/195', 'CL-600',
+                             'G-IV'] and handle:
             # No valid data seen for this type to date....
             logger.warning(
                 'SpeedbrakeSelected: algorithm for family `%s` is undecided, '
@@ -2401,3 +2580,34 @@ class TCASFailure(MultistateDerivedParameterNode):
             (tcas_l_failure, 'Failed'),
             (tcas_r_failure, 'Failed'),
         ).any(axis=0)
+
+
+class SpeedControl(MultistateDerivedParameterNode):
+
+    values_mapping = {0: 'Manual', 1: 'Auto'}
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return any_of((
+            'Speed Control Auto',
+            'Speed Control Manual',
+            'Speed Control (1) Auto',
+            'Speed Control (1) Manual',
+            'Speed Control (2) Auto',
+            'Speed Control (2) Manual',
+        ), available)
+
+    def derive(self,
+               sc0a=M('Speed Control Auto'),
+               sc0m=M('Speed Control Manual'),
+               sc1a=M('Speed Control (1) Auto'),
+               sc1m=M('Speed Control (1) Manual'),
+               sc2a=M('Speed Control (2) Auto'),
+               sc2m=M('Speed Control (2) Manual')):
+
+        self.array = vstack_params_where_state(
+            (sc0a, 'Auto'), (sc0m, 'Auto'),
+            (sc1a, 'Auto'), (sc1m, 'Auto'),
+            (sc2a, 'Auto'), (sc2m, 'Auto'),
+        ).any(axis=0).astype(np.int)

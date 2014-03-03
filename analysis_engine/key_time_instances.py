@@ -8,7 +8,6 @@ from analysis_engine.library import (all_of,
                                      find_toc_tod,
                                      first_valid_sample,
                                      index_at_value,
-                                     is_index_within_slice,
                                      max_value,
                                      minimum_unmasked,
                                      np_ma_masked_zeros_like,
@@ -46,10 +45,15 @@ class BottomOfDescent(KeyTimeInstanceNode):
     '''
     Bottom of a descent phase, which may be a go-around, touch and go or landing.
     '''
+    @classmethod
+    def can_operate(cls, available):
+        return ('HDF Duration' in available and
+                any_of(('Climb Cruise Descent', 'Airborne'), available))
+    
     def derive(self, ccds=S('Climb Cruise Descent'),
-               airs=S('Airborne')):
-        air_list = [a.stop_edge for a in airs] if airs else []
-        climb_list = [c.stop_edge for c in ccds] if ccds else []
+               airs=S('Airborne'), duration=A('HDF Duration')):
+        air_list = [a.stop_edge or duration.value for a in airs] if airs else []
+        climb_list = [c.stop_edge or duration.value for c in ccds] if ccds else []
         ends = sorted(air_list+climb_list)
         index = 0
         while index<len(ends)-1:
@@ -62,8 +66,10 @@ class BottomOfDescent(KeyTimeInstanceNode):
             else:
                 self.create_kti(ends[index])
                 index += 1
-        self.create_kti(ends[-1])
-                
+        if ends:
+            # Ends may not exist for non-START_AND_STOP segments.
+            self.create_kti(ends[-1])
+
 
 # TODO: Determine an altitude peak per climb.
 class AltitudePeak(KeyTimeInstanceNode):
@@ -305,6 +311,32 @@ class EngStart(KeyTimeInstanceNode):
                 )
 
 
+class FirstEngStartBeforeLiftoff(KeyTimeInstanceNode):
+    '''
+    Check for the first engine start before liftoff. The index will be the first
+    time an engine is started and remains on before liftoff.
+    '''
+    
+    def derive(self, eng_starts=KTI('Eng Start'), eng_count=A('Engine Count'),
+               liftoffs=KTI('Liftoff')):
+        eng_starts_before_liftoff = []
+        for x in range(eng_count.value):
+            kti_name = eng_starts.format_name(number=x + 1)
+            eng_start_before_liftoff = eng_starts.get_previous(
+                liftoffs.get_first().index, name=kti_name)
+            if not eng_start_before_liftoff:
+                self.warning("Could not find '%s before Liftoff.",
+                             kti_name)
+                continue
+            eng_starts_before_liftoff.append(eng_start_before_liftoff.index)
+        if eng_starts_before_liftoff:
+            self.create_kti(min(eng_starts_before_liftoff))
+        else:
+            # Q: Should we be creating a KTI if the first engine start cannot
+            # be found? 
+            self.create_kti(0)
+
+
 class EngStop(KeyTimeInstanceNode):
     '''
     Monitors the engine stop time. Engines still running at the end of the
@@ -361,6 +393,32 @@ class EngStop(KeyTimeInstanceNode):
                     direction='falling_edges',
                     replace_values={'number': number},
                 )
+
+
+class LastEngStopAfterTouchdown(KeyTimeInstanceNode):
+    '''
+    Check for the last engine stop after touchdown. The index will be the last
+    time an engine is stopped and remains off after liftoff.
+    '''
+    
+    def derive(self, eng_stops=KTI('Eng Stop'), eng_count=A('Engine Count'),
+               touchdowns=KTI('Touchdown'), duration=A('HDF Duration')):
+        eng_stops_after_touchdown = []
+        for x in range(eng_count.value):
+            kti_name = eng_stops.format_name(number=x + 1)
+            eng_stop_after_touchdown = eng_stops.get_next(
+                touchdowns.get_last().index, name=kti_name)
+            if not eng_stop_after_touchdown:
+                self.warning("Could not find '%s after Touchdown.",
+                             kti_name)
+                continue
+            eng_stops_after_touchdown.append(eng_stop_after_touchdown.index)
+        if eng_stops_after_touchdown:
+            self.create_kti(max(eng_stops_after_touchdown))
+        else:
+            # Q: Should we be creating a KTI if the last engine stop cannot
+            # be found?
+            self.create_kti(duration.value - 1)
 
 
 class EnterHold(KeyTimeInstanceNode):

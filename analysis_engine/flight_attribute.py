@@ -975,7 +975,7 @@ class Version(FlightAttributeNode):
     "Version of code used for analysis"
     name = 'FDR Version'
 
-    def derive(self, start_datetime=P('Start Datetime')):
+    def derive(self, start_datetime=A('Start Datetime')):
         '''
         Every derive method requires at least one dependency. Since this class
         should always derive a flight attribute, 'Start Datetime' is its only

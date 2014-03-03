@@ -111,7 +111,7 @@ def derived_trimmer(hdf_path, node_names, dest):
     with hdf_file(hdf_path) as hdf:
         derived_nodes = get_derived_nodes(settings.NODE_MODULES)
         node_mgr = NodeManager(
-            datetime.now(), hdf.duration, hdf.valid_param_names(), [],
+            datetime.now(), hdf.duration, hdf.valid_param_names(), [], [],
             derived_nodes, {}, {})
         _graph = graph_nodes(node_mgr)
         for node_name in node_names:

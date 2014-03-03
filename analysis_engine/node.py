@@ -277,7 +277,7 @@ def can_operate(cls, available):
         return all(x in available for x in cls.get_dependency_names())
 
     @classmethod
-    def get_operational_combinations(cls):
+    def get_operational_combinations(cls, **kwargs):
         """
         TODO: Support additional requested arguments (series/family)
         e.g. Slat(MultistateDerivedParameter)
@@ -286,7 +286,8 @@ def can_operate(cls, available):
         :rtype: [str]
         """
         dependencies_powerset = powerset(cls.get_dependency_names())
-        return [args for args in dependencies_powerset if cls.can_operate(args)]
+        return [args for args in dependencies_powerset if
+                cls.can_operate(args, **kwargs)]
 
     def get_aligned(self, align_to_param):
         """

@@ -2,10 +2,12 @@ import csv
 import mock
 import numpy as np
 import os
+import types
 import unittest
 
 from datetime import datetime
 from math import sqrt
+from mock import patch
 from time import clock
 
 from analysis_engine.flight_attribute import LandingRunway
@@ -98,6 +100,41 @@ class TestAlignSlices(unittest.TestCase):
         self.assertEqual(result, [slice(None, 39, None), slice(39, 79, None),
                                   slice(79, None, None), slice(9, 19, 3), None,
                                   slice(None, None, None)])
+
+
+class TestFindSlicesOverlap(unittest.TestCase):
+    def test_find_slices_overlap(self):
+        slice1 = slice(None, 100)
+        slice2 = slice(90, None)
+        expected = slice(90, 100)
+        res = find_slices_overlap(slice1, slice2)
+        self.assertEqual(res, expected)
+
+        slice1 = slice(50, 100)
+        slice2 = slice(90, 150)
+        expected = slice(90, 100)
+        res = find_slices_overlap(slice1, slice2)
+        self.assertEqual(res, expected)
+
+        slice1 = slice(50, 90)
+        slice2 = slice(100, 150)
+        expected = None
+        res = find_slices_overlap(slice1, slice2)
+        self.assertEqual(res, expected)
+
+        slice1 = slice(50, 100, None)
+        slice2 = slice(90, 150, 1)
+        expected = slice(90, 100)
+        res = find_slices_overlap(slice1, slice2)
+        self.assertEqual(res, expected)
+
+        slice1 = slice(50, 100, -1)
+        slice2 = slice(90, 150, 1)
+        self.assertRaises(ValueError, find_slices_overlap, slice1, slice2)
+
+        slice1 = slice(50, 100)
+        slice2 = slice(90, 150, 2)
+        self.assertRaises(ValueError, find_slices_overlap, slice1, slice2)
 
 
 class TestAlignSlice(unittest.TestCase):
@@ -1793,7 +1830,7 @@ class TestFirstOrderLag(unittest.TestCase):
         array = np.ma.zeros(5)
         array[3] = np.ma.masked
         result = first_order_lag (array, 1.0, 1.0, initial_value = 1.0)
-        ma_test.assert_mask_eqivalent(result.mask, [0,0,0,1,0],
+        ma_test.assert_mask_equivalent(result.mask, [0,0,0,1,0],
                                       err_msg='Masks are not equal')
 
 
@@ -1853,8 +1890,63 @@ class TestFirstOrderWashout(unittest.TestCase):
         array = np.ma.zeros(5)
         array[3] = np.ma.masked
         result = first_order_washout (array, 1.0, 1.0, initial_value = 1.0)
-        ma_test.assert_mask_eqivalent(result.mask, [0,0,0,1,0],
+        ma_test.assert_mask_equivalent(result.mask, [0,0,0,1,0],
                                       err_msg='Masks are not equal')
+
+
+class TestFirstValidParameter(unittest.TestCase):
+
+    def test_first_valid_parameter__none(self):
+        p1 = P(name='A', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
+        p2 = P(name='B', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
+        p3 = P(name='C', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
+        self.assertEqual(first_valid_parameter(p1, p2, p3), None)
+
+    def test_first_valid_parameter__fully_unmasked(self):
+        p1 = P(name='A', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
+        p2 = P(name='B', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
+        p3 = P(name='C', array=np.ma.array(data=[0] * 5, mask=[False] * 5))
+        self.assertEqual(first_valid_parameter(p1, p2, p3), p3)
+
+    def test_first_valid_parameter__partially_unmasked(self):
+        p1 = P(name='A', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
+        p2 = P(name='B', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
+        p3 = P(name='C', array=np.ma.array(data=[0] * 5, mask=[False] * 4 + [True]))
+        self.assertEqual(first_valid_parameter(p1, p2, p3), p3)
+
+    def test_first_valid_parameter__multiple(self):
+        p1 = P(name='A', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
+        p2 = P(name='B', array=np.ma.array(data=[0] * 5, mask=[True] * 4 + [False]))
+        p3 = P(name='C', array=np.ma.array(data=[0] * 5, mask=[False] * 5))
+        self.assertEqual(first_valid_parameter(p1, p2, p3), p2)
+
+    def test_first_valid_parameter__valid_samples_within_single_phase(self):
+        phases = [slice(1, 5)]
+        p1 = P(name='A', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
+        p2 = P(name='B', array=np.ma.array(data=[0] * 5, mask=[True] * 4 + [False]))
+        p3 = P(name='C', array=np.ma.array(data=[0] * 5, mask=[False] * 5))
+        self.assertEqual(first_valid_parameter(p1, p2, p3, phases=phases), p2)
+
+    def test_first_valid_parameter__no_valid_samples_within_single_phase(self):
+        phases = [slice(0, 4)]
+        p1 = P(name='A', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
+        p2 = P(name='B', array=np.ma.array(data=[0] * 5, mask=[True] * 4 + [False]))
+        p3 = P(name='C', array=np.ma.array(data=[0] * 5, mask=[False] * 5))
+        self.assertEqual(first_valid_parameter(p1, p2, p3, phases=phases), p3)
+
+    def test_first_valid_parameter__no_valid_samples_within_single_phase_2(self):
+        phases = [slice(1, 4)]
+        p1 = P(name='A', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
+        p2 = P(name='B', array=np.ma.array(data=[0] * 5, mask=[True] * 4 + [False]))
+        p3 = P(name='C', array=np.ma.array(data=[0] * 5, mask=[False] + [True] * 4))
+        self.assertEqual(first_valid_parameter(p1, p2, p3, phases=phases), None)
+
+    def test_first_valid_parameter__valid_samples_within_multiple_phases(self):
+        phases = [slice(0, 2), slice(3, 5)]
+        p1 = P(name='A', array=np.ma.array(data=[0] * 5, mask=[True] * 5))
+        p2 = P(name='B', array=np.ma.array(data=[0] * 5, mask=[True] * 4 + [False]))
+        p3 = P(name='C', array=np.ma.array(data=[0] * 5, mask=[False] * 5))
+        self.assertEqual(first_valid_parameter(p1, p2, p3, phases=phases), p2)
 
 
 class TestFirstValidSample(unittest.TestCase):
@@ -2382,6 +2474,24 @@ class TestInterpolate(unittest.TestCase):
                           mask=[0, 0, 0, 0, 0, 0, 0,  0,  0,  0,  0,  0, 0, 1, 1, 1])
         result = interpolate(array, extrapolate=False)
         np.testing.assert_array_equal(result, expected)
+
+
+class TestInterpolateCoarse(unittest.TestCase):
+    def test_interpolate_coarse_1(self):
+        lat_c_array = np.ma.array(
+            [1000, 1000, 56, 56, 56, 57, 57, 58, 57, 57, 2000, 2000, 2000],
+            mask=[True] * 2 + [False] * 8 + [True] * 3, dtype=np.float_)
+        interpolated = interpolate_coarse(lat_c_array)
+        self.assertEqual([('%.1f' % x) if x else None for x in interpolated.tolist()],
+                         [None, None, '56.0', '56.3', '56.7', '57.0', '57.5', '58.0', '57.0', None, None, None, None])
+        
+    def test_interpolate_coarse_2(self):
+        lon_c_array = np.ma.array(
+            [1000, 1000, 60, 60, 60, 61, 61, 61, 62, 63, 2000, 2000, 2000],
+            mask=[True] * 2 + [False] * 8 + [True] * 3, dtype=np.float_)
+        interpolated = interpolate_coarse(lon_c_array)
+        self.assertEqual([('%.1f' % x) if x else None for x in interpolated.tolist()],
+                         [None, None, '60.0', '60.3', '60.7', '61.0', '61.3', '61.7', '62.0', '63.0', None, None, None])
 
 
 class TestIndexOfDatetime(unittest.TestCase):
@@ -3648,7 +3758,7 @@ class TestRateOfChange(unittest.TestCase):
                                               dtype=float), 1), 4)
         answer = np.ma.array(data=[-1.0,-1.0,0.0,0.75,1.25,1.0,1.0,1.0,-1.0,2.0],
                              mask=False)
-        ma_test.assert_mask_eqivalent(sloped, answer)
+        ma_test.assert_mask_equivalent(sloped, answer)
 
     def test_rate_of_change_increased_frequency(self):
         sloped = rate_of_change(P('Test',
@@ -3656,7 +3766,7 @@ class TestRateOfChange(unittest.TestCase):
                                               dtype=float), 2), 4)
         answer = np.ma.array(data=[-2.0,-2.0,6.0,-2.0,1.0,1.75,2.0,4.0,-2.0,4.0],
                              mask=False)
-        ma_test.assert_mask_eqivalent(sloped, answer)
+        ma_test.assert_mask_equivalent(sloped, answer)
 
     def test_rate_of_change_reduced_frequency(self):
         sloped = rate_of_change(P('Test',
@@ -3664,7 +3774,7 @@ class TestRateOfChange(unittest.TestCase):
                                               dtype=float), 0.5), 4)
         answer = np.ma.array(data=[-0.5,-0.5,0.5,0.5,0.25,0.75,0.75,0.25,0.25,1.0],
                              mask=False)
-        ma_test.assert_mask_eqivalent(sloped, answer)
+        ma_test.assert_mask_equivalent(sloped, answer)
 
     def test_rate_of_change_transfer_mask(self):
         sloped = rate_of_change(P('Test',
@@ -3672,7 +3782,7 @@ class TestRateOfChange(unittest.TestCase):
                             mask = [0, 1,  0, 0, 0, 1, 0, 0, 0, 1]), 1), 2)
         answer = np.ma.array(data = [0,-1.0,0,1.0,0,1.5,0,0.5,0,0],
              mask = [True,False,True,False,True,False,True,False,True,True])
-        ma_test.assert_mask_eqivalent(sloped, answer)
+        ma_test.assert_mask_equivalent(sloped, answer)
 
     def test_rate_of_change_half_width_zero(self):
         self.assertRaises(ValueError,
@@ -3695,7 +3805,7 @@ class TestRateOfChange(unittest.TestCase):
                                               dtype=float), 1), 5, method='regression')
         answer = np.ma.array(data=[0.0,0.0,0.0,0.0,0.2,0.3,0.3,0.2,0.0,0.0,0.0,0.0],
                              mask=False)
-        ma_test.assert_mask_eqivalent(sloped, answer)
+        ma_test.assert_mask_equivalent(sloped, answer)
 
 
 class TestRepairMask(unittest.TestCase):
@@ -4117,6 +4227,40 @@ class TestRunsOfOnes(unittest.TestCase):
         self.assertEqual(result, [slice(2, 3), slice(4, 9), slice(11, 14)])
 
 
+class TestSlicesOfRuns(unittest.TestCase):
+
+    def test__slices_of_runs(self):
+        array = np.ma.repeat(range(0, 3), 3)
+        result = slices_of_runs(array)
+        expected = [(0, [slice(0, 3)]), (1, [slice(3, 6)]), (2, [slice(6, 9)])]
+        self.assertIsInstance(result, types.GeneratorType)
+        self.assertEqual(list(result), expected)
+
+    def test__slices_of_runs__multiple_slices(self):
+        array = np.ma.repeat((0, 1, 0), 3)
+        result = slices_of_runs(array)
+        expected = [(0, [slice(0, 3), slice(6, 9)]), (1, [slice(3, 6)])]
+        self.assertIsInstance(result, types.GeneratorType)
+        self.assertEqual(list(result), expected)
+
+    def test__slices_of_runs__exclude_masked(self):
+        array = np.ma.repeat(range(0, 2), 5)
+        array[3:7] = np.ma.masked
+        result = slices_of_runs(array)
+        expected = [(0, [slice(0, 3)]), (1, [slice(7, 10)])]
+        self.assertIsInstance(result, types.GeneratorType)
+        self.assertEqual(list(result), expected)
+
+    def test__slices_of_runs__mapped_array(self):
+        array = np.ma.repeat(range(0, 3), 3)
+        array.mask = np.ma.getmaskarray(array)  # irritating...
+        array = MappedArray(array, values_mapping={0: 'A', 1: 'B', 2: 'C'})
+        result = slices_of_runs(array)
+        expected = [('A', [slice(0, 3)]), ('B', [slice(3, 6)]), ('C', [slice(6, 9)])]
+        self.assertIsInstance(result, types.GeneratorType)
+        self.assertEqual(list(result), expected)
+
+
 class TestShiftSlice(unittest.TestCase):
     def test_shift_slice(self):
         a = slice(1, 3, None)
@@ -4502,6 +4646,12 @@ class TestSlicesRemoveSmallGaps(unittest.TestCase):
         newlist=slices_remove_small_gaps(slicelist, hz=2)
         expected = []
         self.assertEqual(expected, newlist)
+
+    def test_slice_none_within_slices(self):
+        slicelist = [slice(1, None), slice(4,6), slice(None, 8)]
+        newlist = slices_remove_small_gaps(slicelist)
+        self.assertEqual(len(newlist), 3)
+
 
 
 class TestSlicesRemoveSmallSlices(unittest.TestCase):
@@ -5219,21 +5369,6 @@ class TestValueAtIndex(unittest.TestCase):
             self.assertEquals(value_at_index(array, x, interpolate=False), expected)
 
 
-class TestVspeedLookup(unittest.TestCase):
-    def test_vspdlkup_basic(self):
-        self.assertEqual(vspeed_lookup('V2', 'B737-300', None, '15', 65000), 152)
-
-    def test_vspdlkup_vref(self):
-        self.assertEqual(vspeed_lookup('VRef', 'B737-300', None, '30', 45000), 127)
-        
-    def test_vspdlkup_key_error(self):
-        self.assertRaises(KeyError, vspeed_lookup, 'V2', 'B737_300', None, '15', 65000)
-        
-    def test_vspdlkup_out_of_range_error(self):
-        # We return None so that the incorrect flap at takeoff can be reported.
-        self.assertEqual(vspeed_lookup('V2', 'B737-300', None, '25', 65000), None)
-
-
 class TestVstackParams(unittest.TestCase):
     def test_vstack_params(self):
         a = P('a', array=np.ma.array(range(0, 10)))
@@ -5649,9 +5784,62 @@ class TestSecondWindow(unittest.TestCase):
             [10, 10, 9, 8, 7, 6, 5, 4, 3, 2, 2, 2, 2, 4, 6, 8, 10, 12, 14, 16])
 
     def test_three_second_window_with_real_data(self):
-        amv2 = load(os.path.join(test_data_path, 'airspeed_minus_v2.nod'))
-        res = second_window(amv2.array, amv2.frequency, 3)
+        sw = load(os.path.join(test_data_path, 'second_window.nod'))
+        res = second_window(sw.array, sw.frequency, 3)
         self.assertEqual(np.ma.count(res), 40975)
+
+
+class TestLookupTable(unittest.TestCase):
+
+    class Expected(object):
+        tables = {'v2': {}}
+        fallback = {'vref': {}}
+
+    def setUp(self):
+        self.attrs = (
+            A('Model', 'B737-333'),
+            A('Series', 'B737-300'),
+            A('Family', 'B737 Classic'),
+            A('Engine Type', 'CFM56-3B1'),
+            A('Engine Series', 'CRM56-3'),
+        )
+        self.values = [a.value for a in self.attrs]
+
+    @patch('analysis_engine.library.at')
+    @patch.object(P, 'warning')
+    def test_lookup_table__not_found(self, log, at):
+        at.get_vspeed_map.side_effect = KeyError
+        table = lookup_table(P, 'v2', *self.attrs)
+        at.get_vspeed_map.assert_called_once_with(*self.values)
+        self.assertEqual(log.call_count, 1)
+        self.assertEqual(table, None)
+
+    @patch('analysis_engine.library.at')
+    @patch.object(P, 'warning')
+    def test_lookup_table__found_standard_table(self, log, at):
+        at.get_vspeed_map.return_value = self.Expected
+        table = lookup_table(P, 'v2', *self.attrs)
+        at.get_vspeed_map.assert_called_once_with(*self.values)
+        self.assertEqual(log.call_count, 0)
+        self.assertIsInstance(table, self.Expected)
+
+    @patch('analysis_engine.library.at')
+    @patch.object(P, 'warning')
+    def test_lookup_table__found_fallback_table(self, log, at):
+        at.get_vspeed_map.return_value = self.Expected
+        table = lookup_table(P, 'vref', *self.attrs)
+        at.get_vspeed_map.assert_called_once_with(*self.values)
+        self.assertEqual(log.call_count, 0)
+        self.assertIsInstance(table, self.Expected)
+
+    @patch('analysis_engine.library.at')
+    @patch.object(P, 'warning')
+    def test_lookup_table__found_class_without_table(self, log, at):
+        at.get_vspeed_map.return_value = self.Expected
+        table = lookup_table(P, 'vmo', *self.attrs)
+        at.get_vspeed_map.assert_called_once_with(*self.values)
+        self.assertEqual(log.call_count, 1)
+        self.assertEqual(table, None)
 
 
 if __name__ == '__main__':

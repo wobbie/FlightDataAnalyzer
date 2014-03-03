@@ -178,7 +178,7 @@ def _rate_of_turn(heading):
     '''
     heading.array = repair_mask(straighten_headings(heading.array),
                                 repair_duration=None)
-    rate_of_turn = np.ma.abs(rate_of_change(heading, 2))
+    rate_of_turn = np.ma.abs(rate_of_change(heading, 8))
     rate_of_turn_masked = \
         np.ma.masked_greater(rate_of_turn,
                              settings.RATE_OF_TURN_SPLITTING_THRESHOLD)
@@ -201,13 +201,19 @@ def _split_on_eng_params(slice_start_secs, slice_stop_secs,
     :returns: Split index in seconds and value of split_params_min at this index.
     :rtype: (int or float, int or float)
     '''
-    split_params_slice = \
-        slice(slice_start_secs * split_params_frequency,
-              slice_stop_secs * split_params_frequency)
+    slice_start = slice_start_secs * split_params_frequency
+    slice_stop = slice_stop_secs * split_params_frequency
+    split_params_slice = slice(slice_start, slice_stop)
     split_index, split_value = min_value(split_params_min,
                                          _slice=split_params_slice)
+    
     if split_index is None:
         return split_index, split_value
+    
+    matching_indices = np.ma.where(
+        split_params_min[split_params_slice] == split_value)[0]
+    split_index = matching_indices[len(matching_indices) / 2] + slice_start
+    
     split_index = round(split_index / split_params_frequency)
     return split_index, split_value
 

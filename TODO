@@ -54,6 +54,9 @@ TODO
 * Should probably also assert that there are no duplicate Node names (copy and paste error!)
 * determine whether some of the events required cannot be detected as the raw parameters does not exist in the LFL'
 
+* Raise some sort of error if a node frequency is ever set to an invalid value, e.g. zero, negative, > 10 Hz?
+  * Would need to check on node __init__ and also in Node.get_derived() in case assigned post-init.
+
 Notes
 =====
 
