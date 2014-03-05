@@ -7827,12 +7827,12 @@ class TestRateOfClimbBelow10000FtMax(unittest.TestCase):
         self.assertEqual(node, expected)
 
 
-class TestRateOfClimbDuringGoAroundMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
+class TestRateOfClimbDuringGoAroundMax(unittest.TestCase):
 
-    def setUp(self):
-        self.node_class = RateOfClimbDuringGoAroundMax
-        self.operational_combinations = [('Vertical Speed', 'Go Around And Climbout')]
-        self.function = max_value
+    def test_can_operate(self):
+        opts = RateOfClimbDuringGoAroundMax.get_operational_combinations()
+        self.assertEqual(opts, [
+            ('Vertical Speed', 'Go Around And Climbout')])
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
@@ -8041,12 +8041,12 @@ class TestRateOfDescentAtTouchdown(unittest.TestCase, NodeTest):
         self.assertTrue(False, msg='Test not implemented.')
 
 
-class TestRateOfDescentDuringGoAroundMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
+class TestRateOfDescentDuringGoAroundMax(unittest.TestCase):
 
-    def setUp(self):
-        self.node_class = RateOfDescentDuringGoAroundMax
-        self.operational_combinations = [('Vertical Speed', 'Go Around And Climbout')]
-        self.function = min_value
+    def test_can_operate(self):
+        opts = RateOfClimbDuringGoAroundMax.get_operational_combinations()
+        self.assertEqual(opts, [
+            ('Vertical Speed', 'Go Around And Climbout')])
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):

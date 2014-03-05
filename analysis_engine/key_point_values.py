@@ -8728,7 +8728,7 @@ class RateOfClimbMax(KeyPointValueNode):
     def derive(self,
                vrt_spd=P('Vertical Speed'),
                climbing=S('Climbing')):
-
+        vrt_spd.array[vrt_spd.array < 0] = np.ma.masked
         vert_spd_phase_max_or_min(self, vrt_spd, climbing, max_value)
 
 
@@ -8741,7 +8741,7 @@ class RateOfClimb35To1000FtMin(KeyPointValueNode):
     def derive(self,
                vrt_spd=P('Vertical Speed'),
                climbs=S('Initial Climb')):
-
+        vrt_spd.array[vrt_spd.array < 0] = np.ma.masked
         self.create_kpvs_within_slices(vrt_spd.array, climbs, min_value)
 
 
@@ -8759,7 +8759,7 @@ class RateOfClimbBelow10000FtMax(KeyPointValueNode):
     def derive(self,
                vrt_spd=P('Vertical Speed'),
                alt_aal=P('Altitude STD Smoothed')):
-
+        vrt_spd.array[vrt_spd.array < 0] = np.ma.masked
         self.create_kpvs_within_slices(
             vrt_spd.array,
             alt_aal.slices_from_to(0, 10000),
@@ -8779,7 +8779,7 @@ class RateOfClimbDuringGoAroundMax(KeyPointValueNode):
     def derive(self,
                vrt_spd=P('Vertical Speed'),
                go_arounds=S('Go Around And Climbout')):
-
+        vrt_spd.array[vrt_spd.array < 0] = np.ma.masked
         self.create_kpvs_within_slices(vrt_spd.array, go_arounds, max_value)
 
 
@@ -8797,7 +8797,7 @@ class RateOfDescentMax(KeyPointValueNode):
     def derive(self,
                vrt_spd=P('Vertical Speed'),
                descending=S('Descending')):
-
+        vrt_spd.array[vrt_spd.array > 0] = np.ma.masked
         vert_spd_phase_max_or_min(self, vrt_spd, descending, min_value)
 
 
@@ -8871,6 +8871,8 @@ class RateOfDescent5000To3000FtMax(KeyPointValueNode):
                descent=S('Descent')):
 
         alt_band = np.ma.masked_outside(alt_aal.array, 5000, 3000)
+        # maximum RoD must be a big negative value; mask all positives
+        alt_band[vrt_spd.array > 0] = np.ma.masked
         alt_descent_sections = valid_slices_within_array(alt_band, descent)
         self.create_kpvs_within_slices(
             vrt_spd.array,
@@ -8891,6 +8893,8 @@ class RateOfDescent3000To2000FtMax(KeyPointValueNode):
                init_app=S('Initial Approach')):
 
         alt_band = np.ma.masked_outside(alt_aal.array, 3000, 2000)
+        # maximum RoD must be a big negative value; mask all positives
+        alt_band[vrt_spd.array > 0] = np.ma.masked        
         alt_app_sections = valid_slices_within_array(alt_band, init_app)
         self.create_kpvs_within_slices(
             vrt_spd.array,
@@ -8911,6 +8915,8 @@ class RateOfDescent2000To1000FtMax(KeyPointValueNode):
                init_app=S('Initial Approach')):
 
         alt_band = np.ma.masked_outside(alt_aal.array, 2000, 1000)
+        # maximum RoD must be a big negative value; mask all positives
+        alt_band[vrt_spd.array > 0] = np.ma.masked        
         alt_app_sections = valid_slices_within_array(alt_band, init_app)
         self.create_kpvs_within_slices(
             vrt_spd.array,
@@ -8931,6 +8937,8 @@ class RateOfDescent1000To500FtMax(KeyPointValueNode):
                fin_app=S('Final Approach')):
 
         alt_band = np.ma.masked_outside(alt_aal.array, 1000, 500)
+        # maximum RoD must be a big negative value; mask all positives
+        alt_band[vrt_spd.array > 0] = np.ma.masked        
         alt_app_sections = valid_slices_within_array(alt_band, fin_app)
         self.create_kpvs_within_slices(
             vrt_spd.array,
@@ -8951,6 +8959,8 @@ class RateOfDescent500To50FtMax(KeyPointValueNode):
                fin_app=S('Final Approach')):
 
         alt_band = np.ma.masked_outside(alt_aal.array, 500, 50)
+        # maximum RoD must be a big negative value; mask all positives
+        alt_band[vrt_spd.array > 0] = np.ma.masked        
         alt_app_sections = valid_slices_within_array(alt_band, fin_app)
         self.create_kpvs_within_slices(
             vrt_spd.array,
@@ -8977,7 +8987,8 @@ class RateOfDescent50FtToTouchdownMax(KeyPointValueNode):
                vrt_spd=P('Vertical Speed Inertial'),
                alt_aal=P('Altitude AAL For Flight Phases'),
                touchdowns=KTI('Touchdown')):
-
+        # maximum RoD must be a big negative value; mask all positives
+        vrt_spd.array[vrt_spd.array > 0] = np.ma.masked
         self.create_kpvs_within_slices(
             vrt_spd.array,
             alt_aal.slices_to_kti(50, touchdowns),
@@ -9010,7 +9021,7 @@ class RateOfDescentDuringGoAroundMax(KeyPointValueNode):
     def derive(self,
                vrt_spd=P('Vertical Speed'),
                go_arounds=S('Go Around And Climbout')):
-
+        vrt_spd.array[vrt_spd.array > 0] = np.ma.masked
         self.create_kpvs_within_slices(vrt_spd.array, go_arounds, min_value)
 
 
