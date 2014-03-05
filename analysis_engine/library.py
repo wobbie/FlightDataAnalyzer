@@ -2439,10 +2439,11 @@ def ground_track_precise(lat, lon, speed, hdg, frequency, mode):
     # We are going to use the period from the runway to the last point where
     # the speed was over 1kn, to stop the aircraft appearing to wander about
     # on the stand.
-    track_edges = np.ma.flatnotmasked_edges(np.ma.masked_less(speed, 1.0))
+    spd_above_1 = np.ma.masked_less(speed, 1.0)
+    track_edges = np.ma.flatnotmasked_edges(spd_above_1)
 
     # In cases where the data starts with no useful groundspeed data, throw in the towel now.
-    if track_edges is None:
+    if track_edges is None or np.ma.count(spd_above_1) < 5:
         raise ValueError("No useful speed data for '%s' section" % mode)
 
     # Increment to allow for Python indexing, but don't step over the edge.
