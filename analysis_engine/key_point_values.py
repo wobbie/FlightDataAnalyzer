@@ -7818,7 +7818,7 @@ class FuelJettisonDuration(KeyPointValueNode):
     units = ut.SECOND
 
     def derive(self,
-               jet=P('Jettison Nozzle'),
+               jet=P('Fuel Jettison Nozzle'),
                airborne=S('Airborne')):
 
         self.create_kpvs_where(jet.array == 'Jettison', jet.hz, phase=airborne)
