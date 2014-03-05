@@ -3387,7 +3387,7 @@ def slices_or(*slice_lists, **kwargs):
         return shift_slices(np.ma.clump_masked(workspace[startpoint:endpoint]), startpoint)
 
 
-def slices_remove_small_gaps(slice_list, time_limit=10, hz=1):
+def slices_remove_small_gaps(slice_list, time_limit=10, hz=1, count=None):
     '''
     Routine to remove small gaps in a list of slices. Typically when a list
     of flight phases have been computed and we don't want to drop out for
@@ -3401,9 +3401,15 @@ def slices_remove_small_gaps(slice_list, time_limit=10, hz=1):
     :param hz: sample rate for the parameter
     :type hz: float
 
+    :param count: Tolerance based on count, not time
+    :type count: integer (default = None)
+    
     :returns: slice list.
     '''
-    sample_limit = time_limit * hz
+    if count:
+        sample_limit = count
+    else:
+        sample_limit = time_limit * hz
     if slice_list is None or len(slice_list) < 2:
         return slice_list
     new_list = [slice_list[0]]

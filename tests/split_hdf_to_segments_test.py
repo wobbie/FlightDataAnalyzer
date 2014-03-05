@@ -160,8 +160,9 @@ class TestSplitSegments(unittest.TestCase):
         self.assertEqual(segment_type, 'START_AND_STOP')
         self.assertEqual(segment_slice.start, 0)
         self.assertEqual(segment_slice.stop, 398)
+        # Heading diff not exceed HEADING_CHANGE_TAXI_THRESHOLD
         segment_type, segment_slice = segment_tuples[1]
-        self.assertEqual(segment_type, 'START_AND_STOP')
+        self.assertEqual(segment_type, 'GROUND_ONLY')
         self.assertEqual(segment_slice.start, 398)
         self.assertEqual(segment_slice.stop, airspeed_secs)
         
@@ -176,8 +177,9 @@ class TestSplitSegments(unittest.TestCase):
         self.assertEqual(segment_type, 'START_AND_STOP')
         self.assertEqual(segment_slice.start, 0)
         self.assertEqual(segment_slice.stop, 398.0)
+        # Heading diff not exceed HEADING_CHANGE_TAXI_THRESHOLD
         segment_type, segment_slice = segment_tuples[1]
-        self.assertEqual(segment_type, 'START_AND_STOP')
+        self.assertEqual(segment_type, 'GROUND_ONLY')
         self.assertEqual(segment_slice.start, 398.0)
         self.assertEqual(segment_slice.stop, airspeed_secs)        
         
