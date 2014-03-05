@@ -7821,7 +7821,7 @@ class FuelJettisonDuration(KeyPointValueNode):
                jet=P('Fuel Jettison Nozzle'),
                airborne=S('Airborne')):
 
-        self.create_kpvs_where(jet.array == 'Jettison', jet.hz, phase=airborne)
+        self.create_kpvs_where(jet.array == 'Disagree', jet.hz, phase=airborne)
 
 
 ##############################################################################
