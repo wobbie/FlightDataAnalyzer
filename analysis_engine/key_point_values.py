@@ -8734,6 +8734,7 @@ class RateOfClimbMax(KeyPointValueNode):
 
 class RateOfClimb35To1000FtMin(KeyPointValueNode):
     '''
+    Note: The minimum Rate of Climb could be negative in this phase.
     '''
 
     units = ut.FPM
@@ -8741,7 +8742,6 @@ class RateOfClimb35To1000FtMin(KeyPointValueNode):
     def derive(self,
                vrt_spd=P('Vertical Speed'),
                climbs=S('Initial Climb')):
-        vrt_spd.array[vrt_spd.array < 0] = np.ma.masked
         self.create_kpvs_within_slices(vrt_spd.array, climbs, min_value)
 
 
@@ -8789,7 +8789,7 @@ class RateOfClimbDuringGoAroundMax(KeyPointValueNode):
 
 class RateOfDescentMax(KeyPointValueNode):
     '''
-
+    Measures the most negative vertical speed (rate of descent).
     '''
 
     units = ut.FPM
@@ -8803,6 +8803,7 @@ class RateOfDescentMax(KeyPointValueNode):
 
 class RateOfDescentTopOfDescentTo10000FtMax(KeyPointValueNode):
     '''
+    Measures the most negative vertical speed (rate of descent).
     '''
 
     units = ut.FPM
@@ -8819,6 +8820,8 @@ class RateOfDescentTopOfDescentTo10000FtMax(KeyPointValueNode):
 
 class RateOfDescentBelow10000FtMax(KeyPointValueNode):
     '''
+    Measures the most negative vertical speed (rate of descent).
+    
     FDS developed this KPV to support the UK CAA Significant Seven programme.
     "Airborne Conflict (Mid-Air Collision) Excessive rates of climb/descent
     (>3,000FPM) within a TMA (defined as < 10,000ft)"
@@ -8841,6 +8844,7 @@ class RateOfDescentBelow10000FtMax(KeyPointValueNode):
 
 class RateOfDescent10000To5000FtMax(KeyPointValueNode):
     '''
+    Measures the most negative vertical speed (rate of descent).
     '''
 
     units = ut.FPM
@@ -8861,6 +8865,7 @@ class RateOfDescent10000To5000FtMax(KeyPointValueNode):
 
 class RateOfDescent5000To3000FtMax(KeyPointValueNode):
     '''
+    Measures the most negative vertical speed (rate of descent).
     '''
 
     units = ut.FPM
@@ -8883,6 +8888,7 @@ class RateOfDescent5000To3000FtMax(KeyPointValueNode):
 
 class RateOfDescent3000To2000FtMax(KeyPointValueNode):
     '''
+    Measures the most negative vertical speed (rate of descent).
     '''
 
     units = ut.FPM
@@ -8905,6 +8911,7 @@ class RateOfDescent3000To2000FtMax(KeyPointValueNode):
 
 class RateOfDescent2000To1000FtMax(KeyPointValueNode):
     '''
+    Measures the most negative vertical speed (rate of descent).
     '''
 
     units = ut.FPM
@@ -8927,6 +8934,7 @@ class RateOfDescent2000To1000FtMax(KeyPointValueNode):
 
 class RateOfDescent1000To500FtMax(KeyPointValueNode):
     '''
+    Measures the most negative vertical speed (rate of descent).
     '''
 
     units = ut.FPM
@@ -8949,6 +8957,7 @@ class RateOfDescent1000To500FtMax(KeyPointValueNode):
 
 class RateOfDescent500To50FtMax(KeyPointValueNode):
     '''
+    Measures the most negative vertical speed (rate of descent).
     '''
 
     units = ut.FPM
@@ -8971,7 +8980,8 @@ class RateOfDescent500To50FtMax(KeyPointValueNode):
 
 class RateOfDescent50FtToTouchdownMax(KeyPointValueNode):
     '''
-    Rate of descent between 50ft and touchdown.
+    Measures the most negative vertical speed (rate of descent) between 50ft
+    and touchdown.
 
     At this altitude, Altitude AAL is sourced from Altitude Radio where one
     is available, so this is effectively 50ft Radio to touchdown.
@@ -9023,19 +9033,6 @@ class RateOfDescentDuringGoAroundMax(KeyPointValueNode):
                go_arounds=S('Go Around And Climbout')):
         vrt_spd.array[vrt_spd.array > 0] = np.ma.masked
         self.create_kpvs_within_slices(vrt_spd.array, go_arounds, min_value)
-
-
-##### TODO: Implement!
-####class RateOfDescentOverGrossWeightLimitAtTouchdown(KeyPointValueNode):
-####    '''
-####    '''
-####
-####    units = ut.FPM
-####
-####    def derive(self, x=P('Not Yet')):
-####        '''
-####        '''
-####        return NotImplemented
 
 
 ##############################################################################
