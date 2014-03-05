@@ -105,7 +105,7 @@ def any_of(names, available):
     return any(name in available for name in names)
 
 
-def air_track(lat_start, lon_start, lat_end, lon_end, spd, hdg, frequency):
+def air_track(lat_start, lon_start, lat_end, lon_end, spd, hdg, alt_aal, frequency):
     """
 Computation of the air track for cases where recorded latitude and longitude
 are not available but the origin and destination airport locations are known.
@@ -141,84 +141,13 @@ airspeed may be used.
 :Invalid mode fails with ValueError
 :Mismatched array lengths fails with ValueError
 """
-####=================================================================================
-#### Old code with compensation terms scaled with altitude.
-#### May be useful in future if an improved algorithm is required.
-####=================================================================================
-####
-####    def compute_track(lat_start, lon_start, lat_end, lon_end, spd, hdg, alt_aal, frequency, dun=0.0, due=0.0):
-####        lat = np_ma_zeros_like(spd)
-####        lon = np_ma_zeros_like(spd)
-####        half_len = int(len(spd)/2.0)
-####        lat[0]=lat_start
-####        lon[0]=lon_start
-####        lat[-1]=lat_end
-####        lon[-1]=lon_end
-####
-####        spd_north = spd * np.ma.cos(hdg_rad)
-####        spd_east = spd * np.ma.sin(hdg_rad)
-####
-####        # Compute displacements in metres north and east of the starting point.
-####        north_from_start = integrate(spd_north[:half_len]+dun*alt_aal[:half_len],
-####                                     frequency, scale=KTS_TO_MPS)
-####        east_from_start = integrate(spd_east[:half_len]+due*alt_aal[:half_len],
-####                                    frequency, scale=KTS_TO_MPS)
-####        bearings = np.ma.array(np.rad2deg(np.arctan2(east_from_start, north_from_start)))
-####        distances = np.ma.array(np.ma.sqrt(north_from_start**2 + east_from_start**2))
-####        lat[:half_len],lon[:half_len] = latitudes_and_longitudes(
-####            bearings, distances, {'latitude':lat_start, 'longitude':lon_start})
-####
-####        south_from_end = integrate(spd_north[half_len:]-dun*alt_aal[half_len:],
-####                                   frequency, scale=KTS_TO_MPS, direction='reverse')
-####        west_from_end = integrate(spd_east[half_len:]-due*alt_aal[half_len:],
-####                                  frequency, scale=KTS_TO_MPS, direction='reverse')
-####        bearings = (np.ma.array(np.rad2deg(np.arctan2(west_from_end, south_from_end)))+180.0) % 360.0
-####        distances = np.ma.array(np.ma.sqrt(south_from_end**2 + west_from_end**2))
-####        lat[half_len:],lon[half_len:] = latitudes_and_longitudes(
-####            bearings, distances, {'latitude':lat_end, 'longitude':lon_end})
-####
-####        lat_error = lat[half_len] - lat[half_len-1]
-####        lon_error = lon[half_len] - lon[half_len-1]
-####
-####        north_dist = north_from_start[-1] + south_from_end[0]
-####        east_dist = east_from_start[-1] + west_from_end[0]
-####        return lat, north_dist, lon, east_dist
+    def compute_track(lat_start, lon_start, lat_end, lon_end, spd, hdg, alt_aal, frequency):
 
-####=================================================================================
+        def measure_jump(arr, n):
+            # For an array, the jump from n-1 to n rejecting mean slope is:
+            d = (arr[n-2] - 3*arr[n-1] + 3*arr[n] - arr[n+1])/2.0
+            return d
 
-####    # How far is the journey?
-####    brg, dist = bearing_and_distance(lat_start, lon_start, lat_end, lon_end)
-####    north_final = dist * np.cos(brg * deg2rad)
-####    east_final = dist * np.sin(brg * deg2rad)
-####
-####    # Where does the basic speed vector take us?
-####    closest_north, closest_east = estimate_endpoint(spd[valid_slice], hdg[valid_slice], frequency)
-
-####    # If we rescale, what's the error?
-####    spd_ratio = dist / (sqrt(closest_north.value**2 + closest_east.value**2))
-####    closest_north, closest_east = estimate_endpoint(spd[valid_slice], hdg_rad, frequency, spd_ratio=spd_ratio)
-####
-####    # calculate error per sample (in knots)
-####    dun = (north_final - closest_north.value) / ((closest_north.index-1) * KTS_TO_MPS)
-####    due = (east_final - closest_east.value) / ((closest_east.index-1) * KTS_TO_MPS)
-####
-####    # Compute the area under the altitude profile curve
-####    profile = integrate(alt_aal[valid_slice], frequency)[-1]
-####    dun = (north_final - north_dist) / (profile * KTS_TO_MPS)
-####    due = (east_final - east_dist) / (profile * KTS_TO_MPS)
-####
-####    lat[valid_slice], _, lon[valid_slice], _ = compute_track(lat_start, lon_start,
-####                                                             lat_end, lon_end,
-####                                                             spd[valid_slice],
-####                                                             hdg[valid_slice],
-####                                                             alt_aal[valid_slice],
-####                                                             frequency)
-####                                                         dun=dun, due=due)
-####=================================================================================
-#### Old code with compensation terms scaled with altitude.
-####=================================================================================
-
-    def compute_track(lat_start, lon_start, lat_end, lon_end, spd, hdg, frequency):
         lat = np_ma_zeros_like(spd)
         lon = np_ma_zeros_like(spd)
         half_len = int(len(spd)/2.0)
@@ -245,6 +174,22 @@ airspeed may be used.
         lat[half_len:],lon[half_len:] = latitudes_and_longitudes(
             bearings, distances, {'latitude':lat_end, 'longitude':lon_end})
 
+
+        # There will be a jump in the middle of the data caused by
+        # accumulated errors. We remove this to produce a smooth track.
+        dlat = measure_jump(lat, half_len)
+        dlon = measure_jump(lon, half_len)
+        
+        # Compute the area under first half the altitude profile curve to weight the correction
+        profile = integrate(alt_aal[:half_len], frequency)
+        lat[:half_len] += profile * (dlat/(profile[-1] * 2.0))
+        lon[:half_len] += profile * (dlon/(profile[-1] * 2.0))
+        
+        # Compute the area under second half the altitude profile curve
+        profile = integrate(alt_aal[half_len:], frequency, direction='backwards')
+        lat[half_len:] -= profile * (dlat/(profile[0] * 2.0))
+        lon[half_len:] -= profile * (dlon/(profile[0] * 2.0))
+
         return lat, lon
 
     # First check that the gspd/hdg arrays are sensible.
@@ -270,6 +215,7 @@ airspeed may be used.
                                                        lat_end, lon_end,
                                                        spd[valid_slice],
                                                        hdg[valid_slice],
+                                                       alt_aal[valid_slice],
                                                        frequency)
 
     repair_mask(lat, repair_duration=None, extrapolate=True)

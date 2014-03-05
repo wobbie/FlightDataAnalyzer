@@ -4687,6 +4687,7 @@ class LongitudePrepared(DerivedParameterNode, CoordinatesStraighten):
                hdg_true=P('Heading True'),
                tas=P('Airspeed True'),
                gspd=P('Groundspeed'),
+               alt_aal=P('Altitude AAL'),
                lat_lift=KPV('Latitude At Liftoff'),
                lon_lift=KPV('Longitude At Liftoff'),
                lat_land=KPV('Latitude At Touchdown'),
@@ -4712,7 +4713,7 @@ class LongitudePrepared(DerivedParameterNode, CoordinatesStraighten):
             _, lon_array = air_track(
                 lat_lift.get_first().value, lon_lift.get_first().value,
                 lat_land.get_last().value, lon_land.get_last().value,
-                speed.array, hdg.array, tas.frequency)
+                speed.array, hdg.array, alt_aal.array, tas.frequency)
             self.array = lon_array
 
 
@@ -4742,6 +4743,7 @@ class LatitudePrepared(DerivedParameterNode, CoordinatesStraighten):
                hdg_true=P('Heading True'),
                tas=P('Airspeed True'),
                gspd=P('Groundspeed'),
+               alt_aal=P('Altitude AAL'),
                lat_lift=KPV('Latitude At Liftoff'),
                lon_lift=KPV('Longitude At Liftoff'),
                lat_land=KPV('Latitude At Touchdown'),
@@ -4763,7 +4765,7 @@ class LatitudePrepared(DerivedParameterNode, CoordinatesStraighten):
             lat_array, _ = air_track(
                 lat_lift.get_first().value, lon_lift.get_first().value,
                 lat_land.get_last().value, lon_land.get_last().value,
-                speed.array, hdg.array, tas.frequency)
+                speed.array, hdg.array, alt_aal.array, tas.frequency)
             self.array = lat_array
 
 
