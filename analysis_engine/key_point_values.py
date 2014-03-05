@@ -5999,13 +5999,24 @@ class EngGasTempDuringEngStartMax(KeyPointValueNode):
     '''
     One key point value for maximum engine gas temperature at engine start for
     all engines. The value is taken from the engine with the largest value.
+    
+    Note that for three spool engines, the N3 value is used to detect
+    running, while for two spool engines N2 is the highest spool speed so is
+    used.
     '''
 
+    @classmethod
+    def can_operate(cls, available):
+        return ('Eng (*) Gas Temp Max' in available and \
+                'Eng (*) N2 Min' in available and \
+                'Takeoff Turn Onto Runway' in available)
+    
     units = ut.CELSIUS
 
     def derive(self,
                eng_egt_max=P('Eng (*) Gas Temp Max'),
                eng_n2_min=P('Eng (*) N2 Min'),
+               eng_n3_min=P('Eng (*) N3 Min'),
                toff_turn_rwy=KTI('Takeoff Turn Onto Runway')):
 
         # We never see engine start if data started after aircraft is airborne:
@@ -6019,10 +6030,15 @@ class EngGasTempDuringEngStartMax(KeyPointValueNode):
         # Extract the index for the first turn onto the runway:
         fto_idx = toff_turn_rwy.get_first().index
 
-        # Mask out sections with N2 > 60%, i.e. all engines running:
-        n2_data = eng_n2_min.array[0:fto_idx]
-        n2_data[n2_data > 60.0] = np.ma.masked
-        chunks = np.ma.clump_unmasked(n2_data)
+        if eng_n3_min:
+            speed_min = eng_n3_min
+        else:
+            speed_min = eng_n2_min
+            
+        # Mask out sections with lowest core speed > 40%, i.e. all engines running:
+        speed_data = speed_min.array[0:fto_idx]
+        speed_data[speed_data > 40.0] = np.ma.masked
+        chunks = np.ma.clump_unmasked(speed_data)
 
         if not chunks:
             return
