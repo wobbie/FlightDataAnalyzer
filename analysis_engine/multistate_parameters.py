@@ -1029,11 +1029,11 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
 
         # Update the destination array according to the mappings:
         for (state, (s, f, a)) in angles.iteritems():
-            condition = (flap.array == f)
+            condition = (flap.array == str(f))
             if s is not None:
-                condition &= (slat.array == s)
+                condition &= (slat.array == str(s))
             if a is not None:
-                condition &= (flaperon.array == a)
+                condition &= (flaperon.array == str(a))
             if use_conf:
                 state = at.constants.CONF_TO_LEVER[state]
             self.array[condition] = state
