@@ -8970,7 +8970,9 @@ class TestTCASTAWarningDuration(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = TCASTAWarningDuration
-        self.operational_combinations = [('TCAS Combined Control', 'Airborne')]
+        self.operational_combinations = [('TCAS TA', 'Airborne'),
+                                         ('TCAS Combined Control', 'Airborne'),
+                                         ('TCAS TA', 'TCAS Combined Control', 'Airborne')]
 
     def test_derive(self):
         values_mapping = {
@@ -8987,7 +8989,7 @@ class TestTCASTAWarningDuration(unittest.TestCase, NodeTest):
             values_mapping=values_mapping)
         airborne = buildsection('Airborne', 2, 7)
         node = self.node_class()
-        node.derive(tcas, airborne)
+        node.derive(None, tcas, airborne)
         self.assertEqual([KeyPointValue(5.0, 2.0, 'TCAS TA Warning Duration')],
                          node)
 
@@ -9006,7 +9008,7 @@ class TestTCASTAWarningDuration(unittest.TestCase, NodeTest):
             values_mapping=values_mapping)
         airborne = buildsection('Airborne', 1, 9)
         node = self.node_class()
-        node.derive(tcas, airborne)
+        node.derive(None, tcas, airborne)
         self.assertEqual(node, [])
 
 
