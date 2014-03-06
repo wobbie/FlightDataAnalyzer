@@ -1664,6 +1664,19 @@ class TestKeyTimeInstanceNode(unittest.TestCase):
         self.assertEqual(len(kti), 1, msg='Expecting single KTI')
         self.assertEqual(kti, [KeyTimeInstance(index=399.5, name='Kti')])
         
+    def test_create_ktis_on_state_change_entirely_masked(self):
+        '''
+        Entirely masked data must not trigger, as there can be no state change.
+        '''
+        kti = self.kti
+        test_param = MappedArray(data=[0]*4+[1]*6+[0]*5,
+                                 mask=[1]*15,
+                                 values_mapping={0: 'Off', 1: 'On'})
+        
+        kti.create_ktis_on_state_change('On', test_param, change='entering')
+        #Check that long mask does not create additional KTI
+        self.assertEqual(len(kti), 0)
+        
     def test_create_ktis_on_state_change_leaving(self):
         kti = self.kti
         test_param = MappedArray([0, 1, 1, 0, 0, 0, 0, 1, 0],
