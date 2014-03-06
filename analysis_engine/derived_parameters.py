@@ -3178,7 +3178,7 @@ class GrossWeight(DerivedParameterNode):
                 self.array[touchdown_index:] = np.ma.masked
                 index_difference = touchdown_index - liftoff_index
                 self.array[liftoff_index:touchdown_index] = \
-                    np.linspace(liftoff_index, touchdown_index,
+                    np.linspace(afr_takeoff_wgt.value, afr_land_wgt.value,
                                 index_difference)
             else:
                 self.array.fill(afr_land_wgt.value)
