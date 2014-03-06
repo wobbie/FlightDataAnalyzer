@@ -5999,13 +5999,24 @@ class EngGasTempDuringEngStartMax(KeyPointValueNode):
     '''
     One key point value for maximum engine gas temperature at engine start for
     all engines. The value is taken from the engine with the largest value.
+    
+    Note that for three spool engines, the N3 value is used to detect
+    running, while for two spool engines N2 is the highest spool speed so is
+    used.
     '''
 
+    @classmethod
+    def can_operate(cls, available):
+        return ('Eng (*) Gas Temp Max' in available and \
+                'Eng (*) N2 Min' in available and \
+                'Takeoff Turn Onto Runway' in available)
+    
     units = ut.CELSIUS
 
     def derive(self,
                eng_egt_max=P('Eng (*) Gas Temp Max'),
                eng_n2_min=P('Eng (*) N2 Min'),
+               eng_n3_min=P('Eng (*) N3 Min'),
                toff_turn_rwy=KTI('Takeoff Turn Onto Runway')):
 
         # We never see engine start if data started after aircraft is airborne:
@@ -6019,10 +6030,15 @@ class EngGasTempDuringEngStartMax(KeyPointValueNode):
         # Extract the index for the first turn onto the runway:
         fto_idx = toff_turn_rwy.get_first().index
 
-        # Mask out sections with N2 > 60%, i.e. all engines running:
-        n2_data = eng_n2_min.array[0:fto_idx]
-        n2_data[n2_data > 60.0] = np.ma.masked
-        chunks = np.ma.clump_unmasked(n2_data)
+        if eng_n3_min:
+            speed_min = eng_n3_min
+        else:
+            speed_min = eng_n2_min
+            
+        # Mask out sections with lowest core speed > 40%, i.e. all engines running:
+        speed_data = speed_min.array[0:fto_idx]
+        speed_data[speed_data > 40.0] = np.ma.masked
+        chunks = np.ma.clump_unmasked(speed_data)
 
         if not chunks:
             return
@@ -7802,10 +7818,10 @@ class FuelJettisonDuration(KeyPointValueNode):
     units = ut.SECOND
 
     def derive(self,
-               jet=P('Jettison Nozzle'),
+               jet=P('Fuel Jettison Nozzle'),
                airborne=S('Airborne')):
 
-        self.create_kpvs_where(jet.array == 'Jettison', jet.hz, phase=airborne)
+        self.create_kpvs_where(jet.array == 'Disagree', jet.hz, phase=airborne)
 
 
 ##############################################################################
@@ -8728,12 +8744,13 @@ class RateOfClimbMax(KeyPointValueNode):
     def derive(self,
                vrt_spd=P('Vertical Speed'),
                climbing=S('Climbing')):
-
+        vrt_spd.array[vrt_spd.array < 0] = np.ma.masked
         vert_spd_phase_max_or_min(self, vrt_spd, climbing, max_value)
 
 
 class RateOfClimb35To1000FtMin(KeyPointValueNode):
     '''
+    Note: The minimum Rate of Climb could be negative in this phase.
     '''
 
     units = ut.FPM
@@ -8741,7 +8758,6 @@ class RateOfClimb35To1000FtMin(KeyPointValueNode):
     def derive(self,
                vrt_spd=P('Vertical Speed'),
                climbs=S('Initial Climb')):
-
         self.create_kpvs_within_slices(vrt_spd.array, climbs, min_value)
 
 
@@ -8759,7 +8775,7 @@ class RateOfClimbBelow10000FtMax(KeyPointValueNode):
     def derive(self,
                vrt_spd=P('Vertical Speed'),
                alt_aal=P('Altitude STD Smoothed')):
-
+        vrt_spd.array[vrt_spd.array < 0] = np.ma.masked
         self.create_kpvs_within_slices(
             vrt_spd.array,
             alt_aal.slices_from_to(0, 10000),
@@ -8779,7 +8795,7 @@ class RateOfClimbDuringGoAroundMax(KeyPointValueNode):
     def derive(self,
                vrt_spd=P('Vertical Speed'),
                go_arounds=S('Go Around And Climbout')):
-
+        vrt_spd.array[vrt_spd.array < 0] = np.ma.masked
         self.create_kpvs_within_slices(vrt_spd.array, go_arounds, max_value)
 
 
@@ -8789,7 +8805,7 @@ class RateOfClimbDuringGoAroundMax(KeyPointValueNode):
 
 class RateOfDescentMax(KeyPointValueNode):
     '''
-
+    Measures the most negative vertical speed (rate of descent).
     '''
 
     units = ut.FPM
@@ -8797,12 +8813,13 @@ class RateOfDescentMax(KeyPointValueNode):
     def derive(self,
                vrt_spd=P('Vertical Speed'),
                descending=S('Descending')):
-
+        vrt_spd.array[vrt_spd.array > 0] = np.ma.masked
         vert_spd_phase_max_or_min(self, vrt_spd, descending, min_value)
 
 
 class RateOfDescentTopOfDescentTo10000FtMax(KeyPointValueNode):
     '''
+    Measures the most negative vertical speed (rate of descent).
     '''
 
     units = ut.FPM
@@ -8819,6 +8836,8 @@ class RateOfDescentTopOfDescentTo10000FtMax(KeyPointValueNode):
 
 class RateOfDescentBelow10000FtMax(KeyPointValueNode):
     '''
+    Measures the most negative vertical speed (rate of descent).
+    
     FDS developed this KPV to support the UK CAA Significant Seven programme.
     "Airborne Conflict (Mid-Air Collision) Excessive rates of climb/descent
     (>3,000FPM) within a TMA (defined as < 10,000ft)"
@@ -8841,6 +8860,7 @@ class RateOfDescentBelow10000FtMax(KeyPointValueNode):
 
 class RateOfDescent10000To5000FtMax(KeyPointValueNode):
     '''
+    Measures the most negative vertical speed (rate of descent).
     '''
 
     units = ut.FPM
@@ -8861,6 +8881,7 @@ class RateOfDescent10000To5000FtMax(KeyPointValueNode):
 
 class RateOfDescent5000To3000FtMax(KeyPointValueNode):
     '''
+    Measures the most negative vertical speed (rate of descent).
     '''
 
     units = ut.FPM
@@ -8871,6 +8892,8 @@ class RateOfDescent5000To3000FtMax(KeyPointValueNode):
                descent=S('Descent')):
 
         alt_band = np.ma.masked_outside(alt_aal.array, 5000, 3000)
+        # maximum RoD must be a big negative value; mask all positives
+        alt_band[vrt_spd.array > 0] = np.ma.masked
         alt_descent_sections = valid_slices_within_array(alt_band, descent)
         self.create_kpvs_within_slices(
             vrt_spd.array,
@@ -8881,6 +8904,7 @@ class RateOfDescent5000To3000FtMax(KeyPointValueNode):
 
 class RateOfDescent3000To2000FtMax(KeyPointValueNode):
     '''
+    Measures the most negative vertical speed (rate of descent).
     '''
 
     units = ut.FPM
@@ -8891,6 +8915,8 @@ class RateOfDescent3000To2000FtMax(KeyPointValueNode):
                init_app=S('Initial Approach')):
 
         alt_band = np.ma.masked_outside(alt_aal.array, 3000, 2000)
+        # maximum RoD must be a big negative value; mask all positives
+        alt_band[vrt_spd.array > 0] = np.ma.masked        
         alt_app_sections = valid_slices_within_array(alt_band, init_app)
         self.create_kpvs_within_slices(
             vrt_spd.array,
@@ -8901,6 +8927,7 @@ class RateOfDescent3000To2000FtMax(KeyPointValueNode):
 
 class RateOfDescent2000To1000FtMax(KeyPointValueNode):
     '''
+    Measures the most negative vertical speed (rate of descent).
     '''
 
     units = ut.FPM
@@ -8911,6 +8938,8 @@ class RateOfDescent2000To1000FtMax(KeyPointValueNode):
                init_app=S('Initial Approach')):
 
         alt_band = np.ma.masked_outside(alt_aal.array, 2000, 1000)
+        # maximum RoD must be a big negative value; mask all positives
+        alt_band[vrt_spd.array > 0] = np.ma.masked        
         alt_app_sections = valid_slices_within_array(alt_band, init_app)
         self.create_kpvs_within_slices(
             vrt_spd.array,
@@ -8921,6 +8950,7 @@ class RateOfDescent2000To1000FtMax(KeyPointValueNode):
 
 class RateOfDescent1000To500FtMax(KeyPointValueNode):
     '''
+    Measures the most negative vertical speed (rate of descent).
     '''
 
     units = ut.FPM
@@ -8931,6 +8961,8 @@ class RateOfDescent1000To500FtMax(KeyPointValueNode):
                fin_app=S('Final Approach')):
 
         alt_band = np.ma.masked_outside(alt_aal.array, 1000, 500)
+        # maximum RoD must be a big negative value; mask all positives
+        alt_band[vrt_spd.array > 0] = np.ma.masked        
         alt_app_sections = valid_slices_within_array(alt_band, fin_app)
         self.create_kpvs_within_slices(
             vrt_spd.array,
@@ -8941,6 +8973,7 @@ class RateOfDescent1000To500FtMax(KeyPointValueNode):
 
 class RateOfDescent500To50FtMax(KeyPointValueNode):
     '''
+    Measures the most negative vertical speed (rate of descent).
     '''
 
     units = ut.FPM
@@ -8951,6 +8984,8 @@ class RateOfDescent500To50FtMax(KeyPointValueNode):
                fin_app=S('Final Approach')):
 
         alt_band = np.ma.masked_outside(alt_aal.array, 500, 50)
+        # maximum RoD must be a big negative value; mask all positives
+        alt_band[vrt_spd.array > 0] = np.ma.masked        
         alt_app_sections = valid_slices_within_array(alt_band, fin_app)
         self.create_kpvs_within_slices(
             vrt_spd.array,
@@ -8961,7 +8996,8 @@ class RateOfDescent500To50FtMax(KeyPointValueNode):
 
 class RateOfDescent50FtToTouchdownMax(KeyPointValueNode):
     '''
-    Rate of descent between 50ft and touchdown.
+    Measures the most negative vertical speed (rate of descent) between 50ft
+    and touchdown.
 
     At this altitude, Altitude AAL is sourced from Altitude Radio where one
     is available, so this is effectively 50ft Radio to touchdown.
@@ -8977,7 +9013,8 @@ class RateOfDescent50FtToTouchdownMax(KeyPointValueNode):
                vrt_spd=P('Vertical Speed Inertial'),
                alt_aal=P('Altitude AAL For Flight Phases'),
                touchdowns=KTI('Touchdown')):
-
+        # maximum RoD must be a big negative value; mask all positives
+        vrt_spd.array[vrt_spd.array > 0] = np.ma.masked
         self.create_kpvs_within_slices(
             vrt_spd.array,
             alt_aal.slices_to_kti(50, touchdowns),
@@ -9010,21 +9047,8 @@ class RateOfDescentDuringGoAroundMax(KeyPointValueNode):
     def derive(self,
                vrt_spd=P('Vertical Speed'),
                go_arounds=S('Go Around And Climbout')):
-
+        vrt_spd.array[vrt_spd.array > 0] = np.ma.masked
         self.create_kpvs_within_slices(vrt_spd.array, go_arounds, min_value)
-
-
-##### TODO: Implement!
-####class RateOfDescentOverGrossWeightLimitAtTouchdown(KeyPointValueNode):
-####    '''
-####    '''
-####
-####    units = ut.FPM
-####
-####    def derive(self, x=P('Not Yet')):
-####        '''
-####        '''
-####        return NotImplemented
 
 
 ##############################################################################
