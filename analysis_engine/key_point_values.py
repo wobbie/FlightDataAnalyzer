@@ -10131,7 +10131,7 @@ class TCASTAWarningDuration(KeyPointValueNode):
         
         for air in airs:
             if tcas_ta:
-                ras_local = tcas_ra.array[air.slice] == 'TA'
+                ras_local = tcas_ta.array[air.slice] == 'TA'
             else:
                 # If the TA is not recorded separately:
                 ras_local = tcas.array[air.slice] == 'Preventive'
