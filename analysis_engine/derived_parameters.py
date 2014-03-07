@@ -5471,6 +5471,15 @@ class Speedbrake(DerivedParameterNode):
                 'Spoiler (R) Inboard',
                 'Spoiler (R) Outboard'),
                 available
+            ) or
+            family_name in ['ERJ-170/175', 'ERJ-190/195'] and all_of((
+                'Spoiler (L) Inboard',
+                'Spoiler (L) Middle',
+                'Spoiler (L) Outboard',
+                'Spoiler (R) Inboard',
+                'Spoiler (R) Middle',
+                'Spoiler (R) Outboard'),
+                available
             )
         )
 
@@ -5500,8 +5509,10 @@ class Speedbrake(DerivedParameterNode):
                spoiler_L=P('Spoiler (L)'),
                spoiler_R=P('Spoiler (R)'),
                spoiler_LI=P('Spoiler (L) Inboard'),
+               spoiler_LM=P('Spoiler (L) Middle'),
                spoiler_LO=P('Spoiler (L) Outboard'),
                spoiler_RI=P('Spoiler (R) Inboard'),
+               spoiler_RM=P('Spoiler (R) Middle'),
                spoiler_RO=P('Spoiler (R) Outboard'),
                family=A('Family'),
                ):
@@ -5528,6 +5539,15 @@ class Speedbrake(DerivedParameterNode):
                 'Spoiler (R)', *blend_two_parameters(spoiler_RI, spoiler_RO))
             self.merge_spoiler(spoiler_L, spoiler_R)
 
+        elif family_name in ['ERJ-170/175', 'ERJ-190/195']:
+            # First blend inboard, middle and outboard, then merge
+            spoiler_L = DerivedParameterNode(
+                'Spoiler (L)',
+                blend_parameters((spoiler_LI, spoiler_LM, spoiler_LO)))
+            spoiler_R = DerivedParameterNode(
+                'Spoiler (R)',
+                blend_parameters((spoiler_RI, spoiler_RM, spoiler_RO)))
+            self.merge_spoiler(spoiler_L, spoiler_R)
         else:
             raise DataFrameError(self.name, family_name)
 

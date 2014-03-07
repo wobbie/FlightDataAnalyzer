@@ -10121,10 +10121,21 @@ class TCASTAWarningDuration(KeyPointValueNode):
     name = 'TCAS TA Warning Duration'
     units = ut.SECOND
 
-    def derive(self, tcas=M('TCAS Combined Control'), airs=S('Airborne')):
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(('TCAS TA', 'TCAS Combined Control'), available) \
+               and 'Airborne' in available
+
+    def derive(self, tcas_ta=M('TCAS TA'),
+               tcas=M('TCAS Combined Control'), airs=S('Airborne')):
         
         for air in airs:
-            ras_local = tcas.array[air.slice] == 'Preventive'
+            if tcas_ta:
+                ras_local = tcas_ta.array[air.slice] == 'TA'
+            else:
+                # If the TA is not recorded separately:
+                ras_local = tcas.array[air.slice] == 'Preventive'
+
             ras_slices = shift_slices(runs_of_ones(ras_local), air.slice.start)
             self.create_kpvs_from_slice_durations(ras_slices, self.frequency,
                                                   min_duration=2.0,
@@ -10141,7 +10152,8 @@ class TCASRAWarningDuration(KeyPointValueNode):
 
     @classmethod
     def can_operate(cls, available):
-        return 'TCAS RA' in available or 'TCAS Combined Control' in available
+        return any_of(('TCAS RA', 'TCAS Combined Control'), available) \
+               and 'Airborne' in available
 
     def derive(self, tcas_ra=M('TCAS RA'),
                tcas=M('TCAS Combined Control'), 

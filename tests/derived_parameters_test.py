@@ -4077,10 +4077,10 @@ class TestSlopeToLanding(unittest.TestCase):
 
 class TestSpeedbrake(unittest.TestCase):
     def test_can_operate(self):
-        family = A(name='Family', value='B737-Classic')
+        family = A(name='Family', value='B737 Classic')
         self.assertTrue(Speedbrake.can_operate(('Spoiler (2)', 'Spoiler (7)'),
                                                family=family))
-        family = A(name='Family', value='B737-NG')
+        family = A(name='Family', value='B737 NG')
         self.assertTrue(Speedbrake.can_operate(('Spoiler (4)', 'Spoiler (9)'),
                                                family=family))
         family = A(name='Family', value='A320')
@@ -4099,6 +4099,10 @@ class TestSpeedbrake(unittest.TestCase):
         family = A(name='Family', value='Phenom 300')
         self.assertTrue(Speedbrake.can_operate(('Spoiler (L)', 'Spoiler (R)'),
                                                family=family))
+        family = A(name='Family', value='ERJ-190/195')
+        self.assertTrue(Speedbrake.can_operate(
+            ('Spoiler (L) Inboard', 'Spoiler (L) Middle', 'Spoiler (L) Outboard',
+             'Spoiler (R) Inboard', 'Spoiler (R) Middle', 'Spoiler (R) Outboard'), family=family))
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
