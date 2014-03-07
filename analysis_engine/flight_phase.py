@@ -826,7 +826,10 @@ class ILSLocalizerEstablished(FlightPhaseNode):
         if not ils_freq:
             # If we don't have a frequency source, just scan the signal and
             # hope it was for this runway!
-            create_ils_phases(apps.get_slices())
+            for _slice in apps.get_slices():
+                valid_slices = np.ma.clump_unmasked(ils_loc.array[_slice])
+                last_valid_slice = shift_slice(valid_slices[-1], _slice.start)
+                create_ils_phases([last_valid_slice])
             self.info("No ILS Frequency used. Created %d established phases" % len(self))
             return
         if np.ma.count(ils_freq.array) < 10:
