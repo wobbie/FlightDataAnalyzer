@@ -1384,6 +1384,7 @@ def compress_iter_repr(iterable, cast=None, join='+'):
             v = cast(v)
         if v != prev_v:
             if prev_v != None:
+                # FIXME: NameError for count
                 res.append((prev_v, count))
             count = 1
         else:# v == prev_v:
@@ -1515,28 +1516,112 @@ def index_of_last_stop(bool_array, _slice=slice(0, None), min_dur=1,
         return None
 
 
-def find_dlcs(array):
+def find_low_alts(array, threshold_alt, descent_alt=None, climbout_alt=None,
+                  level_flights=None, cycle_size=500):
     '''
-    This function allows us to find the minima below 3000ft AAL with at least
-    500ft descent and climb, hence corresponding to go-arounds.
-
-    :param alt: Altitude AAL data array
-    :type alt: numpy masked array
-    :param pk_idx_list: list of indices in array where descent minima occur
-    :type pk_idx_list: list of integers
-    :param pk_val_list: list of altitude values at minima
-    :type pk_val_list: list of floats
+    This function allows us to find the minima of cycles which dip below
+    threshold_alt, along with initial takeoff and landing.
+    The descent_alt and climbout_alt are extrapolated from
+    the minimum index. A climbout_alt of 0 will find the lowest point of
+    descent. A negative climbout_alt will seek backwards to find altitudes
+    in the descent, e.g. from 3000-50ft descending.
+    
+    :param array: Altitude AAL data array
+    :type array: numpy masked array
+    :param threshold_alt: Altitude which must have dipped below.
+    :type threshold_alt: float or int
+    :param descent_alt: Start of descent altitude. A value of None will be substituted with threshold_alt.
+    :type descent_alt: float or int or None
+    :param climbout_alt: Climbout altitude. A value of None will be substituted with threshold_alt. Negative values seek backwards through the descent.
+    :type climbout_alt: float or int or None
+    :param level_flights: Level flight slices to exclude for descent and climbout.
+    :type level_flights: [slice]
+    :param cycle_size: Minimum cycle size to detect as a dip.
+    :type cycle_size: int or float
+    :returns: List of takeoff, landing and dip slices.
+    :rtype: [slices]
     '''
-    pk_idx_list = []
-    pk_val_list = []
-    dlc = np.ma.masked_greater(repair_mask(array, repair_duration=None),
-                               INITIAL_APPROACH_THRESHOLD)
-    for this_dlc in np.ma.clump_unmasked(dlc):
-        pk_idxs, pk_vals = cycle_finder(
-            dlc[this_dlc], min_step=DESCENT_LOW_CLIMB_THRESHOLD)
-        pk_idx_list.extend(pk_idxs + this_dlc.start)
-        pk_val_list.extend(pk_vals + this_dlc.start)
-    return pk_idx_list, pk_val_list
+    climbout_alt = climbout_alt if climbout_alt is not None else threshold_alt
+    descent_alt = descent_alt if descent_alt is not None else threshold_alt
+    
+    low_alt_slices = []
+    low_alt_cycles = []
+    
+    pk_idxs, pk_vals = cycle_finder(array, min_step=cycle_size)
+    # Convert cycles to slices.
+    if not pk_vals[0]:
+        if climbout_alt != 0:
+            # Do not include takeoffs when looking for climbout of 0.
+            low_alt_cycles.append(
+                (pk_idxs[0], pk_idxs[1], pk_idxs[0], pk_vals[0]))
+        pk_idxs = pk_idxs[1:]
+        pk_vals = pk_vals[1:]
+    
+    if not pk_vals[-1]:
+        low_alt_cycles.append(
+            (pk_idxs[-2], pk_idxs[-1], pk_idxs[-1], pk_vals[-1]))
+        pk_idxs = pk_idxs[:-1]
+        pk_vals = pk_vals[:-1]
+    
+    for dip_start, dip_min_index, dip_min_value, dip_stop in zip(pk_idxs[::2],
+                                                                 pk_idxs[1::2],
+                                                                 pk_vals[1::2],
+                                                                 pk_idxs[2::2]):
+        if dip_min_value >= threshold_alt:
+            # Altitude must dip below threshold_alt.
+            continue
+        low_alt_cycles.append(
+            (dip_start, dip_stop, dip_min_index, dip_min_value))
+    
+    for start_index, stop_index, dip_min_index, dip_min_value in low_alt_cycles:
+        
+        # Extrapolate climbout.
+        if climbout_alt == 0:
+            # Get min index of array in slice.
+            stop_index = min_value(array, _slice=slice(start_index,
+                                                       stop_index)).index
+        elif abs(climbout_alt) <= dip_min_value:
+            # Cycle min value above climbout_alt.
+            stop_index = dip_min_index
+        elif climbout_alt > 0:
+            pk_idxs, pk_vals = cycle_finder(array[dip_min_index:stop_index],
+                                            min_step=cycle_size)
+            
+            if pk_idxs is not None and len(pk_idxs) >= 2:
+                pk_idxs += dip_min_index
+                stop_index = index_at_value_or_level_off(
+                    array, climbout_alt, slice(pk_idxs[0], pk_idxs[1]))
+        else:
+            # Negative climbout, search backwards.
+            pk_idxs, pk_vals = cycle_finder(array[start_index:dip_min_index],
+                                            min_step=cycle_size)
+            
+            if pk_idxs is not None and len(pk_idxs) >= 2:
+                pk_idxs += start_index
+                stop_index = index_at_value_or_level_off(
+                    array, abs(climbout_alt), slice(pk_idxs[-1], pk_idxs[-2], -1))
+        
+        # Extrapolate descent.
+        pk_idxs, pk_vals = cycle_finder(array[start_index:dip_min_index],
+                                        min_step=cycle_size)
+        
+        if pk_idxs is not None and len(pk_idxs) >= 2:
+            pk_idxs += start_index
+            start_index = index_at_value_or_level_off(
+                array, descent_alt, slice(pk_idxs[-1], pk_idxs[-2], -1))
+        
+        low_alt_slice = slice(start_index, stop_index)
+        
+            
+        if level_flights:
+            # Exclude level flight.
+            excluding_level_flight = slices_and_not([low_alt_slice], level_flights)
+            low_alt_slice = find_nearest_slice(
+                max(dip_min_index-1, low_alt_slice.start), excluding_level_flight)
+        
+        low_alt_slices.append(low_alt_slice)
+    
+    return sorted(low_alt_slices)
 
 
 def find_toc_tod(alt_data, ccd_slice, mode='Climb'):
@@ -1569,7 +1654,8 @@ def find_toc_tod(alt_data, ccd_slice, mode='Climb'):
         slope = SLOPE_FOR_TOC_TOD
     else:
         stop = ceil(index_at_value(alt_data, 500,
-                    slice(ccd_slice.stop, peak_index, -1)) or len(alt_data))
+                    slice(ccd_slice.stop, peak_index, -1)) or ccd_slice.stop or
+                    len(alt_data))
         section = slice(peak_index, stop)
         slope = -SLOPE_FOR_TOC_TOD
 
@@ -3082,6 +3168,32 @@ def find_slices_containing_index(index, slices):
     :rtype: [slice]
     '''
     return [s for s in slices if is_index_within_slice(index, s)]
+
+
+def  find_nearest_slice(index, slices):
+    '''
+    :type index: int or float
+    :type slices: a list of slices to search through
+    
+    :returns: the first slice which contains index or None
+    :rtype: [slice]
+    '''
+    if len(slices) == 1:
+        return slices[0]
+    
+    slice_start_diffs = []
+    slice_stop_diffs = []
+    for _slice in slices:
+        slice_start_diffs.append(abs(index - _slice.start))
+        slice_stop_diffs.append(abs(index - _slice.stop))
+    min_slice_start_diff = min(slice_start_diffs)
+    min_slice_stop_diff = min(slice_stop_diffs)
+    min_diff = min(min_slice_start_diff, min_slice_stop_diff)
+    try:
+        index = slice_start_diffs.index(min_diff)
+    except ValueError:
+        index = slice_stop_diffs.index(min_diff)
+    return slices[index]
 
 
 def is_slice_within_slice(inner_slice, outer_slice, within_use='slice'):

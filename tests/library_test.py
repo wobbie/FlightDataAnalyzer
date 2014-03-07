@@ -137,6 +137,112 @@ class TestFindSlicesOverlap(unittest.TestCase):
         self.assertRaises(ValueError, find_slices_overlap, slice1, slice2)
 
 
+class TestFindLowAlts(unittest.TestCase):
+    def test_find_low_alts(self):
+        # Example flight with 3 approaches.
+        array = load(os.path.join(test_data_path, 'alt_aal_goaround.nod')).array
+        level_flights = [slice(1629.0, 2299.0, None),
+                         slice(3722.0, 4708.0, None),
+                         slice(4726.0, 4807.0, None),
+                         slice(5009.0, 5071.0, None),
+                         slice(5168.0, 6883.0, None),
+                         slice(8433.0, 9058.0, None)]
+        
+        low_alts = find_low_alts(array, 500, 3000, 2000,
+                                 level_flights=level_flights)
+        self.assertEqual(len(low_alts), 5)
+        self.assertAlmostEqual(low_alts[0].start, 0, places=0)
+        self.assertAlmostEqual(low_alts[0].stop, 499, places=0)
+        self.assertAlmostEqual(low_alts[1].start, 3425, places=0)
+        self.assertAlmostEqual(low_alts[1].stop, 3722, places=0)
+        self.assertAlmostEqual(low_alts[2].start, 4807, places=0)
+        self.assertAlmostEqual(low_alts[2].stop, 5009, places=0)
+        self.assertAlmostEqual(low_alts[3].start, 6883, places=0)
+        self.assertAlmostEqual(low_alts[3].stop, 7258, places=0)
+        self.assertAlmostEqual(low_alts[4].start, 10362, places=0)
+        self.assertAlmostEqual(low_alts[4].stop, 10815, places=0)
+        
+        low_alts = find_low_alts(array, 500, 3000,
+                                 level_flights=level_flights)
+        self.assertEqual(len(low_alts), 5)
+        self.assertAlmostEqual(low_alts[0].start, 0, places=0)
+        self.assertAlmostEqual(low_alts[0].stop, 455, places=0)
+        self.assertAlmostEqual(low_alts[1].start, 3425, places=0)
+        self.assertAlmostEqual(low_alts[1].stop, 3643, places=0)
+        self.assertAlmostEqual(low_alts[2].start, 4807, places=0)
+        self.assertAlmostEqual(low_alts[2].stop, 4955, places=0)
+        self.assertAlmostEqual(low_alts[3].start, 6883, places=0)
+        self.assertAlmostEqual(low_alts[3].stop, 7182, places=0)
+        self.assertAlmostEqual(low_alts[4].start, 10362, places=0)
+        self.assertAlmostEqual(low_alts[4].stop, 10815, places=0)
+        
+        low_alts = find_low_alts(array, 500, level_flights=level_flights)
+        self.assertEqual(len(low_alts), 5)
+        self.assertAlmostEqual(low_alts[0].start, 0, places=0)
+        self.assertAlmostEqual(low_alts[0].stop, 455, places=0)
+        self.assertAlmostEqual(low_alts[1].start, 3611, places=0)
+        self.assertAlmostEqual(low_alts[1].stop, 3643, places=0)
+        self.assertAlmostEqual(low_alts[2].start, 4919, places=0)
+        self.assertAlmostEqual(low_alts[2].stop, 4955, places=0)
+        self.assertAlmostEqual(low_alts[3].start, 7150, places=0)
+        self.assertAlmostEqual(low_alts[3].stop, 7182, places=0)
+        self.assertAlmostEqual(low_alts[4].start, 10522, places=0)
+        self.assertAlmostEqual(low_alts[4].stop, 10815, places=0)
+        
+        # Slices will include level flight without passing in slices.
+        low_alts = find_low_alts(array, 500, 3000, 2000)
+        self.assertEqual(len(low_alts), 5)
+        self.assertAlmostEqual(low_alts[0].start, 0, places=0)
+        self.assertAlmostEqual(low_alts[0].stop, 499, places=0)
+        self.assertAlmostEqual(low_alts[1].start, 3425, places=0)
+        self.assertAlmostEqual(low_alts[1].stop, 4384, places=0)
+        self.assertAlmostEqual(low_alts[2].start, 4805, places=0)
+        self.assertAlmostEqual(low_alts[2].stop, 5130, places=0)
+        self.assertAlmostEqual(low_alts[3].start, 6648, places=0)
+        self.assertAlmostEqual(low_alts[3].stop, 7258, places=0)
+        self.assertAlmostEqual(low_alts[4].start, 10362, places=0)
+        self.assertAlmostEqual(low_alts[4].stop, 10815, places=0)
+        
+        # Support negative climbout_alt (search backwards).
+        # Slices will include level flight without passing in slices.
+        low_alts = find_low_alts(array, 500, 3000, -50,
+                                 level_flights=level_flights)
+        self.assertEqual(len(low_alts), 5)
+        self.assertAlmostEqual(low_alts[0].start, 0, places=0)
+        self.assertAlmostEqual(low_alts[0].stop, 1629, places=0)
+        self.assertAlmostEqual(low_alts[1].start, 3425, places=0)
+        self.assertAlmostEqual(low_alts[1].stop, 3632, places=0)
+        self.assertAlmostEqual(low_alts[2].start, 4807, places=0)
+        self.assertAlmostEqual(low_alts[2].stop, 4943, places=0)
+        self.assertAlmostEqual(low_alts[3].start, 6883, places=0)
+        self.assertAlmostEqual(low_alts[3].stop, 7171, places=0)
+        self.assertAlmostEqual(low_alts[4].start, 10362, places=0)
+        self.assertAlmostEqual(low_alts[4].stop, 10556, places=0)
+        
+        # 0 climbout_alt (lowest point of descent).
+        low_alts = find_low_alts(array, 500, 3000, 0,
+                                 level_flights=level_flights)
+        self.assertEqual(len(low_alts), 4)
+        self.assertAlmostEqual(low_alts[0].start, 3425, places=0)
+        self.assertAlmostEqual(low_alts[0].stop, 3632, places=0)
+        self.assertAlmostEqual(low_alts[1].start, 4807, places=0)
+        self.assertAlmostEqual(low_alts[1].stop, 4941, places=0)
+        self.assertAlmostEqual(low_alts[2].start, 6883, places=0)
+        self.assertAlmostEqual(low_alts[2].stop, 7171, places=0)
+        self.assertAlmostEqual(low_alts[3].start, 10362, places=0)
+        self.assertAlmostEqual(low_alts[3].stop, 10569, places=0)
+
+
+class TestFindNearestSlice(unittest.TestCase):
+    def test_find_nearest_slice(self):
+        slices = [slice(2, 10)]
+        nearest_slice = find_nearest_slice(5, slices)
+        self.assertEqual(nearest_slice, slices[0])
+        slices = [slice(2, 10), slice(20,30)]
+        nearest_slice = find_nearest_slice(18, slices)
+        self.assertEqual(nearest_slice, slices[1])
+
+
 class TestAlignSlice(unittest.TestCase):
     @mock.patch('analysis_engine.library.align_slices')
     def test_align_slice(self, align_slices):

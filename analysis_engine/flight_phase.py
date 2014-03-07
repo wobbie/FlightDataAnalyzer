@@ -10,7 +10,7 @@ from analysis_engine.library import (
     closest_unmasked_value,
     cycle_finder,
     cycle_match,
-    find_dlcs,
+    find_low_alts,
     first_order_washout,
     first_valid_sample,
     index_at_value,
@@ -19,6 +19,7 @@ from analysis_engine.library import (
     is_index_within_slice,
     is_slice_within_slice,
     last_valid_sample,
+    min_value,
     moving_average,
     nearest_neighbour_mask_repair,
     rate_of_change,
@@ -124,48 +125,24 @@ class GoAroundAndClimbout(FlightPhaseNode):
     approach thresholds. The function here is to expand the phase 500ft before
     to the first level off after (up to 2000ft maximum).
     '''
+    
+    @classmethod
+    def can_operate(cls, available):
+        return 'Altitude AAL For Flight Phases' in available
 
     def derive(self, alt_aal=P('Altitude AAL For Flight Phases'),
-               gas=KTI('Go Around')):
+               level_flights=S('Level Flight')):
         # Find the ups and downs in the height trace.
-        alt_idxs, alt_vals = find_dlcs(alt_aal.array)
-        # Smooth over very small negative rates of change in altitude to
-        # avoid index at closest value returning the slight negative change
-        # in place of the real altitude peak where the 500ft or 2000ft
-        # thresholds are not reached.
+        level_flights = level_flights.get_slices() if level_flights else None
+        low_alt_slices = find_low_alts(
+            alt_aal.array, 500, 3000, 2000, level_flights=level_flights)
+        dlc_slices = []
+        for low_alt in low_alt_slices:
+            if (alt_aal.array[low_alt.start] and
+                alt_aal.array[low_alt.stop - 1]):
+                dlc_slices.append(low_alt)
         
-        # quite a bit of smoothing is required to remove bumpy altitude signals
-        smoothed_alt = moving_average(alt_aal.array, window=15)
-        for ga in gas:
-            ga_idx = ga.index
-            #---------- Scan to match the altitude minima ----------
-            # A wide tolerance is required to cater for lazy go arounds over rough ground
-            prev_idx, post_idx = cycle_match(ga_idx, alt_idxs, dist=1000)
-            #--------------- Go-Around Altitude ---------------
-            # Find the go-around altitude
-            index, value = closest_unmasked_value(
-                alt_aal.array, ga_idx, 
-                slice(prev_idx,  # previous peak index
-                      post_idx)  # next peak index
-            )
-            #--------------- 500ft before ---------------
-            # We have matched the cycle to the (possibly radio height
-            # based) go-around KTI.
-            # Establish an altitude range around this point
-            start_slice = slice(index, prev_idx, -1)  # work backwards towards previous peak
-            ga_start = index_at_value_or_level_off(smoothed_alt, 
-                                                   value+500, start_slice)
-            #--------------- Level off or 2000ft after ---------------
-            stop_slice = slice(index, post_idx)  # look forwards towards next peak
-            # find the nearest value; we are protected by the cycle peak
-            # as the slice.stop from going too far forward.
-            ga_stop = index_at_value_or_level_off(smoothed_alt,
-                                                  value+2000, stop_slice)
-            # round to nearest positions, with a simple reasonableness check.
-            if math.ceil(ga_stop) > int(ga_start):
-                self.create_phase(slice(int(ga_start), math.ceil(ga_stop)))
-        #endfor each goaround
-        return
+        self.create_phases(dlc_slices)
 
 
 class Holding(FlightPhaseNode):
@@ -241,38 +218,32 @@ class ApproachAndLanding(FlightPhaseNode):
     # Force to remove problem with desynchronising of approaches and landings
     # (when offset > 0.5)
     align_offset = 0
+    
+    @classmethod
+    def can_operate(cls, available):
+        return 'Altitude AAL For Flight Phases' in available
 
     def derive(self, alt_aal=P('Altitude AAL For Flight Phases'),
-               lands=S('Landing'), gas=KTI('Go Around')):
+               level_flights=S('Level Flight'),
+               landings=S('Landing')):
         # Prepare to extract the slices
-        app_slices = []
-        ga_slices = []
-
-        # Find the ups and downs in the height trace to restrict search ranges
-        ##cycle_idxs, _ = cycle_finder(alt_aal.array, min_step=500.0)
-        cycle_idxs, _ = find_dlcs(alt_aal.array)
-        for land in lands:
-            prev_peak, _ = cycle_match(land.slice.start, cycle_idxs, dist=10000)
-            _slice = slice(land.slice.start, prev_peak, -1)
-            app_start = index_at_value_or_level_off(
-                alt_aal.array, INITIAL_APPROACH_THRESHOLD, _slice)
-            app_slices.append(slice(app_start, land.slice.stop))
-
-        for ga in gas:
-            # Establish the altitude up to 3000ft before go-around. We know
-            # we are below 3000ft as that's the definition of the Go-Around
-            # (below 3000ft followed by climb of 500ft).
-            ga_start = index_at_value(alt_aal.array, 3000, 
-                                      slice(ga.index, None, -1),
-                                      endpoint='closing')
-            ga_slices.append(slice(ga_start, ga.index+1))
-
-        all_apps = slices_or(app_slices, ga_slices)
-        if not all_apps:
-            self.warning('Flight with no valid approach or go-around phase. '
-                         'Probably truncated data')
-        else:
-            self.create_phases(all_apps)
+        level_flights = level_flights.get_slices() if level_flights else None
+        low_alt_slices = find_low_alts(
+            alt_aal.array, 500, 3000, climbout_alt=0,
+            level_flights=level_flights)
+        for low_alt in low_alt_slices:
+            if not alt_aal.array[low_alt.start]:
+                # Exclude Takeoff.
+                continue
+            
+            # Landing
+            if not alt_aal.array[low_alt.stop - 1]:
+                if landings:
+                    landing = landings.get_last()
+                    assert is_index_within_slice(landing.slice.start, low_alt)
+                    low_alt = slice(low_alt.start, landing.slice.stop)
+            
+            self.create_phase(low_alt)
 
 
 class Approach(FlightPhaseNode):
@@ -284,26 +255,26 @@ class Approach(FlightPhaseNode):
     
     Landing starts at 50ft, therefore this phase is until 50ft.
     """
-    def derive(self, apps=S('Approach And Landing'), lands=S('Landing')):
-        app_slices = []
-        begin = None
-        end = None
-        land_slices = []
-        for app in apps:
-            _slice = app.slice
-            app_slices.append(_slice)
-            if begin is None:
-                begin = _slice.start
-                end = _slice.stop
-            else:
-                begin = min(begin, _slice.start)
-                end = max(end, _slice.stop)
-        for land in lands:
-            land_slices.append(land.slice)
-        self.create_phases(slices_and(app_slices,
-                                      slices_not(land_slices,
-                                                 begin_at=begin,
-                                                 end_at=end)))
+    @classmethod
+    def can_operate(cls, available):
+        return 'Altitude AAL For Flight Phases' in available
+    
+    def derive(self, alt_aal=P('Altitude AAL For Flight Phases'), 
+               level_flights=S('Level Flight'),
+               landings=S('Landing')):
+        level_flights = level_flights.get_slices() if level_flights else None
+        low_alts = find_low_alts(alt_aal.array, 3000, descent_alt=3000,
+                                 climbout_alt=-50, level_flights=level_flights)
+        for low_alt in low_alts:
+            # Exclude takeoff and landing.
+            if alt_aal.array[low_alt.start] and alt_aal.array[low_alt.stop]:
+                if landings:
+                    # Exclude Landing within 30 seconds of 50 ft.
+                    landing = landings.get_last()
+                    landing_diff = low_alt.stop - landing.slice.start
+                    if abs(landing_diff) < (30 * self.frequency):
+                        continue
+                self.create_phase(low_alt)
 
 
 class BouncedLanding(FlightPhaseNode):
@@ -567,16 +538,22 @@ class DescentLowClimb(FlightPhaseNode):
     TODO: Consider refactoring this based on the Bottom Of Descent KTIs and
     just check the altitude at each BOD.
     '''
-    def derive(self, alt_aal=P('Altitude AAL For Flight Phases')):
-        pk_idxs, pk_vals = find_dlcs(alt_aal.array)
-            
-        if pk_vals is None or len(pk_vals) < 3:
-            return 
-        
-        for n in range(1, len(pk_vals) - 1):
-            if (pk_vals[n-1]-pk_vals[n]) > DESCENT_LOW_CLIMB_THRESHOLD and \
-               (pk_vals[n+1]-pk_vals[n]) > DESCENT_LOW_CLIMB_THRESHOLD:
-                self.create_phase(slice(pk_idxs[n-1], pk_idxs[n+1]))
+    
+    @classmethod
+    def can_operate(cls, available):
+        return 'Altitude AAL For Flight Phases' in available
+    
+    def derive(self, alt_aal=P('Altitude AAL For Flight Phases'),
+               level_flights=S('Level Flight')):
+        level_flights = level_flights.get_slices() if level_flights else None
+        low_alt_slices = find_low_alts(alt_aal.array,
+                                       500,
+                                       3000,
+                                       level_flights=level_flights)
+        for low_alt in low_alt_slices:
+            if (alt_aal.array[low_alt.start] and
+                alt_aal.array[low_alt.stop - 1]):
+                self.create_phase(low_alt)
 
 
 class Fast(FlightPhaseNode):

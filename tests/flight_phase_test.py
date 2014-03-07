@@ -196,83 +196,99 @@ class TestAirborne(unittest.TestCase):
 class TestApproachAndLanding(unittest.TestCase):
     def test_can_operate(self):
         opts = ApproachAndLanding.get_operational_combinations()
-        self.assertEqual(opts, [
-            ('Altitude AAL For Flight Phases', 'Landing', 'Go Around')
-            ])
+        self.assertTrue(
+            ('Altitude AAL For Flight Phases', 'Level Flight', 'Landing',) in opts)
+        self.assertTrue(('Altitude AAL For Flight Phases',) in opts)
+        self.assertTrue(('Altitude AAL For Flight Phases', 'Landing') in opts)
+        self.assertTrue(('Altitude AAL For Flight Phases', 'Level Flight') in opts)
         
     def test_approach_and_landing_basic(self):
         alt = np.ma.array(range(5000, 500, -500) + [0] * 10)
-        land = buildsection('Landing', 11, 20)
         # No Go-arounds detected
         gas = KTI(items=[])
         app = ApproachAndLanding()
-        app.derive(
-            Parameter('Altitude AAL For Flight Phases', alt), land, gas)
-        self.assertEqual(app.get_slices(), [slice(4.0, 20)])
+        app.derive(Parameter('Altitude AAL For Flight Phases', alt), None, None)
+        self.assertEqual(app.get_slices(), [slice(4.0, 9)])
 
-    def test_approach_and_landing_separate_landing_phase_go_around(self):
-        alt = np.ma.array([3500, 2500, 2000, 2500, 3500, 3500, 2500, 1600, 0])
-        land = buildsection('Landing', 5.5, 9)
-        gas = KTI(items=[KeyTimeInstance(2)])
-        app = ApproachAndLanding()
-        app.derive(
-            Parameter('Altitude AAL For Flight Phases', alt), land, gas)
-        self.assertEqual(app.get_slices(), [slice(0, 3), slice(5, 9)])
-        
-    def test_with_real_data_with_go_around_below_1500ft(self):
+    def test_go_around_below_1500ft(self):
         alt_aal = load(os.path.join(test_data_path,
                                     'GoAroundAndClimbout_alt_aal.nod'))
-        land = buildsection('Landing', 2793, 3000)
-        gas = load(os.path.join(test_data_path,
-                                'GoAroundAndClimbout_gas.nod'))
-        phase = ApproachAndLanding()
-        phase.derive(alt_aal, land, gas)
-        self.assertEqual(
-            [s.slice for s in phase],
-            [slice(1005, 1112),
-             slice(1378, 1458, None),
-             slice(1676, 1782, None),
-             slice(2021, 2132, None),
-             slice(2208, 2462, None),
-             slice(2680, 3000, None),  # landing
-             ])
+        app_ldg = ApproachAndLanding()
+        app_ldg.derive(alt_aal, None, None)
+        self.assertEqual(len(app_ldg), 6)
+        self.assertAlmostEqual(app_ldg[0].slice.start, 1005, places=0)
+        self.assertAlmostEqual(app_ldg[0].slice.stop, 1111, places=0)
+        self.assertAlmostEqual(app_ldg[1].slice.start, 1378, places=0)
+        self.assertAlmostEqual(app_ldg[1].slice.stop, 1458, places=0)
+        self.assertAlmostEqual(app_ldg[2].slice.start, 1676, places=0)
+        self.assertAlmostEqual(app_ldg[2].slice.stop, 1783, places=0)
+        self.assertAlmostEqual(app_ldg[3].slice.start, 2021, places=0)
+        self.assertAlmostEqual(app_ldg[3].slice.stop, 2116, places=0)
+        self.assertAlmostEqual(app_ldg[4].slice.start, 2208, places=0)
+        self.assertAlmostEqual(app_ldg[4].slice.stop, 2468, places=0)
+        self.assertAlmostEqual(app_ldg[5].slice.start, 2680, places=0)
+        self.assertAlmostEqual(app_ldg[5].slice.stop, 2806, places=0)
+        
+        
+    def test_go_around_2(self):
+        alt_aal = load(os.path.join(test_data_path, 'alt_aal_goaround.nod'))
+        level_flights = SectionNode('Level Flight')
+        level_flights.create_sections([
+            slice(1629.0, 2299.0, None),
+            slice(3722.0, 4708.0, None),
+            slice(4726.0, 4807.0, None),
+            slice(5009.0, 5071.0, None),
+            slice(5168.0, 6883.0, None),
+            slice(8433.0, 9058.0, None)])
+        landings = buildsection('Landing', 10500, 10750)
+        app_ldg = ApproachAndLanding()
+        app_ldg.derive(alt_aal, level_flights, landings)
+        self.assertEqual(len(app_ldg), 4)
+        self.assertAlmostEqual(app_ldg[0].slice.start, 3425, places=0)
+        self.assertAlmostEqual(app_ldg[0].slice.stop, 3632, places=0)
+        self.assertAlmostEqual(app_ldg[1].slice.start, 4807, places=0)
+        self.assertAlmostEqual(app_ldg[1].slice.stop, 4941, places=0)
+        self.assertAlmostEqual(app_ldg[2].slice.start, 6883, places=0)
+        self.assertAlmostEqual(app_ldg[2].slice.stop, 7171, places=0)
+        self.assertAlmostEqual(app_ldg[3].slice.start, 10362, places=0)
+        self.assertAlmostEqual(app_ldg[3].slice.stop, 10569, places=0)
+
         
     def test_with_go_around_and_climbout_atr42_data(self):
         alt_aal = load(os.path.join(test_data_path,
                                     'AltitudeAAL_ATR42_two_goarounds.nod'))
-        lands = SectionNode(items=[
-            Section(name='Landing',
-                    slice=slice(27343, 27500, None),
-                    start_edge=27342, stop_edge=27499),
-        ])
-        gas = KTI(items=[
-            KeyTimeInstance(index=10811.0, name='Go Around'),
-            KeyTimeInstance(index=12630.0, name='Go Around'),
-        ])
         app_ldg = ApproachAndLanding()
-        app_ldg.derive(alt_aal, lands, gas)
+        app_ldg.derive(alt_aal, None, None)
         self.assertEqual(len(app_ldg), 3)
-        self.assertEqual(app_ldg[0].slice, slice(9770, 10812))
-        self.assertEqual(app_ldg[1].slice, slice(12056, 12631))
-        self.assertEqual(app_ldg[2].slice, slice(26925, 27500))
+        self.assertAlmostEqual(app_ldg[0].slice.start, 9771, places=0)
+        self.assertAlmostEqual(app_ldg[0].slice.stop, 10810, places=0)
+        self.assertAlmostEqual(app_ldg[1].slice.start, 12056, places=0)
+        self.assertAlmostEqual(app_ldg[1].slice.stop, 12631, places=0)
+        self.assertAlmostEqual(app_ldg[2].slice.start, 26926, places=0)
+        self.assertAlmostEqual(app_ldg[2].slice.stop, 27359, places=0)
 
 
 class TestApproach(unittest.TestCase):
-    def test_approach_basic(self):
-        aal = buildsection('Approach And Landing', 5, 15)
-        land = buildsection('Landing', 10, 15)
-        app = Approach()
-        app.derive(aal, land)
-        expected = buildsection('Approach', 5, 10)
-        self.assertEqual(app, expected)
+    
+    def test_can_operate(self):
+        opts = Approach.get_operational_combinations()
+        self.assertTrue(
+            ('Altitude AAL For Flight Phases', 'Level Flight', 'Landing',) in opts)
+        self.assertTrue(('Altitude AAL For Flight Phases',) in opts)
+        self.assertTrue(('Altitude AAL For Flight Phases', 'Landing') in opts)
+        self.assertTrue(('Altitude AAL For Flight Phases', 'Level Flight') in opts)        
 
-    def test_approach_complex(self):
-        aal = buildsections('Approach And Landing', [25, 35], [5,15])
-        land = buildsection('Landing', 12, 27)
+    def test_with_go_around_and_climbout_atr42_data(self):
+        alt_aal = load(os.path.join(test_data_path,
+                                    'AltitudeAAL_ATR42_two_goarounds.nod'))
+        landing = buildsection('Landing', 27350, 27400)
         app = Approach()
-        app.derive(aal, land)
-        expected = buildsection('Approach', 27, 35)
-        self.assertEqual(app[0], expected[0])
+        app.derive(alt_aal, None, landing)
+        self.assertEqual(len(app), 2)
+        self.assertAlmostEqual(app[0].slice.start, 9771, places=0)
+        self.assertAlmostEqual(app[0].slice.stop, 10810, places=0)
+        self.assertAlmostEqual(app[1].slice.start, 12056, places=0)
+        self.assertAlmostEqual(app[1].slice.stop, 12631, places=0)
 
 
 class TestBouncedLanding(unittest.TestCase):
@@ -779,8 +795,9 @@ class TestInitialCruise(unittest.TestCase):
 
 class TestDescentLowClimb(unittest.TestCase):
     def test_can_operate(self):
-        self.assertEqual(DescentLowClimb.get_operational_combinations(),
-                         [('Altitude AAL For Flight Phases',)])
+        opts = DescentLowClimb.get_operational_combinations()
+        self.assertTrue(('Altitude AAL For Flight Phases',) in opts)
+        self.assertTrue(('Altitude AAL For Flight Phases', 'Level Flight') in opts)
 
     def test_descent_low_climb_basic(self):
         # Wave is 5000ft to 0 ft and back up, with climb of 5000ft.
@@ -795,8 +812,9 @@ class TestDescentLowClimb(unittest.TestCase):
         #climb = Parameter('Climb For Flight Phases', np.ma.array(clb))
         dlc = DescentLowClimb()
         dlc.derive(alt_aal)
-        expected = buildsection('Descent Low Climb', 14, 49)
-        self.assertEqual(list(dlc), list(expected))
+        self.assertEqual(len(dlc), 1)
+        self.assertAlmostEqual(dlc[0].slice.start, 14, places=0)
+        self.assertAlmostEqual(dlc[0].slice.stop, 38, places=0)
 
     def test_descent_low_climb_inadequate_climb(self):
         testwave = np.cos(np.arange(0, 6.3, 0.1)) * (240) + 2500 # 480ft climb
@@ -1005,8 +1023,9 @@ class TestGearRetracting(unittest.TestCase):
 class TestGoAroundAndClimbout(unittest.TestCase):
 
     def test_can_operate(self):
-        self.assertEqual(GoAroundAndClimbout.get_operational_combinations(),
-                         [('Altitude AAL For Flight Phases','Go Around')])
+        opts = GoAroundAndClimbout.get_operational_combinations()
+        self.assertTrue(('Altitude AAL For Flight Phases','Level Flight') in opts)
+        self.assertTrue(('Altitude AAL For Flight Phases',) in opts)
 
     def test_go_around_and_climbout_phase_not_reaching_2000ft(self):
         '''
@@ -1024,65 +1043,57 @@ class TestGoAroundAndClimbout(unittest.TestCase):
         self.assertEqual(ga_phase.get_first().stop_edge, expected[0].stop_edge)
         '''
         alt_aal = load(os.path.join(test_data_path, 'alt_aal_goaround.nod'))
-        gas = load(os.path.join(test_data_path, 'go_around_kti_goaround.nod'))
+        level_flights = SectionNode('Level Flight')
+        level_flights.create_sections([
+            slice(1629.0, 2299.0, None),
+            slice(3722.0, 4708.0, None),
+            slice(4726.0, 4807.0, None),
+            slice(5009.0, 5071.0, None),
+            slice(5168.0, 6883.0, None),
+            slice(8433.0, 9058.0, None)])
         ga_phase = GoAroundAndClimbout()
-        ga_phase.derive(alt_aal, gas)
+        ga_phase.derive(alt_aal, level_flights)
         self.assertEqual(len(ga_phase), 3)
-        self.assertEqual(ga_phase[0].slice, slice(3586, 3723))
-        self.assertEqual(ga_phase[1].slice, slice(4895, 5141))
-        self.assertEqual(ga_phase[2].slice, slice(7124, 7266))
+        self.assertAlmostEqual(ga_phase[0].slice.start, 3425, places=0)
+        self.assertAlmostEqual(ga_phase[0].slice.stop, 3722, places=0)
+        self.assertAlmostEqual(ga_phase[1].slice.start, 4807, places=0)
+        self.assertAlmostEqual(ga_phase[1].slice.stop, 5009, places=0)
+        self.assertAlmostEqual(ga_phase[2].slice.start, 6883, places=0)
+        self.assertAlmostEqual(ga_phase[2].slice.stop, 7258, places=0)
 
     def test_go_around_and_climbout_real_data(self):
         alt_aal = load(os.path.join(test_data_path,
                                     'GoAroundAndClimbout_alt_aal.nod'))
-        gas = load(os.path.join(test_data_path,
-                                'GoAroundAndClimbout_gas.nod'))
         ga_phase = GoAroundAndClimbout()
-        ga_phase.derive(alt_aal, gas)
-        self.assertEqual(
-            list(ga_phase),
-            [Section(name='Go Around And Climbout',
-                     slice=slice(1057, 1169),
-                     start_edge=1057,
-                     stop_edge=1169),
-             Section(name='Go Around And Climbout',
-                     slice=slice(1393, 1505, None),
-                     start_edge=1393,
-                     stop_edge=1505),
-             Section(name='Go Around And Climbout',
-                     slice=slice(1722, 1837, None),
-                     start_edge=1722,
-                     stop_edge=1837),
-             Section(name='Go Around And Climbout',
-                     slice=slice(2071, 2204, None),
-                     start_edge=2071,
-                     stop_edge=2204),
-             Section(name='Go Around And Climbout',
-                     slice=slice(2391, 2505, None),
-                     start_edge=2391,
-                     stop_edge=2505)])
+        ga_phase.derive(alt_aal, None)
+        self.assertEqual(len(ga_phase), 5)
+        #self.assertEqual(ga_phase.get_slices(), [
+            #slice(1005.0, 1170.0, None),
+            #slice(1378.0, 1502.0, None),
+            #slice(1676.0, 1836.0, None),
+            #slice(2021.0, 2206.0, None),
+            #slice(2208.0, 2502.0, None)])
+        self.assertAlmostEqual(ga_phase[0].slice.start, 1005, places=0)
+        self.assertAlmostEqual(ga_phase[0].slice.stop, 1169, places=0)
+        self.assertAlmostEqual(ga_phase[1].slice.start, 1378, places=0)
+        self.assertAlmostEqual(ga_phase[1].slice.stop, 1502, places=0)
+        self.assertAlmostEqual(ga_phase[2].slice.start, 1676, places=0)
+        self.assertAlmostEqual(ga_phase[2].slice.stop, 1836, places=0)
+        self.assertAlmostEqual(ga_phase[3].slice.start, 2021, places=0)
+        self.assertAlmostEqual(ga_phase[3].slice.stop, 2205, places=0)
+        self.assertAlmostEqual(ga_phase[4].slice.start, 2208, places=0)
+        self.assertAlmostEqual(ga_phase[4].slice.stop, 2502, places=0)
         
     def test_two_go_arounds_for_atr42(self):
         alt_aal = load(os.path.join(test_data_path,
                                     'AltitudeAAL_ATR42_two_goarounds.nod'))
-        gas = KTI(items=[
-            KeyTimeInstance(index=10811.0, name='Go Around', datetime=None, latitude=None, longitude=None),
-            KeyTimeInstance(index=12630.0, name='Go Around', datetime=None, latitude=None, longitude=None),
-            ])
         ga_phase = GoAroundAndClimbout()
-        ga_phase.derive(alt_aal, gas)
-                
-        self.assertEqual(
-            list(ga_phase),
-            [Section(name='Go Around And Climbout',
-                     slice=slice(10702, 10949),
-                     start_edge=10702,
-                     stop_edge=10949),
-             Section(name='Go Around And Climbout',
-                     slice=slice(12528, 12749, None),
-                     start_edge=12528,
-                     stop_edge=12749),
-             ])
+        ga_phase.derive(alt_aal, None)
+        self.assertEqual(len(ga_phase), 2)
+        self.assertAlmostEqual(ga_phase[0].slice.start, 9771, places=0)
+        self.assertAlmostEqual(ga_phase[0].slice.stop, 10945, places=0)
+        self.assertAlmostEqual(ga_phase[1].slice.start, 12056, places=0)
+        self.assertAlmostEqual(ga_phase[1].slice.stop, 12737, places=0)
 
 
 class TestHolding(unittest.TestCase):
