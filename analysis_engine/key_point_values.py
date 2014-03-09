@@ -3228,7 +3228,15 @@ class AltitudeAtFlapExtensionWithGearDown(KeyPointValueNode):
                 # The flap we are moving to is +1 from the diff index
                 index = (air_down.start or 0) + index + 1
                 value = alt_aal.array[index]
-                self.create_kpv(index, value, flap=flap.array[index])
+                try:
+                    self.create_kpv(index, value, flap=flap.array[index])
+                except:
+                    # Where flap values are mapped onto bits in the recorded
+                    # word (e.g. E170 family), the new flap setting may clash
+                    # with the old value, giving a transient indication of
+                    # both flap readings. This is a crude fix to avoid this
+                    # type of error condition.
+                    self.create_kpv(index, value, flap=flap.array[index+2])
 
 
 class AirspeedAtFlapExtensionWithGearDown(KeyPointValueNode):
@@ -3268,7 +3276,10 @@ class AirspeedAtFlapExtensionWithGearDown(KeyPointValueNode):
                 # The flap we are moving to is +1 from the diff index
                 index = (air_down.start or 0) + index + 1
                 value = air_spd.array[index]
-                self.create_kpv(index, value, flap=flap.array[index])
+                try: 
+                    self.create_kpv(index, value, flap=flap.array[index])
+                except:
+                    self.create_kpv(index, value, flap=flap.array[index+2])
 
 
 class AltitudeRadioCleanConfigurationMin(KeyPointValueNode):
