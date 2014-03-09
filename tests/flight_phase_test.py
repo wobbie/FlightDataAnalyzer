@@ -278,17 +278,33 @@ class TestApproach(unittest.TestCase):
         self.assertTrue(('Altitude AAL For Flight Phases', 'Landing') in opts)
         self.assertTrue(('Altitude AAL For Flight Phases', 'Level Flight') in opts)        
 
+    def test_approach_basic(self):
+        alt = np.ma.array(range(5000, 500, -500) + [50] + [0] * 10)
+        app = Approach()
+        land = buildsection('Landing', 11,14)
+        app.derive(Parameter('Altitude AAL For Flight Phases', alt), None, land)
+        self.assertEqual(app.get_slices(), [slice(4.0, 9)])
+
+    def test_ignore_takeoff(self):
+        alt = np.ma.array([0]*5+range(0,5000,500)+range(5000,500,-500)+[0]*5)
+        app = Approach()
+        land = buildsection('Landing', 11,14)
+        app.derive(Parameter('Altitude AAL For Flight Phases', alt), None, land)
+        self.assertEqual(len(app), 1)
+        
     def test_with_go_around_and_climbout_atr42_data(self):
         alt_aal = load(os.path.join(test_data_path,
                                     'AltitudeAAL_ATR42_two_goarounds.nod'))
         landing = buildsection('Landing', 27350, 27400)
         app = Approach()
         app.derive(alt_aal, None, landing)
-        self.assertEqual(len(app), 2)
+        self.assertEqual(len(app), 3)
         self.assertAlmostEqual(app[0].slice.start, 9771, places=0)
         self.assertAlmostEqual(app[0].slice.stop, 10810, places=0)
         self.assertAlmostEqual(app[1].slice.start, 12056, places=0)
         self.assertAlmostEqual(app[1].slice.stop, 12631, places=0)
+        self.assertAlmostEqual(app[2].slice.start, 26926, places=0)
+        self.assertAlmostEqual(app[2].slice.stop, 27343, places=0)
 
 
 class TestBouncedLanding(unittest.TestCase):

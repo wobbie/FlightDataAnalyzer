@@ -236,12 +236,12 @@ class ApproachAndLanding(FlightPhaseNode):
                 # Exclude Takeoff.
                 continue
             
-            # Landing
-            if not alt_aal.array[low_alt.stop - 1]:
-                if landings:
-                    landing = landings.get_last()
-                    assert is_index_within_slice(landing.slice.start, low_alt)
-                    low_alt = slice(low_alt.start, landing.slice.stop)
+            # Include the Landing period
+            # if not alt_aal.array[low_alt.stop - 1]:
+            if landings:
+                landing = landings.get_last()
+                assert is_index_within_slice(landing.slice.start, low_alt)
+                low_alt = slice(low_alt.start, landing.slice.stop)
             
             self.create_phase(low_alt)
 
@@ -266,14 +266,10 @@ class Approach(FlightPhaseNode):
         low_alts = find_low_alts(alt_aal.array, 3000, descent_alt=3000,
                                  climbout_alt=-50, level_flights=level_flights)
         for low_alt in low_alts:
-            # Exclude takeoff and landing.
-            if alt_aal.array[low_alt.start] and alt_aal.array[low_alt.stop]:
-                if landings:
-                    # Exclude Landing within 30 seconds of 50 ft.
-                    landing = landings.get_last()
-                    landing_diff = low_alt.stop - landing.slice.start
-                    if abs(landing_diff) < (30 * self.frequency):
-                        continue
+            # Select landings only.
+            if alt_aal.array[low_alt.start] and \
+               alt_aal.array[low_alt.stop] and \
+               alt_aal.array[low_alt.start] > alt_aal.array[low_alt.stop]:
                 self.create_phase(low_alt)
 
 
