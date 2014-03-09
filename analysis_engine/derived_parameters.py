@@ -5599,15 +5599,17 @@ class ApproachRange(DerivedParameterNode):
                     'Airspeed True',
                     'Altitude AAL',
                     'Approach Information'), available) \
-                       and any_of(('Heading True', 'Track True', 'Track',
-                                   'Heading'), available)
+                       and any_of(('Heading True Continuous', 
+                                   'Track True Continuous',
+                                   'Track Continuous',
+                                   'Heading Continuous'), available)
 
     def derive(self, gspd=P('Groundspeed'),
                glide=P('ILS Glideslope'),
-               trk_mag=P('Track'),
-               trk_true=P('Track True'),
-               hdg_mag=P('Heading'),
-               hdg_true=P('Heading True'),
+               trk_mag=P('Track Continuous'),
+               trk_true=P('Track True Continuous'),
+               hdg_mag=P('Heading Continuous'),
+               hdg_true=P('Heading True Continuous'),
                tas=P('Airspeed True'),
                alt_aal=P('Altitude AAL'),
                approaches=App('Approach Information'),
