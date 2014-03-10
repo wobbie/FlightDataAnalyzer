@@ -229,7 +229,7 @@ class ApproachAndLanding(FlightPhaseNode):
         # Prepare to extract the slices
         level_flights = level_flights.get_slices() if level_flights else None
         low_alt_slices = find_low_alts(
-            alt_aal.array, 500, 3000, climbout_alt=0,
+            alt_aal.array, 500, 3000, stop_alt=0,
             level_flights=level_flights)
         for low_alt in low_alt_slices:
             if not alt_aal.array[low_alt.start]:
@@ -237,11 +237,10 @@ class ApproachAndLanding(FlightPhaseNode):
                 continue
             
             # Include the Landing period
-            # if not alt_aal.array[low_alt.stop - 1]:
             if landings:
                 landing = landings.get_last()
-                assert is_index_within_slice(landing.slice.start, low_alt)
-                low_alt = slice(low_alt.start, landing.slice.stop)
+                if is_index_within_slice(landing.slice.start, low_alt):
+                    low_alt = slice(low_alt.start, landing.slice.stop)
             
             self.create_phase(low_alt)
 
@@ -263,8 +262,9 @@ class Approach(FlightPhaseNode):
                level_flights=S('Level Flight'),
                landings=S('Landing')):
         level_flights = level_flights.get_slices() if level_flights else None
-        low_alts = find_low_alts(alt_aal.array, 3000, descent_alt=3000,
-                                 climbout_alt=-50, level_flights=level_flights)
+        low_alts = find_low_alts(alt_aal.array, 3000, start_alt=3000,
+                                 stop_alt=50, stop_mode='descent',
+                                 level_flights=level_flights)
         for low_alt in low_alts:
             # Select landings only.
             if alt_aal.array[low_alt.start] and \

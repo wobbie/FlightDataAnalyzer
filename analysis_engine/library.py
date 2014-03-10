@@ -1516,33 +1516,36 @@ def index_of_last_stop(bool_array, _slice=slice(0, None), min_dur=1,
         return None
 
 
-def find_low_alts(array, threshold_alt, descent_alt=None, climbout_alt=None,
-                  level_flights=None, cycle_size=500):
+def find_low_alts(array, threshold_alt, start_alt=None, stop_alt=None,
+                  level_flights=None, cycle_size=500,
+                  stop_mode='climbout'):
     '''
     This function allows us to find the minima of cycles which dip below
     threshold_alt, along with initial takeoff and landing.
-    The descent_alt and climbout_alt are extrapolated from
-    the minimum index. A climbout_alt of 0 will find the lowest point of
-    descent. A negative climbout_alt will seek backwards to find altitudes
+    The start_alt and stop_alt are extrapolated from
+    the minimum index. A stop_alt of 0 will find the lowest point of
+    descent. A negative stop_alt will seek backwards to find altitudes
     in the descent, e.g. from 3000-50ft descending.
     
     :param array: Altitude AAL data array
     :type array: numpy masked array
     :param threshold_alt: Altitude which must have dipped below.
     :type threshold_alt: float or int
-    :param descent_alt: Start of descent altitude. A value of None will be substituted with threshold_alt.
-    :type descent_alt: float or int or None
-    :param climbout_alt: Climbout altitude. A value of None will be substituted with threshold_alt. Negative values seek backwards through the descent.
-    :type climbout_alt: float or int or None
-    :param level_flights: Level flight slices to exclude for descent and climbout.
+    :param start_alt: Start of descent altitude. A value of None will be substituted with threshold_alt.
+    :type start_alt: float or int or None
+    :param stop_alt: Stop altitude during climbout or descent. A value of None will be substituted with threshold_alt. If stop_mode is climbout, this altitude will be found after the minimum. If stop mode is climbout the altitude is searched for backwards through the descent.
+    :type stop_alt: float or int or None
+    :param level_flights: Level flight slices to exclude for descent and climbout. The index_at_value_or_level_off algorithm often includes sections of level flight.
     :type level_flights: [slice]
     :param cycle_size: Minimum cycle size to detect as a dip.
     :type cycle_size: int or float
+    :param stop_mode: If stop_mode is 'climbout', the stop_alt will be searched for after the minimum altitude (during climbout). If stop_mode is 'descent', the stop_alt will be searched for before the minimum altitude (during descent).
+    :type stop_mode: int or float
     :returns: List of takeoff, landing and dip slices.
     :rtype: [slices]
     '''
-    climbout_alt = climbout_alt if climbout_alt is not None else threshold_alt
-    descent_alt = descent_alt if descent_alt is not None else threshold_alt
+    stop_alt = stop_alt if stop_alt is not None else threshold_alt
+    start_alt = start_alt if start_alt is not None else threshold_alt
     
     low_alt_slices = []
     low_alt_cycles = []
@@ -1550,7 +1553,7 @@ def find_low_alts(array, threshold_alt, descent_alt=None, climbout_alt=None,
     pk_idxs, pk_vals = cycle_finder(array, min_step=cycle_size)
     # Convert cycles to slices.
     if not pk_vals[0]:
-        if climbout_alt != 0:
+        if stop_alt != 0:
             # Do not include takeoffs when looking for climbout of 0.
             low_alt_cycles.append(
                 (pk_idxs[0], pk_idxs[1], pk_idxs[0], pk_vals[0]))
@@ -1576,30 +1579,34 @@ def find_low_alts(array, threshold_alt, descent_alt=None, climbout_alt=None,
     for start_index, stop_index, dip_min_index, dip_min_value in low_alt_cycles:
         
         # Extrapolate climbout.
-        if climbout_alt == 0:
+        if stop_alt == 0:
             # Get min index of array in slice.
             stop_index = min_value(array, _slice=slice(start_index,
                                                        stop_index)).index
-        elif abs(climbout_alt) <= dip_min_value:
-            # Cycle min value above climbout_alt.
+        elif abs(stop_alt) <= dip_min_value:
+            # Cycle min value above stop_alt.
             stop_index = dip_min_index
-        elif climbout_alt > 0:
+        elif stop_mode == 'climbout':
+            # Search forwards during climbout.
             pk_idxs, pk_vals = cycle_finder(array[dip_min_index:stop_index],
                                             min_step=cycle_size)
             
             if pk_idxs is not None and len(pk_idxs) >= 2:
                 pk_idxs += dip_min_index
                 stop_index = index_at_value_or_level_off(
-                    array, climbout_alt, slice(pk_idxs[0], pk_idxs[1]))
-        else:
-            # Negative climbout, search backwards.
+                    array, stop_alt, slice(pk_idxs[0], pk_idxs[1]))
+        elif stop_mode == 'descent':
+            # Search backwards during descent.
             pk_idxs, pk_vals = cycle_finder(array[start_index:dip_min_index],
                                             min_step=cycle_size)
             
             if pk_idxs is not None and len(pk_idxs) >= 2:
                 pk_idxs += start_index
                 stop_index = index_at_value_or_level_off(
-                    array, abs(climbout_alt), slice(pk_idxs[-1], pk_idxs[-2], -1))
+                    array, abs(stop_alt), slice(pk_idxs[-1], pk_idxs[-2], -1))
+        else:
+            raise NotImplementedError(
+                "Unknown stop_mode '%s' within find_low_alts." % stop_mode)
         
         # Extrapolate descent.
         pk_idxs, pk_vals = cycle_finder(array[start_index:dip_min_index],
@@ -1608,7 +1615,7 @@ def find_low_alts(array, threshold_alt, descent_alt=None, climbout_alt=None,
         if pk_idxs is not None and len(pk_idxs) >= 2:
             pk_idxs += start_index
             start_index = index_at_value_or_level_off(
-                array, descent_alt, slice(pk_idxs[-1], pk_idxs[-2], -1))
+                array, start_alt, slice(pk_idxs[-1], pk_idxs[-2], -1))
         
         low_alt_slice = slice(start_index, stop_index)
         
