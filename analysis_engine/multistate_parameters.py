@@ -1780,8 +1780,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         x = available
         if family and family.value == 'BD-100':
             return 'Speedbrake Handle' in x and 'Spoiler Ground Armed' in x
-        elif family and family.value in ['Global', 'CRJ 100/200', 'ERJ-135/145',
-                                         'ERJ-170/175', 'ERJ-190/195']:
+        elif family and family.value in ['Global', 'CRJ 100/200', 'ERJ-135/145']:
             return 'Speedbrake Handle' in x
         else:
             return ('Speedbrake Deployed' in x or
@@ -1980,8 +1979,8 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         elif family_name == 'Learjet':
             self.array = self.learjet_speedbrake(spdsw)
 
-        elif family_name in ['G-V', 'CL-600', 'BAE 146', 
-                             'Phenom 300'] and spdbrk:
+        elif family_name in ['G-V', 'CL-600', 'BAE 146', 'ERJ-170/175',
+                             'ERJ-190/195' 'Phenom 300'] and spdbrk:
             # On the test aircraft SE-RDY the Speedbrake stored 0 at all
             # times and Speedbrake Handle was unresponsive with small numeric
             # variation. The Speedbrake (L) & (R) responded normally so we
@@ -1990,8 +1989,8 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
                                      'Stowed',
                                      'Deployed/Cmd Up')
             
-        elif family_name in ['ERJ-170/175', 'ERJ-190/195'] and spdbrk:
-            self.array = np.ma.where(spdbrk.array < -15.0,
+        elif family_name in ['ERJ-170/175', 'ERJ-190/195'] and handle:
+            self.array = np.ma.where(handle.array < -15.0,
                                      'Stowed',
                                      'Deployed/Cmd Up')
 
