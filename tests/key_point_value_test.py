@@ -421,6 +421,7 @@ from analysis_engine.key_point_values import (
     TAWSPredictiveWindshearDuration,
     TAWSPullUpWarningDuration,
     TAWSSinkRateWarningDuration,
+    TAWSUnspecifiedDuration,
     TAWSTerrainAheadDuration,
     TAWSTerrainAheadPullUpDuration,
     TAWSTerrainCautionDuration,
@@ -8984,6 +8985,17 @@ class TestTAWSWindshearWarningBelow1500FtDuration(unittest.TestCase, NodeTest):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestTAWSUnspecifiedDuration(unittest.TestCase,
+                                         CreateKPVsWhereTest):
+    def setUp(self):
+        self.param_name = 'TAWS Unspecified'
+        self.phase_name = 'Airborne'
+        self.node_class = TAWSUnspecifiedDuration
+        self.values_mapping = {0: '-', 1: 'Warning'}
+
+        self.basic_setup()
 
 
 ##############################################################################

@@ -10141,6 +10141,19 @@ class TAWSWindshearSirenBelow1500FtDuration(KeyPointValueNode):
                                fast_below_1500)
 
 
+class TAWSUnspecifiedDuration(KeyPointValueNode):
+    '''
+    The Duration to which the unspecified TAWS Warning is available.
+    '''
+
+    name = 'TAWS Unspecified Duration'
+    units = ut.SECOND
+
+    def derive(self, taws_unspecified=M('TAWS Unspecified'),
+               airborne=S('Airborne')):
+        self.create_kpvs_where(taws_unspecified.array == 'Warning',
+                               taws_unspecified.hz, phase=airborne)
+
 ##############################################################################
 # Warnings: Traffic Collision Avoidance System (TCAS)
 
