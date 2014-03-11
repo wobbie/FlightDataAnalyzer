@@ -237,6 +237,7 @@ from analysis_engine.key_point_values import (
     EngTorqueDuringTakeoff5MinRatingMax,
     EngTorqueDuringTaxiMax,
     EngTorqueWhileDescendingMax,
+    EngTorquePercent65KtsTo35FtMin,
     EngTorquePercent500To50FtMax,
     EngTorquePercent500To50FtMin,
     EngTorquePercentDuringGoAround5MinRatingMax,
@@ -420,6 +421,7 @@ from analysis_engine.key_point_values import (
     TAWSPredictiveWindshearDuration,
     TAWSPullUpWarningDuration,
     TAWSSinkRateWarningDuration,
+    TAWSUnspecifiedDuration,
     TAWSTerrainAheadDuration,
     TAWSTerrainAheadPullUpDuration,
     TAWSTerrainCautionDuration,
@@ -5728,6 +5730,29 @@ class TestEngTorquePercentDuringTakeoff5MinRatingMax(unittest.TestCase, CreateKP
         self.assertTrue(False, msg='Test Not Implemented')
 
 
+
+class TestEngTorquePercent65KtsTo35FtMin(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = EngTorquePercent65KtsTo35FtMin
+        self.operational_combinations = [('Eng (*) Torque [%] Min', 'Airspeed', 'Takeoff')]
+
+    def test_can_operate(self):
+        self.assertEqual(self.node_class.get_operational_combinations(),
+                         self.operational_combinations)
+
+    def test_derive(self):
+        eng_torq_min = P('Eng (*) Torque [%] Min', array=np.ma.arange(60, 100))
+        air_spd = P('Airspeed', array=np.ma.arange(0, 200, 5))
+        toff = buildsection('Takeoff', 1,30)
+        node = self.node_class()
+        node.derive(eng_torq_min, air_spd, toff)
+
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].value, 73)
+        self.assertEqual(node[0].index, 13)
+
+
 class TestEngTorquePercentDuringGoAround5MinRatingMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
 
     def setUp(self):
@@ -8960,6 +8985,17 @@ class TestTAWSWindshearWarningBelow1500FtDuration(unittest.TestCase, NodeTest):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestTAWSUnspecifiedDuration(unittest.TestCase,
+                                         CreateKPVsWhereTest):
+    def setUp(self):
+        self.param_name = 'TAWS Unspecified'
+        self.phase_name = 'Airborne'
+        self.node_class = TAWSUnspecifiedDuration
+        self.values_mapping = {0: '-', 1: 'Warning'}
+
+        self.basic_setup()
 
 
 ##############################################################################

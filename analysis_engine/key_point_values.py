@@ -7090,6 +7090,30 @@ class EngTorquePercentDuringTakeoff5MinRatingMax(KeyPointValueNode):
         self.create_kpvs_within_slices(eng_trq_max.array, ratings, max_value)
 
 
+class EngTorquePercent65KtsTo35FtMin(KeyPointValueNode):
+    '''
+    KPV designed in accordance with ATR72 FCOM
+    
+    Looks for the minimum Eng Torque [%] between the aircraft reaching 65 kts
+    during takeoff and it it reaching an altitude of 35 ft (end of takeoff)
+    '''
+
+    name = 'Eng Torque [%] 65 Kts To 35 Ft Min'
+    units = ut.PERCENT
+
+    def derive(self,
+               eng_trq_min=P('Eng (*) Torque [%] Min'),
+               airspeed=P('Airspeed'),
+               takeoffs=S('Takeoff')):
+
+        takeoff = takeoffs.get_first()
+        start = index_at_value(airspeed.array, 65, _slice=takeoff.slice,
+                              )
+        self.create_kpvs_within_slices(eng_trq_min.array,
+                                       [slice(start, takeoff.slice.stop)],
+                                       min_value)
+
+
 class EngTorquePercentDuringGoAround5MinRatingMax(KeyPointValueNode):
     '''
     '''
@@ -10116,6 +10140,19 @@ class TAWSWindshearSirenBelow1500FtDuration(KeyPointValueNode):
                                taws_windshear.hz,
                                fast_below_1500)
 
+
+class TAWSUnspecifiedDuration(KeyPointValueNode):
+    '''
+    The Duration to which the unspecified TAWS Warning is available.
+    '''
+
+    name = 'TAWS Unspecified Duration'
+    units = ut.SECOND
+
+    def derive(self, taws_unspecified=M('TAWS Unspecified'),
+               airborne=S('Airborne')):
+        self.create_kpvs_where(taws_unspecified.array == 'Warning',
+                               taws_unspecified.hz, phase=airborne)
 
 ##############################################################################
 # Warnings: Traffic Collision Avoidance System (TCAS)
