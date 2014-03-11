@@ -205,7 +205,7 @@ class TestFindLowAlts(unittest.TestCase):
         
         # Support negative climbout_alt (search backwards).
         # Slices will include level flight without passing in slices.
-        low_alts = find_low_alts(array, 500, 3000, -50,
+        low_alts = find_low_alts(array, 500, 3000, 50, stop_mode='descent',
                                  level_flights=level_flights)
         self.assertEqual(len(low_alts), 5)
         self.assertAlmostEqual(low_alts[0].start, 0, places=0)

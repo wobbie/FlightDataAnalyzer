@@ -251,7 +251,7 @@ class TestApproachAndLanding(unittest.TestCase):
         self.assertAlmostEqual(app_ldg[2].slice.start, 6883, places=0)
         self.assertAlmostEqual(app_ldg[2].slice.stop, 7171, places=0)
         self.assertAlmostEqual(app_ldg[3].slice.start, 10362, places=0)
-        self.assertAlmostEqual(app_ldg[3].slice.stop, 10569, places=0)
+        self.assertAlmostEqual(app_ldg[3].slice.stop, 10750, places=0)
 
         
     def test_with_go_around_and_climbout_atr42_data(self):
