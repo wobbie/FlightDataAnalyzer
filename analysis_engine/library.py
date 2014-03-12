@@ -2103,6 +2103,7 @@ def runway_distance_from_end(runway, *args, **kwds):
     else:
         return None
 
+
 def runway_deviation(array, runway={}, heading=None):
     '''
     Computes an array of heading deviations from the selected runway
@@ -2130,6 +2131,28 @@ def runway_deviation(array, runway={}, heading=None):
         rwy_hdg = runway_heading(runway)
     dev = (array - rwy_hdg) % 360
     return np.ma.where(dev>180.0, dev-360.0, dev)
+
+
+def heading_diff(heading1, heading2):
+    '''
+    Difference between heading1 and heading2. If heading1 is greater than
+    heading2, the returned difference will be negative.
+    
+    :type heading1: int or float
+    :type heading2: int or float
+    '''
+    assert (0 <= heading1 < 360) and (0 <= heading2 < 360)
+    diff = heading1 - heading2
+    abs_diff = abs(diff)
+    if abs_diff == 180:
+        return abs_diff
+    elif abs_diff < 180:
+        return diff
+    elif heading2 > heading1:
+        return abs_diff - 360
+    else:
+        return 360 - abs_diff
+
 
 def runway_distances(runway):
     '''
