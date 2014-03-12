@@ -1076,10 +1076,22 @@ class TestGoAroundAndClimbout(unittest.TestCase):
         self.assertAlmostEqual(ga_phase[1].slice.stop, 5009, places=0)
         self.assertAlmostEqual(ga_phase[2].slice.start, 6883, places=0)
         self.assertAlmostEqual(ga_phase[2].slice.stop, 7258, places=0)
+    
+    def test_go_around_and_climbout_below_3000ft(self):
+        alt_aal = load(os.path.join(test_data_path,
+                                    'GoAroundAndClimbout_AltitudeAAL.nod'))
+        level_flights = load(os.path.join(test_data_path,
+                                          'GoAroundAndClimbout_LevelFlights.nod'))
+        ga_phase = GoAroundAndClimbout()
+        ga_phase.derive(alt_aal, level_flights)
+        self.assertEqual(len(ga_phase), 1)
+        self.assertAlmostEqual(ga_phase[0].slice.start, 10545, places=0)
+        self.assertAlmostEqual(ga_phase[0].slice.stop, 10833, places=0)
 
     def test_go_around_and_climbout_real_data(self):
         alt_aal = load(os.path.join(test_data_path,
                                     'GoAroundAndClimbout_alt_aal.nod'))
+        
         ga_phase = GoAroundAndClimbout()
         ga_phase.derive(alt_aal, None)
         self.assertEqual(len(ga_phase), 5)

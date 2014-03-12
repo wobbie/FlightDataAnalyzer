@@ -494,10 +494,12 @@ class GoAround(KeyTimeInstanceNode):
 
 
 class TopOfClimb(KeyTimeInstanceNode):
+    '''
+    This checks for the top of climb in each Climb/Cruise/Descent period of
+    the flight.
+    '''
     def derive(self, alt_std=P('Altitude STD Smoothed'),
                ccd=S('Climb Cruise Descent')):
-        # This checks for the top of climb in each
-        # Climb/Cruise/Descent period of the flight.
         for ccd_phase in ccd:
             ccd_slice = ccd_phase.slice
             try:
@@ -517,10 +519,12 @@ class TopOfClimb(KeyTimeInstanceNode):
 
 
 class TopOfDescent(KeyTimeInstanceNode):
+    '''
+    This checks for the top of descent in each Climb/Cruise/Descent period 
+    of the flight.
+    '''
     def derive(self, alt_std=P('Altitude STD Smoothed'),
                ccd=S('Climb Cruise Descent')):
-        # This checks for the top of descent in each
-        # Climb/Cruise/Descent period of the flight.
         for ccd_phase in ccd:
             ccd_slice = ccd_phase.slice
             try:

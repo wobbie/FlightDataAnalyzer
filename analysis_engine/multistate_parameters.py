@@ -336,9 +336,9 @@ class APVerticalMode(MultistateDerivedParameterNode):
         if altitude_mode:
             self.array[altitude_mode.array == 'Activated'] = 'ALT'
         if expedite_climb_mode:
-            self.array[expedite_climb_mode.array == 'Expedite Climb Mode'] = 'EXPED CLB'
+            self.array[expedite_climb_mode.array == 'Activated'] = 'EXPED CLB'
         if expedite_descent_mode:
-            self.array[expedite_descent_mode.array == 'Expedite Descent Mode'] = 'EXPED DES'
+            self.array[expedite_descent_mode.array == 'Activated'] = 'EXPED DES'
 
 
 class APURunning(MultistateDerivedParameterNode):

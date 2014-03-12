@@ -2243,9 +2243,6 @@ class TestGroundTrackPrecise(unittest.TestCase):
 
 class TestHashArray(unittest.TestCase):
     def test_hash_array(self):
-        '''
-
-        '''
         section = [slice(0,10)]
         self.assertEqual(hash_array(np.ma.arange(10), section, 5),
                          hash_array(np.ma.arange(10), section, 5))
@@ -2261,6 +2258,25 @@ class TestHashArray(unittest.TestCase):
         self.assertEqual(hash_array(ma2, section, 5), hash_array(ma2, section, 5))
         self.assertEqual(hash_array(np.ma.arange(10, dtype=np.float_), [slice(0,10)], 5),
             'c29605eb4e50fbb653a19f1a28c4f0955721419f989f1ffd8cb2ed6f4914bbea')
+
+
+class TestHeadingDiff(unittest.TestCase):
+    def test_heading_diff(self):
+        self.assertRaises(AssertionError, heading_diff, -10, 20)
+        self.assertRaises(AssertionError, heading_diff, 375, 15)
+        self.assertRaises(AssertionError, heading_diff, 20, -20)
+        self.assertRaises(AssertionError, heading_diff, 30, 400)
+        self.assertRaises(AssertionError, heading_diff, -86.2, 400)
+        self.assertRaises(AssertionError, heading_diff, 500, 400)
+        self.assertRaises(AssertionError, heading_diff, -86.2, -152)
+        self.assertEqual(heading_diff(0, 0), 0)
+        self.assertEqual(heading_diff(10, 0), 10)
+        self.assertEqual(heading_diff(0, 10), -10)
+        self.assertEqual(heading_diff(0, 180), 180)
+        self.assertEqual(heading_diff(47.81925103290594,
+                                      53.00950000000029), -5.1902489670943481)
+        self.assertEqual(heading_diff(1.6407827938370874,
+                                      359.8320000000002), -1.8087827938368832)
 
 
 class TestHysteresis(unittest.TestCase):

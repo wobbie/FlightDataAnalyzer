@@ -36,6 +36,7 @@ from analysis_engine.library import (actuator_mismatch,
                                      first_order_washout,
                                      ground_track,
                                      ground_track_precise,
+                                     heading_diff,
                                      hysteresis,
                                      integrate,
                                      ils_localizer_align,
@@ -79,7 +80,6 @@ from analysis_engine.library import (actuator_mismatch,
                                      slices_from_ktis,
                                      slices_from_to,
                                      slices_not,
-                                     slices_or,
                                      slices_remove_small_slices,
                                      smooth_track,
                                      straighten_headings,
@@ -4384,7 +4384,8 @@ class MagneticVariationFromRunway(DerivedParameterNode):
                 # runway does not have coordinates to calculate true heading
                 pass
             else:
-                dev[tof_hdg_mag_kpv.index] = takeoff_hdg_true - takeoff_hdg_mag
+                dev[tof_hdg_mag_kpv.index] = heading_diff(takeoff_hdg_true,
+                                                          takeoff_hdg_mag)
         
         # landing
         ldg_hdg_mag_kpv = head_land.get_last()
@@ -4396,7 +4397,8 @@ class MagneticVariationFromRunway(DerivedParameterNode):
                 # runway does not have coordinates to calculate true heading
                 pass
             else:
-                dev[ldg_hdg_mag_kpv.index] = landing_hdg_true - landing_hdg_mag
+                dev[ldg_hdg_mag_kpv.index] = heading_diff(landing_hdg_true,
+                                                          landing_hdg_mag)
 
         # linearly interpolate between values and extrapolate to ends of the
         # array, even if only the takeoff variation is calculated as the
