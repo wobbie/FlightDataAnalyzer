@@ -135,7 +135,7 @@ class GoAroundAndClimbout(FlightPhaseNode):
         # Find the ups and downs in the height trace.
         level_flights = level_flights.get_slices() if level_flights else None
         low_alt_slices = find_low_alts(
-            alt_aal.array, 500, 3000, 2000, level_flights=level_flights)
+            alt_aal.array, 3000, stop_alt=2000, level_flights=level_flights)
         dlc_slices = []
         for low_alt in low_alt_slices:
             if (alt_aal.array[low_alt.start] and
@@ -229,7 +229,7 @@ class ApproachAndLanding(FlightPhaseNode):
         # Prepare to extract the slices
         level_flights = level_flights.get_slices() if level_flights else None
         low_alt_slices = find_low_alts(
-            alt_aal.array, 500, 3000, stop_alt=0,
+            alt_aal.array, 3000, stop_alt=0,
             level_flights=level_flights)
         for low_alt in low_alt_slices:
             if not alt_aal.array[low_alt.start]:
