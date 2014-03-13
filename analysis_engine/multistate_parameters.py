@@ -302,6 +302,7 @@ class APVerticalMode(MultistateDerivedParameterNode):
                                      longitudinal_mode_selected,
                                      ils_glideslope_capture_active,
                                      ils_glideslope_active,
+                                     flare_mode,
                                      at_active,
                                      open_climb_mode,
                                      open_descent_mode,
