@@ -4751,7 +4751,7 @@ def overflow_correction(param, fast=None, max_val=8191):
     # overflow.
     old_mask = array.mask
     good_slices = slices_remove_small_gaps(
-        np.ma.clump_unmasked(array), time_limit=10.0 / hz,
+        np.ma.clump_unmasked(array), time_limit=20.0 / hz,
         hz=hz)
 
     for sl in good_slices:

@@ -182,10 +182,10 @@ class ApproachInformation(ApproachNode):
                turnoffs=KTI('Landing Turn Off Runway')):
         precise = bool(getattr(precision, 'value', False))
 
-        default_kwargs = dict(
-            precise=precise,
-            appr_ils_freq=appr_ils_freq,
-        )
+        default_kwargs = {
+            'precise': precise,
+            'appr_ils_freq': appr_ils_freq,
+        }
         
         app_slices = app.get_slices()
         
