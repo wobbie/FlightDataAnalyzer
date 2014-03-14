@@ -120,40 +120,6 @@ def derived_trimmer(hdf_path, node_names, dest):
     return strip_hdf(hdf_path, params, dest) 
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    subparser = parser.add_subparsers(dest='command',
-                                      description="Utility command, currently "
-                                      "only 'trimmer' is supported",
-                                      help='Additional help')
-    trimmer_parser = subparser.add_parser('trimmer')
-    trimmer_parser.add_argument('input_file_path', help='Input hdf filename.')  
-    trimmer_parser.add_argument('output_file_path', help='Output hdf filename.')
-    trimmer_parser.add_argument('nodes', nargs='+',
-                                help='Keep dependencies of the specified nodes '
-                                'within the output hdf file. All other '
-                                'parameters will be stripped.')
-    
-    args = parser.parse_args()
-    if args.command == 'trimmer':
-        if not os.path.isfile(args.input_file_path):
-            parser.error("Input file path '%s' does not exist." %
-                         args.input_file_path)
-        if os.path.exists(args.output_file_path):
-            parser.error("Output file path '%s' already exists." %
-                         args.output_file_path)
-        output_parameters = derived_trimmer(args.input_file_path, args.nodes,
-                                            args.output_file_path)
-        if output_parameters:
-            print 'The following parameters are in the output hdf file:'
-            for name in output_parameters:
-                print ' * %s' % name
-        else:
-            print 'No matching parameters were found in the hdf file.'            
-    else:
-        parser.error("'%s' is not a known command." % args.command)
-
-
 def _get_names(module_locations, fetch_names=True, fetch_dependencies=False):
     '''
     Get the names of Nodes and dependencies.
@@ -251,3 +217,37 @@ def list_flight_phases():
     Return an ordered list of the flight phases which have been coded.
     '''
     return _get_names(['analysis_engine.flight_phase'])
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    subparser = parser.add_subparsers(dest='command',
+                                      description="Utility command, currently "
+                                      "only 'trimmer' is supported",
+                                      help='Additional help')
+    trimmer_parser = subparser.add_parser('trimmer')
+    trimmer_parser.add_argument('input_file_path', help='Input hdf filename.')  
+    trimmer_parser.add_argument('output_file_path', help='Output hdf filename.')
+    trimmer_parser.add_argument('nodes', nargs='+',
+                                help='Keep dependencies of the specified nodes '
+                                'within the output hdf file. All other '
+                                'parameters will be stripped.')
+    
+    args = parser.parse_args()
+    if args.command == 'trimmer':
+        if not os.path.isfile(args.input_file_path):
+            parser.error("Input file path '%s' does not exist." %
+                         args.input_file_path)
+        if os.path.exists(args.output_file_path):
+            parser.error("Output file path '%s' already exists." %
+                         args.output_file_path)
+        output_parameters = derived_trimmer(args.input_file_path, args.nodes,
+                                            args.output_file_path)
+        if output_parameters:
+            print 'The following parameters are in the output hdf file:'
+            for name in output_parameters:
+                print ' * %s' % name
+        else:
+            print 'No matching parameters were found in the hdf file.'
+    else:
+        parser.error("'%s' is not a known command." % args.command)

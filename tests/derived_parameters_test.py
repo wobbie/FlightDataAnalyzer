@@ -1326,7 +1326,26 @@ class TestAltitudeRadio(unittest.TestCase):
         for sect in sects[1::2]:
             # landings
             self.assertAlmostEqual(rad.array[sect.stop - 1] / 10., 0, 0)
-     
+    
+    def test_altitude_radio_A330(self):
+        fast = buildsection('Fast', 480, 31032)
+        radioA = load(os.path.join(
+            test_data_path, 'A330_AltitudeRadio_A_overflow_8191.nod'))
+        radioB = load(os.path.join(
+            test_data_path, 'A330_AltitudeRadio_B_overflow_8191.nod'))
+        
+        rad = AltitudeRadio()
+        rad.derive(radioA, radioB, None, None, None, None, None, None, None, 
+                   fast=fast, family=A('Family', 'A330'))
+        
+        sects = np.ma.clump_unmasked(rad.array)
+        self.assertEqual(len(sects), 4)
+        self.assertEqual(sects[0].start, 17)
+        self.assertEqual(sects[0].stop, 2763)
+        self.assertAlmostEqual(rad.array[2762], 5524, places=0)
+        self.assertEqual(sects[1].start, 122453)
+        self.assertAlmostEqual(rad.array[122453], 5455, places=0)
+
 
     def test_altitude_radio_CL_600(self):
         alt_rad = AltitudeRadio()
@@ -1342,7 +1361,6 @@ class TestAltitudeRadio(unittest.TestCase):
         self.assertAlmostEqual(alt_rad.array.data[4], 2.5) # -1.5ft offset
         self.assertEqual(alt_rad.array.data[36], -3.675) # -1.5ft & 5deg
         self.assertEqual(alt_rad.array.data[76], 6.15) # -1.5ft & 10 deg
-        
         
 '''
 class TestAltitudeRadioForFlightPhases(unittest.TestCase):

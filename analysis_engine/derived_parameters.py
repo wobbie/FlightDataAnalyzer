@@ -912,7 +912,7 @@ class AltitudeRadio(DerivedParameterNode):
 
         sources = [source_A, source_B, source_C, source_L, source_R,
                    source_efis, source_efis_L, source_efis_R]
-
+ 
         self.offset = 0.0
         self.frequency = 4.0
 
