@@ -921,9 +921,10 @@ class AltitudeRadio(DerivedParameterNode):
             for source in sources:
                 if source is None:
                     continue
+                max_val = 8191 if source.array.ptp() > 4095 else 4095
                 # correct for overflow, aligning the fast slice to each source
                 source.array = overflow_correction(
-                    source, fast.get_aligned(source))
+                    source, fast.get_aligned(source), max_val=max_val)
                 # Mask values less than 20. These values were left unmasked 
                 # previously for overflow_correction.
                 source.array = np.ma.masked_less(source.array, -20)
