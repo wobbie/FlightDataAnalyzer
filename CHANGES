@@ -8,6 +8,13 @@ You can view the differences in tagged versions as follows:
 
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
+v0.7.2
+------
+ - fix for APVerticalMode where only flare mode is avaliable
+ - added check for valid ils localiser data within approach for ils established flight phase
+ - improvements to Altitude Radio overflow correction
+
+
 v0.7.1
 ------
  - Velocity Speed Parameters and KPV's reworked
