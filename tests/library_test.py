@@ -5741,6 +5741,13 @@ class TestDpOverP2mach(unittest.TestCase):
 
         Truth = np.ma.array(data=[0.8, 0.999, 1.0], mask=[False, False, True])
         ma_test.assert_almost_equal(Value,Truth, decimal=3)
+        
+    def test_masked_dp_over_p(self):
+        # In cases of data corruption, large or negative dp/p values may arise.
+        Value = dp_over_p2mach(np.ma.array(data=[-0.52434, .89072, 51.1],
+                                           mask=[1,0,1]))
+        Truth = np.ma.array(data=[0.0, 0.999, 1.0], mask=[True, False, True])
+        ma_test.assert_almost_equal(Value,Truth, decimal=3)
 
         
 class TestPress2Alt(unittest.TestCase):
