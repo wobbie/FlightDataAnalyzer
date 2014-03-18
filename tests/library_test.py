@@ -5908,7 +5908,7 @@ class TestSecondWindow(unittest.TestCase):
     def test_three_second_window_with_real_data(self):
         sw = load(os.path.join(test_data_path, 'second_window.nod'))
         res = second_window(sw.array, sw.frequency, 3)
-        self.assertEqual(np.ma.count(res), 40975)
+        self.assertEqual(np.ma.count(res), 40972)
 
 
 class TestLookupTable(unittest.TestCase):
