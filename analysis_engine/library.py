@@ -3174,6 +3174,17 @@ def is_index_within_slices(index, slices):
     return False
 
 
+def filter_slices_length(slices, length):
+    '''
+    :param slices: List of slices to filter.
+    :type slices: [slice]
+    :param length: Minimum length of slices.
+    :type length: int or float
+    :rtype: [slice]
+    '''
+    return [s for s in slices if (s.stop - s.start) >= length]
+
+
 def filter_slices_duration(slices, duration, frequency=1):
     '''
     Q: Does this need to be updated to use Sections?
@@ -3186,7 +3197,7 @@ def filter_slices_duration(slices, duration, frequency=1):
     :returns: List of slices greater than duration.
     :rtype: [slice]
     '''
-    return [s for s in slices if (s.stop - s.start) >= (duration * frequency)]
+    return filter_slices_length(slices, duration * frequency)
 
 
 def find_slices_containing_index(index, slices):
@@ -6541,20 +6552,20 @@ def second_window(array, frequency, seconds):
 
     :type array: np.ma.masked_array
     '''
-    if int(seconds) != seconds:
-        raise ValueError('Only whole seconds are currently supported.')
     if ((seconds % 2 == 0 and not frequency % 2 == 1) or
         (seconds % 2 == 1 and not frequency % 2 == 0)):
         raise ValueError('Invalid seconds for frequency')
-
-    frequency = int(frequency)  # only integer frequencies supported
-    samples = (seconds * frequency) + 1
-
-    sample_idx = samples - 1
+    
+    samples = int(seconds * frequency)
+    
+    if seconds * frequency != samples:
+        raise ValueError('Only whole number vales for frequency and seconds '
+                         'are supported.')
     
     window_array = np_ma_masked_zeros_like(array)
+    # Optimization: local namespace (17 ms -> 6 ms)
+    window_array_data = window_array.data
     
-    from numpy.lib.stride_tricks import as_strided
     # Make a view of a sliding window using a different stride.
     # For 3 samples, the array [1, 2, 3, 4, 5, 6, 7, 8, 9] will become
     # [[1, 2, 3],
@@ -6564,32 +6575,34 @@ def second_window(array, frequency, seconds):
     #  [5, 6, 7],
     #  [6, 7, 8],
     #  [7, 8, 9]]
-       
-    sliding_window = as_strided(array, 
-                                shape=( len(array)-sample_idx, samples),
-                                strides=array.strides * 2)
+    
+    sliding_window = np.lib.stride_tricks.as_strided(
+        array, shape=(len(array) - samples, samples + 1),
+        strides=array.strides * 2)
     
     # Calculate min and max over the last axis (for each sliding window)
-    min_ = np.ma.min(sliding_window, axis=-1)
-    max_ = np.ma.max(sliding_window, axis=-1)
+    # Optimization: convert array to list for indexing (161 ms -> 124 ms)
+    min_ = np.min(sliding_window, axis=-1).tolist()
+    max_ = np.max(sliding_window, axis=-1).tolist()
 
     unmasked_slices = np.ma.clump_unmasked(array)
-    for unmasked_slice in unmasked_slices:
-        start, stop = unmasked_slice.start, unmasked_slice.stop
+    
+    for unmasked_slice in filter_slices_length(unmasked_slices, samples):
+        start = unmasked_slice.start
         last_value = array[start]
+        window_stop = unmasked_slice.stop - samples
         # We set already the mask to False where we are going to insert
         # values. That is from start up to stop-sample_idx
         # Much faster than setting the value in the masked array item by item
-        window_array.mask[start : stop-sample_idx] = False
-        
-        for i in xrange( stop - start - sample_idx ):
+        window_array.mask[start:window_stop] = False
+        for idx in xrange(start, window_stop):
             # Clip the last value between sliding window min and max
-            last_value = min( max(last_value, min_.data[start+i]), max_.data[start+i] )
+            last_value = min(max(last_value, min_[idx]), max_[idx])
             # Set this value in the data object of the masked array.
             # Much faster than using window_array[start+i] = last_value
-            window_array.data[start+i] = last_value
-            
-    return np.ma.array(window_array)
+            window_array_data[idx] = last_value
+    
+    return window_array
 
 #---------------------------------------------------------------------------
 # Air data calculations adapted from AeroCalc V0.11 to suit POLARIS Numpy

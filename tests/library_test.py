@@ -973,8 +973,8 @@ class TestLatitudesAndLongitudes(unittest.TestCase):
         goodyear_dist = np.ma.array([8482000.0])
         goodyear_brg = np.ma.array([306.78])
         lat,lon = latitudes_and_longitudes(goodyear_brg, goodyear_dist, fareham)
-        self.assertAlmostEqual(lat[0],33.44929,delta=0.001)
-        self.assertAlmostEqual(lon,-112.359,delta=0.001)
+        self.assertAlmostEqual(lat[0],33.44929,delta=0.01)
+        self.assertAlmostEqual(lon,-112.359,delta=0.01)
         # TODO - Test with array and masks (for Brg/Dist also?)
 
 
@@ -1702,6 +1702,17 @@ class TestDatetimeOfIndex(unittest.TestCase):
         start_datetime = datetime.now()
         dt = datetime_of_index(start_datetime, 160, frequency=4)
         self.assertEqual(dt, start_datetime + timedelta(seconds=40))
+
+
+class TestFilterSlicesLength(unittest.TestCase):
+    def test_filter_slices_length(self):
+        slices = [slice(1, 5), slice(4, 6), slice (5, 10)]
+        result = filter_slices_length(slices, 0)
+        self.assertEqual(result, slices)
+        result = filter_slices_length(slices, 4)
+        self.assertEqual(result, [slices[0], slices[2]])
+        result = filter_slices_length(slices, 5)
+        self.assertEqual(result, [slices[2]])
 
 
 class TestFilterSlicesDuration(unittest.TestCase):
@@ -5845,53 +5856,58 @@ class TestSecondWindow(unittest.TestCase):
     
     def test_three_second_window_incrementing(self):
         ma_test.assert_masked_array_almost_equal (
-            second_window(np.ma.arange(0, 10, 1), 2, 3),
-            np.ma.masked_array([0, 1, 2, 3, 4, 5, 6, 7, 8, 0],
-                               mask=[False] * 9 + [True]))
-        
+            second_window(np.ma.arange(0, 20, 1), 2, 3),
+            np.ma.masked_array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] + [0] * 6,
+                               mask=[False] * 14 + [True] * 6))
+    
+    def test_three_second_window_incrementing_large(self):
+        mask = [True] * 6 + [False] * 10 + [True] * 4 + [False] * 5 + [True] * 5
+        array = np.ma.array(np.ma.arange(0, 30, 1), mask=mask)
+        expected_mask = [True] * 6 + [False] * 4 + [True] * 20
+        ma_test.assert_masked_array_almost_equal(
+            second_window(array, 2, 3),
+            np.ma.masked_array([0] * 6 + [6, 7, 8, 9] + [0] * 20,
+                               mask=expected_mask))
+    
     def test_three_second_window_decrementing(self):
-        print second_window(np.ma.arange(10, 0, -1), 2, 3)
         ma_test.assert_masked_array_almost_equal (
-            second_window(np.ma.arange(10, 0, -1), 2, 3),
-            np.ma.masked_array([10, 9, 8, 7, 6, 5, 4, 3, 2, 0],
-                               mask=[False] * 9 + [True]))
+            second_window(np.ma.arange(20, 0, -1), 2, 3),
+            np.ma.masked_array([20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7] + [0] * 6,
+                               mask=[False] * 14 + [True] * 6))
     
     def test_three_second_window_peak(self):
         ma_test.assert_masked_array_almost_equal (
             second_window(np.ma.concatenate([np.ma.arange(0, 5, 0.5),
                                              np.ma.arange(5, 0, -0.5)]), 2, 3),
             np.ma.masked_array([0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 3.5, 3.5, 3.5,
-                                3.5, 3.5, 3.5, 3, 2.5, 2, 0, 0, 0],
-                               mask=17 * [False] + 3 * [True]))
+                                3.5, 3.5, 3.5] + [0] * 6,
+                               mask=14 * [False] + 6 * [True]))
     
     def test_second_window_invalid_frequency(self):
         self.assertRaises(ValueError, second_window, np.ma.arange(10), 1, 3)
     
     def test_three_second_window_basic_trough(self):
         ma_test.assert_masked_array_almost_equal (
-            second_window(np.ma.concatenate([np.ma.arange(5, 0, -0.5),
-                                             np.ma.arange(0, 5, 0.5)]), 2, 3),
-            np.ma.masked_array([5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1.5, 1.5, 1.5,
-                                1.5, 1.5, 1.5, 2.0, 2.5, 3.0, 0, 0, 0],
-                               mask=17 * [False] + 3 * [True]))
+            second_window(np.ma.concatenate([np.ma.arange(10, 0, -0.5),
+                                             np.ma.arange(0, 10, 0.5)]), 2, 3),
+            np.ma.masked_array([10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6, 5.5, 5,
+                                4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1.5, 1.5, 1.5,
+                                1.5, 1.5, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5] +
+                               [0] * 6, mask=34 * [False] + 6 * [True]))
     
     def test_three_second_window_trough(self):
         ma_test.assert_masked_array_almost_equal (
             second_window(np.ma.concatenate([np.ma.arange(5, 0, -0.5),
                                              np.ma.arange(0, 10, 1)]), 2, 3),
-            np.ma.array([5, 4.5, 4, 3.5, 3, 2.5, 2, 2, 2, 2, 2, 2, 2, 3, 4, 5,
-                         6, 0, 0, 0], mask=17 * [False] + 3 * [True]))
+            np.ma.array([5, 4.5, 4, 3.5, 3, 2.5, 2, 2, 2, 2, 2, 2, 2, 3] + [0] * 6, mask=14 * [False] + 6 * [True]))
     
     def test_three_second_window_masked(self):
         masked_data = np.ma.arange(10, 0, -0.5)
         masked_data[8:10] = np.ma.masked
         ma_test.assert_masked_array_almost_equal (
             second_window(masked_data, 2, 3),
-            np.ma.array([10, 9.5, 9, 8.5, 8, 0, 0, 0, 0, 0, 5, 4.5, 4, 3.5, 3,
-                         2.5, 2, 0, 0, 0],
-                        mask=[False, False, False, False, False, True, True,
-                              True, True, True, False, False, False, False,
-                              False, False, False, True, True, True])
+            np.ma.array([10, 9.5] + [0] * 8 + [5, 4.5, 4, 3.5] + [0] * 6,
+                        mask=[False] * 2 + [True] * 8 + [False] * 4 + [True] * 6),
         )
     
     def test_five_second_window_basic_trough(self):
@@ -5901,9 +5917,8 @@ class TestSecondWindow(unittest.TestCase):
             np.ma.masked_array([10.0, 9.5, 9.0, 8.5, 8.0, 7.5, 7.0, 6.5, 6.0,
                                 5.5, 5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.5, 2.5,
                                 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 3.0,
-                                3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 0, 0, 0,
-                                0, 0],
-                               mask=35 * [False] + 5 * [True]))    
+                                3.5, 4.0, 4.5] + [0] * 10,
+                               mask=30 * [False] + 10 * [True]))
     
     def test_five_second_window_trough(self):
         ma_test.assert_masked_array_almost_equal (
@@ -5911,9 +5926,8 @@ class TestSecondWindow(unittest.TestCase):
                                              np.ma.arange(0, 20, 1)]), 2, 5),
             np.ma.array([10.0, 9.5, 9.0, 8.5, 8.0, 7.5, 7.0, 6.5, 6.0, 5.5, 5.0,
                          4.5, 4.0, 3.5, 3.5, 3.5, 3.5, 3.5, 3.5, 3.5, 3.5, 3.5,
-                         3.5, 3.5, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0,
-                         12.0, 13.0, 14.0, 0, 0, 0, 0, 0],
-                        mask=35 * [False] + 5 * [True]))
+                         3.5, 3.5, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0] + [0] * 10,
+                        mask=30 * [False] + 10 * [True]))
     
     @unittest.skip('Not Implemented')
     def test_three_second_window(self):
