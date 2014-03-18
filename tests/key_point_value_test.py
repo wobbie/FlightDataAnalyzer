@@ -7055,10 +7055,10 @@ class TestFuelQtyAtTouchdown(unittest.TestCase, CreateKPVsAtKTIsTest):
 
 class TestFuelJettisonDuration(unittest.TestCase, CreateKPVsWhereTest):
     def setUp(self):
-        self.param_name = 'Jettison Nozzle'
+        self.param_name = 'Fuel Jettison Nozzle'
         self.phase_name = 'Airborne'
         self.node_class = FuelJettisonDuration
-        self.values_mapping = {0: '-', 1: 'Jettison'}
+        self.values_mapping = {0: '-', 1: 'Disagree'}
 
         self.basic_setup()
 
