@@ -44,9 +44,11 @@ from analysis_engine.key_point_values import (
     AccelerationNormalWithFlapDownWhileAirborneMin,
     AccelerationNormalWithFlapUpWhileAirborneMax,
     AccelerationNormalWithFlapUpWhileAirborneMin,
+    Airspeed10000To5000FtMax,
     Airspeed10000To8000FtMax,
     Airspeed1000To500FtMax,
     Airspeed1000To500FtMin,
+    Airspeed1000To5000FtMax,
     Airspeed1000To8000FtMax,
     Airspeed3000FtToTopOfClimbMax,
     Airspeed3000FtToTopOfClimbMin,
@@ -56,6 +58,7 @@ from analysis_engine.key_point_values import (
     Airspeed5000To3000FtMax,
     Airspeed500To20FtMax,
     Airspeed500To20FtMin,
+    Airspeed5000To10000FtMax,
     Airspeed8000To10000FtMax,
     Airspeed8000To5000FtMax,
     AirspeedAt35FtDuringTakeoff,
@@ -1462,6 +1465,22 @@ class TestAirspeed35To1000FtMax(unittest.TestCase):
     def test_derive(self):
         self.assertTrue(False, msg='Test Not Implemented')
 
+class TestAirspeed1000To5000FtMax(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = Airspeed1000To5000FtMax
+        self.operational_combinations = [
+            ('Airspeed', 'Altitude AAL For Flight Phases', 'Climb')]
+        self.function = max_value
+
+    def test_can_operate(self):
+        opts = self.node_class.get_operational_combinations()
+        self.assertEqual(opts, self.operational_combinations)
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test Not Implemented')
+
 
 class TestAirspeed35To1000FtMin(unittest.TestCase):
 
@@ -1501,7 +1520,26 @@ class TestAirspeed1000To8000FtMax(unittest.TestCase, CreateKPVFromSlicesTest):
         self.assertAlmostEqual(event[0].value, 112.88, 1)
         self.assertEqual(event[1].index, 80.0)
         self.assertAlmostEqual(event[1].value, 114.55, 1)
-        
+
+
+class TestAirspeed5000To10000FtMax(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = Airspeed5000To10000FtMax
+        self.operational_combinations = [
+            ('Airspeed', 'Altitude AAL For Flight Phases',
+             'Altitude STD Smoothed', 'Climb')
+        ]
+        self.function = max_value
+
+    def test_can_operate(self):
+        opts = self.node_class.get_operational_combinations()
+        self.assertEqual(opts, self.operational_combinations)
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test Not Implemented')
+
 
 class TestAirspeed8000To10000FtMax(unittest.TestCase):
 
@@ -1546,6 +1584,22 @@ class TestAirspeed8000To5000FtMax(unittest.TestCase, NodeTest):
         self.operational_combinations = [('Airspeed', 'Altitude AAL For Flight Phases', 'Altitude STD Smoothed', 'Descent')]
         self.function = max_value
         self.second_param_method_calls = [('slices_from_to', (8000, 5000), {})]
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test Not Implemented')
+
+
+class TestAirspeed10000To5000FtMax(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = Airspeed10000To5000FtMax
+        self.operational_combinations = [
+            ('Airspeed', 'Altitude AAL For Flight Phases',
+             'Altitude STD Smoothed', 'Descent')
+        ]
+        self.function = max_value
+        self.second_param_method_calls = [('slices_from_to', (1000, 5000), {})]
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
