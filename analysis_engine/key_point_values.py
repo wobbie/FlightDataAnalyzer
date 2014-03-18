@@ -845,11 +845,10 @@ class Airspeed1000To5000FtMax(KeyPointValueNode):
                alt_aal=P('Altitude AAL For Flight Phases'),
                climbs=S('Climb')):
 
-        for climb in climbs:
-            alt_band = np.ma.masked_outside(alt_aal.array, 1000, 5000)
-            alt_climb_sections = valid_slices_within_array(alt_band, climb)
-            self.create_kpvs_within_slices(air_spd.array, alt_climb_sections,
-                                           max_value)
+        alt_band = np.ma.masked_outside(alt_aal.array, 1000, 5000)
+        alt_climb_sections = valid_slices_within_array(alt_band, climbs)
+        self.create_kpvs_within_slices(air_spd.array, alt_climb_sections,
+                                       max_value)
 
 
 class Airspeed5000To10000FtMax(KeyPointValueNode):
