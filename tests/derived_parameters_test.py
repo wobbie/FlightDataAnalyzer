@@ -1536,7 +1536,7 @@ class TestCabinAltitude(unittest.TestCase):
         ca = CabinAltitude()
         ca.derive(cp)
         expected = np.ma.array([0.0, 10000, 30000, 45000])
-        ma_test.assert_almost_equal(ca.array, expected, decimal=-3)
+        ma_test.assert_masked_array_almost_equal (ca.array, expected, decimal=-3)
         
 
 class TestClimbForFlightPhases(unittest.TestCase):
@@ -3018,7 +3018,7 @@ class TestHeadwind(unittest.TestCase):
         hw = Headwind()
         hw.derive(None, ws, wd, head, None, None)
         expected = np.ma.array([-20]*3+[20]*5)
-        ma_test.assert_almost_equal(hw.array, expected)
+        ma_test.assert_masked_array_almost_equal (hw.array, expected)
 
     def test_headwind_below_100ft(self):
         # create consistent 20 kt windspeed on the tail
@@ -3916,7 +3916,7 @@ class TestMagneticVariation(unittest.TestCase):
         start_datetime = A('Start Datetime',
                            value=datetime.datetime(2013, 3, 23))
         mag_var.derive(lat, None, lon, None, alt_aal, start_datetime)
-        ma_test.assert_almost_equal(
+        ma_test.assert_masked_array_almost_equal (
             mag_var.array[0:10],
             [-6.064445460989708, -6.065693019716132, -6.066940578442557,
              -6.068188137168981, -6.069435695895405, -6.070683254621829,
@@ -3924,7 +3924,7 @@ class TestMagneticVariation(unittest.TestCase):
              -6.075673489527527])
         # Test with Coarse parameters.
         mag_var.derive(None, lat, None, lon, alt_aal, start_datetime)
-        ma_test.assert_almost_equal(
+        ma_test.assert_masked_array_almost_equal (
             mag_var.array[300:310],
             [-6.506129083442324, -6.507848687633959, -6.509568291825593,
              -6.511287896017228, -6.513007500208863, -6.514727104400498,

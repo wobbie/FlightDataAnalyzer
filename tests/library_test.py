@@ -48,14 +48,19 @@ class TestAirTrack(unittest.TestCase):
     def test_air_track_basic(self):
         spd = np.ma.array([260,260,260,260,260,260,260], dtype=float)
         hdg = np.ma.array([0,0,0,90,90,90,270], dtype=float)
-        lat, lon = air_track(0.0, 0.0, 0.0035, 0.0035, spd, hdg, 1.0)
+        alt = np_ma_ones_like(hdg)
+        alt[0] = 0.0
+        alt[-1] = 0.0
+        lat, lon = air_track(0.0, 0.0, 0.0035, 0.0035, spd, hdg, alt, 1.0)
         np.testing.assert_array_almost_equal(0.0035, lat[-1], decimal=4)
         np.testing.assert_array_almost_equal(0.0035, lon[-1], decimal=4)
         
     def test_air_track_arrays_too_short(self):
         spd = np.ma.array([60,60])
         hdg = np.ma.array([0,0])
-        lat, lon = air_track(0.0, 0.0, 1.0, 1.0, spd, hdg, 1.0)
+        alt = np.ma.array([0,0])
+        # (lat_start, lon_start, lat_end, lon_end, spd, hdg, alt_aal, frequency
+        lat, lon = air_track(0.0, 0.0, 1.0, 1.0, spd, hdg, alt, 1.0)
         self.assertEqual(lat, None)
         self.assertEqual(lon, None)
     
@@ -64,12 +69,15 @@ class TestAirTrack(unittest.TestCase):
                                            'air_track_spd.npy')))
         hdg = np.ma.load(open(os.path.join(test_data_path, 
                                            'air_track_hdg.npy')))
+        alt = np_ma_ones_like(hdg)
+        alt[0] = 0.0
+        alt[-1] = 0.0
         lat, lon = air_track(25.751953125, -80.332374, 9.052734375, -79.453464,
-                             spd, hdg, 1.0)
+                             spd, hdg, alt, 1.0)
         self.assertEqual(lat[0], 25.751953125)
         self.assertEqual(lon[0], -80.332374000000002)
-        self.assertAlmostEqual(lat[5000], 17.185, places=3)
-        self.assertAlmostEqual(lon[5000], -79.486, places=3)
+        self.assertAlmostEqual(lat[5000], 17.177, places=3)
+        self.assertAlmostEqual(lon[5000], -79.5, places=3)
         self.assertAlmostEqual(lat[-1], 9.05, places=2)
         self.assertAlmostEqual(lon[-1], -79.45, places=2)
 
@@ -784,7 +792,7 @@ class TestAlign(unittest.TestCase):
                   offset=0)
         master = P(frequency=2, offset=0)
         result = align(slave, master)
-        ma_test.assert_almost_equal(
+        ma_test.assert_masked_array_almost_equal (
             result,
             [22.0, 22.0, 22.0, 22.0, 22.0, 21.9990234375, 21.9833984375,
              21.9677734375, 21.9521484375, 21.9365234375, 21.9208984375,
@@ -1203,10 +1211,13 @@ class TestCoReg(unittest.TestCase):
         y=np.ma.array([-2,-4,-5,-3,-6], dtype=float)
         self.assertRaises(ValueError, coreg, y, indep_var=x)
 
+    '''
+    Now only a logger warning message.
     def test_correlation_raises_error_too_short(self):
         y=np.ma.array([1], dtype=float)
         self.assertRaises(ValueError, coreg, y)
-
+    '''
+    
     def test_correlation_constant_arrays(self):
         x=np.ma.array([0,0,0,0,0,0], dtype=float)
         y=np.ma.arange(6)
@@ -3173,8 +3184,8 @@ class TestBlendParameters(unittest.TestCase):
     def test_blend_params_complex_example(self):
         result = blend_parameters(self.params, offset=0.0, frequency=2.0, debug=False)
         expected = []
-        ma_test.assert_almost_equal(result[30], 14.225, decimal=2)
-        ma_test.assert_almost_equal(result[80], 1208.451, decimal=2)
+        ma_test.assert_masked_array_almost_equal (result[30], 14.225, decimal=2)
+        ma_test.assert_masked_array_almost_equal (result[80], 1208.451, decimal=2)
         
         
     def test_blend_two_parameters_p2_before_p1_equal_spacing(self):
@@ -3226,14 +3237,14 @@ class TestBlendParametersWeighting(unittest.TestCase):
                           mask=[1,1,1,0,0,0])
         result = blend_parameters_weighting(array, 2.0)
         expected = [0.0, 0.0, 0.0, 0.0, 0.0, 0.05, 0.1, 0.3, 0.5, 0.5, 0.5, 0.5]
-        ma_test.assert_almost_equal(result.data, expected)
+        ma_test.assert_masked_array_almost_equal (result.data, expected)
         
     def test_weighting_decreased_freq(self):
         array=np.ma.array(data=[0,0,0,0,0,0],
                           mask=[1,1,1,0,0,0])
         result = blend_parameters_weighting(array, 0.5)
         expected = [0.0, 0.05, 2.0]
-        ma_test.assert_almost_equal(result.data, expected)
+        ma_test.assert_masked_array_almost_equal (result.data, expected)
         
     def test_weighting_decreased_freq_odd_samples(self):
         array=np.ma.array(data=[0,0,0,0,0,0,0],
@@ -3241,7 +3252,7 @@ class TestBlendParametersWeighting(unittest.TestCase):
         result = blend_parameters_weighting(array, 0.5)
         expected = [0.0, 0.05, 2.0]
         # When first run, the length of this array was 4, not 3 (!)
-        ma_test.assert_almost_equal(len(result.data), 3)
+        ma_test.assert_masked_array_almost_equal (len(result.data), 3)
 
 
 class TestBlendTwoParameters(unittest.TestCase):
@@ -5674,7 +5685,7 @@ class TestDp2Cas(unittest.TestCase):
 
         Value = dp2cas(np.ma.array([99.837, 2490.53]))
         Truth = np.ma.array(data=[244.0, 1000.0], mask=[False,True])
-        ma_test.assert_almost_equal(Value,Truth,decimal=2)
+        ma_test.assert_masked_array_almost_equal (Value,Truth,decimal=2)
 
 
 class TestDp2Tas(unittest.TestCase):
@@ -5728,7 +5739,7 @@ class TestAlt2Sat(unittest.TestCase):
 
         Value = alt2sat(np.ma.array([0.0, 15000.0, 45000.0]))
         Truth = np.ma.array(data=[15.0, -14.718, -56.5])
-        ma_test.assert_almost_equal(Value,Truth)
+        ma_test.assert_masked_array_almost_equal (Value,Truth)
 
 
 class TestDpOverP2mach(unittest.TestCase):
@@ -5740,25 +5751,32 @@ class TestDpOverP2mach(unittest.TestCase):
         # truth values from NASA RP 1046
 
         Truth = np.ma.array(data=[0.8, 0.999, 1.0], mask=[False, False, True])
-        ma_test.assert_almost_equal(Value,Truth, decimal=3)
+        ma_test.assert_masked_array_almost_equal (Value,Truth, decimal=3)
+        
+    def test_masked_dp_over_p(self):
+        # In cases of data corruption, large or negative dp/p values may arise.
+        Value = dp_over_p2mach(np.ma.array(data=[-0.52434, .89072, 51.1],
+                                           mask=[1,0,1]))
+        Truth = np.ma.array(data=[0.0, 0.999, 1.0], mask=[True, False, True])
+        ma_test.assert_masked_array_almost_equal(Value,Truth, decimal=3)
 
         
 class TestPress2Alt(unittest.TestCase):
     def test_01(self):
         Value = press2alt(np.ma.array([14.696, 10.108, 4.3727, 2.1490]))
         Truth = np.ma.array(data=[0.0, 10000, 30000, 45000])
-        ma_test.assert_almost_equal(Value,Truth, decimal=-3)
+        ma_test.assert_masked_array_almost_equal (Value,Truth, decimal=-3)
 ##Tests used to prove low level functions for press2alt
 ##class TestPress2AltGradient(unittest.TestCase):
     ##def test_01(self):
         ##Value = press2alt_gradient(np.ma.array([1013.25,  696.817, 300.896]))
         ##Truth = np.ma.array(data=[0.0, 10000, 30000])
-        ##ma_test.assert_almost_equal(Value,Truth, decimal=1)
+        ##ma_test.assert_masked_array_almost_equal (Value,Truth, decimal=1)
 ##class TestPress2AltIsothermal(unittest.TestCase):
     ##def test_01(self):
         ##Value = press2alt_isothermal(np.ma.array([188.23, 148.17]))
         ##Truth = np.ma.array(data=[40000, 45000])
-        ##ma_test.assert_almost_equal(Value,Truth, decimal=-3)
+        ##ma_test.assert_masked_array_almost_equal (Value,Truth, decimal=-3)
         
 class TestIsDay(unittest.TestCase):
     # Solstice times for 2012 at Stonehenge.
@@ -5826,20 +5844,20 @@ class TestIsDay(unittest.TestCase):
 class TestSecondWindow(unittest.TestCase):
     
     def test_three_second_window_incrementing(self):
-        ma_test.assert_almost_equal(
+        ma_test.assert_masked_array_almost_equal (
             second_window(np.ma.arange(0, 10, 1), 2, 3),
             np.ma.masked_array([0, 1, 2, 3, 4, 5, 6, 7, 8, 0],
                                mask=[False] * 9 + [True]))
         
     def test_three_second_window_decrementing(self):
         print second_window(np.ma.arange(10, 0, -1), 2, 3)
-        ma_test.assert_almost_equal(
+        ma_test.assert_masked_array_almost_equal (
             second_window(np.ma.arange(10, 0, -1), 2, 3),
             np.ma.masked_array([10, 9, 8, 7, 6, 5, 4, 3, 2, 0],
                                mask=[False] * 9 + [True]))
     
     def test_three_second_window_peak(self):
-        ma_test.assert_almost_equal(
+        ma_test.assert_masked_array_almost_equal (
             second_window(np.ma.concatenate([np.ma.arange(0, 5, 0.5),
                                              np.ma.arange(5, 0, -0.5)]), 2, 3),
             np.ma.masked_array([0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 3.5, 3.5, 3.5,
@@ -5850,7 +5868,7 @@ class TestSecondWindow(unittest.TestCase):
         self.assertRaises(ValueError, second_window, np.ma.arange(10), 1, 3)
     
     def test_three_second_window_basic_trough(self):
-        ma_test.assert_almost_equal(
+        ma_test.assert_masked_array_almost_equal (
             second_window(np.ma.concatenate([np.ma.arange(5, 0, -0.5),
                                              np.ma.arange(0, 5, 0.5)]), 2, 3),
             np.ma.masked_array([5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1.5, 1.5, 1.5,
@@ -5858,7 +5876,7 @@ class TestSecondWindow(unittest.TestCase):
                                mask=17 * [False] + 3 * [True]))
     
     def test_three_second_window_trough(self):
-        ma_test.assert_almost_equal(
+        ma_test.assert_masked_array_almost_equal (
             second_window(np.ma.concatenate([np.ma.arange(5, 0, -0.5),
                                              np.ma.arange(0, 10, 1)]), 2, 3),
             np.ma.array([5, 4.5, 4, 3.5, 3, 2.5, 2, 2, 2, 2, 2, 2, 2, 3, 4, 5,
@@ -5867,7 +5885,7 @@ class TestSecondWindow(unittest.TestCase):
     def test_three_second_window_masked(self):
         masked_data = np.ma.arange(10, 0, -0.5)
         masked_data[8:10] = np.ma.masked
-        ma_test.assert_almost_equal(
+        ma_test.assert_masked_array_almost_equal (
             second_window(masked_data, 2, 3),
             np.ma.array([10, 9.5, 9, 8.5, 8, 0, 0, 0, 0, 0, 5, 4.5, 4, 3.5, 3,
                          2.5, 2, 0, 0, 0],
@@ -5877,7 +5895,7 @@ class TestSecondWindow(unittest.TestCase):
         )
     
     def test_five_second_window_basic_trough(self):
-        ma_test.assert_almost_equal(
+        ma_test.assert_masked_array_almost_equal (
             second_window(np.ma.concatenate([np.ma.arange(10, 0, -0.5),
                                              np.ma.arange(0, 10, 0.5)]), 2, 5),
             np.ma.masked_array([10.0, 9.5, 9.0, 8.5, 8.0, 7.5, 7.0, 6.5, 6.0,
@@ -5888,7 +5906,7 @@ class TestSecondWindow(unittest.TestCase):
                                mask=35 * [False] + 5 * [True]))    
     
     def test_five_second_window_trough(self):
-        ma_test.assert_almost_equal(
+        ma_test.assert_masked_array_almost_equal (
             second_window(np.ma.concatenate([np.ma.arange(10, 0, -0.5),
                                              np.ma.arange(0, 20, 1)]), 2, 5),
             np.ma.array([10.0, 9.5, 9.0, 8.5, 8.0, 7.5, 7.0, 6.5, 6.0, 5.5, 5.0,
@@ -5901,7 +5919,7 @@ class TestSecondWindow(unittest.TestCase):
     def test_three_second_window(self):
         self.assertTrue(False)
         amv2 = np.ma.load('...airspeed_minus_v2.npy')
-        ma_test.assert_almost_equal(
+        ma_test.assert_masked_array_almost_equal (
             sample_window(amv2, 3),
             [10, 10, 9, 8, 7, 6, 5, 4, 3, 2, 2, 2, 2, 4, 6, 8, 10, 12, 14, 16])
 

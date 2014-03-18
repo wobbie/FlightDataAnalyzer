@@ -800,6 +800,9 @@ class ILSLocalizerEstablished(FlightPhaseNode):
             # If we don't have a frequency source, just scan the signal and
             # hope it was for this runway!
             for _slice in apps.get_slices():
+                if not np.ma.count(ils_loc.array[_slice]):
+                    # No valid ils localizer data for this approach.
+                    continue
                 valid_slices = np.ma.clump_unmasked(ils_loc.array[_slice])
                 last_valid_slice = shift_slice(valid_slices[-1], _slice.start)
                 create_ils_phases([last_valid_slice])

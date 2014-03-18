@@ -6656,7 +6656,8 @@ def dp_over_p2mach(dp_over_p):
     """
     Return the mach number for a given delta p over p. Supersonic results masked as invalid.
     """
-    mach = np.sqrt(5.0 * ((dp_over_p + 1.0) ** (2.0/7.0) - 1.0))
+    mach_squared = 5.0 * ((dp_over_p + 1.0) ** (2.0/7.0) - 1.0)
+    mach = np.ma.sqrt(mach_squared)
     return np.ma.masked_greater_equal(mach, 1.0)
 
 def _dp2speed(dp, P, Rho):
