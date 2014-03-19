@@ -260,6 +260,7 @@ from analysis_engine.key_point_values import (
     FlapAtGearDownSelection,
     FlapAtLiftoff,
     FlapAtTouchdown,
+    FlapOrConfigurationMaxOrMin,
     FlapWithGearUpMax,
     FlapWithSpeedbrakeDeployedMax,
     FlareDistance20FtToTouchdown,
@@ -5643,6 +5644,7 @@ class TestEngOilTempForXMinMax(unittest.TestCase, NodeTest):
     for). The consequence was that the np.ma.average was being called with no
     data, returning "nan" and this led to a large number of KTP problems. Not
     certain how to replicate this in a test.
+    '''
     
     def test_derive_real_case(self):
         oil_temp = P(
@@ -5654,7 +5656,8 @@ class TestEngOilTempForXMinMax(unittest.TestCase, NodeTest):
         oil_temp.array[-3:]=np.ma.masked
         node = EngOilTempForXMinMax()
         node.derive(oil_temp)
-        '''
+        node
+
 
     def test_derive_all_oil_data_masked(self):
         # This has been a specific problem, hence this test.
@@ -6905,6 +6908,15 @@ class TestFlapAtGearDownSelection(unittest.TestCase, NodeTest):
             KeyPointValue(index=30.00, value=30, name=name),
             KeyPointValue(index=30.25, value=30, name=name),
         ]))
+
+
+class TestFlapOrConfigurationMaxOrMin(unittest.TestCase):
+    
+    def test_flap_or_conf_max_or_min_empty_scope(self):
+        flap = M('Flap', array=np.ma.zeros(10), values_mapping={0: '0'})
+        result = FlapOrConfigurationMaxOrMin.flap_or_conf_max_or_min(
+            flap, np.arange(10), max_value, [])
+        self.assertEqual(result, [])
 
 
 class TestFlapWithGearUpMax(unittest.TestCase, NodeTest):

@@ -91,8 +91,9 @@ class FlapOrConfigurationMaxOrMin(object):
     '''
     Abstract superclass.
     '''
-
-    def flap_or_conf_max_or_min(self, conflap, parameter, function, scope=None,
+    
+    @staticmethod
+    def flap_or_conf_max_or_min(conflap, parameter, function, scope=None,
                                 include_zero=False):
         '''
         Generic flap and configuration key point value search process.
@@ -126,7 +127,7 @@ class FlapOrConfigurationMaxOrMin(object):
         assert isinstance(conflap, M), 'Expected a multi-state.'
 
         if scope == []:
-            return  # can't have an event if the scope is empty.
+            return []  # can't have an event if the scope is empty.
 
         if scope:
             scope_array = np_ma_masked_zeros_like(parameter.array)
