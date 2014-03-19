@@ -1781,7 +1781,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         x = available
         if family and family.value == 'BD-100':
             return 'Speedbrake Handle' in x and 'Spoiler Ground Armed' in x
-        elif family and family.value in ['Global', 'CRJ 100/200', 'ERJ-135/145']:
+        elif family and family.value in ['Global', 'CRJ 100/200', 'ERJ-135/145' 'B777']:
             return 'Speedbrake Handle' in x
         else:
             return ('Speedbrake Deployed' in x or
@@ -1790,7 +1790,8 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
                     ('Family' in x and 'Speedbrake' in x))
 
     @classmethod
-    def derive_from_handle(cls, handle_array, deployed=1, armed=None):
+    def derive_from_handle(cls, handle_array, deployed=1, armed=None,
+                           mask_below_armed=False):
         '''
         Basic Speedbrake algorithm for Stowed and Deployed states from
         Spoiler Handle.
@@ -1801,7 +1802,11 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         if armed is not None:
             stowed_value = armed
             array[(handle_array >= stowed_value) & (handle_array < deployed)] = 'Armed/Cmd Dn'
-        array[handle_array < stowed_value] = 'Stowed'
+        if mask_below_armed:
+            array[handle_array == stowed_value] = 'Stowed'
+            array[handle_array < stowed_value] = np.ma.masked
+        else:
+            array[handle_array < stowed_value] = 'Stowed'
         array[handle_array >= deployed] = 'Deployed/Cmd Up'
         return array
 
@@ -1965,7 +1970,11 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
 
         elif family_name in ['B757', 'B767']:
             self.array = self.b757_767_speedbrake(handle)
-
+        
+        elif family_name == 'B777':
+            self.array = self.derive_from_handle(handle.array, deployed=10,
+                                                 armed=0, mask_below_armed=True)
+        
         elif family_name == 'B787':
             self.array = self.b787_speedbrake(handle)
 

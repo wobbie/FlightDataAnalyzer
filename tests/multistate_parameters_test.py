@@ -1916,6 +1916,15 @@ class TestSpeedbrakeSelected(unittest.TestCase):
         array = spd_sel.derive_from_handle(handle_array, deployed=5)
         self.assertEqual(list(array), # MappedArray .tolist() does not output states.
                          ['Stowed']*20+['Deployed/Cmd Up']*10+['Stowed']*10)
+    
+    def test_derive_from_handle_mask_below_armed(self):
+        array = np.ma.arange(-5, 15)
+        result = SpeedbrakeSelected.derive_from_handle(array, deployed=10,
+                                                       armed=0,
+                                                       mask_below_armed=True)
+        self.assertEqual(list(result),
+                         [np.ma.masked] * 5 + ['Stowed'] + 9 * ['Armed/Cmd Dn'] +
+                         5 * ['Deployed/Cmd Up'])
 
     def test_bd100_speedbrake(self):
         handle = load(os.path.join(
