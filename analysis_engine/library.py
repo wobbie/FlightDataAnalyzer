@@ -6563,8 +6563,10 @@ def second_window(array, frequency, seconds):
                          'are supported.')
     
     window_array = np_ma_masked_zeros_like(array)
-    # Optimization: local namespace (17 ms -> 6 ms)
-    window_array_data = window_array.data
+    
+    if array.size < samples:
+        # Array size is less than the window sample size.
+        return window_array
     
     # Make a view of a sliding window using a different stride.
     # For 3 samples, the array [1, 2, 3, 4, 5, 6, 7, 8, 9] will become
@@ -6586,6 +6588,9 @@ def second_window(array, frequency, seconds):
     max_ = np.max(sliding_window, axis=-1).tolist()
 
     unmasked_slices = np.ma.clump_unmasked(array)
+    
+    # Optimization: local namespace (17 ms -> 6 ms)
+    window_array_data = window_array.data
     
     for unmasked_slice in filter_slices_length(unmasked_slices, samples):
         start = unmasked_slice.start

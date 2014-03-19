@@ -5854,8 +5854,13 @@ class TestIsDay(unittest.TestCase):
 
 class TestSecondWindow(unittest.TestCase):
     
+    def test_second_window_too_large_for_array(self):
+        ma_test.assert_masked_array_almost_equal(
+            second_window(np.ma.arange(0, 20), 2, 45),
+            np_ma_masked_zeros(20))
+    
     def test_three_second_window_incrementing(self):
-        ma_test.assert_masked_array_almost_equal (
+        ma_test.assert_masked_array_almost_equal(
             second_window(np.ma.arange(0, 20, 1), 2, 3),
             np.ma.masked_array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] + [0] * 6,
                                mask=[False] * 14 + [True] * 6))
@@ -5870,13 +5875,13 @@ class TestSecondWindow(unittest.TestCase):
                                mask=expected_mask))
     
     def test_three_second_window_decrementing(self):
-        ma_test.assert_masked_array_almost_equal (
+        ma_test.assert_masked_array_almost_equal(
             second_window(np.ma.arange(20, 0, -1), 2, 3),
             np.ma.masked_array([20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7] + [0] * 6,
                                mask=[False] * 14 + [True] * 6))
     
     def test_three_second_window_peak(self):
-        ma_test.assert_masked_array_almost_equal (
+        ma_test.assert_masked_array_almost_equal(
             second_window(np.ma.concatenate([np.ma.arange(0, 5, 0.5),
                                              np.ma.arange(5, 0, -0.5)]), 2, 3),
             np.ma.masked_array([0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 3.5, 3.5, 3.5,
@@ -5887,7 +5892,7 @@ class TestSecondWindow(unittest.TestCase):
         self.assertRaises(ValueError, second_window, np.ma.arange(10), 1, 3)
     
     def test_three_second_window_basic_trough(self):
-        ma_test.assert_masked_array_almost_equal (
+        ma_test.assert_masked_array_almost_equal(
             second_window(np.ma.concatenate([np.ma.arange(10, 0, -0.5),
                                              np.ma.arange(0, 10, 0.5)]), 2, 3),
             np.ma.masked_array([10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6, 5.5, 5,
@@ -5896,7 +5901,7 @@ class TestSecondWindow(unittest.TestCase):
                                [0] * 6, mask=34 * [False] + 6 * [True]))
     
     def test_three_second_window_trough(self):
-        ma_test.assert_masked_array_almost_equal (
+        ma_test.assert_masked_array_almost_equal(
             second_window(np.ma.concatenate([np.ma.arange(5, 0, -0.5),
                                              np.ma.arange(0, 10, 1)]), 2, 3),
             np.ma.array([5, 4.5, 4, 3.5, 3, 2.5, 2, 2, 2, 2, 2, 2, 2, 3] + [0] * 6, mask=14 * [False] + 6 * [True]))
@@ -5904,14 +5909,14 @@ class TestSecondWindow(unittest.TestCase):
     def test_three_second_window_masked(self):
         masked_data = np.ma.arange(10, 0, -0.5)
         masked_data[8:10] = np.ma.masked
-        ma_test.assert_masked_array_almost_equal (
+        ma_test.assert_masked_array_almost_equal(
             second_window(masked_data, 2, 3),
             np.ma.array([10, 9.5] + [0] * 8 + [5, 4.5, 4, 3.5] + [0] * 6,
                         mask=[False] * 2 + [True] * 8 + [False] * 4 + [True] * 6),
         )
     
     def test_five_second_window_basic_trough(self):
-        ma_test.assert_masked_array_almost_equal (
+        ma_test.assert_masked_array_almost_equal(
             second_window(np.ma.concatenate([np.ma.arange(10, 0, -0.5),
                                              np.ma.arange(0, 10, 0.5)]), 2, 5),
             np.ma.masked_array([10.0, 9.5, 9.0, 8.5, 8.0, 7.5, 7.0, 6.5, 6.0,
@@ -5921,7 +5926,7 @@ class TestSecondWindow(unittest.TestCase):
                                mask=30 * [False] + 10 * [True]))
     
     def test_five_second_window_trough(self):
-        ma_test.assert_masked_array_almost_equal (
+        ma_test.assert_masked_array_almost_equal(
             second_window(np.ma.concatenate([np.ma.arange(10, 0, -0.5),
                                              np.ma.arange(0, 20, 1)]), 2, 5),
             np.ma.array([10.0, 9.5, 9.0, 8.5, 8.0, 7.5, 7.0, 6.5, 6.0, 5.5, 5.0,

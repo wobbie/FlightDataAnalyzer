@@ -6061,8 +6061,6 @@ class EngGasTempDuringMaximumContinuousPowerForXMinMax(KeyPointValueNode):
         )
         for minutes in self.NAME_VALUES['minutes']:
             seconds = minutes * 60
-            if seconds % 2 and eng_egt_max.hz % 2:
-                seconds += 1
             self.create_kpvs_within_slices(
                 ##clip(eng_egt_max.array, minutes * 60, eng_egt_max.hz),
                 second_window(eng_egt_max.array.astype(int), eng_egt_max.hz, seconds),
@@ -6161,11 +6159,8 @@ class EngGasTempDuringEngStartForXSecMax(KeyPointValueNode):
             if not slices:
                 continue
             # second_window is more accurate than clip and much faster
-            if seconds % 2:
-                # shh... we'll add one so that second_window will work!
-                dur = seconds + 1
-            else:
-                dur = seconds
+            # shh... we'll add one so that second_window will work!
+            dur = seconds + 1 if seconds % 2 else seconds
             array = second_window(eng_egt_max.array.astype(int), eng_egt_max.hz, dur)
             self.create_kpvs_within_slices(array, slices, max_value, seconds=seconds)
 
@@ -6999,22 +6994,13 @@ class EngOilTempForXMinMax(KeyPointValueNode):
         # Some aircraft don't have oil temperature sensors fitted. This trap
         # may be superceded by masking the Eng (*) Oil Temp Max parameter in
         # future:
-        if np.ma.count(oil_temp.array) == 0:
+        if oil_temp.array.mask.all():
             return
 
         for minutes in self.NAME_VALUES['minutes']:
-            seconds = minutes * 60 * self.frequency
-            # second_window is more accurate than clip and much faster
-            if seconds % 2 and oil_temp.hz % 2:
-                # shh... we'll add one so that second_window will work!
-                seconds += 1
-            oil_sustained = second_window(oil_temp.array.astype(int), oil_temp.hz, seconds)
-            
-            ####oil_sustained = clip(oil_temp.array, minutes * 60, oil_temp.hz)
-            # There have been cases where there were no valid oil temperature
-            # measurements throughout the flight, in which case there's no
-            # point testing for a maximum:
-            if oil_sustained is not None:
+            oil_sustained = oil_temp.array.astype(int)
+            oil_sustained = second_window(oil_sustained, self.hz, minutes * 60)
+            if not oil_sustained.mask.all():
                 self.create_kpv(*max_value(oil_sustained), minutes=minutes)
 
 

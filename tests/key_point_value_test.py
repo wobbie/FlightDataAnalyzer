@@ -5638,26 +5638,27 @@ class TestEngOilTempForXMinMax(unittest.TestCase, NodeTest):
         self.node_class = EngOilTempForXMinMax
         self.operational_combinations = [('Eng (*) Oil Temp Max', )]
 
-    '''
-    This data set produces overlaps which extend beyond the bounds of the
-    array with 45 minute clip periods (daft, but that's what the KPV calls
-    for). The consequence was that the np.ma.average was being called with no
-    data, returning "nan" and this led to a large number of KTP problems. Not
-    certain how to replicate this in a test.
-    '''
-    
     def test_derive_real_case(self):
-        oil_temp = P(
-            name='Eng (*) Oil Temp Max',
-            array=np.ma.array(data=[[67.0,79,81,82,84,85,87,88,90,90,92,93,93,94,
-                                    94,95,97,103,109,112,115,118,119,121,121,
-                                    123,123,124,124,125,125,124,122,121,121,120,
-                                    120]+[119]*34+[117]*17+[115]*98+[112]*5+[106]*65+[103]*80][0]))
+        array = np.ma.array(
+            [67.0,79,81,82,84,85,87,88,90,90,92,93,93,94,
+             94,95,97,103,109,112,115,118,119,121,121,
+             123,123,124,124,125,125,124,122,121,121,120,
+             120]+[119]*34+[117]*17+[115]*98+[112]*5+[106]*65+[103]*80)
+        array = np.repeat(array, 10)
+        oil_temp = P(name='Eng (*) Oil Temp Max', array=array)
         oil_temp.array[-3:]=np.ma.masked
         node = EngOilTempForXMinMax()
         node.derive(oil_temp)
-        node
-
+        self.assertEqual(len(node), 3)
+        kpv_15 = next(x for x in node if
+                      x.name == 'Eng Oil Temp For 15 Min Max')
+        self.assertEqual(kpv_15.index, 200, 115)
+        kpv_20 = next(x for x in node if
+                      x.name == 'Eng Oil Temp For 20 Min Max')
+        self.assertEqual(kpv_20.index, 200, 115)
+        kpv_45 = next(x for x in node if
+                      x.name == 'Eng Oil Temp For 45 Min Max')
+        self.assertEqual(kpv_45.index, 170, 103)
 
     def test_derive_all_oil_data_masked(self):
         # This has been a specific problem, hence this test.
