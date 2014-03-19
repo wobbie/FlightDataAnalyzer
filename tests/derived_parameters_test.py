@@ -84,6 +84,9 @@ from analysis_engine.derived_parameters import (
     Eng_EPRMax,
     Eng_EPRMin,
     Eng_EPRMinFor5Sec,
+    Eng_FuelFlow,
+    Eng_FuelFlowMax,
+    Eng_FuelFlowMin,
     Eng_N1Avg,
     Eng_N1Max,
     Eng_N1Min,
@@ -3335,15 +3338,65 @@ class TestElevatorRight(unittest.TestCase):
 
 
 class TestEng_FuelFlow(unittest.TestCase):
-    @unittest.skip('Test Not Implemented')
     def test_can_operate(self):
-        self.assertTrue(False, msg='Test not implemented.')
-        
-    @unittest.skip('Test Not Implemented')
+        for n in range(1, 5):
+            self.assertTrue(Eng_FuelFlow.can_operate(
+                ('Eng (%d) Fuel Flow' % n,)))
+
     def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+        ff1_arr = np.ma.arange(100)
+        ff2_arr = np.ma.arange(100)[::-1]
+        ff1 = P(name='Eng (1) Fuel Flow', array=ff1_arr, frequency=1)
+        ff2 = P(name='Eng (2) Fuel Flow', array=ff2_arr, frequency=1)
+
+        expected_arr = np.ma.array([99] * 100)
+
+        node = Eng_FuelFlow()
+        node.derive(ff1, ff2, None, None)
+
+        np.testing.assert_array_equal(node.array, expected_arr)
 
 
+class TestEng_FuelFlowMax(unittest.TestCase):
+    def test_can_operate(self):
+        for n in range(1, 5):
+            self.assertTrue(Eng_FuelFlowMax.can_operate(
+                ('Eng (%d) Fuel Flow' % n,)))
+
+    def test_derive(self):
+        ff1_arr = np.ma.arange(100)
+        ff2_arr = np.ma.arange(100)[::-1]
+        ff1 = P(name='Eng (1) Fuel Flow', array=ff1_arr, frequency=1)
+        ff2 = P(name='Eng (2) Fuel Flow', array=ff2_arr, frequency=1)
+
+        expected_arr = np.ma.concatenate([np.ma.arange(99, 49, -1),
+                                          np.ma.arange(50, 100)])
+
+        node = Eng_FuelFlowMax()
+        node.derive(ff1, ff2, None, None)
+
+        np.testing.assert_array_equal(node.array, expected_arr)
+
+
+class TestEng_FuelFlowMin(unittest.TestCase):
+    def test_can_operate(self):
+        for n in range(1, 5):
+            self.assertTrue(Eng_FuelFlowMin.can_operate(
+                ('Eng (%d) Fuel Flow' % n,)))
+
+    def test_derive(self):
+        ff1_arr = np.ma.arange(100)
+        ff2_arr = np.ma.arange(100)[::-1]
+        ff1 = P(name='Eng (1) Fuel Flow', array=ff1_arr, frequency=1)
+        ff2 = P(name='Eng (2) Fuel Flow', array=ff2_arr, frequency=1)
+
+        expected_arr = np.ma.concatenate([np.ma.arange(50),
+                                          np.ma.arange(49, -1, -1)])
+
+        node = Eng_FuelFlowMin()
+        node.derive(ff1, ff2, None, None)
+
+        np.testing.assert_array_equal(node.array, expected_arr)
 
 
 class TestEng_1_FuelBurn(unittest.TestCase, NodeTest):

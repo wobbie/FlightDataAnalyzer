@@ -1925,7 +1925,35 @@ class Eng_FuelFlowMin(DerivedParameterNode):
         engines = vstack_params(eng1, eng2, eng3, eng4)
         self.array = np.ma.min(engines, axis=0)
 
-        
+
+class Eng_FuelFlowMax(DerivedParameterNode):
+    '''
+    The maximum recorded Fuel Flow across all engines.
+
+    All engines data aligned (using interpolation) and forced the frequency to
+    be a higher 4Hz to protect against smoothing of peaks.
+    '''
+
+    name = 'Eng (*) Fuel Flow Max'
+    align_frequency = 4
+    align_offset = 0
+    units = ut.KG_H
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               eng1=P('Eng (1) Fuel Flow'),
+               eng2=P('Eng (2) Fuel Flow'),
+               eng3=P('Eng (3) Fuel Flow'),
+               eng4=P('Eng (4) Fuel Flow')):
+
+        engines = vstack_params(eng1, eng2, eng3, eng4)
+        self.array = np.ma.max(engines, axis=0)
+
+
 ##############################################################################
 # Fuel Burn
 
