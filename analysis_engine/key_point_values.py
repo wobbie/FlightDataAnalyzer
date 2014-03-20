@@ -5963,7 +5963,7 @@ class APUFireWarningDuration(KeyPointValueNode):
         if fire:
             self.create_kpvs_where(fire.array==True, fire.hz)
         else:
-            hz = single_bottle.hz or dual_bottle.hz
+            hz = (single_bottle or dual_bottle).hz
             apu_fires = vstack_params_where_state((single_bottle, 'Fire'),
                                                   (dual_bottle, 'Fire'))
     
