@@ -3745,7 +3745,10 @@ def max_abs_value(array, _slice=slice(None), start_edge=None, stop_edge=None):
         if edge_value and edge_value > value:
             index = stop_edge
             value = edge_value
-    return Value(index, array[index]) # Recover sign of the value.
+    if value is None:
+        return Value(None, None)
+    else:
+        return Value(index, array[index]) # Recover sign of the value.
 
 
 def max_value(array, _slice=slice(None), start_edge=None, stop_edge=None):

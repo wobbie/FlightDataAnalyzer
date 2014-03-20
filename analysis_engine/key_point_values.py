@@ -11000,6 +11000,8 @@ class GrossWeightDelta60SecondsInFlightMax(KeyPointValueNode):
             in_air_stop = (in_air.slice.stop / 60.0) if in_air.slice.stop else None
             in_air_slice = slice(in_air_start, in_air_stop)
             max_diff = max_abs_value(weight_diff, _slice=in_air_slice)
+            if max_diff.index is None:
+                continue
             # narrow down the index to the maximum change in this region of flight
             max_diff_slice = slice(max_diff.index * 60,
                                    (max_diff.index + 1) * 60)
