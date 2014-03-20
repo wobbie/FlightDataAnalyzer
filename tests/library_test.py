@@ -5684,7 +5684,7 @@ class TestDelay(unittest.TestCase):
 
 class TestDp2Cas(unittest.TestCase):
 
-    def test_01(self):
+    def test_dp2cas(self):
 
         # Tests low speed and masking supersonic cases in one go.
 
@@ -5701,31 +5701,31 @@ class TestDp2Cas(unittest.TestCase):
 
 class TestDp2Tas(unittest.TestCase):
 
-    def test_01(self):
+    def test_dp2tas_1(self):
         # "Null" case to start
         Value = dp2tas(0.0, 0.0, 15.0)
         Truth = 0.0
         self.assertEqual(Value, Truth)
 
-    def test_02(self):
+    def test_dp2tas_2(self):
         # Trivial case = 200 KIAS
         Value = dp2tas(66.3355, 20000.0, -24.586)
         Truth = 270.4489
         self.assertAlmostEqual(Value, Truth, delta = 1)
 
-    def test_03(self):
+    def test_dp2tas_3(self):
         # 200 KIAS at ISA + 20C
         Value = dp2tas(66.3355, 20000.0, -13.4749)
         Truth = 276.4275
         self.assertAlmostEqual(Value, Truth, delta = 1)
 
-    def test_04(self):
+    def test_dp2tas_4(self):
         # Speed up to 300 KIAS and higher
         Value = dp2tas(153.5471, 30000.0, -44.35)
         Truth = 465.6309
         self.assertAlmostEqual(Value, Truth, delta = 1)
 
-    def test_05(self):
+    def test_dp2tas_5(self):
         # Still 300 KIAS but Stratospheric
         Value = dp2tas(153.5469, 45000.0, -56.5)
         Truth = 608.8925
@@ -5734,23 +5734,24 @@ class TestDp2Tas(unittest.TestCase):
 
 class TestMachTat2Sat(unittest.TestCase):
 
-    def test_01(self):
+    def test_machtat2sat(self):
 
         # Mach 0.5, 15 deg C, K = 0.5
         mach = np.ma.array(data=[0.5, 0.5], mask=[False, True])
-        Value = machtat2sat(mach, 15, recovery_factor = 0.5)
-        Truth = 7.97195121951
-        self.assertAlmostEqual(Value[0], Truth, delta = 1e-5)
-        self.assertAlmostEqual(Value.data[1], 1.0, delta = 1e-5)
+        value = machtat2sat(mach, 15, recovery_factor = 0.5)
+        truth = 7.97195121951
+        self.assertAlmostEqual(value[0], truth, delta = 1e-5)
+        self.assertAlmostEqual(value.data[1], 1.0, delta = 1e-5)
 
 
 class TestAlt2Sat(unittest.TestCase):
 
-    def test_01(self):
+    def test_alt2sat(self):
 
-        Value = alt2sat(np.ma.array([0.0, 15000.0, 45000.0]))
-        Truth = np.ma.array(data=[15.0, -14.718, -56.5])
-        ma_test.assert_masked_array_almost_equal (Value,Truth)
+        value = alt2sat(np.ma.array([0.0, 15000.0, 45000.0]))
+        truth = np.ma.array(data=[15.0, -14.718, -56.5])
+        ma_test.assert_masked_array_almost_equal(value, truth)
+
 
 class TestLevelOffIndex(unittest.TestCase):
     def test_level_off_index_index_array_too_small(self):
@@ -5788,28 +5789,28 @@ class TestLevelOffIndex(unittest.TestCase):
 
 class TestDpOverP2mach(unittest.TestCase):
 
-    def test_01(self):
+    def test_dp_over_p2mach(self):
 
-        Value = dp_over_p2mach(np.ma.array([.52434, .89072, 1.1]))
+        value = dp_over_p2mach(np.ma.array([.52434, .89072, 1.1]))
 
         # truth values from NASA RP 1046
 
-        Truth = np.ma.array(data=[0.8, 0.999, 1.0], mask=[False, False, True])
-        ma_test.assert_masked_array_almost_equal (Value,Truth, decimal=3)
+        truth = np.ma.array(data=[0.8, 0.999, 1.0], mask=[False, False, True])
+        ma_test.assert_masked_array_almost_equal (value, truth, decimal=3)
         
-    def test_masked_dp_over_p(self):
+    def test_dp_over_p2mach_masked_dp_over_p(self):
         # In cases of data corruption, large or negative dp/p values may arise.
-        Value = dp_over_p2mach(np.ma.array(data=[-0.52434, .89072, 51.1],
+        value = dp_over_p2mach(np.ma.array(data=[-0.52434, .89072, 51.1],
                                            mask=[1,0,1]))
-        Truth = np.ma.array(data=[0.0, 0.999, 1.0], mask=[True, False, True])
-        ma_test.assert_masked_array_almost_equal(Value,Truth, decimal=3)
+        truth = np.ma.array(data=[0.0, 0.999, 1.0], mask=[True, False, True])
+        ma_test.assert_masked_array_almost_equal(value,truth, decimal=3)
 
         
 class TestPress2Alt(unittest.TestCase):
-    def test_01(self):
-        Value = press2alt(np.ma.array([14.696, 10.108, 4.3727, 2.1490]))
-        Truth = np.ma.array(data=[0.0, 10000, 30000, 45000])
-        ma_test.assert_masked_array_almost_equal (Value,Truth, decimal=-3)
+    def test_press2alt(self):
+        value = press2alt(np.ma.array([14.696, 10.108, 4.3727, 2.1490]))
+        truth = np.ma.array(data=[0.0, 10000, 30000, 45000])
+        ma_test.assert_masked_array_almost_equal (value,truth, decimal=-3)
 ##Tests used to prove low level functions for press2alt
 ##class TestPress2AltGradient(unittest.TestCase):
     ##def test_01(self):
