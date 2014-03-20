@@ -484,6 +484,7 @@ from analysis_engine.key_point_values import (
 )
 from analysis_engine.key_time_instances import (
     AltitudeWhenDescending,
+    EngStart,
     EngStop,
 )
 from analysis_engine.library import (max_abs_value, max_value, min_value)
@@ -5029,11 +5030,25 @@ class TestEngGasTempDuringEngStartMax(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = EngGasTempDuringEngStartMax
-        self.operational_combinations = [('Eng (*) Gas Temp Max', 'Eng (*) N2 Min', 'Takeoff Turn Onto Runway')]
+        self.operational_combinations = [('Eng (1) Gas Temp', 'Eng (1) N2', 'Eng (1) N3')]
 
-    @unittest.skip('Test Not Implemented')
     def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+        eng_starts = EngStart('Eng Start', items=[
+            KeyTimeInstance(163, 'Eng (1) Start'),
+            KeyTimeInstance(98, 'Eng (2) Start'),
+        ])
+        eng_1_egt = load(os.path.join(test_data_path, 'eng_start_eng_1_egt.nod'))
+        eng_2_egt = load(os.path.join(test_data_path, 'eng_start_eng_2_egt.nod'))
+        eng_1_n3 = load(os.path.join(test_data_path, 'eng_start_eng_1_n3.nod'))
+        eng_2_n3 = load(os.path.join(test_data_path, 'eng_start_eng_2_n3.nod'))
+        node = EngGasTempDuringEngStartMax()
+        node.derive(eng_1_egt, eng_2_egt, None, None, eng_1_n3, eng_2_n3, None,
+                    None, None, None, None, None, eng_starts)
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].index, 174)
+        self.assertEqual(node[0].value, 303)
+        self.assertEqual(node[1].index, 99)
+        self.assertEqual(node[1].value, 333)
 
 
 class TestEngGasTempDuringEngStartForXSecMax(unittest.TestCase, NodeTest):
