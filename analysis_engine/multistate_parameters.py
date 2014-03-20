@@ -1738,7 +1738,7 @@ class StickShaker(MultistateDerivedParameterNode):
                #b777_R2=M('Stick Shaker (R) (2)'),
                ):
 
-        if frame and frame.value=='B777':
+        if frame and frame.value =='B777':
             #Provision has been included for Boeing 777 type, but until this has been
             #evaluated in detail it raises an exception because there are two bits per
             #shaker, and their operation is not obvious from the documentation.
@@ -1781,7 +1781,8 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         x = available
         if family and family.value == 'BD-100':
             return 'Speedbrake Handle' in x and 'Spoiler Ground Armed' in x
-        elif family and family.value in ['Global', 'CRJ 100/200', 'ERJ-135/145' 'B777']:
+        elif family and family.value in ['Global', 'CRJ 100/200', 'ERJ-135/145',
+                                         'B777']:
             return 'Speedbrake Handle' in x
         else:
             return ('Speedbrake Deployed' in x or
