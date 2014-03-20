@@ -9925,11 +9925,20 @@ class TAWSTerrainWarningDuration(KeyPointValueNode):
 
     name = 'TAWS Terrain Warning Duration'
     units = ut.SECOND
+    
+    @classmethod
+    def can_operate(cls, available):
+        return ('Airborne' in available and
+                any_of(('TAWS Terrain', 'TAWS Terrain Warning'), available))
 
     def derive(self, taws_terrain=M('TAWS Terrain'),
+               taws_terrain_warning=M('TAWS Terrain Warning'),
                airborne=S('Airborne')):
-        self.create_kpvs_where(taws_terrain.array == 'Warning',
-                               taws_terrain.hz, phase=airborne)
+        hz = (taws_terrain or taws_terrain_warning).hz
+        taws_terrains = vstack_params_where_state(
+            (taws_terrain, 'Warning'),
+            (taws_terrain_warning, 'Warning')).any(axis=0)
+        self.create_kpvs_where(taws_terrains, hz, phase=airborne)
 
 
 class TAWSTerrainPullUpWarningDuration(KeyPointValueNode):

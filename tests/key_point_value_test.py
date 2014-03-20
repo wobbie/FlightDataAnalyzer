@@ -8825,11 +8825,40 @@ class TestTAWSTerrainWarningDuration(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = TAWSTerrainWarningDuration
-        self.operational_combinations = [('TAWS Terrain', 'Airborne')]
-
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+        self.operational_combinations = [('TAWS Terrain', 'Airborne'),
+                                         ('TAWS Terrain Warning', 'Airborne'),
+                                         ('TAWS Terrain', 'TAWS Terrain Warning', 'Airborne')]
+    
+    def test_derive_basic(self):
+        values_mapping = {1: 'Warning', 0: '-'}
+        taws_terrain_array = np.ma.array([0] * 10 + [1] * 10 + [0] * 20)
+        taws_terrain_warning_array = np.ma.array(
+            [0] * 15 + [1] * 10 + [0] * 5 + [1] * 5 + [0] * 5)
+        taws_terrain = M('TAWS Terrain', array=taws_terrain_array,
+                         values_mapping=values_mapping)
+        taws_terrain_warning = M('TAWS Terrain Warning',
+                                 array=taws_terrain_warning_array,
+                                 values_mapping=values_mapping)
+        airborne = buildsection('Airborne', 12, 33)
+        node = self.node_class()
+        node.derive(taws_terrain, None, airborne)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 12)
+        self.assertEqual(node[0].value, 8)
+        node = self.node_class()
+        node.derive(None, taws_terrain_warning, airborne)
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].index, 15)
+        self.assertEqual(node[0].value, 10)
+        self.assertEqual(node[1].index, 30)
+        self.assertEqual(node[1].value, 3)
+        node = self.node_class()
+        node.derive(taws_terrain, taws_terrain_warning, airborne)
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].index, 12)
+        self.assertEqual(node[0].value, 13)
+        self.assertEqual(node[1].index, 30)
+        self.assertEqual(node[1].value, 3)
 
 
 class TestTAWSTerrainPullUpWarningDuration(unittest.TestCase, NodeTest):
