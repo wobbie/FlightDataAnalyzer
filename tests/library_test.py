@@ -5752,6 +5752,39 @@ class TestAlt2Sat(unittest.TestCase):
         Truth = np.ma.array(data=[15.0, -14.718, -56.5])
         ma_test.assert_masked_array_almost_equal (Value,Truth)
 
+class TestLevelOffIndex(unittest.TestCase):
+    def test_level_off_index_index_array_too_small(self):
+        self.assertEqual(level_off_index(np.ma.arange(5), 1, 10, 1), None)
+        self.assertEqual(
+            level_off_index(np.ma.arange(60), 1, 10, 1, _slice=slice(2,11)),
+            None)
+        
+    def test_level_off_index_index_all_unstable(self):
+        self.assertEqual(level_off_index(np.ma.arange(10), 1, 2, 1), None)
+    
+    def test_level_off_index_index_all_stable(self):
+        self.assertEqual(level_off_index(np.ma.arange(10), 1, 2, 5), 2)
+        self.assertEqual(level_off_index(np.ma.arange(10), 1, 2, 5,
+                                          _slice=slice(5,9)), 7)
+    
+    def test_level_off_index_basic(self):
+        array = np.ma.array([0,2,4,6,8,10,8,6,5,4.5,5,4.5,5])
+        self.assertEqual(level_off_index(array, 1, 3, 2), 10)
+        self.assertEqual(level_off_index(array, 1, 3, 2, include_window=False),
+                         7)
+    
+    def test_level_off_index_basic_masked(self):
+        array = np.ma.array([0,0,0,0,8,10,8,6,5,4.5,5,4.5,5, 7, 9, 11, 13, 15],
+                            mask=[True] * 4 + [False] * 9 + [True] * 5)
+        self.assertEqual(level_off_index(np.ma.repeat(array, 2), 1, 6, 2), 20)
+    
+    def test_level_off_index_eng_n3(self):
+        array = np.ma.load(os.path.join(test_data_path, 'eng_n3.npy'))
+        index = level_off_index(array, 1, 10, 1, _slice=slice(60, 750))
+        self.assertEqual(index, 100)
+        index = level_off_index(array, 1, 10, 1, _slice=slice(3625, None))
+        self.assertEqual(index, 3674)
+
 
 class TestDpOverP2mach(unittest.TestCase):
 
