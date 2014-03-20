@@ -4364,11 +4364,19 @@ class TestSectionContainsKti(unittest.TestCase):
 
 
 class TestRunsOfOnes(unittest.TestCase):
-    def test_runs_of_ones(self):
-        result = runs_of_ones(np.ma.array(
+
+    def setUp(self):
+        self.test_array = np.ma.array(
             [0,0,1,0,1,1,1,1,1,0,0,1,1,1,0,1,1,1],
-            mask=14 * [False] + 4 * [True]))
+            mask=14 * [False] + 4 * [True])
+
+    def test_runs_of_ones(self):
+        result = runs_of_ones(self.test_array)
         self.assertEqual(result, [slice(2, 3), slice(4, 9), slice(11, 14)])
+
+    def test_runs_of_ones_min_samples(self):
+        result = runs_of_ones(self.test_array, min_samples=2)
+        self.assertEqual(result, [slice(4, 9), slice(11, 14)])
 
 
 class TestSlicesOfRuns(unittest.TestCase):

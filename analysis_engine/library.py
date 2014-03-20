@@ -5157,7 +5157,7 @@ def rms_noise(array, ignore_pc=None):
     return sqrt(np.ma.mean(np.ma.power(to_rms,2))) # RMS in one line !
 
 
-def runs_of_ones(bits):
+def runs_of_ones(bits, min_samples=None):
     '''
     Q: This function used to have a min_len kwarg which was a result of its
     implementation. If there is a use case for only returning sections greater
@@ -5167,10 +5167,14 @@ def runs_of_ones(bits):
     :returns: S
     :rtype: [slice]
     '''
-    return np.ma.clump_unmasked(np.ma.masked_not_equal(bits, 1))
+    runs = np.ma.clump_unmasked(np.ma.masked_not_equal(bits, 1))
+    if min_samples:
+        runs = slices_remove_small_slices(runs, count=min_samples)
+
+    return runs
 
 
-def slices_of_runs(array):
+def slices_of_runs(array, min_samples=None):
     '''
     Provides a list of slices of runs of each value in the array.
 
@@ -5189,7 +5193,11 @@ def slices_of_runs(array):
             continue
         if hasattr(array, 'values_mapping'):
             value = array.values_mapping[value]
-        yield value, runs_of_ones(array == value)
+        runs = runs_of_ones(array == value, min_samples=min_samples)
+        if min_samples and runs == []:
+            value = None
+
+        yield value, runs
 
 
 def shift_slice(this_slice, offset):
