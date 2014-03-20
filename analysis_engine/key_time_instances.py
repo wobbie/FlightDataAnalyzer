@@ -12,8 +12,10 @@ from analysis_engine.library import (all_of,
                                      minimum_unmasked,
                                      np_ma_masked_zeros_like,
                                      peak_curvature,
+                                     repair_mask,
                                      runs_of_ones,
                                      slices_and,
+                                     slice_duration,
                                      slices_not)
 
 from analysis_engine.node import A, M, P, S, KTI, KeyTimeInstanceNode
@@ -292,23 +294,21 @@ class EngStart(KeyTimeInstanceNode):
         for number, eng_nx in enumerate(eng_nx_list, start=1):
             if not eng_nx:
                 continue
-
-            running = np.ma.where(eng_nx.array > limit, 1, 0)
-            first_speed = first_valid_sample(running)
-
-            if first_speed.value:
-                # The first valid sample shows the engine running when the
-                # recording started.
-                self.create_kti(first_speed.index,
+            
+            array = repair_mask(eng_nx.array, repair_duration=None)
+            array = np.ma.masked_greater(array, limit)
+            below_slices = np.ma.clump_unmasked(array)
+            
+            for below_slice in below_slices:
+                
+                if ((below_slice.start != 0 and
+                     slice_duration(below_slice, self.hz) < 6) or 
+                    below_slice.stop == len(array)):
+                    # Small dip or reached the end of the array.
+                    continue
+                
+                self.create_kti(below_slice.stop,
                                 replace_values={'number': number})
-
-            else:
-                # The engine stopped before the end of the data.
-                self.create_ktis_at_edges(
-                    running,
-                    direction='rising_edges',
-                    replace_values={'number': number},
-                )
 
 
 class FirstEngStartBeforeLiftoff(KeyTimeInstanceNode):
