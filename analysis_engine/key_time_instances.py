@@ -660,17 +660,6 @@ class SlatAlternateArmedSet(KeyTimeInstanceNode):
         self.create_ktis_on_state_change('Armed', saa.array, change='entering')
 
 
-class SpeedbrakeOpen(KeyTimeInstanceNode):
-    '''
-    A convenient indication of speedbrake use.
-    '''
-    
-    def derive(self,
-               slat=P('Speedbrake')):
-        for opening in np.ma.clump_unmasked(np.ma.masked_less_equal(slat.array, 0.0)):
-            self.create_kti(opening.start)
-
-
 class FlapRetractionWhileAirborne(KeyTimeInstanceNode):
     '''
     '''

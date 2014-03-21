@@ -1129,28 +1129,7 @@ class TestFlapLeverSet(unittest.TestCase, NodeTest):
             KeyTimeInstance(index=5.5, name='Flap 15 Set'),
             KeyTimeInstance(index=12.5, name='Flap 17.5 Set'),
         ]))
-
-
-class TestSpeedbrakeOpen(unittest.TestCase):
-    
-    def setUp(self):
-        self.assertEqual(SpeedbrakeOpen.get_operational_combinations(),
-                         [('Speedbrake',)])
-
-    def test_basic(self):
-        spdbrk = P('Speedbrake', array=np.ma.array([0]*5 +
-                                                   [3]*3 +
-                                                   [-1]*2 +
-                                                   [45]*4 + 
-                                                   [0]*3
-                                                   ))
-        node = SpeedbrakeOpen()
-        node.derive(spdbrk)
-        self.assertEqual(node, [
-            KeyTimeInstance(index=5, name='Speedbrake Open'),
-            KeyTimeInstance(index=10, name='Speedbrake Open'),
-        ])
-
+        
 
 class TestFlapExtensionWhileAirborne(unittest.TestCase, NodeTest):
 
