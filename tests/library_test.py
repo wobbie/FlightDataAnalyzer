@@ -1858,7 +1858,7 @@ class TestFindEdgesOnStateChange(unittest.TestCase):
         self.assertEqual(edges, [])
 
 
-class FindTocTod(unittest.TestCase):
+class TestFindTocTod(unittest.TestCase):
     def test_find_tod_with_smoothed_data(self):
         # sample data from Hercules during a low level circuit
         array = np.ma.array(
