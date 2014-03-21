@@ -882,10 +882,9 @@ class TestEngStart(unittest.TestCase):
                                                    mask=[1,1, 1, 1, 0, 0, 0]))
         es = EngStart()
         es.derive(None, None, None, None, eng1, eng2, None, None, None, None, None, None)
-        self.assertEqual(es[0].name, 'Eng (1) Start')
-        self.assertEqual(es[0].index, 4)
-        self.assertEqual(es[1].name, 'Eng (2) Start')
-        self.assertEqual(es[1].index, 2.5)
+        self.assertEqual(len(es), 1)
+        self.assertEqual(es[0].name, 'Eng (2) Start')
+        self.assertEqual(es[0].index, 3)
 
     def test_prefer_N2(self):
         eng_N1 = Parameter('Eng (1) N1', np.ma.array([50,50,50,50]))
@@ -893,7 +892,7 @@ class TestEngStart(unittest.TestCase):
         es = EngStart()
         es.derive(eng_N1, None, None, None, eng_N2, None, None, None, None, None, None, None)
         self.assertEqual(es[0].name, 'Eng (1) Start')
-        self.assertEqual(es[0].index, 2.5)
+        self.assertEqual(es[0].index, 3)
         self.assertEqual(len(es), 1)
 
     def test_three_spool(self):
@@ -905,17 +904,30 @@ class TestEngStart(unittest.TestCase):
                                                    mask=[1,1, 1, 1, 0, 0, 0, 0]))
         es = EngStart()
         es.derive(None, None, None, None, eng12, eng22, None, None, eng13, eng23, None, None)
-        self.assertEqual(es[0].name, 'Eng (1) Start')
-        self.assertEqual(es[0].index, 4)
-        self.assertEqual(es[1].name, 'Eng (2) Start')
-        self.assertEqual(es[1].index, 1.5)
+        self.assertEqual(len(es), 1)
+        self.assertEqual(es[0].name, 'Eng (2) Start')
+        self.assertEqual(es[0].index, 2)
 
     def test_N1_only(self):
         eng_N1 = Parameter('Eng (1) N1', np.ma.array([0,5,10,10]))
         es = EngStart()
         es.derive(eng_N1, None, None, None, None, None, None, None, None, None, None, None)
+        self.assertEqual(len(es), 1)
         self.assertEqual(es[0].name, 'Eng (1) Start')
-        self.assertEqual(es[0].index, 1.5)
+        self.assertEqual(es[0].index, 2)
+    
+    def test_short_dip(self):
+        eng_1_n3 = load(os.path.join(test_data_path, 'eng_start_eng_1_n3.nod'))
+        eng_2_n3 = load(os.path.join(test_data_path, 'eng_start_eng_2_n3.nod'))
+        node = EngStart()
+        node.derive(None, None, None, None,
+                    None, None, None, None,
+                    eng_1_n3, eng_2_n3, None, None)
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].name, 'Eng (1) Start')
+        self.assertEqual(node[0].index, 164)
+        self.assertEqual(node[1].name, 'Eng (2) Start')
+        self.assertEqual(node[1].index, 99)
 
 
 class TestFirstEngStartBeforeLiftoff(unittest.TestCase):

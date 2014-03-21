@@ -78,6 +78,7 @@ from analysis_engine.library import (ambiguous_runway,
                                      slices_and,
                                      slices_remove_small_slices,
                                      trim_slices,
+                                     level_off_index,
                                      valid_slices_within_array,
                                      value_at_index,
                                      vstack_params_where_state)
@@ -5963,7 +5964,7 @@ class APUFireWarningDuration(KeyPointValueNode):
         if fire:
             self.create_kpvs_where(fire.array==True, fire.hz)
         else:
-            hz = single_bottle.hz or dual_bottle.hz
+            hz = (single_bottle or dual_bottle).hz
             apu_fires = vstack_params_where_state((single_bottle, 'Fire'),
                                                   (dual_bottle, 'Fire'))
     
@@ -6072,8 +6073,7 @@ class EngGasTempDuringMaximumContinuousPowerForXMinMax(KeyPointValueNode):
 
 class EngGasTempDuringEngStartMax(KeyPointValueNode):
     '''
-    One key point value for maximum engine gas temperature at engine start for
-    all engines. The value is taken from the engine with the largest value.
+    One key point value for maximum engine gas temperature at engine start.
     
     Note that for three spool engines, the N3 value is used to detect
     running, while for two spool engines N2 is the highest spool speed so is
@@ -6082,43 +6082,69 @@ class EngGasTempDuringEngStartMax(KeyPointValueNode):
 
     @classmethod
     def can_operate(cls, available):
-        return ('Eng (*) Gas Temp Max' in available and \
-                'Eng (*) N2 Min' in available and \
-                'Takeoff Turn Onto Runway' in available)
+        egt = any_of(['Eng (1) Gas Temp',
+                      'Eng (2) Gas Temp',
+                      'Eng (3) Gas Temp',
+                      'Eng (4) Gas Temp',], available)
+        n3 = any_of(('Eng (1) Gas Temp',
+                     'Eng (2) Gas Temp',
+                     'Eng (3) Gas Temp',
+                     'Eng (4) Gas Temp'), available)
+        n2 = any_of(('Eng (1) N3',
+                     'Eng (2) N3',
+                     'Eng (3) N3',
+                     'Eng (4) N3'), available)
+        return egt and (n3 or n2)
     
     units = ut.CELSIUS
 
     def derive(self,
-               eng_egt_max=P('Eng (*) Gas Temp Max'),
-               eng_n2_min=P('Eng (*) N2 Min'),
-               eng_n3_min=P('Eng (*) N3 Min'),
-               toff_turn_rwy=KTI('Takeoff Turn Onto Runway')):
+               eng_1_egt=P('Eng (1) Gas Temp'),
+               eng_2_egt=P('Eng (2) Gas Temp'),
+               eng_3_egt=P('Eng (3) Gas Temp'),
+               eng_4_egt=P('Eng (4) Gas Temp'),
+               eng_1_n3=P('Eng (1) N3'),
+               eng_2_n3=P('Eng (2) N3'),
+               eng_3_n3=P('Eng (3) N3'),
+               eng_4_n3=P('Eng (4) N3'),
+               eng_1_n2=P('Eng (1) N2'),
+               eng_2_n2=P('Eng (2) N2'),
+               eng_3_n2=P('Eng (3) N2'),
+               eng_4_n2=P('Eng (4) N2'),
+               eng_starts=KTI('Eng Start')):
 
-        # We never see engine start if data started after aircraft is airborne:
-        if not toff_turn_rwy:
-            return
-
-        # Where the egt is in a superframe, let's give up now:
-        if eng_egt_max.frequency < 0.25:
-            return
-
-        # Extract the index for the first turn onto the runway:
-        fto_idx = toff_turn_rwy.get_first().index
-
-        if eng_n3_min:
-            speed_min = eng_n3_min
-        else:
-            speed_min = eng_n2_min
+        eng_egts = (eng_1_egt, eng_2_egt, eng_3_egt, eng_4_egt)
+        eng_powers = (eng_1_n3 or eng_1_n2,
+                      eng_2_n3 or eng_2_n2,
+                      eng_3_n3 or eng_3_n2,
+                      eng_4_n3 or eng_4_n2)
+        
+        eng_groups = enumerate(zip(eng_egts, eng_powers), start=1)
+        
+        search_duration = 10 * 60 * self.frequency
+        
+        for eng_number, (eng_egt, eng_power) in eng_groups:
+            if not eng_egt or not eng_power or eng_egt.frequency < 0.25:
+                # Where the egt is in a superframe, let's give up now:
+                continue
             
-        # Mask out sections with lowest core speed > 40%, i.e. all engines running:
-        speed_data = speed_min.array[0:fto_idx]
-        speed_data[speed_data > 40.0] = np.ma.masked
-        chunks = np.ma.clump_unmasked(speed_data)
-
-        if not chunks:
-            return
-
-        self.create_kpvs_within_slices(eng_egt_max.array, chunks, max_value)
+            eng_start_name = eng_starts.format_name(number=eng_number)
+            eng_number_starts = eng_starts.get(name=eng_start_name)
+            
+            for eng_start in eng_number_starts:
+                # Search for 10 minutes for level off.
+                start = eng_start.index
+                stop = start + search_duration
+                eng_start_slice = slice(start, stop)
+                
+                level_off = level_off_index(eng_power.array, self.frequency, 10, 1,
+                                            _slice=eng_start_slice)
+                
+                if level_off is not None:
+                    eng_start_slice = slice(start, level_off)
+                
+                self.create_kpv(*max_value(eng_egt.array,
+                                           _slice=eng_start_slice))
 
 
 class EngGasTempDuringEngStartForXSecMax(KeyPointValueNode):
@@ -9925,11 +9951,20 @@ class TAWSTerrainWarningDuration(KeyPointValueNode):
 
     name = 'TAWS Terrain Warning Duration'
     units = ut.SECOND
+    
+    @classmethod
+    def can_operate(cls, available):
+        return ('Airborne' in available and
+                any_of(('TAWS Terrain', 'TAWS Terrain Warning'), available))
 
     def derive(self, taws_terrain=M('TAWS Terrain'),
+               taws_terrain_warning=M('TAWS Terrain Warning'),
                airborne=S('Airborne')):
-        self.create_kpvs_where(taws_terrain.array == 'Warning',
-                               taws_terrain.hz, phase=airborne)
+        hz = (taws_terrain or taws_terrain_warning).hz
+        taws_terrains = vstack_params_where_state(
+            (taws_terrain, 'Warning'),
+            (taws_terrain_warning, 'Warning')).any(axis=0)
+        self.create_kpvs_where(taws_terrains, hz, phase=airborne)
 
 
 class TAWSTerrainPullUpWarningDuration(KeyPointValueNode):
@@ -10965,6 +11000,8 @@ class GrossWeightDelta60SecondsInFlightMax(KeyPointValueNode):
             in_air_stop = (in_air.slice.stop / 60.0) if in_air.slice.stop else None
             in_air_slice = slice(in_air_start, in_air_stop)
             max_diff = max_abs_value(weight_diff, _slice=in_air_slice)
+            if max_diff.index is None:
+                continue
             # narrow down the index to the maximum change in this region of flight
             max_diff_slice = slice(max_diff.index * 60,
                                    (max_diff.index + 1) * 60)

@@ -4937,6 +4937,26 @@ class RollRate(DerivedParameterNode):
         self.array = rate_of_change(roll, 2.0)
 
 
+class Rudder(DerivedParameterNode):
+    '''
+    Combination of multi-part rudder elements.
+    '''
+
+    units = ut.DEGREE
+    
+    def derive(self,
+               src_A=P('Rudder (Upper)'),
+               src_B=P('Rudder (Middle)'),
+               src_C=P('Rudder (Lower)'),
+               ):
+
+        sources = [src_A, src_B, src_C]
+        self.offset = 0.0
+        self.frequency = src_A.frequency
+        self.array = blend_parameters(sources, offset=self.offset, 
+                                      frequency=self.frequency)
+
+
 class RudderPedal(DerivedParameterNode):
     '''
     '''

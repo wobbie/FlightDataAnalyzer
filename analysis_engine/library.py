@@ -3745,7 +3745,10 @@ def max_abs_value(array, _slice=slice(None), start_edge=None, stop_edge=None):
         if edge_value and edge_value > value:
             index = stop_edge
             value = edge_value
-    return Value(index, array[index]) # Recover sign of the value.
+    if value is None:
+        return Value(None, None)
+    else:
+        return Value(index, array[index]) # Recover sign of the value.
 
 
 def max_value(array, _slice=slice(None), start_edge=None, stop_edge=None):
@@ -5157,7 +5160,7 @@ def rms_noise(array, ignore_pc=None):
     return sqrt(np.ma.mean(np.ma.power(to_rms,2))) # RMS in one line !
 
 
-def runs_of_ones(bits):
+def runs_of_ones(bits, min_samples=None):
     '''
     Q: This function used to have a min_len kwarg which was a result of its
     implementation. If there is a use case for only returning sections greater
@@ -5167,10 +5170,14 @@ def runs_of_ones(bits):
     :returns: S
     :rtype: [slice]
     '''
-    return np.ma.clump_unmasked(np.ma.masked_not_equal(bits, 1))
+    runs = np.ma.clump_unmasked(np.ma.masked_not_equal(bits, 1))
+    if min_samples:
+        runs = slices_remove_small_slices(runs, count=min_samples)
+
+    return runs
 
 
-def slices_of_runs(array):
+def slices_of_runs(array, min_samples=None):
     '''
     Provides a list of slices of runs of each value in the array.
 
@@ -5189,7 +5196,11 @@ def slices_of_runs(array):
             continue
         if hasattr(array, 'values_mapping'):
             value = array.values_mapping[value]
-        yield value, runs_of_ones(array == value)
+        runs = runs_of_ones(array == value, min_samples=min_samples)
+        if min_samples and runs == []:
+            value = None
+
+        yield value, runs
 
 
 def shift_slice(this_slice, offset):
@@ -5571,6 +5582,61 @@ def slices_from_ktis(kti_1, kti_2):
                 slices.append(slice(previous[0], item[0]))
         previous = item
     return slices
+
+
+def level_off_index(array, frequency, seconds, variance, _slice=None,
+                   include_window=True):
+    '''
+    Find the first index within _slice where array levels off. The window
+    
+    :type array: np.ma.masked_array
+    :type frequency: int or float
+    :type seconds: int or float
+    :type variance: int or float
+    :type _slice: slice
+    :param include_window: Include the window in the returned level off index.
+    :type include_window: bool
+    :raises ValueError: If the sample window (frequency * samples) is not a whole number.
+    :returns: Index where the array first levels off within slice within the specified variance.
+    :rtype: 
+    '''
+    if _slice:
+        array = array[_slice]
+    
+    samples = int(frequency * seconds)
+    
+    if frequency * seconds != samples:
+        raise ValueError("Frequency * samples must be integer")
+    
+    if samples > array.size:
+        return None
+    
+    sliding_window = np.lib.stride_tricks.as_strided(
+        array, shape=(len(array) - samples, samples),
+        strides=array.strides * 2)
+    
+    unmasked_slices = np.ma.clump_unmasked(array)
+    
+    for unmasked_slice in filter_slices_length(unmasked_slices, samples):
+        # Exclude masked data within the sliding_window.
+        stop = unmasked_slice.stop - (samples - 1)
+        ptp = np.ptp(sliding_window[unmasked_slice.start:stop], axis=-1)
+        stable = ptp < variance
+        
+        if not stable.any():
+            # All data is not level.
+            return None
+        
+        index = np.argmax(stable) + unmasked_slice.start
+        
+        if _slice and _slice.start:
+            index += _slice.start
+        
+        if include_window:
+            index += samples
+        
+        return index
+
 
 """
 Spline function placeholder
