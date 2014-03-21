@@ -61,7 +61,9 @@ def get_derived_nodes(module_names):
     '''
     def isclassandsubclass(value, classinfo):
         return isclass(value) and issubclass(value, classinfo)
-
+    if isinstance(module_names, basestring):
+        # This has been done too often!
+        module_names = [module_names]
     nodes = {}
     for name in module_names:
         #Ref:
