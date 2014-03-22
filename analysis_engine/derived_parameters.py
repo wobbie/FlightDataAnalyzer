@@ -5630,6 +5630,26 @@ class SpeedbrakeHandle(DerivedParameterNode):
             self.array = available[0]
 
 
+class Stabilizer(DerivedParameterNode):
+    '''
+    Combination of multi-part stabilizer elements.
+    '''
+
+    units = ut.DEGREE
+    
+    def derive(self,
+               src_1=P('Stabilizer (1)'),
+               src_2=P('Stabilizer (2)'),
+               src_3=P('Stabilizer (3)'),
+               ):
+
+        sources = [src_1, src_2, src_3]
+        self.offset = 0.0
+        self.frequency = src_1.frequency
+        self.array = blend_parameters(sources, offset=self.offset, 
+                                      frequency=self.frequency)
+
+
 class ApproachRange(DerivedParameterNode):
     '''
     This is the range to the touchdown point for both ILS and visual
