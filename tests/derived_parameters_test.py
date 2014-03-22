@@ -4386,19 +4386,21 @@ class TestRudder(unittest.TestCase):
 class TestStabilizer(unittest.TestCase):
     def test_can_operate(self):
         opts = Stabilizer.get_operational_combinations()
-        # Set up currently for 777 which has to have three parts.
-        self.assertIn(('Stabilizer (1)', 'Stabilizer (2)', 'Stabilizer (3)'), opts)
+        # Set up currently for 777 which has to have four parts.
+        self.assertIn(('Stabilizer (1)', 'Stabilizer (2)', 'Stabilizer (3)', 'Stabilizer (4)'), opts)
 
     def test_derive(self):
-        s1 = P('Stabilizer (1)', array=np.ma.array([0]*7))
+        s1 = P('Stabilizer (1)', array=np.ma.array([0]*9))
         s1.array[1] = 3
-        s2 = P('Stabilizer (2)', array=np.ma.array([0]*7))
+        s2 = P('Stabilizer (2)', array=np.ma.array([0]*9))
         s2.array[3] = 6
-        s3 = P('Stabilizer (3)', array=np.ma.array([0]*7))
+        s3 = P('Stabilizer (3)', array=np.ma.array([0]*9))
         s3.array[5] = 9
+        s4 = P('Stabilizer (3)', array=np.ma.array([0]*9))
+        s4.array[7] = 12
         stab = Stabilizer()
-        stab.derive(s1, s2, s3)
-        np.testing.assert_almost_equal(stab.array.data, [0,1,0,2,0,3,0])
+        stab.derive(s1, s2, s3, s4)
+        np.testing.assert_almost_equal(stab.array.data, [0,1,0,2,0,3,0,4,0])
         
 
 class TestWheelSpeed(unittest.TestCase):

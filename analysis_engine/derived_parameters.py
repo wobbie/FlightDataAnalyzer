@@ -5641,9 +5641,10 @@ class Stabilizer(DerivedParameterNode):
                src_1=P('Stabilizer (1)'),
                src_2=P('Stabilizer (2)'),
                src_3=P('Stabilizer (3)'),
+               src_4=P('Stabilizer (4)'),
                ):
 
-        sources = [src_1, src_2, src_3]
+        sources = [src_1, src_2, src_3, src_4]
         self.offset = 0.0
         self.frequency = src_1.frequency
         self.array = blend_parameters(sources, offset=self.offset, 
