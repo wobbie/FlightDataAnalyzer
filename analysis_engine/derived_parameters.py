@@ -5633,6 +5633,10 @@ class SpeedbrakeHandle(DerivedParameterNode):
 class Stabilizer(DerivedParameterNode):
     '''
     Combination of multi-part stabilizer elements.
+    
+    Three sensors measure the input shaft angle, converted here for the 777 surface.
+    
+    See D247W018-9 Page 2677
     '''
 
     units = ut.DEGREE
@@ -5641,14 +5645,20 @@ class Stabilizer(DerivedParameterNode):
                src_1=P('Stabilizer (1)'),
                src_2=P('Stabilizer (2)'),
                src_3=P('Stabilizer (3)'),
-               src_4=P('Stabilizer (4)'),
+               frame = A('Frame'),
                ):
+        
+        frame_name = frame.value if frame else ''
 
-        sources = [src_1, src_2, src_3, src_4]
-        self.offset = 0.0
-        self.frequency = src_1.frequency
-        self.array = blend_parameters(sources, offset=self.offset, 
-                                      frequency=self.frequency)
+        if frame_name in ['777']:
+            sources = [src_1, src_2, src_3]
+            self.offset = 0.0
+            self.frequency = src_1.frequency
+            shaft_angle = blend_parameters(sources, offset=self.offset,
+                                           frequency=self.frequency)
+            self.array = 0.0503 * shaft_angle - 3.4629
+        else:
+            raise ValueError('Stabilizer called but not for 777 frame.')
 
 
 class ApproachRange(DerivedParameterNode):
