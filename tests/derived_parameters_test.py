@@ -144,10 +144,12 @@ from analysis_engine.derived_parameters import (
     SidestickAngleFO,
     SlatAngle,
     Speedbrake,
+    Stabilizer,
     VerticalSpeed,
     VerticalSpeedForFlightPhases,
     RateOfTurn,
     Roll,
+    Rudder,
     ThrottleLevers,
     ThrustAsymmetry,
     TrackDeviationFromRunway,
@@ -4359,6 +4361,53 @@ class TestVerticalSpeedInertial(unittest.TestCase):
         # Just check the graphs are similar in shape - there will always be
         # errors because of the integration technique used.
         np.testing.assert_almost_equal(vsi.array, expected, decimal=-2)
+
+
+class TestRudder(unittest.TestCase):
+    def test_can_operate(self):
+        opts = Rudder.get_operational_combinations()
+        # Set up currently for 777 which has to have three parts.
+        #self.assertIn(('Rudder (Upper)'), opts)
+        #self.assertIn(('Rudder (Middle)'), opts)
+        #self.assertIn(('Rudder (Lower)'), opts)
+        self.assertIn(('Rudder (Upper)', 'Rudder (Middle)', 'Rudder (Lower)'), opts)
+
+    def test_derive(self):
+        upper = P('Rudder (Upper)', array=np.ma.array([0]*7))
+        upper.array[1] = 3
+        middle = P('Rudder (Middle)', array=np.ma.array([0]*7))
+        middle.array[3] = 6
+        lower = P('Rudder (Lower)', array=np.ma.array([0]*7))
+        lower.array[5] = 9
+        rud = Rudder()
+        rud.derive(upper, middle, lower)
+        np.testing.assert_almost_equal(rud.array.data, [0,1,0,2,0,3,0])
+        
+class TestStabilizer(unittest.TestCase):
+    def test_can_operate(self):
+        opts = Stabilizer.get_operational_combinations()
+        # Set up currently for 777 which has to have four parts.
+        self.assertIn(('Stabilizer (1)', 'Stabilizer (2)', 'Stabilizer (3)', 'Frame'), opts)
+
+    def test_basic(self):
+        s1 = P('Stabilizer (1)', array=np.ma.array([0]*7))
+        s1.array[1] = 3
+        s2 = P('Stabilizer (2)', array=np.ma.array([0]*7))
+        s2.array[3] = 6
+        s3 = P('Stabilizer (3)', array=np.ma.array([0]*7))
+        s3.array[5] = 9
+        frame = A('Frame', '777')
+        stab = Stabilizer()
+        stab.derive(s1, s2, s3, frame)
+        result = (np.array([0,1,0,2,0,3,0]) * 0.0503) - 3.4629
+        # Blend will null the end values, so only test excluding these.
+        np.testing.assert_almost_equal(stab.array.data[1:-1], result[1:-1])
+        
+    def test_wrong_frame(self):
+        s1 = P('Stabilizer (1)', array=np.ma.array([0]*7))
+        frame = A('Frame', '787')
+        stab = Stabilizer()
+        self.assertRaises(ValueError, stab.derive, s1, s1, s1, frame)
 
 
 class TestWheelSpeed(unittest.TestCase):
