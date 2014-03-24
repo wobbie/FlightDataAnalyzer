@@ -7059,22 +7059,48 @@ class TestFlareDistance20FtToTouchdown(unittest.TestCase, NodeTest):
 # Fuel Quantity
 
 
-class TestFuelQtyAtLiftoff(unittest.TestCase, CreateKPVsAtKTIsTest):
+class TestFuelQtyAtLiftoff(unittest.TestCase):
 
-    def setUp(self):
-        self.node_class = FuelQtyAtLiftoff
-        self.operational_combinations = [('Fuel Qty', 'Liftoff')]
+    def test_can_operate(self):
+        opts = FuelQtyAtLiftoff.get_operational_combinations()
+        self.assertEqual(opts, [('Fuel Qty', 'Liftoff')])
 
-    @unittest.skip('Test Not Implemented')
     def test_derive(self):
-        self.assertTrue(False, msg='Test Not Implemented')
+        # example from B777 recorded fuel qty parameter
+        fuel_qty = P('Fuel Qty', np.ma.array(
+            [ 105600.,  105600.,  105600.,  105600.,  105600.,  105500.,
+              105500.,  105500.,  105500.,  105500.,  105500.,  105500.,
+              105500.,  105500.,  105500.,  105500.,  105500.,  105500.,
+              105500.,  105600.,  105600.,  105600.,  105500.,  105500.,
+              105500.,  105500.,  105500.,  105500.,  105500.,  105500.,
+              105500.,  105400.,  105400.,  105500.,  105500.,  105500.,
+              105400.,  105400.,  105400.,  105400.,  105400.,  105400.,
+              105400.,  105400.,  105400.,  105500.,  105500.,  105600.,
+              105500.,  105500.,  105400.,  105400.,  105300.,  105100.,
+              105300.,  105300.,  105300.,  105300.,  105400.,  105400.,
+              105300.,  105300.,  105200.,  105300.,  105400.,  105400.,
+              105400.,  105500.,  105600.,  105500.,  105500.,  105500.,
+              105500.,  105500.,  105400.,  105500.,  105500.,  105400.,
+              105400.,  105400.,  105500.,  105500.,  105400.,  105400.,
+              105500.,  105400.,  105400.,  105400.,  105300.,  105300.,
+              105300.,  105200.,  105200.,  105200.,  105100.,  105100.,
+              105100.,  105100.,  104900.,  104900.]))
+        # roc limit exceeded, caused by long G at liftoff
+        fuel_qty.array[53] = np.ma.masked
+        fuel_qty.array[54] = np.ma.masked
+        fuel_qty.array[58] = np.ma.masked
+        liftoff = KTI(items=[KeyTimeInstance(54)])
+        fq = FuelQtyAtLiftoff()
+        fq.derive(fuel_qty, liftoff)
+        self.assertEqual(len(fq), 1)
+        self.assertEqual(fq[0].index, 54)
+        self.assertEqual(fq[0].value, 105372.5)
 
 
-class TestFuelQtyAtTouchdown(unittest.TestCase, CreateKPVsAtKTIsTest):
-
-    def setUp(self):
-        self.node_class = FuelQtyAtTouchdown
-        self.operational_combinations = [('Fuel Qty', 'Touchdown')]
+class TestFuelQtyAtTouchdown(unittest.TestCase):
+    def test_can_operate(self):
+        opts = FuelQtyAtTouchdown.get_operational_combinations()
+        self.assertEqual(opts, [('Fuel Qty', 'Touchdown')])
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
