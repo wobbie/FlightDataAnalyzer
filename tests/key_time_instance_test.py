@@ -52,7 +52,6 @@ from analysis_engine.key_time_instances import (
     OnBlocks,
     SecsToTouchdown,
     SlatAlternateArmedSet,
-    SpeedbrakeOpen,
     TakeoffAccelerationStart,
     TakeoffPeakAcceleration,
     TakeoffTurnOntoRunway,
