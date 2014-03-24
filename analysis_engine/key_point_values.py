@@ -31,6 +31,7 @@ from analysis_engine.flight_phase import scan_ils
 from analysis_engine.node import KeyPointValueNode, KPV, KTI, P, S, A, M, App, Section
 
 from analysis_engine.library import (ambiguous_runway,
+                                     align,
                                      all_of,
                                      any_of,
                                      bearings_and_distances,
@@ -8078,33 +8079,40 @@ class GroundspeedAtTOGA(KeyPointValueNode):
 
 class GroundspeedWithThrustReversersDeployedMin(KeyPointValueNode):
     '''
-    Minimum groundspeed measured with Thrust Reversers deployed and the maximum 
-    of either engine's EPR measurements above %.2f%% or N1 measurements 
+    Minimum groundspeed measured with Thrust Reversers deployed and the maximum
+    of either engine's EPR measurements above %.2f%% or N1 measurements
     above %d%%
     ''' % (REVERSE_THRUST_EFFECTIVE_EPR, REVERSE_THRUST_EFFECTIVE_N1)
 
+    align = False
     units = ut.KT
 
     @classmethod
     def can_operate(self, available):
-        return all_of(('Groundspeed', 'Thrust Reversers', 'Landing'), 
+        return all_of(('Groundspeed', 'Thrust Reversers', 'Landing'),
                       available) and \
                any_of(('Eng (*) EPR Max', 'Eng (*) N1 Max'), available)
-    
+
     def derive(self,
                gnd_spd=P('Groundspeed'),
                tr=M('Thrust Reversers'),
-               eng_epr=P('Eng (*) EPR Max'),  # must come before N1 where available
+               eng_epr=P('Eng (*) EPR Max'),
                eng_n1=P('Eng (*) N1 Max'),
                landings=S('Landing')):
 
+        if eng_epr and eng_epr.frequency > (eng_n1.frequency if eng_n1 else 0):
+            power = eng_epr
+            threshold = REVERSE_THRUST_EFFECTIVE_EPR
+        else:
+            power = eng_n1
+            threshold = REVERSE_THRUST_EFFECTIVE_N1
+
+        power.array = align(power, gnd_spd)
+        power.frequency = gnd_spd.frequency
+        tr.array = align(tr, gnd_spd)
+        tr.frequency = gnd_spd.frequency
+
         for landing in landings:
-            if eng_epr:
-                power = eng_epr
-                threshold = REVERSE_THRUST_EFFECTIVE_EPR
-            else:
-                power = eng_n1
-                threshold = REVERSE_THRUST_EFFECTIVE_N1
             high_rev = thrust_reversers_working(landing, power, tr, threshold)
             self.create_kpvs_within_slices(gnd_spd.array, high_rev, min_value)
 
