@@ -1907,13 +1907,13 @@ class TestFindTocTod(unittest.TestCase):
               351.50954688,  333.34129375,  331.8642    ,  331.8642    ,
               323.14934688])
         # data is already sliced for the required section
-        res = find_toc_tod(array, slice(0, len(array)), mode='Descent')
+        res = find_toc_tod(array, slice(0, len(array)), 1, mode='Descent')
         self.assertEqual(res, 117)
         # with some smoothing (as per Hercules Alt Std Smoothed
         smooth = moving_average(array, window=3, weightings=[0.25,0.5,0.25])
-        res = find_toc_tod(smooth, slice(0, len(smooth)), mode='Descent')
+        res = find_toc_tod(smooth, slice(0, len(smooth)), 1, mode='Descent')
         self.assertEqual(res, 116) # bit before previous
-        
+
 
 class TestFirstOrderLag(unittest.TestCase):
 

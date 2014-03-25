@@ -511,7 +511,8 @@ class TopOfClimb(KeyTimeInstanceNode):
         for ccd_phase in ccd:
             ccd_slice = ccd_phase.slice
             try:
-                n_toc = find_toc_tod(alt_std.array, ccd_slice, 'Climb')
+                n_toc = find_toc_tod(alt_std.array, ccd_slice, self.frequency,
+                                     mode='Climb')
             except:
                 # altitude data does not have an increasing section, so quit.
                 continue
@@ -536,7 +537,8 @@ class TopOfDescent(KeyTimeInstanceNode):
         for ccd_phase in ccd:
             ccd_slice = ccd_phase.slice
             try:
-                n_tod = find_toc_tod(alt_std.array, ccd_slice, 'Descent')
+                n_tod = find_toc_tod(alt_std.array, ccd_slice, self.frequency,
+                                     mode='Descent')
             except ValueError:
                 # altitude data does not have a decreasing section, so quit.
                 continue
