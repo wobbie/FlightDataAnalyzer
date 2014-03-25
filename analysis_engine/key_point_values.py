@@ -57,6 +57,7 @@ from analysis_engine.library import (ambiguous_runway,
                                      max_continuous_unmasked,
                                      max_value,
                                      min_value,
+                                     moving_average,
                                      repair_mask,
                                      np_ma_masked_zeros_like,
                                      peak_curvature,
@@ -7889,6 +7890,9 @@ class FlareDistance20FtToTouchdown(KeyPointValueNode):
 
 class FuelQtyAtLiftoff(KeyPointValueNode):
     '''
+    Fuel quantity data is repaired and gaps are smoothed over to create a
+    more realistic reading than that of the recorded value which fluctuates
+    based on the longitudinal acceleration.
     '''
 
     units = ut.KG
@@ -7897,11 +7901,15 @@ class FuelQtyAtLiftoff(KeyPointValueNode):
                fuel_qty=P('Fuel Qty'),
                liftoffs=KTI('Liftoff')):
 
-        self.create_kpvs_at_ktis(fuel_qty.array, liftoffs)
+        self.create_kpvs_at_ktis(
+            moving_average(repair_mask(fuel_qty.array), 20), liftoffs)
 
 
 class FuelQtyAtTouchdown(KeyPointValueNode):
     '''
+    Fuel quantity data is repaired and gaps are smoothed over to create a
+    more realistic reading than that of the recorded value which fluctuates
+    based on the longitudinal acceleration.
     '''
 
     units = ut.KG
@@ -7910,7 +7918,8 @@ class FuelQtyAtTouchdown(KeyPointValueNode):
                fuel_qty=P('Fuel Qty'),
                touchdowns=KTI('Touchdown')):
 
-        self.create_kpvs_at_ktis(fuel_qty.array, touchdowns)
+        self.create_kpvs_at_ktis(
+            moving_average(repair_mask(fuel_qty.array), 20), touchdowns)
 
 
 class FuelQtyLowWarningDuration(KeyPointValueNode):
