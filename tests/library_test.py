@@ -3638,7 +3638,7 @@ class TestOverflowCorrection(unittest.TestCase):
                         Section('Fast', slice(5859, 11520), 5859, 11520)])
         radioA = load(os.path.join(
             test_data_path, 'A320_Altitude_Radio_A_overflow.nod'))
-        resA = overflow_correction(radioA, fast)
+        resA = overflow_correction(radioA, fast, max_val=4095)
         sects = np.ma.clump_unmasked(resA)
         self.assertEqual(len(sects), 4)
         for sect in sects[0::2]:
@@ -3650,7 +3650,7 @@ class TestOverflowCorrection(unittest.TestCase):
 
         radioB = load(os.path.join(
             test_data_path, 'A320_Altitude_Radio_B_overflow.nod'))
-        resB = overflow_correction(radioB, fast)
+        resB = overflow_correction(radioB, max_val=4095)
         sects = np.ma.clump_unmasked(resB)
         self.assertEqual(len(sects), 4)
         for sect in sects[0::2]:
