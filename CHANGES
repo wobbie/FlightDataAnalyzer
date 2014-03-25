@@ -8,11 +8,21 @@ You can view the differences in tagged versions as follows:
 
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
-v0.7.2
+v0.8.1
 ------
  - fix for APVerticalMode where only flare mode is avaliable
- - added check for valid ils localiser data within approach for ils established flight phase
+ - added check for valid ils localiser data within approach for ils established
+   flight phase
  - improvements to Altitude Radio overflow correction
+ - optimisations in second_window()
+ - global replacement of assert_almost_equal with
+   assert_masked_array_almost_equal in library test and derived parameters
+ - added missing "Eng (*) Fuel Flow Max"
+ - added B777 Speedbrake Selected algorithm
+ - EngStart and EngStop improved to ignore small power dips
+ - rudder added as Derived Parameter, based on the three parts of a 777 rudder
+ - fuel quantity data is repaired and gaps are smoothed over to create a more
+   realistic reading than that of the recorded
 
 
 v0.7.1
