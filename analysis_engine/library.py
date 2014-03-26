@@ -5587,7 +5587,7 @@ def slices_from_ktis(kti_1, kti_2):
 def level_off_index(array, frequency, seconds, variance, _slice=None,
                    include_window=True):
     '''
-    Find the first index within _slice where array levels off. The window
+    Find the first index within _slice where array levels off.
     
     :type array: np.ma.masked_array
     :type frequency: int or float
@@ -5603,10 +5603,7 @@ def level_off_index(array, frequency, seconds, variance, _slice=None,
     if _slice:
         array = array[_slice]
     
-    samples = int(frequency * seconds)
-    
-    if frequency * seconds != samples:
-        raise ValueError("Frequency * samples must be integer")
+    samples = ceil(frequency * seconds)
     
     if samples > array.size:
         return None
