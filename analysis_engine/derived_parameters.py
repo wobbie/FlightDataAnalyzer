@@ -7175,8 +7175,15 @@ class AirspeedMinusVapp(DerivedParameterNode):
             return
 
         for phase in phases:
-            value = most_common_value(vapp.array[phase].astype(np.int))
-            if value is not None:
+            if vapp.name == 'Vapp':
+                # we have the recorded or value provided in derived parameter
+                # from AFR field, so we can use the entire array
+                self.array[phase] = airspeed.array[phase] - vapp.array[phase]
+            else:
+                # we have the lookup parameter
+                value = most_common_value(vapp.array[phase].astype(np.int))
+                if value is None:
+                    continue
                 self.array[phase] = airspeed.array[phase] - value
 
 
