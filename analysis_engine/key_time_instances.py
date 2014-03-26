@@ -426,7 +426,7 @@ class LastEngStopAfterTouchdown(KeyTimeInstanceNode):
         else:
             # Q: Should we be creating a KTI if the last engine stop cannot
             # be found?
-            self.create_kti(duration.value - 1)
+            self.create_kti(duration.value * self.frequency - 1)
 
 
 class EnterHold(KeyTimeInstanceNode):
