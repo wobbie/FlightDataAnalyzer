@@ -60,6 +60,7 @@ from analysis_engine.derived_parameters import (
     #AltitudeForFlightPhases,
     AltitudeQNH,
     AltitudeRadio,
+    AltitudeSTDSmoothed,
     #AltitudeRadioForFlightPhases,
     #AltitudeSTD,
     AltitudeTail,
@@ -653,6 +654,25 @@ class TestAirspeedTrue(unittest.TestCase):
         tas.derive(cas, alt, None, None, None, rtos, None, acc)
         expected = speed+speed[::-1]
         ma_test.assert_array_almost_equal(tas.array, expected, decimal=1)
+
+
+class TestAltitudeSTDSmoothed(unittest.TestCase):
+    def test_can_operate(self):
+        opts = AltitudeSTDSmoothed.get_operational_combinations()
+        self.assertTrue(('Altitude STD', 'Frame',) in opts)
+        self.assertTrue(('Altitude STD (Fine)', 'Altitude STD', 'Frame') in opts)
+        self.assertTrue(('Altitude STD (Capt)', 'Altitude STD (FO)', 'Frame') in opts)
+    
+    def test_derive_atr_42(self):
+        frame = Attribute('Frame', 'ATR42_V2_Quad')
+        alt = load(os.path.join(test_data_path, 'AltitudeSTDSmoothed_alt.nod'))
+        node = AltitudeSTDSmoothed()
+        node.derive(None, alt, None, None, frame)
+        # np.ma.sum(np.ma.abs(np.ma.diff(alt.array[4800:5000]))) == 2000
+        linear_diff = np.ma.sum(np.ma.abs(np.ma.diff(node.array[4800:5000])))
+        self.assertTrue(linear_diff < 200)
+        max_diff = np.ma.max(np.ma.abs(alt.array - node.array))
+        self.assertTrue(max_diff < 100)
 
 
 class TestAltitudeAAL(unittest.TestCase):
