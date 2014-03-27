@@ -6091,15 +6091,6 @@ class TestAirspeedMinusV2(unittest.TestCase, NodeTest):
         expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
-    def test_derive__superframe(self):
-        self.v2_record.array = np.tile(np.ma.repeat((100, 100, 100, 120), 4), 2)
-        self.v2_record.frequency = 1 / 64.0
-        node = self.node_class()
-        node.get_derived([self.airspeed, self.v2_record, None, self.liftoffs, self.climbs])
-        expected = np.ma.repeat((0, 2, 0), (180, 820, 1000))
-        expected[expected == 0] = np.ma.masked
-        ma_test.assert_masked_array_equal(node.array, expected)
-
 
 class TestAirspeedMinusV2For3Sec(unittest.TestCase, NodeTest):
 
