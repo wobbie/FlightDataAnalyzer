@@ -975,7 +975,9 @@ class AltitudeSTDSmoothed(DerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
 
-        return 'Altitude STD' in available
+        return ('Frame' in available and 
+                (('Altitude STD' in available) or 
+                 all_of(('Altitude STD (Capt)', 'Altitude STD (FO)'), available)))
 
     def derive(self, fine = P('Altitude STD (Fine)'), 
                alt = P('Altitude STD'),
@@ -1016,6 +1018,10 @@ class AltitudeSTDSmoothed(DerivedParameterNode):
 
         else:
             self.array = alt.array
+        
+        # Applying moving_window of a moving_window to avoid a large weighting/
+        # window size which would skew sharp curves.
+        self.array = moving_average(moving_average(self.array))
 
 
 # TODO: Account for 'Touch & Go' - need to adjust QNH for additional airfields!
