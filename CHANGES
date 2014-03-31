@@ -8,6 +8,15 @@ You can view the differences in tagged versions as follows:
 
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
+v0.8.2
+ - find_toc_tod improved to use frequency in creating the slope
+ - Fix for LastEngStop outside of data
+ - Added moving_average to AltitudeSTDSmoothed
+ - Fix: V-Vapp wasn't following changing Vapp signal Invalid test case for
+   superframe Vapp
+ - Align the AP Engaged arguments
+ - Fix for case when all data used by MagneticVariation (Lat and Lon) is masked
+
 v0.8.1
 ------
  - fix for APVerticalMode where only flare mode is avaliable
