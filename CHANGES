@@ -14,7 +14,7 @@ v0.8.2
  - Added moving_average to AltitudeSTDSmoothed
  - Fix: V-Vapp wasn't following changing Vapp signal Invalid test case for
    superframe Vapp
- - Align the AP Engaged arguments
+ - Align the AP Engaged and AP Channels Engaged arguments
  - Fix for case when all data used by MagneticVariation (Lat and Lon) is masked
 
 v0.8.1
