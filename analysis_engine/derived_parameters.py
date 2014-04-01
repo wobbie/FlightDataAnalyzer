@@ -4358,7 +4358,12 @@ class MagneticVariation(DerivedParameterNode):
                 mag_vars.append(geomag.declination(lat_val, lon_val,
                                                    alt_aal_val,
                                                    time=start_date))
-        
+
+        if not any(mag_vars):
+            # all masked array
+            self.array = np_ma_masked_zeros_like(lat.array)
+            return
+
         # Repair mask to avoid interpolating between masked values.
         mag_vars = repair_mask(np.ma.array(mag_vars), extrapolate=True)
         interpolator = interp1d(
@@ -4367,7 +4372,7 @@ class MagneticVariation(DerivedParameterNode):
         array = np_ma_masked_zeros_like(lat.array)
         array[:interpolation_length] = \
             interpolator(np.arange(interpolation_length))
-        
+
         # Exclude masked values.
         mask = lat.array.mask | lon.array.mask | alt_aal.array.mask
         array = np.ma.masked_where(mask, array)
