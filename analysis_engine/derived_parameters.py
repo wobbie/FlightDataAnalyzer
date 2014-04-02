@@ -3197,7 +3197,7 @@ class GrossWeight(DerivedParameterNode):
         return (all_of(('AFR Landing Gross Weight', 'HDF Duration'), available) or
                 all_of(('Zero Fuel Weight', 'Fuel Qty'), available))
     
-    def derive(self, zfw=KPV('Zero Fuel Weight'), fq=P('Fuel Qty'),
+    def derive(self, zfw=P('Zero Fuel Weight'), fq=P('Fuel Qty'),
                duration=A('HDF Duration'),
                afr_land_wgt=A('AFR Landing Gross Weight'),
                afr_takeoff_wgt=A('AFR Takeoff Gross Weight'),
@@ -3218,7 +3218,43 @@ class GrossWeight(DerivedParameterNode):
             else:
                 self.array.fill(afr_land_wgt.value)
         else:
-            self.array = fq.array + zfw.get_first().value
+            zfw_value = np.bincount(zfw.array.compressed().astype(np.int)).argmax()
+            self.array = fq.array + zfw_value
+
+
+class ZeroFuelWeight(DerivedParameterNode):
+    '''
+    The aircraft zero fuel weight is computed from the recorded gross weight
+    and fuel data.
+
+    See also the GrossWeightSmoothed calculation which uses fuel flow data to
+    obtain a higher sample rate solution to the aircraft weight calculation,
+    with a best fit to the available weight data.
+    
+    TODO: Move to a FlightAttribute which is stored in the database.
+    '''
+
+    units = ut.KG
+    # Force align for cases when only attribute dependencies are available.
+    align_frequency = 1
+    align_offset = 0
+    
+    @classmethod
+    def can_operate(cls, available):
+        return ('HDF Duration' in available and 
+                ('Dry Operating Weight' in available or
+                 all_of(('Fuel Qty', 'Gross Weight'), available)))
+    
+    def derive(self, fuel_qty=P('Fuel Qty'), gross_wgt=P('Gross Weight'),
+               dry_operating_wgt=A('Dry Operating Weight'),
+               payload=A('Payload'), duration=A('HDF Duration')):
+        if gross_wgt and fuel_qty:
+            weight = np.ma.median(gross_wgt.array - fuel_qty.array)
+        else:
+            weight = dry_operating_wgt.value
+            if payload and payload.value:
+                weight += payload.value
+        array = np.ma.ones(duration.value) * weight
 
 
 class GrossWeightSmoothed(DerivedParameterNode):

@@ -10962,40 +10962,6 @@ class GrossWeightAtTouchdown(KeyPointValueNode):
         self.create_kpvs_at_ktis(array, touchdowns)
 
 
-class ZeroFuelWeight(KeyPointValueNode):
-    '''
-    The aircraft zero fuel weight is computed from the recorded gross weight
-    and fuel data.
-
-    See also the GrossWeightSmoothed calculation which uses fuel flow data to
-    obtain a higher sample rate solution to the aircraft weight calculation,
-    with a best fit to the available weight data.
-    
-    TODO: Move to a FlightAttribute which is stored in the database.
-    '''
-
-    units = ut.KG
-    # Force align for cases when only attribute dependencies are available.
-    align_frequency = 1
-    align_offset = 0
-    
-    @classmethod
-    def can_operate(cls, available):
-        return ('Dry Operating Weight' in available or 
-                all_of(('Fuel Qty', 'Gross Weight'), available))
-    
-    def derive(self, fuel_qty=P('Fuel Qty'), gross_wgt=P('Gross Weight'),
-               dry_operating_wgt=A('Dry Operating Weight'),
-               payload=A('Payload')):
-        if gross_wgt and fuel_qty:
-            weight = np.ma.median(gross_wgt.array - fuel_qty.array)
-        else:
-            weight = dry_operating_wgt.value
-            if payload and payload.value:
-                weight += payload.value
-        self.create_kpv(0, weight)
-
-
 class GrossWeightDelta60SecondsInFlightMax(KeyPointValueNode):
     '''
     Measure the maximum change of gross weight over a one minute window. This is

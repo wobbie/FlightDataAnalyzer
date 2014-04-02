@@ -189,6 +189,7 @@ from analysis_engine.derived_parameters import (
     Vref,
     VrefLookup,
     VMOLookup,
+    ZeroFuelWeight,
 )
 
 
@@ -4807,6 +4808,43 @@ class TestApproachRange(TemporaryFileTest, unittest.TestCase):
                                  slice(12928, 13440, None)])
 
 
+class TestZeroFuelWeight(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = ZeroFuelWeight
+        self.operational_combinations = [
+            ('HDF Duration', 'Fuel Qty', 'Gross Weight'),
+            ('HDF Duration', 'Dry Operating Weight',),
+            ('HDF Duration', 'Dry Operating Weight', 'Payload'),
+        ]
+        self.duration = A('HDF Duration', 10)
+
+    def test_derive_fuel_qty_gross_wgt(self):
+        fuel_qty = P('Fuel Qty', np.ma.array([1, 2, 3, 4]))
+        gross_wgt = P('Gross Weight', np.ma.array([11, 12, 13, 14]))
+        zfw = ZeroFuelWeight()
+        zfw.derive(fuel_qty, gross_wgt, None, None, self.duration)
+        self.assertTrue((zfw.array == 10).all())
+    
+    def test_derive_dry_operating_wgt(self):
+        dry_operating_wgt = A('Dry Operating Weight', 100000)
+        zfw = ZeroFuelWeight()
+        zfw.derive(None, None, dry_operating_wgt, None, self.duration)
+        self.assertTrue((zfw.array == dry_operating_wgt.value).all())
+    
+    def test_derive_dry_operating_wgt_payload(self):
+        dry_operating_wgt = A('Dry Operating Weight', 100000)
+        payload = A('Payload', None)
+        zfw = ZeroFuelWeight()
+        zfw.derive(None, None, dry_operating_wgt, payload, self.duration)
+        self.assertTrue((zfw.array == dry_operating_wgt.value).all())
+        
+        payload = A('Payload', 1000)
+        zfw = ZeroFuelWeight()
+        zfw.derive(None, None, dry_operating_wgt, payload, self.duration)
+        self.assertTrue((zfw.array == 101000).all())
+
+
 class TestGrossWeight(unittest.TestCase):
     def test_can_operate(self):
         combinations = GrossWeight.get_operational_combinations()
@@ -4820,7 +4858,7 @@ class TestGrossWeight(unittest.TestCase):
     
     def test_derive_fuel_qty_zfw(self):
         fq = P('Fuel Qty', array=np.ma.array([40,30,20,10]))
-        zfw = KPV('Zero Fuel Weight', items=[KeyPointValue(0, 1000)])
+        zfw = P('Zero Fuel Weight', array=np.ma.array([990, 1000, 1000, 1100]))
         node = GrossWeight()
         node.derive(zfw, fq, None, None, None, None, None)
         self.assertEqual(node.array.tolist(), [1040, 1030, 1020, 1010])
@@ -4854,12 +4892,12 @@ class TestGrossWeight(unittest.TestCase):
         self.assertAlmostEqual(result[50], 1493.7, 1)
     
     def test_using_zero_fuel_weight(self):
-        zfw = KPV('Zero Fuel Weight',
-                  items=[KeyPointValue('Zero Fuel Weight', 17400)])
-        
         fuel_qty_array = np.ma.arange(10000, 4000, -100)
         fuel_qty_array[10] *= 0.9
         fuel_qty = P('Fuel Qty', array=fuel_qty_array)
+        
+        zfw_array = np_ma_ones_like(fuel_qty_array) * 17400
+        zfw = P('Zero Fuel Weight', array=zfw_array)
         
         gw = GrossWeight()
         gw.derive(zfw, fuel_qty, None, None, None, None, None)
