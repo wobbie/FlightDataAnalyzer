@@ -6123,7 +6123,7 @@ class EngGasTempDuringEngStartMax(KeyPointValueNode):
         
         eng_groups = enumerate(zip(eng_egts, eng_powers), start=1)
         
-        search_duration = 10 * 60 * self.frequency
+        search_duration = 5 * 60 * self.frequency
         
         for eng_number, (eng_egt, eng_power) in eng_groups:
             if not eng_egt or not eng_power or eng_egt.frequency < 0.25:
