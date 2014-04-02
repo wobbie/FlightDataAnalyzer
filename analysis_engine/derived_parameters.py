@@ -3254,7 +3254,7 @@ class ZeroFuelWeight(DerivedParameterNode):
             weight = dry_operating_wgt.value
             if payload and payload.value:
                 weight += payload.value
-        array = np.ma.ones(duration.value) * weight
+        self.array = np.ma.ones(duration.value * self.frequency) * weight
 
 
 class GrossWeightSmoothed(DerivedParameterNode):
