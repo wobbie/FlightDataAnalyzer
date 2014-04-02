@@ -5793,6 +5793,12 @@ class TestLevelOffIndex(unittest.TestCase):
         self.assertEqual(index, 100)
         index = level_off_index(array, 1, 10, 1, _slice=slice(3625, None))
         self.assertEqual(index, 3674)
+    
+    def test_level_off_masked(self):
+        array = np.ma.load(os.path.join(test_data_path,
+                                        'level_off_index_eng_n3.npy'))
+        index = level_off_index(array, 1, 10, 1)
+        self.assertEqual(index, 28)
 
 
 class TestDpOverP2mach(unittest.TestCase):

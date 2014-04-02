@@ -5622,7 +5622,7 @@ def level_off_index(array, frequency, seconds, variance, _slice=None,
         
         if not stable.any():
             # All data is not level.
-            return None
+            continue
         
         index = np.argmax(stable) + unmasked_slice.start
         
@@ -5633,6 +5633,8 @@ def level_off_index(array, frequency, seconds, variance, _slice=None,
             index += samples
         
         return index
+    
+    return None
 
 
 """
