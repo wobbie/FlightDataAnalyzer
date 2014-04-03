@@ -480,7 +480,6 @@ from analysis_engine.key_point_values import (
     WindAcrossLandingRunwayAt50Ft,
     WindDirectionAtAltitudeDuringDescent,
     WindSpeedAtAltitudeDuringDescent,
-    ZeroFuelWeight,
 )
 from analysis_engine.key_time_instances import (
     AltitudeWhenDescending,
@@ -7059,22 +7058,48 @@ class TestFlareDistance20FtToTouchdown(unittest.TestCase, NodeTest):
 # Fuel Quantity
 
 
-class TestFuelQtyAtLiftoff(unittest.TestCase, CreateKPVsAtKTIsTest):
+class TestFuelQtyAtLiftoff(unittest.TestCase):
 
-    def setUp(self):
-        self.node_class = FuelQtyAtLiftoff
-        self.operational_combinations = [('Fuel Qty', 'Liftoff')]
+    def test_can_operate(self):
+        opts = FuelQtyAtLiftoff.get_operational_combinations()
+        self.assertEqual(opts, [('Fuel Qty', 'Liftoff')])
 
-    @unittest.skip('Test Not Implemented')
     def test_derive(self):
-        self.assertTrue(False, msg='Test Not Implemented')
+        # example from B777 recorded fuel qty parameter
+        fuel_qty = P('Fuel Qty', np.ma.array(
+            [ 105600.,  105600.,  105600.,  105600.,  105600.,  105500.,
+              105500.,  105500.,  105500.,  105500.,  105500.,  105500.,
+              105500.,  105500.,  105500.,  105500.,  105500.,  105500.,
+              105500.,  105600.,  105600.,  105600.,  105500.,  105500.,
+              105500.,  105500.,  105500.,  105500.,  105500.,  105500.,
+              105500.,  105400.,  105400.,  105500.,  105500.,  105500.,
+              105400.,  105400.,  105400.,  105400.,  105400.,  105400.,
+              105400.,  105400.,  105400.,  105500.,  105500.,  105600.,
+              105500.,  105500.,  105400.,  105400.,  105300.,  105100.,
+              105300.,  105300.,  105300.,  105300.,  105400.,  105400.,
+              105300.,  105300.,  105200.,  105300.,  105400.,  105400.,
+              105400.,  105500.,  105600.,  105500.,  105500.,  105500.,
+              105500.,  105500.,  105400.,  105500.,  105500.,  105400.,
+              105400.,  105400.,  105500.,  105500.,  105400.,  105400.,
+              105500.,  105400.,  105400.,  105400.,  105300.,  105300.,
+              105300.,  105200.,  105200.,  105200.,  105100.,  105100.,
+              105100.,  105100.,  104900.,  104900.]))
+        # roc limit exceeded, caused by long G at liftoff
+        fuel_qty.array[53] = np.ma.masked
+        fuel_qty.array[54] = np.ma.masked
+        fuel_qty.array[58] = np.ma.masked
+        liftoff = KTI(items=[KeyTimeInstance(54)])
+        fq = FuelQtyAtLiftoff()
+        fq.derive(fuel_qty, liftoff)
+        self.assertEqual(len(fq), 1)
+        self.assertEqual(fq[0].index, 54)
+        self.assertEqual(fq[0].value, 105372.5)
 
 
-class TestFuelQtyAtTouchdown(unittest.TestCase, CreateKPVsAtKTIsTest):
-
-    def setUp(self):
-        self.node_class = FuelQtyAtTouchdown
-        self.operational_combinations = [('Fuel Qty', 'Touchdown')]
+class TestFuelQtyAtTouchdown(unittest.TestCase):
+    def test_can_operate(self):
+        opts = FuelQtyAtTouchdown.get_operational_combinations()
+        self.assertEqual(opts, [('Fuel Qty', 'Touchdown')])
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
@@ -7210,33 +7235,42 @@ class TestGroundspeedWithThrustReversersDeployedMin(unittest.TestCase, NodeTest)
     def setUp(self):
         self.node_class = GroundspeedWithThrustReversersDeployedMin
         self.operational_combinations = [
-            ('Groundspeed', 'Thrust Reversers', 'Eng (*) EPR Max', 'Eng (*) N1 Max', 'Landing'),
+            ('Groundspeed', 'Thrust Reversers', 'Eng (*) EPR Max',
+             'Eng (*) N1 Max', 'Landing'),
             ('Groundspeed', 'Thrust Reversers', 'Eng (*) EPR Max', 'Landing'),
             ('Groundspeed', 'Thrust Reversers', 'Eng (*) N1 Max', 'Landing')]
-        
+
     def test_derive_basic(self):
-        spd=P('Groundspeed True', array = np.ma.arange(100,0,-10))
-        tr=M('Thrust Reversers', array=np.ma.array([0]*3+[1]+[2]*4+[1,0]), 
+        spd=P('Groundspeed True', array = np.ma.arange(100, 0, -10))
+        tr=M('Thrust Reversers',
+             array=np.ma.array([0] * 3 + [1] + [2] * 4 + [1,0]),
              values_mapping = {0: 'Stowed', 1: 'In Transit', 2: 'Deployed'})
-        n1=P('Eng (*) N1 Max', array=np.ma.array([40]*5+[70]*5))
+        # half the frequency of spd
+        n1=P('Eng (*) N1 Max', frequency=0.5,
+             array=np.ma.array([40] * 2 + [70] * 3))
         landings=buildsection('Landing', 2, 9)
         node = GroundspeedWithThrustReversersDeployedMin()
         node.derive(spd, tr, None, n1, landings)
         self.assertEqual(len(node), 1)
         self.assertEqual(node[0], KeyPointValue(
-            index=7, value=30.0, name='Groundspeed With Thrust Reversers Deployed Min'))
+            index=7, value=30.0,
+            name='Groundspeed With Thrust Reversers Deployed Min'))
 
     def test_derive_with_epr(self):
-        spd = P('Groundspeed True', array = np.ma.arange(100,0,-10))
-        tr = M('Thrust Reversers', array=np.ma.array([0]*3+[1]+[2]*4+[1,0]), 
-             values_mapping = {0: 'Stowed', 1: 'In Transit', 2: 'Deployed'})
-        epr = P('Eng (*) EPR Max', array=np.ma.array([1.0]*5+[1.26]*3+[1.0]*2))
+        spd = P('Groundspeed True', array = np.ma.arange(100, 0, -10))
+        tr = M('Thrust Reversers',
+               array=np.ma.array([0] * 3 + [1] + [2] * 4 + [1,0]),
+               values_mapping = {0: 'Stowed', 1: 'In Transit', 2: 'Deployed'})
+        # half the frequency of spd
+        epr = P('Eng (*) EPR Max', frequency=0.5,
+                array=np.ma.array([1.0] * 2 + [1.26] * 2 + [1.0] * 1))
         landings=buildsection('Landing', 2, 9)
         node = GroundspeedWithThrustReversersDeployedMin()
         node.derive(spd, tr, epr, None, landings)
         self.assertEqual(len(node), 1)
         self.assertEqual(node[0], KeyPointValue(
-            index=7, value=30.0, name='Groundspeed With Thrust Reversers Deployed Min'))
+            index=6, value=40.0,
+            name='Groundspeed With Thrust Reversers Deployed Min'))
 
 
 class TestGroundspeedStabilizerOutOfTrimDuringTakeoffMax(unittest.TestCase,
@@ -9859,48 +9893,6 @@ class TestDualInputByFODuration(unittest.TestCase, NodeTest):
 
 
 ##############################################################################
-
-
-class TestZeroFuelWeight(unittest.TestCase, NodeTest):
-
-    def setUp(self):
-        self.node_class = ZeroFuelWeight
-        self.operational_combinations = [('Fuel Qty', 'Gross Weight'),
-                                         ('Dry Operating Weight',),
-                                         ('Dry Operating Weight', 'Payload')]
-
-    def test_derive_fuel_qty_gross_wgt(self):
-        fuel_qty = P('Fuel Qty', np.ma.array([1, 2, 3, 4]))
-        gross_wgt = P('Gross Weight', np.ma.array([11, 12, 13, 14]))
-        zfw = ZeroFuelWeight()
-        zfw.derive(fuel_qty, gross_wgt, None, None)
-        self.assertEqual(len(zfw), 1)
-        self.assertEqual(zfw[0].index, 0)  # Note: Index should always be 0!
-        self.assertEqual(zfw[0].value, 10.0)
-    
-    def test_derive_dry_operating_wgt(self):
-        dry_operating_wgt = A('Dry Operating Weight', 100000)
-        zfw = ZeroFuelWeight()
-        zfw.derive(None, None, dry_operating_wgt, None)
-        self.assertEqual(len(zfw), 1)
-        self.assertEqual(zfw[0].index, 0)  # Note: Index should always be 0!
-        self.assertEqual(zfw[0].value, dry_operating_wgt.value)
-    
-    def test_derive_dry_operating_wgt_payload(self):
-        dry_operating_wgt = A('Dry Operating Weight', 100000)
-        payload = A('Payload', None)
-        zfw = ZeroFuelWeight()
-        zfw.derive(None, None, dry_operating_wgt, payload)
-        self.assertEqual(len(zfw), 1)
-        self.assertEqual(zfw[0].index, 0)  # Note: Index should always be 0!
-        self.assertEqual(zfw[0].value, dry_operating_wgt.value)
-        
-        payload = A('Payload', 1000)
-        zfw = ZeroFuelWeight()
-        zfw.derive(None, None, dry_operating_wgt, payload)
-        self.assertEqual(len(zfw), 1)
-        self.assertEqual(zfw[0].index, 0)  # Note: Index should always be 0!
-        self.assertEqual(zfw[0].value, 101000)
 
 
 ##############################################################################

@@ -31,6 +31,7 @@ from analysis_engine.flight_phase import scan_ils
 from analysis_engine.node import KeyPointValueNode, KPV, KTI, P, S, A, M, App, Section
 
 from analysis_engine.library import (ambiguous_runway,
+                                     align,
                                      all_of,
                                      any_of,
                                      bearings_and_distances,
@@ -56,6 +57,7 @@ from analysis_engine.library import (ambiguous_runway,
                                      max_continuous_unmasked,
                                      max_value,
                                      min_value,
+                                     moving_average,
                                      repair_mask,
                                      np_ma_masked_zeros_like,
                                      peak_curvature,
@@ -6121,7 +6123,7 @@ class EngGasTempDuringEngStartMax(KeyPointValueNode):
         
         eng_groups = enumerate(zip(eng_egts, eng_powers), start=1)
         
-        search_duration = 10 * 60 * self.frequency
+        search_duration = 5 * 60 * self.frequency
         
         for eng_number, (eng_egt, eng_power) in eng_groups:
             if not eng_egt or not eng_power or eng_egt.frequency < 0.25:
@@ -7888,6 +7890,9 @@ class FlareDistance20FtToTouchdown(KeyPointValueNode):
 
 class FuelQtyAtLiftoff(KeyPointValueNode):
     '''
+    Fuel quantity data is repaired and gaps are smoothed over to create a
+    more realistic reading than that of the recorded value which fluctuates
+    based on the longitudinal acceleration.
     '''
 
     units = ut.KG
@@ -7896,11 +7901,15 @@ class FuelQtyAtLiftoff(KeyPointValueNode):
                fuel_qty=P('Fuel Qty'),
                liftoffs=KTI('Liftoff')):
 
-        self.create_kpvs_at_ktis(fuel_qty.array, liftoffs)
+        self.create_kpvs_at_ktis(
+            moving_average(repair_mask(fuel_qty.array), 20), liftoffs)
 
 
 class FuelQtyAtTouchdown(KeyPointValueNode):
     '''
+    Fuel quantity data is repaired and gaps are smoothed over to create a
+    more realistic reading than that of the recorded value which fluctuates
+    based on the longitudinal acceleration.
     '''
 
     units = ut.KG
@@ -7909,7 +7918,8 @@ class FuelQtyAtTouchdown(KeyPointValueNode):
                fuel_qty=P('Fuel Qty'),
                touchdowns=KTI('Touchdown')):
 
-        self.create_kpvs_at_ktis(fuel_qty.array, touchdowns)
+        self.create_kpvs_at_ktis(
+            moving_average(repair_mask(fuel_qty.array), 20), touchdowns)
 
 
 class FuelQtyLowWarningDuration(KeyPointValueNode):
@@ -8078,33 +8088,40 @@ class GroundspeedAtTOGA(KeyPointValueNode):
 
 class GroundspeedWithThrustReversersDeployedMin(KeyPointValueNode):
     '''
-    Minimum groundspeed measured with Thrust Reversers deployed and the maximum 
-    of either engine's EPR measurements above %.2f%% or N1 measurements 
+    Minimum groundspeed measured with Thrust Reversers deployed and the maximum
+    of either engine's EPR measurements above %.2f%% or N1 measurements
     above %d%%
     ''' % (REVERSE_THRUST_EFFECTIVE_EPR, REVERSE_THRUST_EFFECTIVE_N1)
 
+    align = False
     units = ut.KT
 
     @classmethod
     def can_operate(self, available):
-        return all_of(('Groundspeed', 'Thrust Reversers', 'Landing'), 
+        return all_of(('Groundspeed', 'Thrust Reversers', 'Landing'),
                       available) and \
                any_of(('Eng (*) EPR Max', 'Eng (*) N1 Max'), available)
-    
+
     def derive(self,
                gnd_spd=P('Groundspeed'),
                tr=M('Thrust Reversers'),
-               eng_epr=P('Eng (*) EPR Max'),  # must come before N1 where available
+               eng_epr=P('Eng (*) EPR Max'),
                eng_n1=P('Eng (*) N1 Max'),
                landings=S('Landing')):
 
+        if eng_epr and eng_epr.frequency > (eng_n1.frequency if eng_n1 else 0):
+            power = eng_epr
+            threshold = REVERSE_THRUST_EFFECTIVE_EPR
+        else:
+            power = eng_n1
+            threshold = REVERSE_THRUST_EFFECTIVE_N1
+
+        power.array = align(power, gnd_spd)
+        power.frequency = gnd_spd.frequency
+        tr.array = align(tr, gnd_spd)
+        tr.frequency = gnd_spd.frequency
+
         for landing in landings:
-            if eng_epr:
-                power = eng_epr
-                threshold = REVERSE_THRUST_EFFECTIVE_EPR
-            else:
-                power = eng_n1
-                threshold = REVERSE_THRUST_EFFECTIVE_N1
             high_rev = thrust_reversers_working(landing, power, tr, threshold)
             self.create_kpvs_within_slices(gnd_spd.array, high_rev, min_value)
 
@@ -10943,40 +10960,6 @@ class GrossWeightAtTouchdown(KeyPointValueNode):
                          "could not be repaired.", self.name, gw.name)
             return
         self.create_kpvs_at_ktis(array, touchdowns)
-
-
-class ZeroFuelWeight(KeyPointValueNode):
-    '''
-    The aircraft zero fuel weight is computed from the recorded gross weight
-    and fuel data.
-
-    See also the GrossWeightSmoothed calculation which uses fuel flow data to
-    obtain a higher sample rate solution to the aircraft weight calculation,
-    with a best fit to the available weight data.
-    
-    TODO: Move to a FlightAttribute which is stored in the database.
-    '''
-
-    units = ut.KG
-    # Force align for cases when only attribute dependencies are available.
-    align_frequency = 1
-    align_offset = 0
-    
-    @classmethod
-    def can_operate(cls, available):
-        return ('Dry Operating Weight' in available or 
-                all_of(('Fuel Qty', 'Gross Weight'), available))
-    
-    def derive(self, fuel_qty=P('Fuel Qty'), gross_wgt=P('Gross Weight'),
-               dry_operating_wgt=A('Dry Operating Weight'),
-               payload=A('Payload')):
-        if gross_wgt and fuel_qty:
-            weight = np.ma.median(gross_wgt.array - fuel_qty.array)
-        else:
-            weight = dry_operating_wgt.value
-            if payload and payload.value:
-                weight += payload.value
-        self.create_kpv(0, weight)
 
 
 class GrossWeightDelta60SecondsInFlightMax(KeyPointValueNode):

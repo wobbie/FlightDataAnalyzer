@@ -1631,7 +1631,7 @@ def find_low_alts(array, threshold_alt, start_alt=None, stop_alt=None,
     return sorted(low_alt_slices)
 
 
-def find_toc_tod(alt_data, ccd_slice, mode='Climb'):
+def find_toc_tod(alt_data, ccd_slice, frequency, mode='Climb'):
     '''
     Find the Top Of Climb or Top Of Descent from an altitude trace.
 
@@ -1658,13 +1658,13 @@ def find_toc_tod(alt_data, ccd_slice, mode='Climb'):
         start = floor(index_at_value(alt_data, 500,
                     slice(ccd_slice.start, peak_index)) or ccd_slice.start or 0)
         section = slice(start, peak_index + 1)
-        slope = SLOPE_FOR_TOC_TOD
+        slope = SLOPE_FOR_TOC_TOD / frequency
     else:
         stop = ceil(index_at_value(alt_data, 500,
                     slice(ccd_slice.stop, peak_index, -1)) or ccd_slice.stop or
                     len(alt_data))
         section = slice(peak_index, stop)
-        slope = -SLOPE_FOR_TOC_TOD
+        slope = -SLOPE_FOR_TOC_TOD / frequency
 
     # Quit if there is nothing to do here.
     if section.start == section.stop:
@@ -5587,7 +5587,7 @@ def slices_from_ktis(kti_1, kti_2):
 def level_off_index(array, frequency, seconds, variance, _slice=None,
                    include_window=True):
     '''
-    Find the first index within _slice where array levels off. The window
+    Find the first index within _slice where array levels off.
     
     :type array: np.ma.masked_array
     :type frequency: int or float
@@ -5603,10 +5603,7 @@ def level_off_index(array, frequency, seconds, variance, _slice=None,
     if _slice:
         array = array[_slice]
     
-    samples = int(frequency * seconds)
-    
-    if frequency * seconds != samples:
-        raise ValueError("Frequency * samples must be integer")
+    samples = ceil(frequency * seconds)
     
     if samples > array.size:
         return None
@@ -5625,7 +5622,7 @@ def level_off_index(array, frequency, seconds, variance, _slice=None,
         
         if not stable.any():
             # All data is not level.
-            return None
+            continue
         
         index = np.argmax(stable) + unmasked_slice.start
         
@@ -5636,6 +5633,8 @@ def level_off_index(array, frequency, seconds, variance, _slice=None,
             index += samples
         
         return index
+    
+    return None
 
 
 """
@@ -6440,13 +6439,14 @@ def index_at_value_or_level_off(array, value, _slice, abs_threshold=None):
         # we never got quite close enough to 2000ft above the
         # minimum go around altitude. Find the top of the climb.
         if _slice.step in (1, None):
-            return find_toc_tod(array, _slice, 'Climb')
+            # TODO: Fix forced frequency of 1.
+            return find_toc_tod(array, _slice, 1, 'Climb')
         else:
             # negative step provided which is not supported by find_toc_tod
             # so reverse the start and stop
             stop = _slice.stop -1 if _slice.stop > 0 else 0
             rev_slice = slice(stop, _slice.start, 1)
-            return find_toc_tod(array, rev_slice, 'Descent')
+            return find_toc_tod(array, rev_slice, 1, 'Descent')
 
 
 def _value(array, _slice, operator):

@@ -60,6 +60,7 @@ from analysis_engine.derived_parameters import (
     #AltitudeForFlightPhases,
     AltitudeQNH,
     AltitudeRadio,
+    AltitudeSTDSmoothed,
     #AltitudeRadioForFlightPhases,
     #AltitudeSTD,
     AltitudeTail,
@@ -188,6 +189,7 @@ from analysis_engine.derived_parameters import (
     Vref,
     VrefLookup,
     VMOLookup,
+    ZeroFuelWeight,
 )
 
 
@@ -653,6 +655,25 @@ class TestAirspeedTrue(unittest.TestCase):
         tas.derive(cas, alt, None, None, None, rtos, None, acc)
         expected = speed+speed[::-1]
         ma_test.assert_array_almost_equal(tas.array, expected, decimal=1)
+
+
+class TestAltitudeSTDSmoothed(unittest.TestCase):
+    def test_can_operate(self):
+        opts = AltitudeSTDSmoothed.get_operational_combinations()
+        self.assertTrue(('Altitude STD', 'Frame',) in opts)
+        self.assertTrue(('Altitude STD (Fine)', 'Altitude STD', 'Frame') in opts)
+        self.assertTrue(('Altitude STD (Capt)', 'Altitude STD (FO)', 'Frame') in opts)
+    
+    def test_derive_atr_42(self):
+        frame = Attribute('Frame', 'ATR42_V2_Quad')
+        alt = load(os.path.join(test_data_path, 'AltitudeSTDSmoothed_alt.nod'))
+        node = AltitudeSTDSmoothed()
+        node.derive(None, alt, None, None, frame)
+        # np.ma.sum(np.ma.abs(np.ma.diff(alt.array[4800:5000]))) == 2000
+        linear_diff = np.ma.sum(np.ma.abs(np.ma.diff(node.array[4800:5000])))
+        self.assertTrue(linear_diff < 200)
+        max_diff = np.ma.max(np.ma.abs(alt.array - node.array))
+        self.assertTrue(max_diff < 100)
 
 
 class TestAltitudeAAL(unittest.TestCase):
@@ -4787,6 +4808,43 @@ class TestApproachRange(TemporaryFileTest, unittest.TestCase):
                                  slice(12928, 13440, None)])
 
 
+class TestZeroFuelWeight(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = ZeroFuelWeight
+        self.operational_combinations = [
+            ('HDF Duration', 'Fuel Qty', 'Gross Weight'),
+            ('HDF Duration', 'Dry Operating Weight',),
+            ('HDF Duration', 'Dry Operating Weight', 'Payload'),
+        ]
+        self.duration = A('HDF Duration', 10)
+
+    def test_derive_fuel_qty_gross_wgt(self):
+        fuel_qty = P('Fuel Qty', np.ma.array([1, 2, 3, 4]))
+        gross_wgt = P('Gross Weight', np.ma.array([11, 12, 13, 14]))
+        zfw = ZeroFuelWeight()
+        zfw.derive(fuel_qty, gross_wgt, None, None, self.duration)
+        self.assertTrue((zfw.array == 10).all())
+    
+    def test_derive_dry_operating_wgt(self):
+        dry_operating_wgt = A('Dry Operating Weight', 100000)
+        zfw = ZeroFuelWeight()
+        zfw.derive(None, None, dry_operating_wgt, None, self.duration)
+        self.assertTrue((zfw.array == dry_operating_wgt.value).all())
+    
+    def test_derive_dry_operating_wgt_payload(self):
+        dry_operating_wgt = A('Dry Operating Weight', 100000)
+        payload = A('Payload', None)
+        zfw = ZeroFuelWeight()
+        zfw.derive(None, None, dry_operating_wgt, payload, self.duration)
+        self.assertTrue((zfw.array == dry_operating_wgt.value).all())
+        
+        payload = A('Payload', 1000)
+        zfw = ZeroFuelWeight()
+        zfw.derive(None, None, dry_operating_wgt, payload, self.duration)
+        self.assertTrue((zfw.array == 101000).all())
+
+
 class TestGrossWeight(unittest.TestCase):
     def test_can_operate(self):
         combinations = GrossWeight.get_operational_combinations()
@@ -4800,7 +4858,7 @@ class TestGrossWeight(unittest.TestCase):
     
     def test_derive_fuel_qty_zfw(self):
         fq = P('Fuel Qty', array=np.ma.array([40,30,20,10]))
-        zfw = KPV('Zero Fuel Weight', items=[KeyPointValue(0, 1000)])
+        zfw = P('Zero Fuel Weight', array=np.ma.array([990, 1000, 1000, 1100]))
         node = GrossWeight()
         node.derive(zfw, fq, None, None, None, None, None)
         self.assertEqual(node.array.tolist(), [1040, 1030, 1020, 1010])
@@ -4834,12 +4892,12 @@ class TestGrossWeight(unittest.TestCase):
         self.assertAlmostEqual(result[50], 1493.7, 1)
     
     def test_using_zero_fuel_weight(self):
-        zfw = KPV('Zero Fuel Weight',
-                  items=[KeyPointValue('Zero Fuel Weight', 17400)])
-        
         fuel_qty_array = np.ma.arange(10000, 4000, -100)
         fuel_qty_array[10] *= 0.9
         fuel_qty = P('Fuel Qty', array=fuel_qty_array)
+        
+        zfw_array = np_ma_ones_like(fuel_qty_array) * 17400
+        zfw = P('Zero Fuel Weight', array=zfw_array)
         
         gw = GrossWeight()
         gw.derive(zfw, fuel_qty, None, None, None, None, None)
@@ -6068,15 +6126,6 @@ class TestAirspeedMinusV2(unittest.TestCase, NodeTest):
         node = self.node_class()
         node.derive(self.airspeed, self.v2_record, self.v2_lookup, self.liftoffs, self.climbs)
         expected = np.ma.repeat((0, 7, 0), (180, 820, 1000))
-        expected[expected == 0] = np.ma.masked
-        ma_test.assert_masked_array_equal(node.array, expected)
-
-    def test_derive__superframe(self):
-        self.v2_record.array = np.tile(np.ma.repeat((100, 100, 100, 120), 4), 2)
-        self.v2_record.frequency = 1 / 64.0
-        node = self.node_class()
-        node.get_derived([self.airspeed, self.v2_record, None, self.liftoffs, self.climbs])
-        expected = np.ma.repeat((0, 2, 0), (180, 820, 1000))
         expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 

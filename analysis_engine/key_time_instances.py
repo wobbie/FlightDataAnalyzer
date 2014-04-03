@@ -295,7 +295,8 @@ class EngStart(KeyTimeInstanceNode):
             if not eng_nx:
                 continue
             
-            array = repair_mask(eng_nx.array, repair_duration=None)
+            array = repair_mask(eng_nx.array, repair_duration=None,
+                                extrapolate=True)
             array = np.ma.masked_greater(array, limit)
             below_slices = np.ma.clump_unmasked(array)
             
@@ -363,10 +364,19 @@ class EngStop(KeyTimeInstanceNode):
                eng_1_n2=P('Eng (1) N2'),
                eng_2_n2=P('Eng (2) N2'),
                eng_3_n2=P('Eng (3) N2'),
-               eng_4_n2=P('Eng (4) N2')):
+               eng_4_n2=P('Eng (4) N2'),
+               
+               eng_1_n3=P('Eng (1) N3'),
+               eng_2_n3=P('Eng (2) N3'),
+               eng_3_n3=P('Eng (3) N3'),
+               eng_4_n3=P('Eng (4) N3')):
 
-        if eng_1_n2 or eng_2_n2:
-            # The engines are 2- or 3-spool engines
+        if eng_1_n3 or eng_2_n3:
+            # This aircraft has 3-spool engines
+            eng_nx_list = (eng_1_n3, eng_2_n3, eng_3_n3, eng_4_n3)
+            limit = MIN_CORE_SUSTAINABLE
+        elif eng_1_n2 or eng_2_n2:
+            # The engines are 2-spool engines
             eng_nx_list = (eng_1_n2, eng_2_n2, eng_3_n2, eng_4_n2)
             limit = MIN_CORE_SUSTAINABLE
         else:
@@ -376,23 +386,21 @@ class EngStop(KeyTimeInstanceNode):
         for number, eng_nx in enumerate(eng_nx_list, start=1):
             if not eng_nx:
                 continue
-
-            running = np.ma.where(eng_nx.array > limit/2, 1, 0)
-            last_speed = first_valid_sample(running[::-1])
-
-            if last_speed.value:
-                # The last valid sample shows the engine running when the
-                # recording stopped.
-                self.create_kti(len(eng_nx.array)-last_speed.index-1,
+            
+            array = repair_mask(eng_nx.array, repair_duration=None,
+                                extrapolate=True)
+            array = np.ma.masked_greater(array, limit)
+            below_slices = np.ma.clump_unmasked(array)
+            
+            for below_slice in below_slices:
+                
+                if (below_slice.start == 0 or
+                    slice_duration(below_slice, self.hz) < 6):
+                    # Small dip or reached the end of the array.
+                    continue
+                
+                self.create_kti(below_slice.start,
                                 replace_values={'number': number})
-
-            else:
-                # The engine stopped before the end of the data.
-                self.create_ktis_at_edges(
-                    running,
-                    direction='falling_edges',
-                    replace_values={'number': number},
-                )
 
 
 class LastEngStopAfterTouchdown(KeyTimeInstanceNode):
@@ -418,7 +426,7 @@ class LastEngStopAfterTouchdown(KeyTimeInstanceNode):
         else:
             # Q: Should we be creating a KTI if the last engine stop cannot
             # be found?
-            self.create_kti(duration.value - 1)
+            self.create_kti(duration.value * self.frequency - 1)
 
 
 class EnterHold(KeyTimeInstanceNode):
@@ -503,7 +511,8 @@ class TopOfClimb(KeyTimeInstanceNode):
         for ccd_phase in ccd:
             ccd_slice = ccd_phase.slice
             try:
-                n_toc = find_toc_tod(alt_std.array, ccd_slice, 'Climb')
+                n_toc = find_toc_tod(alt_std.array, ccd_slice, self.frequency,
+                                     mode='Climb')
             except:
                 # altitude data does not have an increasing section, so quit.
                 continue
@@ -528,7 +537,8 @@ class TopOfDescent(KeyTimeInstanceNode):
         for ccd_phase in ccd:
             ccd_slice = ccd_phase.slice
             try:
-                n_tod = find_toc_tod(alt_std.array, ccd_slice, 'Descent')
+                n_tod = find_toc_tod(alt_std.array, ccd_slice, self.frequency,
+                                     mode='Descent')
             except ValueError:
                 # altitude data does not have a decreasing section, so quit.
                 continue

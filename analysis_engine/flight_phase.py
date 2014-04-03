@@ -971,9 +971,9 @@ class StraightAndLevel(FlightPhaseNode):
             rot = rate_of_change_array(hdg.array[level.slice], hdg.frequency, width=30)
             straight_flight = np.ma.masked_outside(rot, -limit, limit)
             straight_slices = np.ma.clump_unmasked(straight_flight)
-            straight_and_level_slices = slices_remove_small_slices(straight_slices, 
-                                                                   time_limit=settings.LEVEL_FLIGHT_MIN_DURATION,
-                                                                   hz=hdg.frequency)
+            straight_and_level_slices = slices_remove_small_slices(
+                straight_slices, time_limit=settings.LEVEL_FLIGHT_MIN_DURATION,
+                hz=hdg.frequency)
             self.create_phases(shift_slices(straight_and_level_slices, level.slice.start))
 
 

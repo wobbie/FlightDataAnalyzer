@@ -975,7 +975,9 @@ class AltitudeSTDSmoothed(DerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
 
-        return 'Altitude STD' in available
+        return ('Frame' in available and 
+                (('Altitude STD' in available) or 
+                 all_of(('Altitude STD (Capt)', 'Altitude STD (FO)'), available)))
 
     def derive(self, fine = P('Altitude STD (Fine)'), 
                alt = P('Altitude STD'),
@@ -1016,6 +1018,10 @@ class AltitudeSTDSmoothed(DerivedParameterNode):
 
         else:
             self.array = alt.array
+        
+        # Applying moving_window of a moving_window to avoid a large weighting/
+        # window size which would skew sharp curves.
+        self.array = moving_average(moving_average(self.array))
 
 
 # TODO: Account for 'Touch & Go' - need to adjust QNH for additional airfields!
@@ -3191,7 +3197,7 @@ class GrossWeight(DerivedParameterNode):
         return (all_of(('AFR Landing Gross Weight', 'HDF Duration'), available) or
                 all_of(('Zero Fuel Weight', 'Fuel Qty'), available))
     
-    def derive(self, zfw=KPV('Zero Fuel Weight'), fq=P('Fuel Qty'),
+    def derive(self, zfw=P('Zero Fuel Weight'), fq=P('Fuel Qty'),
                duration=A('HDF Duration'),
                afr_land_wgt=A('AFR Landing Gross Weight'),
                afr_takeoff_wgt=A('AFR Takeoff Gross Weight'),
@@ -3212,7 +3218,43 @@ class GrossWeight(DerivedParameterNode):
             else:
                 self.array.fill(afr_land_wgt.value)
         else:
-            self.array = fq.array + zfw.get_first().value
+            zfw_value = np.bincount(zfw.array.compressed().astype(np.int)).argmax()
+            self.array = fq.array + zfw_value
+
+
+class ZeroFuelWeight(DerivedParameterNode):
+    '''
+    The aircraft zero fuel weight is computed from the recorded gross weight
+    and fuel data.
+
+    See also the GrossWeightSmoothed calculation which uses fuel flow data to
+    obtain a higher sample rate solution to the aircraft weight calculation,
+    with a best fit to the available weight data.
+    
+    TODO: Move to a FlightAttribute which is stored in the database.
+    '''
+
+    units = ut.KG
+    # Force align for cases when only attribute dependencies are available.
+    align_frequency = 1
+    align_offset = 0
+    
+    @classmethod
+    def can_operate(cls, available):
+        return ('HDF Duration' in available and 
+                ('Dry Operating Weight' in available or
+                 all_of(('Fuel Qty', 'Gross Weight'), available)))
+    
+    def derive(self, fuel_qty=P('Fuel Qty'), gross_wgt=P('Gross Weight'),
+               dry_operating_wgt=A('Dry Operating Weight'),
+               payload=A('Payload'), duration=A('HDF Duration')):
+        if gross_wgt and fuel_qty:
+            weight = np.ma.median(gross_wgt.array - fuel_qty.array)
+        else:
+            weight = dry_operating_wgt.value
+            if payload and payload.value:
+                weight += payload.value
+        self.array = np.ma.ones(duration.value * self.frequency) * weight
 
 
 class GrossWeightSmoothed(DerivedParameterNode):
@@ -4352,7 +4394,12 @@ class MagneticVariation(DerivedParameterNode):
                 mag_vars.append(geomag.declination(lat_val, lon_val,
                                                    alt_aal_val,
                                                    time=start_date))
-        
+
+        if not any(mag_vars):
+            # all masked array
+            self.array = np_ma_masked_zeros_like(lat.array)
+            return
+
         # Repair mask to avoid interpolating between masked values.
         mag_vars = repair_mask(np.ma.array(mag_vars), extrapolate=True)
         interpolator = interp1d(
@@ -4361,7 +4408,7 @@ class MagneticVariation(DerivedParameterNode):
         array = np_ma_masked_zeros_like(lat.array)
         array[:interpolation_length] = \
             interpolator(np.arange(interpolation_length))
-        
+
         # Exclude masked values.
         mask = lat.array.mask | lon.array.mask | alt_aal.array.mask
         array = np.ma.masked_where(mask, array)
@@ -7175,8 +7222,15 @@ class AirspeedMinusVapp(DerivedParameterNode):
             return
 
         for phase in phases:
-            value = most_common_value(vapp.array[phase].astype(np.int))
-            if value is not None:
+            if vapp.name == 'Vapp':
+                # we have the recorded or value provided in derived parameter
+                # from AFR field, so we can use the entire array
+                self.array[phase] = airspeed.array[phase] - vapp.array[phase]
+            else:
+                # we have the lookup parameter
+                value = most_common_value(vapp.array[phase].astype(np.int))
+                if value is None:
+                    continue
                 self.array[phase] = airspeed.array[phase] - value
 
 

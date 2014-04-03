@@ -118,7 +118,6 @@ class APEngaged(MultistateDerivedParameterNode):
     '''
 
     name = 'AP Engaged'
-    align = False  #TODO: Should this be here?
     values_mapping = {0: '-', 1: 'Engaged'}
 
     @classmethod
@@ -134,12 +133,6 @@ class APEngaged(MultistateDerivedParameterNode):
             (ap3, 'Engaged'),
             )
         self.array = stacked.any(axis=0)
-        if ap1:
-            self.frequency = ap1.frequency
-        elif ap2:
-            self.frequency = ap2.frequency
-        else:
-            self.frequency = ap3.frequency
         self.offset = offset_select('mean', [ap1, ap2, ap3])
 
 
@@ -152,7 +145,6 @@ class APChannelsEngaged(MultistateDerivedParameterNode):
     2 APs, Boeing is happier with 3 though some older types may only have 2.
     '''
     name = 'AP Channels Engaged'
-    align = False  # TODO: Should this be here?
     values_mapping = {0: '-', 1: 'Single', 2: 'Dual', 3: 'Triple'}
 
     @classmethod
@@ -169,8 +161,6 @@ class APChannelsEngaged(MultistateDerivedParameterNode):
             (ap3, 'Engaged'),
         )
         self.array = stacked.sum(axis=0)
-        # Assume all are sampled at the same frequency
-        self.frequency = ap1.frequency
         self.offset = offset_select('mean', [ap1, ap2, ap3])
 
 

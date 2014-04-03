@@ -52,7 +52,6 @@ from analysis_engine.key_time_instances import (
     OnBlocks,
     SecsToTouchdown,
     SlatAlternateArmedSet,
-    SpeedbrakeOpen,
     TakeoffAccelerationStart,
     TakeoffPeakAcceleration,
     TakeoffTurnOntoRunway,
@@ -971,14 +970,24 @@ class TestEngStop(unittest.TestCase):
     
     def test_basic(self):
         eng2 = Parameter('Eng (2) N2', np.ma.array([60,40,20,0]))
-        eng1 = Parameter('Eng (1) N2', np.ma.array(data=[60,40,40,99,99, 0, 0], 
+        eng1 = Parameter('Eng (1) N2', np.ma.array(data=[60,50,40,99,99, 0, 0], 
                                                    mask=[ 0, 0, 0, 1, 1, 1, 1]))
         es = EngStop()
         es.derive(None, None, None, None, eng1, eng2, None, None)
+        self.assertEqual(len(es), 2)
         self.assertEqual(es[0].name, 'Eng (1) Stop')
         self.assertEqual(es[0].index, 2)
         self.assertEqual(es[1].name, 'Eng (2) Stop')
-        self.assertEqual(es[1].index, 1.5)
+        self.assertEqual(es[1].index, 1)
+    
+    def test_short_dip(self):
+        eng_1_n3 = load(os.path.join(test_data_path, 'eng_start_eng_1_n3.nod'))
+        eng_2_n3 = load(os.path.join(test_data_path, 'eng_start_eng_2_n3.nod'))
+        node = EngStop()
+        node.derive(None, None, None, None,
+                    None, None, None, None,
+                    eng_1_n3, eng_2_n3, None, None)
+        self.assertEqual(len(node), 0)
 
 
 class TestLastEngStopAfterTouchdown(unittest.TestCase):

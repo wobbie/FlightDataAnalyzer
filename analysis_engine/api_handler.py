@@ -190,7 +190,9 @@ class APIHandlerHTTP(object):
         error = None
         for attempt in range(self.attempts):
             try:
-                logger.info('API Request args: %s | kwargs: %s', args, kwargs)
+                msg = 'API Request args: %s | kwargs: %s' % (args, kwargs)
+                # This log message can be 60k characters.
+                logger.info(msg[:2000])
                 return self._request(*args, **kwargs)
             except (APIConnectionError, UnknownAPIError) as error:
                 msg = "'%s' error in request, retrying in %.2f seconds..."

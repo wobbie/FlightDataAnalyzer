@@ -1858,7 +1858,7 @@ class TestFindEdgesOnStateChange(unittest.TestCase):
         self.assertEqual(edges, [])
 
 
-class FindTocTod(unittest.TestCase):
+class TestFindTocTod(unittest.TestCase):
     def test_find_tod_with_smoothed_data(self):
         # sample data from Hercules during a low level circuit
         array = np.ma.array(
@@ -1907,13 +1907,13 @@ class FindTocTod(unittest.TestCase):
               351.50954688,  333.34129375,  331.8642    ,  331.8642    ,
               323.14934688])
         # data is already sliced for the required section
-        res = find_toc_tod(array, slice(0, len(array)), mode='Descent')
+        res = find_toc_tod(array, slice(0, len(array)), 1, mode='Descent')
         self.assertEqual(res, 117)
         # with some smoothing (as per Hercules Alt Std Smoothed
         smooth = moving_average(array, window=3, weightings=[0.25,0.5,0.25])
-        res = find_toc_tod(smooth, slice(0, len(smooth)), mode='Descent')
+        res = find_toc_tod(smooth, slice(0, len(smooth)), 1, mode='Descent')
         self.assertEqual(res, 116) # bit before previous
-        
+
 
 class TestFirstOrderLag(unittest.TestCase):
 
@@ -3638,7 +3638,7 @@ class TestOverflowCorrection(unittest.TestCase):
                         Section('Fast', slice(5859, 11520), 5859, 11520)])
         radioA = load(os.path.join(
             test_data_path, 'A320_Altitude_Radio_A_overflow.nod'))
-        resA = overflow_correction(radioA, fast)
+        resA = overflow_correction(radioA, fast, max_val=4095)
         sects = np.ma.clump_unmasked(resA)
         self.assertEqual(len(sects), 4)
         for sect in sects[0::2]:
@@ -3650,7 +3650,7 @@ class TestOverflowCorrection(unittest.TestCase):
 
         radioB = load(os.path.join(
             test_data_path, 'A320_Altitude_Radio_B_overflow.nod'))
-        resB = overflow_correction(radioB, fast)
+        resB = overflow_correction(radioB, max_val=4095)
         sects = np.ma.clump_unmasked(resB)
         self.assertEqual(len(sects), 4)
         for sect in sects[0::2]:
@@ -5793,6 +5793,12 @@ class TestLevelOffIndex(unittest.TestCase):
         self.assertEqual(index, 100)
         index = level_off_index(array, 1, 10, 1, _slice=slice(3625, None))
         self.assertEqual(index, 3674)
+    
+    def test_level_off_masked(self):
+        array = np.ma.load(os.path.join(test_data_path,
+                                        'level_off_index_eng_n3.npy'))
+        index = level_off_index(array, 1, 10, 1)
+        self.assertEqual(index, 28)
 
 
 class TestDpOverP2mach(unittest.TestCase):

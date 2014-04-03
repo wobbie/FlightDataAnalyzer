@@ -122,7 +122,8 @@ def derived_trimmer(hdf_path, node_names, dest):
     return strip_hdf(hdf_path, params, dest) 
 
 
-def _get_names(module_locations, fetch_names=True, fetch_dependencies=False):
+def _get_names(module_locations, fetch_names=True, fetch_dependencies=False,
+               filter_nodes=None):
     '''
     Get the names of Nodes and dependencies.
     
@@ -135,7 +136,9 @@ def _get_names(module_locations, fetch_names=True, fetch_dependencies=False):
     '''
     nodes = get_derived_nodes(module_locations)
     names = []
-    for node in nodes.values():
+    for name, node in nodes.iteritems():
+        if filter_nodes and name not in filter_nodes:
+            continue
         if fetch_names:
             if hasattr(node, 'names'):
                 # FormattedNameNode (KPV/KTI) can have many names
@@ -145,8 +148,8 @@ def _get_names(module_locations, fetch_names=True, fetch_dependencies=False):
         if fetch_dependencies:
             names.extend(node.get_dependency_names())
     return sorted(names)
-    
-    
+
+
 def list_parameters():
     '''
     Return an ordered list of parameters.
@@ -235,6 +238,13 @@ if __name__ == '__main__':
                                 'within the output hdf file. All other '
                                 'parameters will be stripped.')
     
+    list_parser = subparser.add_parser('list')
+    list_parser.add_argument('--filter-nodes', nargs='+', help='Node names')
+    list_parser.add_argument('--additional-modules', nargs='+',
+                             help='Additional modules')
+    #list_parser.add_argument('--list', action='store_true',
+                             #help='Output as Python list')
+    
     args = parser.parse_args()
     if args.command == 'trimmer':
         if not os.path.isfile(args.input_file_path):
@@ -251,5 +261,13 @@ if __name__ == '__main__':
                 print ' * %s' % name
         else:
             print 'No matching parameters were found in the hdf file.'
+    elif args.command == 'list':
+        kwargs = {}
+        if args.filter_nodes:
+            kwargs['filter_nodes'] = args.filter_nodes
+        modules = list(settings.NODE_MODULES)
+        if args.additional_modules:
+            modules += args.additional_modules
+        print _get_names(modules, **kwargs)
     else:
         parser.error("'%s' is not a known command." % args.command)
