@@ -1278,6 +1278,78 @@ class TestFlapLeverSynthetic(unittest.TestCase, NodeTest):
             series=A('Series', None),
             family=A('Family', 'A330'),
         ))
+        
+        with patch('analysis_engine.multistate_parameters.at') as at:
+            at.get_conf_angles.side_effect = KeyError
+            # Requires Slat.
+            at.get_lever_angles.return_value = {
+                'Lever 0': (0, 0, None),
+                'Lever 1': (20, 9, None),
+                'Lever 2': (20, 20, None),
+                'Lever 3': (20, 40, None),
+            }
+            self.assertFalse(self.node_class.can_operate(
+                ('Flap', 'Model', 'Series', 'Family'),
+                model=A('Model', 'CRJ900 (CL-600-2D24)'),
+                series=A('Series', 'CRJ900'),
+                family=A('Family', 'CL-600'),
+            ))
+            self.assertTrue(self.node_class.can_operate(
+                ('Flap', 'Slat', 'Model', 'Series', 'Family'),
+                model=A('Model', 'CRJ900 (CL-600-2D24)'),
+                series=A('Series', 'CRJ900'),
+                family=A('Family', 'CL-600'),
+            ))
+            # Requires Flaperon.
+            at.get_lever_angles.return_value = {
+                'Lever 0': (None, 0, 1),
+                'Lever 1': (None, 9, 2),
+                'Lever 2': (None, 20, 3),
+                'Lever 3': (None, 40, 4),
+            }
+            self.assertFalse(self.node_class.can_operate(
+                ('Flap', 'Model', 'Series', 'Family'),
+                model=A('Model', 'CRJ900 (CL-600-2D24)'),
+                series=A('Series', 'CRJ900'),
+                family=A('Family', 'CL-600'),
+            ))
+            self.assertTrue(self.node_class.can_operate(
+                ('Flap', 'Flaperon', 'Model', 'Series', 'Family'),
+                model=A('Model', 'CRJ900 (CL-600-2D24)'),
+                series=A('Series', 'CRJ900'),
+                family=A('Family', 'CL-600'),
+            ))
+            # Requires Slat and Flaperon.
+            at.get_lever_angles.return_value = {
+                'Lever 0': (0, 0, 1),
+                'Lever 1': (20, 9, 2),
+                'Lever 2': (20, 20, 3),
+                'Lever 3': (20, 40, 4),
+            }
+            self.assertFalse(self.node_class.can_operate(
+                ('Flap', 'Model', 'Series', 'Family'),
+                model=A('Model', 'CRJ900 (CL-600-2D24)'),
+                series=A('Series', 'CRJ900'),
+                family=A('Family', 'CL-600'),
+            ))
+            self.assertFalse(self.node_class.can_operate(
+                ('Flap', 'Slat', 'Model', 'Series', 'Family'),
+                model=A('Model', 'CRJ900 (CL-600-2D24)'),
+                series=A('Series', 'CRJ900'),
+                family=A('Family', 'CL-600'),
+            ))
+            self.assertFalse(self.node_class.can_operate(
+                ('Flap', 'Flaperon', 'Model', 'Series', 'Family'),
+                model=A('Model', 'CRJ900 (CL-600-2D24)'),
+                series=A('Series', 'CRJ900'),
+                family=A('Family', 'CL-600'),
+            ))
+            self.assertTrue(self.node_class.can_operate(
+                ('Flap', 'Slat', 'Flaperon', 'Model', 'Series', 'Family'),
+                model=A('Model', 'CRJ900 (CL-600-2D24)'),
+                series=A('Series', 'CRJ900'),
+                family=A('Family', 'CL-600'),
+            ))
 
     @patch('analysis_engine.multistate_parameters.at')
     def test_derive__crj900(self, at):
