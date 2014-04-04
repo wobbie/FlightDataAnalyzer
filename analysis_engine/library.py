@@ -12,14 +12,14 @@ from hdfaccess.parameter import MappedArray
 
 from flightdatautilities import aircrafttables as at
 
-from settings import (DESCENT_LOW_CLIMB_THRESHOLD,
-                      INITIAL_APPROACH_THRESHOLD,
-                      KTS_TO_MPS,
-                      METRES_TO_FEET,
-                      REPAIR_DURATION,
-                      SLOPE_FOR_TOC_TOD,
-                      TRUCK_OR_TRAILER_INTERVAL,
-                      TRUCK_OR_TRAILER_PERIOD)
+from settings import (
+    KTS_TO_MPS,
+    METRES_TO_FEET,
+    REPAIR_DURATION,
+    SLOPE_FOR_TOC_TOD,
+    TRUCK_OR_TRAILER_INTERVAL,
+    TRUCK_OR_TRAILER_PERIOD,
+)
 
 # There is no numpy masked array function for radians, so we just multiply thus:
 deg2rad = radians(1.0)

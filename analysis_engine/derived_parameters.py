@@ -1088,15 +1088,16 @@ class AltitudeQNH(DerivedParameterNode):
             return  # BAIL OUT!
         elif t_elev is None:
             self.warning("No Takeoff elevation, using %dft at Landing", l_elev)
-            smooth = False
+            #smooth = False
             t_elev = l_elev
         elif l_elev is None:
             self.warning("No Landing elevation, using %dft at Takeoff", t_elev)
-            smooth = False
+            #smooth = False
             l_elev = t_elev
         else:
             # both have valid values
-            smooth = True
+            #smooth = True
+            pass
 
         ### Break the "journey" at the "midpoint" - actually max altitude aal -
         ### and be sure to account for rise/fall in the data and stick the peak
