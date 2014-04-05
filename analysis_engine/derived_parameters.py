@@ -90,12 +90,14 @@ from analysis_engine.library import (actuator_mismatch,
 from settings import (AIRSPEED_THRESHOLD,
                       AZ_WASHOUT_TC,
                       BOUNCED_LANDING_THRESHOLD,
+                      CLIMB_THRESHOLD,
                       FEET_PER_NM,
                       HYSTERESIS_FPIAS,
                       HYSTERESIS_FPROC,
                       GRAVITY_IMPERIAL,
                       KTS_TO_FPS,
                       KTS_TO_MPS,
+                      LANDING_THRESHOLD_HEIGHT,
                       METRES_TO_FEET,
                       METRES_TO_NM,
                       VERTICAL_SPEED_LAG_TC)
@@ -1169,9 +1171,9 @@ class AltitudeQNH(DerivedParameterNode):
     @staticmethod
     def _qnh_adjust(aal, std, elev, mode):
         if mode == 'climb':
-            datum = 1000.0 # Initial climbs start from 1000ft
+            datum = CLIMB_THRESHOLD
         elif mode == 'descent':
-            datum = 50 # Descents end at the start of landing, or 50ft AAL
+            datum = LANDING_THRESHOLD_HEIGHT
         else:
             raise ValueError("Unrecognised mode in _qnh_adjust")
         # numpy.linspace(start, stop, num=50, endpoint=True)
