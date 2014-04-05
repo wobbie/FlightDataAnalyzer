@@ -1135,7 +1135,7 @@ class AltitudeQNH(DerivedParameterNode):
                             climbs[0].slice.stop+1)
         adjust_up = self._qnh_adjust(alt_aal.array[first_climb], 
                                 alt_std.array[first_climb], 
-                                t_elev)
+                                t_elev, 'climb')
         
         # Descent phase adjustment        
         last_descent = slice(descends[-1].slice.stop+1, 
@@ -1143,7 +1143,7 @@ class AltitudeQNH(DerivedParameterNode):
                              -1) 
         adjust_down = self._qnh_adjust(alt_aal.array[last_descent], 
                                   alt_std.array[last_descent], 
-                                  l_elev)
+                                  l_elev, 'descent')
         
         alt_qnh=np_ma_masked_zeros_like(alt_aal.array)
         
@@ -1166,9 +1166,15 @@ class AltitudeQNH(DerivedParameterNode):
         self.array = np.ma.array(data=alt_qnh, mask=alt_aal.array.mask)
 
     @staticmethod
-    def _qnh_adjust(aal, std, elev):
+    def _qnh_adjust(aal, std, elev, mode):
+        if mode == 'climb':
+            datum = 1000.0 # Initial climbs start from 1000ft
+        elif mode == 'descent':
+            datum = 50 # Descents end at the start of landing, or 50ft AAL
+        else:
+            raise ValueError("Unrecognised mode in _qnh_adjust")
         # numpy.linspace(start, stop, num=50, endpoint=True)
-        press_offset = std[0] - elev
+        press_offset = std[0] - elev - datum
         if abs(press_offset) > 4000.0:
             raise ValueError("Excessive difference between pressure altitude (%s) and airport elevation (%s) of '%s' implies incorrect altimeter scaling.",
                              std[0], elev, press_offset)
