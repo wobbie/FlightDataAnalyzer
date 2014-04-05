@@ -28,7 +28,6 @@ from analysis_engine.library import (
     slices_above,
     slices_below,
     slices_between,
-    slices_from_ktis,
     slices_from_to,
     value_at_index,
     value_at_time,
@@ -352,7 +351,7 @@ def can_operate(cls, available):
 
         try:
             res = self.derive(*args)
-        except Exception as err:
+        except Exception:
             self.exception('Failed to derive node `%s`.\n'
                            'Nodes used to derive:\n  %s',
                            self.name, '\n  '.join(repr(n) for n in args))

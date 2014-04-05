@@ -986,18 +986,30 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
             return False
 
         try:
-            at.get_conf_angles(model.value, series.value, family.value)
+            angles = at.get_conf_angles(model.value, series.value, family.value)
         except KeyError:
             pass  # try lever map
 
         try:
-            at.get_lever_angles(model.value, series.value, family.value)
+            angles = at.get_lever_angles(model.value, series.value, family.value)
         except KeyError:
             cls.warning("No lever angles available for '%s', '%s', '%s'.",
                         model.value, series.value, family.value)
             return False
-
-        return True
+        
+        can_operate = True
+        
+        slat_required = any(slat is not None for slat, flap, flaperon in 
+                            angles.values())
+        if slat_required:
+            can_operate = can_operate and 'Slat' in available
+        
+        flaperon_required = any(flaperon is not None for slat, flap, flaperon in
+                                angles.values())
+        if flaperon_required:
+            can_operate = can_operate and 'Flaperon' in available
+        
+        return can_operate
 
     def derive(self, flap=M('Flap'), slat=M('Slat'), flaperon=M('Flaperon'),
                model=A('Model'), series=A('Series'), family=A('Family')):
