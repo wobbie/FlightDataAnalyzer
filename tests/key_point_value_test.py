@@ -6675,7 +6675,7 @@ class TestElevatorDuringLandingMin(unittest.TestCase,
             node,
             KPV('Elevator During Landing Min',
                 items=[KeyPointValue(
-                    index=8.0, value=42.0,
+                    index=9.0, value=41.0,
                     name='Elevator During Landing Min')]))
 
 
