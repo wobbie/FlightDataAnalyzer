@@ -951,7 +951,6 @@ class TestFast(unittest.TestCase):
         self.assertEqual(node[0].slice.stop, 14976)
         
         # Test short masked section does not create two fast slices.
-        
         airspeed.array[5000:5029] = np.ma.masked
         node = Fast()
         node.derive(airspeed)
@@ -1808,11 +1807,16 @@ class TestGoAround5MinRating(unittest.TestCase):
 class TestTakeoff5MinRating(unittest.TestCase):
     def test_can_operate(self):
         self.assertEqual(Takeoff5MinRating.get_operational_combinations(),
-                         [('Takeoff',)])
+                         [('Takeoff Acceleration Start',)])
 
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+    def test_derive_basic(self):
+        toffs = KTI('Takeoff Acceleration Start',
+                    items=[KeyTimeInstance(index=100)])
+        node = Takeoff5MinRating()
+        node.derive(toffs)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].slice.start, 100)
+        self.assertEqual(node[0].slice.stop, 400)
 
 
 class TestTakeoffRoll(unittest.TestCase):
