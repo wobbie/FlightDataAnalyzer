@@ -7922,6 +7922,18 @@ class FuelQtyAtTouchdown(KeyPointValueNode):
             moving_average(repair_mask(fuel_qty.array), 20), touchdowns)
 
 
+class FuelQtyWingDifferenceMax(KeyPointValueNode):
+    '''
+    Maximum difference between fuel quantity in wing tanks where positive
+    difference is additional fuel in Right hand tank.
+    '''
+    def derive(self, left_wing=P('Fuel Qty (L)'), right_wing=P('Fuel Qty (R)')):
+
+        diff = right_wing.array - left_wing.array
+        value = max_abs_value(diff)
+        self.create_kpv(*value)
+
+
 class FuelQtyLowWarningDuration(KeyPointValueNode):
     '''
     Measures the duration of the Fuel Quantity Low warning discretes.
