@@ -1476,9 +1476,9 @@ class TestFuelQtyLow(unittest.TestCase):
     def test_can_operate(self):
         opts = FuelQty_Low.get_operational_combinations()
         self.assertIn(('Fuel Qty Low',), opts)
-        self.assertIn(('Fuel Qty (1) Low',), opts)
-        self.assertIn(('Fuel Qty (2) Low',), opts)
-        self.assertIn(('Fuel Qty (1) Low', 'Fuel Qty (2) Low'), opts)
+        self.assertIn(('Fuel Qty (L) Low',), opts)
+        self.assertIn(('Fuel Qty (R) Low',), opts)
+        self.assertIn(('Fuel Qty (L) Low', 'Fuel Qty (R) Low'), opts)
 
     def test_derive_fuel_qty_low_warning(self):
         low = M(array=np.ma.array([0,0,0,1,1,0]), values_mapping={1: 'Warning'})

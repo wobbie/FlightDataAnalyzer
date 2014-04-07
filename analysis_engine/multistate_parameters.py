@@ -1104,12 +1104,12 @@ class FuelQty_Low(MultistateDerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available):
-        return any_of(('Fuel Qty Low', 'Fuel Qty (1) Low', 'Fuel Qty (2) Low'),
+        return any_of(('Fuel Qty Low', 'Fuel Qty (L) Low', 'Fuel Qty (R) Low'),
                       available)
 
     def derive(self, fqty = M('Fuel Qty Low'),
-               fqty1 = M('Fuel Qty (1) Low'),
-               fqty2 = M('Fuel Qty (2) Low')):
+               fqty1 = M('Fuel Qty (L) Low'),
+               fqty2 = M('Fuel Qty (R) Low')):
         warning = vstack_params_where_state(
             (fqty,  'Warning'),
             (fqty1, 'Warning'),
