@@ -1194,7 +1194,7 @@ class RejectedTakeoff(FlightPhaseNode):
             # we get the min of the potential rto stop and the end of the
             # data for cases where the potential rto is detected close to the
             # end of the data
-            check_grounded_idx = min(potential_rto.stop + 60 * self.frequency,
+            check_grounded_idx = min(potential_rto.stop + (60 * self.frequency),
                                      len(accel_lon.array) - 1)
             if is_index_within_slices(check_grounded_idx, groundeds.get_slices()):
                 # if soon after potential rto and still grounded we have a
@@ -1312,6 +1312,7 @@ class TakeoffRotation(FlightPhaseNode):
     This is used by correlation tests to check control movements during the
     rotation and lift phases.
     '''
+    align_frequency = 1
     def derive(self, lifts=S('Liftoff')):
         if not lifts:
             return
@@ -1325,17 +1326,18 @@ class TakeoffRotation(FlightPhaseNode):
 # Takeoff/Go-Around Ratings
 
 
-# TODO: Write some unit tests!
 class Takeoff5MinRating(FlightPhaseNode):
     '''
     For engines, the period of high power operation is normally 5 minutes from
     the start of takeoff. Also applies in the case of a go-around.
     '''
-    def derive(self, toffs=S('Takeoff')):
+    align_frequency = 1
+    
+    def derive(self, toffs=KTI('Takeoff Acceleration Start')):
         '''
         '''
         for toff in toffs:
-            self.create_phase(slice(toff.slice.start, toff.slice.start + 300))
+            self.create_phase(slice(toff.index, toff.index + 300))
 
 
 # TODO: Write some unit tests!
@@ -1344,7 +1346,8 @@ class GoAround5MinRating(FlightPhaseNode):
     For engines, the period of high power operation is normally 5 minutes from
     the start of takeoff. Also applies in the case of a go-around.
     '''
-
+    align_frequency = 1
+    
     def derive(self, gas=S('Go Around And Climbout'), tdwn=S('Touchdown')):
         '''
         We check that the computed phase cannot extend beyond the last

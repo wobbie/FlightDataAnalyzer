@@ -535,12 +535,12 @@ def main():
     parser = argparse.ArgumentParser(description="Process a flight.")
     parser.add_argument('file', type=str,
                         help='Path of file to process.')
-    help = 'Write CSV of processing results. Set "False" to disable.'
-    parser.add_argument('-csv', dest='write_csv', type=str, default='True',
-                        help=help)
-    help = 'Write KML of flight track. Set "False" to disable.'
-    parser.add_argument('-kml', dest='write_kml', type=str, default='True',
-                        help=help)
+    help = 'Disable writing a CSV of the processing results.'
+    parser.add_argument('-disable-csv', dest='disable_csv',
+                        action='store_true', help=help)
+    help = 'Disable writing a KML of the flight track.'
+    parser.add_argument('-disable-kml', dest='disable_kml',
+                        action='store_true', help=help)
     parser.add_argument('-r', '--requested', type=str, nargs='+', dest='requested',
                         default=[], help='Requested nodes.')
     parser.add_argument('--required', type=str, nargs='+', dest='required',
@@ -642,13 +642,13 @@ def main():
         requested=args.requested, required=args.required)
     logger.info("Derived parameters stored in hdf: %s", hdf_copy)
     # Write CSV file
-    if args.write_csv.lower() == 'true':
+    if not args.disable_csv:
         csv_dest = os.path.splitext(hdf_copy)[0] + '.csv'
         csv_flight_details(hdf_copy, res['kti'], res['kpv'], res['phases'],
                            dest_path=csv_dest)
         logger.info("KPV, KTI and Phases writen to csv: %s", csv_dest)
     # Write KML file
-    if args.write_kml.lower() == 'true':
+    if not args.disable_kml:
         kml_dest = os.path.splitext(hdf_copy)[0] + '.kml'
         dest = track_to_kml(hdf_copy, res['kti'], res['kpv'], res['approach'],
                      plot_altitude='Altitude QNH', dest_path=kml_dest)

@@ -163,8 +163,11 @@ def track_to_kml(hdf_path, kti_list, kpv_list, approach_list,
     one_hz = Parameter()
     kml = simplekml.Kml()
     with hdf_file(hdf_path) as hdf:
-        if 'Latitude Smoothed' not in hdf:
-            logger.error("Cannot write track as Latitude Smoothed not in hdf")
+        coord_params = (('Latitude Smoothed', 'Longitude Smoothed'),
+                        ('Latitude Prepared', 'Longitude Prepared'),
+                        ('Latitude', 'Longitude'))
+        if not any(lat in hdf and lon in hdf for lat, lon in coord_params):
+            logger.error("Cannot write track as coordinate paarmeters not in hdf")
             return False
         if plot_altitude not in hdf:
             logger.warning("Disabling altitude on KML plot as it is unavailable.")
@@ -182,23 +185,41 @@ def track_to_kml(hdf_path, kti_list, kpv_list, approach_list,
         else:
             altitude_mode = simplekml.constants.AltitudeMode.clamptoground
         
-        # TODO: align everything to 0 offset
-        smooth_lat = derived_param_from_hdf(hdf['Latitude Smoothed']).get_aligned(one_hz)
-        smooth_lon = derived_param_from_hdf(hdf['Longitude Smoothed']).get_aligned(one_hz)
-        add_track(kml, 'Smoothed', smooth_lat, smooth_lon, 'ff7fff7f', 
-                  alt_param=alt, alt_mode=altitude_mode)
-        add_track(kml, 'Smoothed On Ground', smooth_lat, smooth_lon, 'ff7fff7f')        
+        best_lat = None
+        best_lon = None
+        
+        if 'Latitude Smoothed' in hdf and 'Longitude Smoothed' in hdf:
+            # TODO: align everything to 0 offset
+            best_lat = hdf['Latitude Smoothed']
+            best_lon = hdf['Longitude Smoothed']
+            add_track(kml, 'Smoothed', best_lat, best_lon, 'ff7fff7f', 
+                      alt_param=alt, alt_mode=altitude_mode)
+            add_track(kml, 'Smoothed On Ground', best_lat, best_lon, 'ff7fff7f')
     
         if 'Latitude Prepared' in hdf and 'Longitude Prepared' in hdf:
             lat = hdf['Latitude Prepared']
             lon = hdf['Longitude Prepared']
-            add_track(kml, 'Prepared Track', lat, lon, 'A11EB3', visible=False)
+            prepared = not best_lat or not best_lon
+            add_track(kml, 'Prepared Track', lat, lon, 'A11EB3',
+                      visible=prepared)
+            if prepared:
+                best_lat = lat
+                best_lon = lon
         
         if 'Latitude' in hdf and 'Longitude' in hdf:
             lat_r = hdf['Latitude']
             lon_r = hdf['Longitude']
+            unprepared = not best_lat or not best_lon
             # add RAW track default invisible
-            add_track(kml, 'Recorded Track', lat_r, lon_r, 'ff0000ff', visible=False)
+            add_track(kml, 'Recorded Track', lat_r, lon_r, 'ff0000ff',
+                      visible=unprepared)
+            
+            if unprepared:
+                best_lat = lat_r
+                best_lon = lon_r
+        
+        best_lat = derived_param_from_hdf(best_lat).get_aligned(one_hz)
+        best_lon = derived_param_from_hdf(best_lat).get_aligned(one_hz)
 
     for kti in kti_list:
         kti_point_values = {'name': kti.name}
@@ -219,8 +240,8 @@ def track_to_kml(hdf_path, kti_list, kpv_list, approach_list,
         # Trap kpvs with invalid latitude or longitude data (normally happens
         # at the start of the data where accelerometer offsets are declared,
         # and this avoids casting kpvs into the Atlantic.
-        kpv_lat = smooth_lat.at(kpv.index)
-        kpv_lon = smooth_lon.at(kpv.index)
+        kpv_lat = best_lat.at(kpv.index)
+        kpv_lon = best_lat.at(kpv.index)
         if kpv_lat == None or kpv_lon == None or \
            (kpv_lat == 0.0 and kpv_lon == 0.0):
             continue
