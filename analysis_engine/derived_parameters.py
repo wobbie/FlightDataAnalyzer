@@ -6999,7 +6999,7 @@ class FlapManoeuvreSpeed(DerivedParameterNode):
                     model=A('Model'), series=A('Series'), family=A('Family'),
                     engine_type=A('Engine Type'), engine_series=A('Engine Series')):
 
-        if not manufacturer.value == 'Boeing':
+        if not manufacturer or not manufacturer.value == 'Boeing':
             return False
 
         try:
