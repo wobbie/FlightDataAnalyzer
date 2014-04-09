@@ -190,8 +190,8 @@ def track_to_kml(hdf_path, kti_list, kpv_list, approach_list,
         
         if 'Latitude Smoothed' in hdf and 'Longitude Smoothed' in hdf:
             # TODO: align everything to 0 offset
-            best_lat = derived_param_from_hdf(hdf['Latitude Smoothed']).get_aligned(one_hz)
-            best_lon = derived_param_from_hdf(hdf['Longitude Smoothed']).get_aligned(one_hz)
+            best_lat = hdf['Latitude Smoothed']
+            best_lon = hdf['Longitude Smoothed']
             add_track(kml, 'Smoothed', best_lat, best_lon, 'ff7fff7f', 
                       alt_param=alt, alt_mode=altitude_mode)
             add_track(kml, 'Smoothed On Ground', best_lat, best_lon, 'ff7fff7f')
@@ -217,6 +217,9 @@ def track_to_kml(hdf_path, kti_list, kpv_list, approach_list,
             if unprepared:
                 best_lat = lat_r
                 best_lon = lon_r
+        
+        best_lat = derived_param_from_hdf(best_lat).get_aligned(one_hz)
+        best_lon = derived_param_from_hdf(best_lat).get_aligned(one_hz)
 
     for kti in kti_list:
         kti_point_values = {'name': kti.name}
