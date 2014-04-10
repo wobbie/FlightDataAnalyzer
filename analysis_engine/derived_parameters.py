@@ -797,8 +797,9 @@ class AltitudeAAL(DerivedParameterNode):
                     land_pitch=land_pitch)
             
             # Reset end sections
-            alt_aal[quick.start:alt_idxs[0]+1] = 0.0
-            alt_aal[alt_idxs[-1]+1:quick.stop] = 0.0
+            if len(alt_idxs):
+                alt_aal[quick.start:alt_idxs[0]+1] = 0.0
+                alt_aal[alt_idxs[-1]+1:quick.stop] = 0.0
         
         '''
         # Quick visual check of the altitude aal.
