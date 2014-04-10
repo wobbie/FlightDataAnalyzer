@@ -659,7 +659,7 @@ def main():
     if not args.disable_kml:
         kml_dest = os.path.splitext(hdf_copy)[0] + '.kml'
         dest = track_to_kml(hdf_copy, res['kti'], res['kpv'], res['approach'],
-                     plot_altitude='Altitude QNH', dest_path=kml_dest)
+                     dest_path=kml_dest)
         if dest:
             logger.info("Flight Track with attributes writen to kml: %s", dest)
 
