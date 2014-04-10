@@ -550,6 +550,8 @@ def main():
                         help='Aircraft tail number.')
     parser.add_argument('--strip', default=False, action='store_true',
                         help='Strip the HDF5 file to only the LFL parameters')
+    parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
+                        help='Verbose logging')
 
     # Aircraft info
     parser.add_argument('-aircraft-family', dest='aircraft_family', type=str,
@@ -596,6 +598,10 @@ def main():
                         help='Engine type.')
 
     args = parser.parse_args()
+    
+    if args.verbose:
+        logger.setLevel(logging.DEBUG)
+    
     aircraft_info = {}
     if args.aircraft_model:
         aircraft_info['Model'] = args.aircraft_model
