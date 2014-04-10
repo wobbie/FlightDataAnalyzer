@@ -167,8 +167,8 @@ def track_to_kml(hdf_path, kti_list, kpv_list, approach_list,
         coord_params = (('Latitude Smoothed', 'Longitude Smoothed'),
                         ('Latitude Prepared', 'Longitude Prepared'),
                         ('Latitude', 'Longitude'))
-        altitude_absolute_params = ('Altitude QNH', 'Altitude AAL',
-                                    'Altitude STD')
+        altitude_absolute_params = ('Altitude QNH', 'Altitude STD',
+                                    'Altitude AAL')
         altitude_relative_params = ('Altitude Radio',)
         # Check latitude and longitude pair exist.
         if not any(lat in hdf and lon in hdf for lat, lon in coord_params):
