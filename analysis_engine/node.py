@@ -28,7 +28,6 @@ from analysis_engine.library import (
     slices_above,
     slices_below,
     slices_between,
-    slices_from_ktis,
     slices_from_to,
     value_at_index,
     value_at_time,
@@ -352,7 +351,7 @@ def can_operate(cls, available):
 
         try:
             res = self.derive(*args)
-        except Exception as err:
+        except Exception:
             self.exception('Failed to derive node `%s`.\n'
                            'Nodes used to derive:\n  %s',
                            self.name, '\n  '.join(repr(n) for n in args))
@@ -1776,16 +1775,15 @@ class KeyPointValueNode(FormattedNameNode):
 
             if isinstance(slice_, Section):
                 index, value = function(array, slice_.slice,
-                                    start_edge=slice_.start_edge,
-                                    stop_edge=slice_.stop_edge)
+                                        start_edge=slice_.start_edge,
+                                        stop_edge=slice_.stop_edge)
             else:
                 # Where slice.stop is not a whole number, it is assumed that the
                 # value is an stop_edge rather than an inclusive pythonic end to a
                 # range (stop+1) as a slice should be.
                 stop = slice_.stop if slice_.stop%1 else None
-                index, value = function(array, slice_,
-                                    start_edge=slice_.start,
-                                    stop_edge=stop)
+                index, value = function(array, slice_, start_edge=slice_.start,
+                                        stop_edge=stop)
             self.create_kpv(index, value, **kwargs)
 
     def create_kpv_from_slices(self, array, slices, function, **kwargs):

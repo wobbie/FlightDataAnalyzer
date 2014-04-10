@@ -1,4 +1,3 @@
-import math
 import numpy as np
 
 from analysis_engine import settings
@@ -7,19 +6,15 @@ from analysis_engine.library import (
     all_of,
     any_of,
     bearing_and_distance,
-    closest_unmasked_value,
     cycle_finder,
-    cycle_match,
     find_low_alts,
     first_order_washout,
     first_valid_sample,
     index_at_value,
-    index_at_value_or_level_off,
     is_index_within_slices,
     is_index_within_slice,
     is_slice_within_slice,
     last_valid_sample,
-    min_value,
     moving_average,
     nearest_neighbour_mask_repair,
     rate_of_change,
@@ -45,7 +40,6 @@ from analysis_engine.settings import (
     AIRSPEED_THRESHOLD,
     BOUNCED_LANDING_THRESHOLD,
     BOUNCED_MAXIMUM_DURATION,
-    DESCENT_LOW_CLIMB_THRESHOLD,
     GROUNDSPEED_FOR_MOBILE,
     HEADING_RATE_FOR_MOBILE,
     HEADING_TURN_OFF_RUNWAY,
@@ -54,7 +48,6 @@ from analysis_engine.settings import (
     HOLDING_MIN_TIME,
     HYSTERESIS_FPALT_CCD,
     INITIAL_CLIMB_THRESHOLD,
-    INITIAL_APPROACH_THRESHOLD,
     KTS_TO_MPS,
     LANDING_THRESHOLD_HEIGHT,
     RATE_OF_TURN_FOR_FLIGHT_PHASES,
@@ -577,19 +570,11 @@ class Fast(FlightPhaseNode):
             (airspeed.array[1:-1]-AIRSPEED_THRESHOLD)
         test_array = np.ma.masked_outside(value_passing_array, 0.0, -100.0)
         """
-        fast_samples = np.ma.clump_unmasked(
-            np.ma.masked_less(airspeed.array, AIRSPEED_THRESHOLD))
-
-        for fast_sample in fast_samples:
-            start = fast_sample.start
-            stop = fast_sample.stop
-            if abs(airspeed.array[start] - AIRSPEED_THRESHOLD) > 20:
-                start = None
-            if abs(airspeed.array[stop - 1] - AIRSPEED_THRESHOLD) > 30:
-                stop = None
-            # Dont create a phase if neither is valid.
-            if start or stop:
-                self.create_phase(slice(start, stop))
+        fast = np.ma.masked_less(airspeed.array, AIRSPEED_THRESHOLD)
+        fast_slices = np.ma.clump_unmasked(fast)
+        fast_slices = slices_remove_small_gaps(fast_slices, time_limit=30,
+                                               hz=self.frequency)
+        self.create_phases(fast_slices)
 
 
 class FinalApproach(FlightPhaseNode):
@@ -1209,7 +1194,7 @@ class RejectedTakeoff(FlightPhaseNode):
             # we get the min of the potential rto stop and the end of the
             # data for cases where the potential rto is detected close to the
             # end of the data
-            check_grounded_idx = min(potential_rto.stop + 60 * self.frequency,
+            check_grounded_idx = min(potential_rto.stop + (60 * self.frequency),
                                      len(accel_lon.array) - 1)
             if is_index_within_slices(check_grounded_idx, groundeds.get_slices()):
                 # if soon after potential rto and still grounded we have a
@@ -1327,6 +1312,7 @@ class TakeoffRotation(FlightPhaseNode):
     This is used by correlation tests to check control movements during the
     rotation and lift phases.
     '''
+    align_frequency = 1
     def derive(self, lifts=S('Liftoff')):
         if not lifts:
             return
@@ -1340,17 +1326,18 @@ class TakeoffRotation(FlightPhaseNode):
 # Takeoff/Go-Around Ratings
 
 
-# TODO: Write some unit tests!
 class Takeoff5MinRating(FlightPhaseNode):
     '''
     For engines, the period of high power operation is normally 5 minutes from
     the start of takeoff. Also applies in the case of a go-around.
     '''
-    def derive(self, toffs=S('Takeoff')):
+    align_frequency = 1
+    
+    def derive(self, toffs=KTI('Takeoff Acceleration Start')):
         '''
         '''
         for toff in toffs:
-            self.create_phase(slice(toff.slice.start, toff.slice.start + 300))
+            self.create_phase(slice(toff.index, toff.index + 300))
 
 
 # TODO: Write some unit tests!
@@ -1359,7 +1346,8 @@ class GoAround5MinRating(FlightPhaseNode):
     For engines, the period of high power operation is normally 5 minutes from
     the start of takeoff. Also applies in the case of a go-around.
     '''
-
+    align_frequency = 1
+    
     def derive(self, gas=S('Go Around And Climbout'), tdwn=S('Touchdown')):
         '''
         We check that the computed phase cannot extend beyond the last

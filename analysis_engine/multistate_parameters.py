@@ -986,18 +986,30 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
             return False
 
         try:
-            at.get_conf_angles(model.value, series.value, family.value)
+            angles = at.get_conf_angles(model.value, series.value, family.value)
         except KeyError:
             pass  # try lever map
 
         try:
-            at.get_lever_angles(model.value, series.value, family.value)
+            angles = at.get_lever_angles(model.value, series.value, family.value)
         except KeyError:
             cls.warning("No lever angles available for '%s', '%s', '%s'.",
                         model.value, series.value, family.value)
             return False
-
-        return True
+        
+        can_operate = True
+        
+        slat_required = any(slat is not None for slat, flap, flaperon in 
+                            angles.values())
+        if slat_required:
+            can_operate = can_operate and 'Slat' in available
+        
+        flaperon_required = any(flaperon is not None for slat, flap, flaperon in
+                                angles.values())
+        if flaperon_required:
+            can_operate = can_operate and 'Flaperon' in available
+        
+        return can_operate
 
     def derive(self, flap=M('Flap'), slat=M('Slat'), flaperon=M('Flaperon'),
                model=A('Model'), series=A('Series'), family=A('Family')):
@@ -1092,12 +1104,12 @@ class FuelQty_Low(MultistateDerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available):
-        return any_of(('Fuel Qty Low', 'Fuel Qty (1) Low', 'Fuel Qty (2) Low'),
+        return any_of(('Fuel Qty Low', 'Fuel Qty (L) Low', 'Fuel Qty (R) Low'),
                       available)
 
     def derive(self, fqty = M('Fuel Qty Low'),
-               fqty1 = M('Fuel Qty (1) Low'),
-               fqty2 = M('Fuel Qty (2) Low')):
+               fqty1 = M('Fuel Qty (L) Low'),
+               fqty2 = M('Fuel Qty (R) Low')):
         warning = vstack_params_where_state(
             (fqty,  'Warning'),
             (fqty1, 'Warning'),

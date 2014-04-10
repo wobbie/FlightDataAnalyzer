@@ -90,12 +90,14 @@ from analysis_engine.library import (actuator_mismatch,
 from settings import (AIRSPEED_THRESHOLD,
                       AZ_WASHOUT_TC,
                       BOUNCED_LANDING_THRESHOLD,
+                      CLIMB_THRESHOLD,
                       FEET_PER_NM,
                       HYSTERESIS_FPIAS,
                       HYSTERESIS_FPROC,
                       GRAVITY_IMPERIAL,
                       KTS_TO_FPS,
                       KTS_TO_MPS,
+                      LANDING_THRESHOLD_HEIGHT,
                       METRES_TO_FEET,
                       METRES_TO_NM,
                       VERTICAL_SPEED_LAG_TC)
@@ -795,8 +797,9 @@ class AltitudeAAL(DerivedParameterNode):
                     land_pitch=land_pitch)
             
             # Reset end sections
-            alt_aal[quick.start:alt_idxs[0]+1] = 0.0
-            alt_aal[alt_idxs[-1]+1:quick.stop] = 0.0
+            if len(alt_idxs):
+                alt_aal[quick.start:alt_idxs[0]+1] = 0.0
+                alt_aal[alt_idxs[-1]+1:quick.stop] = 0.0
         
         '''
         # Quick visual check of the altitude aal.
@@ -1088,15 +1091,16 @@ class AltitudeQNH(DerivedParameterNode):
             return  # BAIL OUT!
         elif t_elev is None:
             self.warning("No Takeoff elevation, using %dft at Landing", l_elev)
-            smooth = False
+            #smooth = False
             t_elev = l_elev
         elif l_elev is None:
             self.warning("No Landing elevation, using %dft at Takeoff", t_elev)
-            smooth = False
+            #smooth = False
             l_elev = t_elev
         else:
             # both have valid values
-            smooth = True
+            #smooth = True
+            pass
 
         ### Break the "journey" at the "midpoint" - actually max altitude aal -
         ### and be sure to account for rise/fall in the data and stick the peak
@@ -1135,7 +1139,7 @@ class AltitudeQNH(DerivedParameterNode):
                             climbs[0].slice.stop+1)
         adjust_up = self._qnh_adjust(alt_aal.array[first_climb], 
                                 alt_std.array[first_climb], 
-                                t_elev)
+                                t_elev, 'climb')
         
         # Descent phase adjustment        
         last_descent = slice(descends[-1].slice.stop+1, 
@@ -1143,7 +1147,7 @@ class AltitudeQNH(DerivedParameterNode):
                              -1) 
         adjust_down = self._qnh_adjust(alt_aal.array[last_descent], 
                                   alt_std.array[last_descent], 
-                                  l_elev)
+                                  l_elev, 'descent')
         
         alt_qnh=np_ma_masked_zeros_like(alt_aal.array)
         
@@ -1166,9 +1170,15 @@ class AltitudeQNH(DerivedParameterNode):
         self.array = np.ma.array(data=alt_qnh, mask=alt_aal.array.mask)
 
     @staticmethod
-    def _qnh_adjust(aal, std, elev):
+    def _qnh_adjust(aal, std, elev, mode):
+        if mode == 'climb':
+            datum = CLIMB_THRESHOLD
+        elif mode == 'descent':
+            datum = LANDING_THRESHOLD_HEIGHT
+        else:
+            raise ValueError("Unrecognised mode in _qnh_adjust")
         # numpy.linspace(start, stop, num=50, endpoint=True)
-        press_offset = std[0] - elev
+        press_offset = std[0] - elev - datum
         if abs(press_offset) > 4000.0:
             raise ValueError("Excessive difference between pressure altitude (%s) and airport elevation (%s) of '%s' implies incorrect altimeter scaling.",
                              std[0], elev, press_offset)
@@ -3141,17 +3151,16 @@ class FuelQty(DerivedParameterNode):
         return any_of(cls.get_dependency_names(), available)
 
     def derive(self,
-               fuel_qty1=P('Fuel Qty (1)'),
-               fuel_qty2=P('Fuel Qty (2)'),
-               fuel_qty3=P('Fuel Qty (3)'),
-               fuel_qty4=P('Fuel Qty (4)'),
-               fuel_qty5=P('Fuel Qty (5)'),
-               fuel_qty6=P('Fuel Qty (6)'),
-               fuel_qty7=P('Fuel Qty (7)'),
+               fuel_qty_l=P('Fuel Qty (L)'),
+               fuel_qty_c=P('Fuel Qty (C)'),
+               fuel_qty_c_1=P('Fuel Qty (C1)'),
+               fuel_qty_c_2=P('Fuel Qty (C2)'),
+               fuel_qty_r=P('Fuel Qty (R)'),
                fuel_qty_trim=P('Fuel Qty (Trim)'),
                fuel_qty_aux=P('Fuel Qty (Aux)')):
         params = []
-        for param in (fuel_qty1, fuel_qty2, fuel_qty3, fuel_qty4, fuel_qty5, fuel_qty6, fuel_qty7, fuel_qty_trim, fuel_qty_aux):
+        for param in (fuel_qty_l, fuel_qty_c, fuel_qty_c_1, fuel_qty_c_2,
+                      fuel_qty_r, fuel_qty_trim, fuel_qty_aux):
             if not param:
                 continue
             # Repair array masks to ensure that the summed values are not too small
@@ -3180,6 +3189,52 @@ class FuelQty(DerivedParameterNode):
             # empty array like the last (inherently recorded) array.
             self.array = np_ma_masked_zeros_like(param.array)
             self.offset = 0.0
+
+
+class FuelQtyL(DerivedParameterNode):
+    '''
+    Total fuel quantity measured in the left wing.
+    '''
+    name = 'Fuel Qty (L)'
+
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self, fuel_qty_l_1=P('Fuel Qty (L1)'),
+               fuel_qty_l_2=P('Fuel Qty (L2)'),
+               fuel_qty_l_3=P('Fuel Qty (L3)'),):
+        # Sum all the available measurements! Masked values are maintained as
+        # all tanks must be reading valid values to be summed together. Fuel in
+        # both tanks but a masked value in one should not result in half the
+        # measured fuel quantity!
+        params = [p.array for p in (fuel_qty_l_1,
+                                    fuel_qty_l_2,
+                                    fuel_qty_l_3) if p is not None]
+        self.array = np.ma.sum(np.ma.vstack(params), axis=0)
+
+
+class FuelQtyR(DerivedParameterNode):
+    '''
+    Total fuel quantity measured in the right wing.
+    '''
+    name = 'Fuel Qty (R)'
+
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self, fuel_qty_r_1=P('Fuel Qty (R1)'),
+               fuel_qty_r_2=P('Fuel Qty (R2)'),
+               fuel_qty_r_3=P('Fuel Qty (R3)'),):
+        # Sum all the available measurements! Masked values are maintained as
+        # all tanks must be reading valid values to be summed together. Fuel in
+        # both tanks but a masked value in one should not result in half the
+        # measured fuel quantity!
+        params = [p.array for p in (fuel_qty_r_1,
+                                    fuel_qty_r_2,
+                                    fuel_qty_r_3) if p is not None]
+        self.array = np.ma.sum(np.ma.vstack(params), axis=0)
 
 
 ##############################################################################
@@ -6945,7 +7000,7 @@ class FlapManoeuvreSpeed(DerivedParameterNode):
                     model=A('Model'), series=A('Series'), family=A('Family'),
                     engine_type=A('Engine Type'), engine_series=A('Engine Series')):
 
-        if not manufacturer.value == 'Boeing':
+        if not manufacturer or not manufacturer.value == 'Boeing':
             return False
 
         try:

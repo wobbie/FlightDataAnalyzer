@@ -1,5 +1,6 @@
 import argparse
 import csv
+import itertools
 import logging
 import numpy as np
 import os
@@ -151,7 +152,7 @@ def draw_centreline(kml, rwy):
 
 
 def track_to_kml(hdf_path, kti_list, kpv_list, approach_list,
-                 plot_altitude='Altitude QNH', dest_path=None):
+                 plot_altitude=None, dest_path=None):
     '''
     Plot results of process_flight onto a KML track.
     
@@ -163,43 +164,78 @@ def track_to_kml(hdf_path, kti_list, kpv_list, approach_list,
     one_hz = Parameter()
     kml = simplekml.Kml()
     with hdf_file(hdf_path) as hdf:
-        if 'Latitude Smoothed' not in hdf:
-            logger.error("Cannot write track as Latitude Smoothed not in hdf")
+        coord_params = (('Latitude Smoothed', 'Longitude Smoothed'),
+                        ('Latitude Prepared', 'Longitude Prepared'),
+                        ('Latitude', 'Longitude'))
+        altitude_absolute_params = ('Altitude QNH', 'Altitude STD',
+                                    'Altitude AAL')
+        altitude_relative_params = ('Altitude Radio',)
+        # Check latitude and longitude pair exist.
+        if not any(lat in hdf and lon in hdf for lat, lon in coord_params):
+            logger.error("Cannot write track as coordinate paarmeters not in hdf")
             return False
-        if plot_altitude not in hdf:
-            logger.warning("Disabling altitude on KML plot as it is unavailable.")
-            plot_altitude = False
+        # Choose best altitude parameter if not specified.
+        if not plot_altitude:
+            altitude_params = itertools.chain(altitude_absolute_params,
+                                              altitude_relative_params)
+            try:
+                plot_altitude = next(p for p in altitude_params if p in hdf)
+            except StopIteration:
+                logger.warning("Disabling altitude on KML plot as it is "
+                               "unavailable.")
+        # Get altitude param from hdf.
         if plot_altitude:
             alt = derived_param_from_hdf(hdf[plot_altitude]).get_aligned(one_hz)
-            alt.array = repair_mask(alt.array, frequency=alt.frequency, repair_duration=None) / METRES_TO_FEET
+            alt.array = repair_mask(alt.array, frequency=alt.frequency,
+                                    repair_duration=None) / METRES_TO_FEET
         else:
             alt = None
-            
-        if plot_altitude in ['Altitude QNH', 'Altitude AAL', 'Altitude STD']:
+        
+        if plot_altitude in altitude_absolute_params:
             altitude_mode = simplekml.constants.AltitudeMode.absolute
-        elif plot_altitude in ['Altitude Radio']:
+        elif plot_altitude in altitude_relative_params:
             altitude_mode = simplekml.constants.AltitudeMode.relativetoground
         else:
             altitude_mode = simplekml.constants.AltitudeMode.clamptoground
         
-        # TODO: align everything to 0 offset
-        smooth_lat = derived_param_from_hdf(hdf['Latitude Smoothed']).get_aligned(one_hz)
-        smooth_lon = derived_param_from_hdf(hdf['Longitude Smoothed']).get_aligned(one_hz)
-        add_track(kml, 'Smoothed', smooth_lat, smooth_lon, 'ff7fff7f', 
-                  alt_param=alt, alt_mode=altitude_mode)
-        add_track(kml, 'Smoothed On Ground', smooth_lat, smooth_lon, 'ff7fff7f')        
+        # Get best latitude and longitude parameters.
+        best_lat = None
+        best_lon = None
+        
+        if 'Latitude Smoothed' in hdf and 'Longitude Smoothed' in hdf:
+            # TODO: align everything to 0 offset
+            best_lat = hdf['Latitude Smoothed']
+            best_lon = hdf['Longitude Smoothed']
+            add_track(kml, 'Smoothed', best_lat, best_lon, 'ff7fff7f', 
+                      alt_param=alt, alt_mode=altitude_mode)
+            add_track(kml, 'Smoothed On Ground', best_lat, best_lon, 'ff7fff7f')
     
         if 'Latitude Prepared' in hdf and 'Longitude Prepared' in hdf:
             lat = hdf['Latitude Prepared']
             lon = hdf['Longitude Prepared']
-            add_track(kml, 'Prepared Track', lat, lon, 'A11EB3', visible=False)
+            prepared = not best_lat or not best_lon
+            add_track(kml, 'Prepared Track', lat, lon, 'A11EB3',
+                      visible=prepared)
+            if prepared:
+                best_lat = lat
+                best_lon = lon
         
         if 'Latitude' in hdf and 'Longitude' in hdf:
             lat_r = hdf['Latitude']
             lon_r = hdf['Longitude']
+            unprepared = not best_lat or not best_lon
             # add RAW track default invisible
-            add_track(kml, 'Recorded Track', lat_r, lon_r, 'ff0000ff', visible=False)
+            add_track(kml, 'Recorded Track', lat_r, lon_r, 'ff0000ff',
+                      visible=unprepared)
+            
+            if unprepared:
+                best_lat = lat_r
+                best_lon = lon_r
+        
+        best_lat = derived_param_from_hdf(best_lat).get_aligned(one_hz)
+        best_lon = derived_param_from_hdf(best_lat).get_aligned(one_hz)
 
+    # Add KTIs.
     for kti in kti_list:
         kti_point_values = {'name': kti.name}
         if kti.name in SKIP_KTIS:
@@ -212,15 +248,15 @@ def track_to_kml(hdf_path, kti_list, kpv_list, approach_list,
         else:
             kti_point_values['coords'] = ((kti.longitude, kti.latitude),)
         kml.newpoint(**kti_point_values)
-        
     
+    # Add KPVs.
     for kpv in kpv_list:
 
         # Trap kpvs with invalid latitude or longitude data (normally happens
         # at the start of the data where accelerometer offsets are declared,
         # and this avoids casting kpvs into the Atlantic.
-        kpv_lat = smooth_lat.at(kpv.index)
-        kpv_lon = smooth_lon.at(kpv.index)
+        kpv_lat = best_lat.at(kpv.index)
+        kpv_lon = best_lat.at(kpv.index)
         if kpv_lat == None or kpv_lon == None or \
            (kpv_lat == 0.0 and kpv_lon == 0.0):
             continue
@@ -241,12 +277,12 @@ def track_to_kml(hdf_path, kti_list, kpv_list, approach_list,
         pnt = kml.newpoint(**kpv_point_values)
         pnt.style = style
     
+    # Add approach centre lines.
     for app in approach_list:
         try:
             draw_centreline(kml, app.runway)
         except:
             pass
-                
 
     if not dest_path:
         dest_path = hdf_path + ".kml"
