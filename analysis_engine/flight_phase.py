@@ -1243,7 +1243,7 @@ class Takeoff(FlightPhaseNode):
             # We know a takeoff should come at the start of the phase,
             # however if the aircraft is already airborne, we can skip the
             # takeoff stuff.
-            if speedy.slice.start is None:
+            if not speedy.slice.start:
                 break
 
             # The aircraft is part way down its takeoff run at the start of

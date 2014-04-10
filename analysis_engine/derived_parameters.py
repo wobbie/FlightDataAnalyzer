@@ -688,7 +688,7 @@ class AltitudeAAL(DerivedParameterNode):
                     # as for takeoffs.
                     dips.append({
                         'type': 'land',
-                        'slice': slice(quick.stop, alt_idx - 1, -1),
+                        'slice': slice(quick.stop, (alt_idx or 1) - 1, -1),
                         # was 'slice': slice(next_alt_idx - 1, alt_idx - 1, -1),
                         'alt_std': next_alt,
                         'highest_ground': next_alt,
@@ -1124,39 +1124,50 @@ class AltitudeQNH(DerivedParameterNode):
         
         # TODO: Improvement would be to adjust to half the difference if the cruise is below 10,000ft
         
-        # Climb phase adjustment
-        first_climb = slice(climbs[0].slice.start, 
-                            climbs[0].slice.stop+1)
-        adjust_up = self._qnh_adjust(alt_aal.array[first_climb], 
-                                alt_std.array[first_climb], 
-                                t_elev)
+        #if not climbs and descends:
+            ## just do the descent part (STOP_ONLY)
+            ## both elevations should be the same from earlier assumptions
+            #assert t_elev == l_elev, 'unhandled elevation and climb/descent logic!'
+            #adjustment = self._qnh_adjust(alt_aal.array[descends[-1].slice, 
+                                          #alt_std.array, 
+                                          #t_elev)
+            #self.array = alt_aal.array + adjustment
+            #return
         
-        # Descent phase adjustment        
-        last_descent = slice(descends[-1].slice.stop+1, 
-                             descends[-1].slice.start, 
-                             -1) 
-        adjust_down = self._qnh_adjust(alt_aal.array[last_descent], 
-                                  alt_std.array[last_descent], 
-                                  l_elev)
-        
-        alt_qnh=np_ma_masked_zeros_like(alt_aal.array)
-        
-        # Before first climb
-        alt_qnh[:first_climb.start] = alt_aal.array[:first_climb.start] + t_elev
-        
-        # First climb adjusted
-        alt_qnh[first_climb] = alt_aal.array[first_climb] + adjust_up
-        
-        # Use pressure altitude in the cruise
-        alt_qnh[first_climb.stop:last_descent.stop+1] = alt_std.array[first_climb.stop:last_descent.stop+1]
-        
-        # Last descent adjusted
-        alt_qnh[last_descent] =alt_aal.array[last_descent] + adjust_down
-        
-        # After last descent
-        alt_qnh[last_descent.start:] = alt_aal.array[last_descent.start:] + l_elev
-        
+        alt_qnh = np_ma_masked_zeros_like(alt_aal.array)
+        if climbs:
+            # Climb phase adjustment
+            first_climb = slice(climbs[0].slice.start, 
+                                climbs[0].slice.stop+1)
+            adjust_up = self._qnh_adjust(alt_aal.array[first_climb], 
+                                    alt_std.array[first_climb], 
+                                    t_elev)
+            # Before first climb
+            alt_qnh[:first_climb.start] = alt_aal.array[:first_climb.start] + t_elev
 
+            # First climb adjusted
+            alt_qnh[first_climb] = alt_aal.array[first_climb] + adjust_up
+
+        if descends:
+            # Descent phase adjustment        
+            last_descent = slice(descends[-1].slice.stop+1, 
+                                 descends[-1].slice.start, 
+                                 -1) 
+            adjust_down = self._qnh_adjust(alt_aal.array[last_descent], 
+                                      alt_std.array[last_descent], 
+                                      l_elev)
+            # Last descent adjusted
+            alt_qnh[last_descent] = alt_aal.array[last_descent] + adjust_down
+            
+            # After last descent
+            alt_qnh[last_descent.start:] = alt_aal.array[last_descent.start:] + l_elev
+        
+                
+        # Use pressure altitude in the cruise
+        cruise_start = first_climb.stop if climbs else 0
+        cruise_stop = last_descent.stop+1 if descends else len(alt_std.array)
+        alt_qnh[cruise_start:cruise_stop] = alt_std.array[cruise_start:cruise_stop]
+        
         self.array = np.ma.array(data=alt_qnh, mask=alt_aal.array.mask)
 
     @staticmethod
