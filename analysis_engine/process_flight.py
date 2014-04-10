@@ -600,6 +600,8 @@ def main():
     if args.aircraft_model:
         aircraft_info['Model'] = args.aircraft_model
     if args.aircraft_family:
+        aircraft_info['Family'] = args.aircraft_family
+    if args.aircraft_series:
         aircraft_info['Series'] = args.aircraft_series
     if args.aircraft_manufacturer:
         aircraft_info['Manufacturer'] = args.aircraft_manufacturer
