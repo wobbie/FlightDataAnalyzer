@@ -550,6 +550,8 @@ def main():
                         help='Aircraft tail number.')
     parser.add_argument('--strip', default=False, action='store_true',
                         help='Strip the HDF5 file to only the LFL parameters')
+    parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
+                        help='Verbose logging')
 
     # Aircraft info
     parser.add_argument('-aircraft-family', dest='aircraft_family', type=str,
@@ -596,10 +598,16 @@ def main():
                         help='Engine type.')
 
     args = parser.parse_args()
+    
+    if args.verbose:
+        logger.setLevel(logging.DEBUG)
+    
     aircraft_info = {}
     if args.aircraft_model:
         aircraft_info['Model'] = args.aircraft_model
     if args.aircraft_family:
+        aircraft_info['Family'] = args.aircraft_family
+    if args.aircraft_series:
         aircraft_info['Series'] = args.aircraft_series
     if args.aircraft_manufacturer:
         aircraft_info['Manufacturer'] = args.aircraft_manufacturer
@@ -651,7 +659,7 @@ def main():
     if not args.disable_kml:
         kml_dest = os.path.splitext(hdf_copy)[0] + '.kml'
         dest = track_to_kml(hdf_copy, res['kti'], res['kpv'], res['approach'],
-                     plot_altitude='Altitude QNH', dest_path=kml_dest)
+                     dest_path=kml_dest)
         if dest:
             logger.info("Flight Track with attributes writen to kml: %s", dest)
 
