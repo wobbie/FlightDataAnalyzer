@@ -7,6 +7,7 @@
 ##############################################################################
 # Imports
 
+import logging
 import os
 import simplejson
 import urllib
@@ -20,6 +21,12 @@ from analysis_engine.api_handler import (APIHandlerHTTP,
                                          IncompleteEntryError,
                                          NotFoundError)
 from analysis_engine.library import bearing_and_distance
+
+
+##############################################################################
+# Globals
+
+logger = logging.getLogger(name=__name__)
 
 
 ##############################################################################
@@ -327,9 +334,17 @@ class AnalysisEngineAPIHandlerLocal(AnalysisEngineAPI):
             LOCAL_API_RUNWAY_PATH,
             LOCAL_API_EXPORTS_PATH,
         )
+        logger.debug("Loading local API aircraft from '%s'",
+                     LOCAL_API_AIRCRAFT_PATH)
         self.aircraft = self._load_data(LOCAL_API_AIRCRAFT_PATH)
-        self.airports = self._load_data(LOCAL_API_AIRPORT_PATH)
+        logger.debug("Loading local API airports from '%s'",
+                     LOCAL_API_AIRPORT_PATH)
+        self.airports = self._load_data(LOCAL_API_RUNWAY_PATH)
+        logger.debug("Loading local API runways from '%s'",
+                     LOCAL_API_RUNWAY_PATH)
         self.runways = self._load_data(LOCAL_API_RUNWAY_PATH)
+        logger.debug("Loading local API exports from '%s'",
+                     LOCAL_API_EXPORTS_PATH)
         self.exports = self._load_data(LOCAL_API_EXPORTS_PATH)
     
     def get_aircraft(self, tail_number):
