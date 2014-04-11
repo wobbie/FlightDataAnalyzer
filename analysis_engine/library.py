@@ -2142,11 +2142,9 @@ def heading_diff(heading1, heading2):
     :type heading2: int or float
     '''
     assert (0 <= heading1 < 360) and (0 <= heading2 < 360)
-    diff = heading1 - heading2
+    diff = heading2 - heading1
     abs_diff = abs(diff)
-    if abs_diff == 180:
-        return abs_diff
-    elif abs_diff < 180:
+    if abs_diff <= 180:
         return diff
     elif heading2 > heading1:
         return abs_diff - 360

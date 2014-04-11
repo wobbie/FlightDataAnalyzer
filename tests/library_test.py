@@ -2293,13 +2293,17 @@ class TestHeadingDiff(unittest.TestCase):
         self.assertRaises(AssertionError, heading_diff, 500, 400)
         self.assertRaises(AssertionError, heading_diff, -86.2, -152)
         self.assertEqual(heading_diff(0, 0), 0)
-        self.assertEqual(heading_diff(10, 0), 10)
-        self.assertEqual(heading_diff(0, 10), -10)
+        self.assertEqual(heading_diff(10, 0), -10)
+        self.assertEqual(heading_diff(0, 10), 10)
         self.assertEqual(heading_diff(0, 180), 180)
         self.assertEqual(heading_diff(47.81925103290594,
-                                      53.00950000000029), -5.1902489670943481)
+                                      53.00950000000029), 5.1902489670943481)
         self.assertEqual(heading_diff(1.6407827938370874,
                                       359.8320000000002), -1.8087827938368832)
+        self.assertEqual(heading_diff(10, 350), -20)
+        self.assertEqual(heading_diff(350, 10), 20)
+        self.assertEqual(heading_diff(320, 340), 20)
+        self.assertEqual(heading_diff(340, 320), -20)
 
 
 class TestHysteresis(unittest.TestCase):
