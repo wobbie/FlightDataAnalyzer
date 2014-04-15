@@ -5025,7 +5025,7 @@ class TestV2(unittest.TestCase, NodeTest):
         ))
         # Airbus:
         self.assertTrue(self.node_class.can_operate(
-            ('Airspeed', 'Selected Speed', 'Speed Control', 'Liftoff', 'Climb Start', 'Manufacturer'),
+            ('Airspeed', 'Airspeed Selected', 'Speed Control', 'Liftoff', 'Climb Start', 'Manufacturer'),
             manufacturer=A('Manufacturer', 'Airbus'),
         ))
 
@@ -5047,7 +5047,7 @@ class TestV2(unittest.TestCase, NodeTest):
     def test_derive__airbus(self):
         manufacturer = A(name='Manufacturer', value='Airbus')
         spd_ctl = M('Speed Control', np.ma.repeat((1, 0), (320, 960)), values_mapping={0: 'Manual', 1: 'Auto'})
-        spd_sel = P('Selected Speed', np.ma.repeat((400, 120, 170), (10, 630, 640)))
+        spd_sel = P('Airspeed Selected', np.ma.repeat((400, 120, 170), (10, 630, 640)))
         spd_sel.array[:10] = np.ma.masked
         node = self.node_class()
         node.derive(self.airspeed, None, spd_sel, spd_ctl, None, self.liftoffs, self.climbs, manufacturer)
