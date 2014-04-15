@@ -6301,7 +6301,7 @@ class V2(DerivedParameterNode):
 
         airbus = all_of((
             'Airspeed',
-            'Selected Speed',
+            'Airspeed Selected',
             'Speed Control',
             'Liftoff',
             'Climb Start',
@@ -6320,7 +6320,7 @@ class V2(DerivedParameterNode):
     def derive(self,
                airspeed=P('Airspeed'),
                v2_vac=A('V2-Vac'),
-               spd_sel=P('Selected Speed'),
+               spd_sel=P('Airspeed Selected'),
                spd_ctl=P('Speed Control'),
                afr_v2=A('AFR V2'),
                liftoffs=KTI('Liftoff'),
