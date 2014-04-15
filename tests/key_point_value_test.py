@@ -5825,6 +5825,18 @@ class TestEngTorquePercent65KtsTo35FtMin(unittest.TestCase):
         self.assertEqual(node[0].value, 73)
         self.assertEqual(node[0].index, 13)
 
+    def test_derive_above_65(self):
+        # Very similar to above but checks when airspeed starts above 65 kts
+        eng_torq_min = P('Eng (*) Torque [%] Min', array=np.ma.arange(60, 100))
+        air_spd = P('Airspeed', array=np.ma.arange(0.1, 200.1, 5))
+        air_spd.array = np.ma.masked_less(air_spd.array, 65)
+        toff = buildsection('Takeoff', 1,30)
+        node = self.node_class()
+        node.derive(eng_torq_min, air_spd, toff)
+
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].value, 73)
+        self.assertEqual(node[0].index, 13)
 
 class TestEngTorquePercentDuringGoAround5MinRatingMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
 
