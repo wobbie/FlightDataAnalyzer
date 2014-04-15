@@ -164,15 +164,30 @@ def track_to_kml(hdf_path, kti_list, kpv_list, approach_list,
     one_hz = Parameter()
     kml = simplekml.Kml()
     with hdf_file(hdf_path) as hdf:
-        coord_params = (('Latitude Smoothed', 'Longitude Smoothed'),
-                        ('Latitude Prepared', 'Longitude Prepared'),
-                        ('Latitude (Coarse)', 'Longitude (Coarse)'),
-                        ('Latitude', 'Longitude'))
+        # Latitude param, Longitude param, track name, colour
+        coord_params = (
+            {'lat': 'Latitude Smoothed',
+             'lon': 'Longitude Smoothed',
+             'track': 'Smoothed',
+             'colour': 'ff7fff7f'},
+            {'lat': 'Latitude Prepared',
+             'lon': 'Longitude Prepared',
+             'track': 'Prepared',
+             'colour': 'A11EB3'},
+            {'lat': 'Latitude',
+             'lon': 'Longitude',
+             'track': 'Recorded',
+             'colour': 'ff0000ff'},
+            {'lat': 'Latitude (Coarse)',
+             'lon': 'Longitude (Coarse)',
+             'track': 'Coarse',
+             'colour': 'ff0000ff'},
+        )
         altitude_absolute_params = ('Altitude QNH', 'Altitude STD',
                                     'Altitude AAL')
         altitude_relative_params = ('Altitude Radio',)
         # Check latitude and longitude pair exist.
-        if not any(lat in hdf and lon in hdf for lat, lon in coord_params):
+        if not any(c['lat'] in hdf and c['lon'] in hdf for c in coord_params):
             logger.error("Cannot write track as coordinate paarmeters not in hdf")
             return False
         # Choose best altitude parameter if not specified.
@@ -199,50 +214,27 @@ def track_to_kml(hdf_path, kti_list, kpv_list, approach_list,
         else:
             altitude_mode = simplekml.constants.AltitudeMode.clamptoground
         
-        # Get best latitude and longitude parameters.
+        ## Get best latitude and longitude parameters.
         best_lat = None
         best_lon = None
         
-        if 'Latitude Smoothed' in hdf and 'Longitude Smoothed' in hdf:
-            # TODO: align everything to 0 offset
-            best_lat = hdf['Latitude Smoothed']
-            best_lon = hdf['Longitude Smoothed']
-            add_track(kml, 'Smoothed', best_lat, best_lon, 'ff7fff7f', 
-                      alt_param=alt, alt_mode=altitude_mode)
-            add_track(kml, 'Smoothed On Ground', best_lat, best_lon, 'ff7fff7f')
+        for coord_config in coord_params:
+            lat_name = coord_config['lat']
+            lon_name = coord_config['lon']
+            if not lat_name in hdf or not lon_name in hdf:
+                continue
+            lat = hdf[lat_name]
+            lon = hdf[lon_name]
+            best = not best_lat or not best_lon
+            add_track(kml, coord_config['track'], lat, lon,
+                      coord_config['colour'], alt_param=alt,
+                      visible=best)
+            add_track(kml, coord_config['track'] + ' On Ground', lat, lon,
+                      coord_config['colour'], visible=best)
+            if best:
+                best_lat = derived_param_from_hdf(lat).get_aligned(one_hz)
+                best_lon = derived_param_from_hdf(lon).get_aligned(one_hz)
     
-        if 'Latitude Prepared' in hdf and 'Longitude Prepared' in hdf:
-            lat = hdf['Latitude Prepared']
-            lon = hdf['Longitude Prepared']
-            prepared = not best_lat or not best_lon
-            add_track(kml, 'Prepared Track', lat, lon, 'A11EB3',
-                      visible=prepared)
-            if prepared:
-                best_lat = lat
-                best_lon = lon
-        
-        if 'Latitude' in hdf and 'Longitude' in hdf:
-            lat_r = hdf['Latitude']
-            lon_r = hdf['Longitude']
-            unprepared = not lat_r or not lon_r
-            # add RAW track default invisible
-            add_track(kml, 'Recorded Track', lat_r, lon_r, 'ff0000ff',
-                      visible=unprepared)
-        elif 'Latitude (Coarse)' in hdf and 'Longitude (Coarse)' in hdf:
-            lat_r = hdf['Latitude (Coarse)']
-            lon_r = hdf['Longitude (Coarse)']
-            unprepared = not lat_r or not lon_r
-            # add RAW track default invisible
-            add_track(kml, 'Recorded Coarse Track', lat_r, lon_r, 'ff0000ff',
-                      visible=unprepared)
-                
-        if unprepared:
-            best_lat = lat_r
-            best_lon = lon_r
-        
-        best_lat = derived_param_from_hdf(best_lat).get_aligned(one_hz)
-        best_lon = derived_param_from_hdf(best_lon).get_aligned(one_hz)
-
     # Add KTIs.
     for kti in kti_list:
         kti_point_values = {'name': kti.name}
