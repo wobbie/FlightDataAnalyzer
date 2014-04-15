@@ -34,7 +34,7 @@ def node_to_jsondict(node):
     compare values.
     """
     if hasattr(node, 'todict'):
-        # recordtypes
+        # recordtypes and Attributes
         d = node.todict()
     elif hasattr(node, '_asdict'):
         # nametuples
@@ -46,14 +46,20 @@ def node_to_jsondict(node):
         v = d[k]
         if isinstance(v, datetime):
             d[k] = {
-                'type': type(v).__name__,
+                'type': datetime.__name__,
                 'value': v.strftime('%Y-%m-%d %H:%M:%S.%f'),
             }
 
         elif isinstance(v, slice):
             d[k] = {
-                'type': type(v).__name__,
+                'type': slice.__name__,
                 'value': (v.start, v.stop, v.step),
+            }
+
+        elif isinstance(v, dict):
+            d[k] = {
+                'type': dict.__name__,
+                'value': v,
             }
 
         else:
@@ -82,7 +88,7 @@ def jsondict_to_node(d):
     cls = getattr(analysis_engine.node, node_cls_name)
     kw = {}
     for k, n in d.items():
-        if isinstance(n, dict):
+        if isinstance(n, dict) and 'value' in n and 'type' in n:
             val = n['value']
             if n['type'] == 'datetime':
                 val = datetime.strptime(val, '%Y-%m-%d %H:%M:%S.%f')
@@ -114,6 +120,8 @@ def process_flight_to_json(pf_results, indent=2):
         for node in pf_results[key]:
             d[key].append(node_to_jsondict(node))
 
+        d[key] = sorted(d[key])
+
     return json.dumps(d, indent=indent)
 
 
@@ -127,3 +135,5 @@ def json_to_process_flight(txt):
         res[key] = []
         for dn in d[key]:
             res[key].append(jsondict_to_node(dn))
+
+    return res
