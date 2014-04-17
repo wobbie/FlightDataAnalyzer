@@ -4181,7 +4181,7 @@ class TestMagneticVariationFromRunway(unittest.TestCase):
         # 0 to takeoff index variation
         self.assertTrue(np.all(mag_var_rwy.array[:149] == -5.1902489670943481))
         # landing index to end
-        self.assertTrue(np.all(mag_var_rwy.array[1580:] == -1.8087827938368832))
+        self.assertTrue(np.all(mag_var_rwy.array[1580:] == 1.8087827938368832))
 
 
 class TestPitchRate(unittest.TestCase):
