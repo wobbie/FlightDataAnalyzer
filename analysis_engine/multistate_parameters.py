@@ -360,19 +360,24 @@ class APURunning(MultistateDerivedParameterNode):
 
     name = 'APU Running'
 
-    values_mapping = {0 : '-',  1 : 'Running'}
+    values_mapping = {0 : '-',  1: 'Running'}
     
     @classmethod
     def can_operate(cls, available):
-        return any_of(('APU N1', 'APU Generator AC Voltage'), available)
+        return any_of(('APU N1',
+                       'APU Generator AC Voltage',
+                       'APU Bleed Valve Open'), available)
 
     def derive(self, apu_n1=P('APU N1'),
-               apu_voltage=P('APU Generator AC Voltage')):
+               apu_voltage=P('APU Generator AC Voltage'),
+               apu_bleed_valve_open=M('APU Bleed Valve Open')):
         if apu_n1:
             self.array = np.ma.where(apu_n1.array > 50.0, 'Running', '-')
-        else:
+        elif apu_voltage:
             # XXX: APU Generator AC Voltage > 100 volts.
             self.array = np.ma.where(apu_voltage.array > 100.0, 'Running', '-')
+        else:
+            self.array = apu_bleed_valve_open.array == 'Open'
 
 
 class Configuration(MultistateDerivedParameterNode):
