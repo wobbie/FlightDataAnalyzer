@@ -411,15 +411,23 @@ class LastEngStopAfterTouchdown(KeyTimeInstanceNode):
     def derive(self, eng_stops=KTI('Eng Stop'), eng_count=A('Engine Count'),
                touchdowns=KTI('Touchdown'), duration=A('HDF Duration')):
         eng_stops_after_touchdown = []
+
         for x in range(eng_count.value):
             kti_name = eng_stops.format_name(number=x + 1)
-            eng_stop_after_touchdown = eng_stops.get_next(
-                touchdowns.get_last().index, name=kti_name)
+           
+            if touchdowns.get_last():
+                eng_stop_after_touchdown = eng_stops.get_next(
+                    touchdowns.get_last().index, name=kti_name)
+            else:
+                eng_stop_after_touchdown = None
+                
             if not eng_stop_after_touchdown:
                 self.warning("Could not find '%s after Touchdown.",
                              kti_name)
                 continue
+
             eng_stops_after_touchdown.append(eng_stop_after_touchdown.index)
+
         if eng_stops_after_touchdown:
             self.create_kti(max(eng_stops_after_touchdown))
         else:
