@@ -5943,7 +5943,7 @@ class ApproachRange(DerivedParameterNode):
 
             # Shift the values in this approach so that the range = 0 at
             # 0ft on the projected ILS or approach slope.
-            app_range[this_app_slice] += extend - offset
+            app_range[this_app_slice] += extend - (offset or 0)
 
         self.array = app_range
 
