@@ -294,16 +294,17 @@ class EngStart(KeyTimeInstanceNode):
             if not eng_nx:
                 continue
             
-            array = repair_mask(eng_nx.array, repair_duration=None,
+            array = repair_mask(eng_nx.array,
+                                repair_duration=60 / self.frequency,
                                 extrapolate=True)
-            array = np.ma.masked_greater(array, limit)
-            below_slices = np.ma.clump_unmasked(array)
+            below_slices = runs_of_ones(array < limit)
             
             for below_slice in below_slices:
                 
                 if ((below_slice.start != 0 and
                      slice_duration(below_slice, self.hz) < 6) or 
-                    below_slice.stop == len(array)):
+                    below_slice.stop == len(array) or 
+                    eng_nx.array[below_slice.stop] is np.ma.masked):
                     # Small dip or reached the end of the array.
                     continue
                 
@@ -386,16 +387,18 @@ class EngStop(KeyTimeInstanceNode):
             if not eng_nx:
                 continue
             
-            array = repair_mask(eng_nx.array, repair_duration=None,
+            array = repair_mask(eng_nx.array,
+                                repair_duration=60 / self.frequency,
                                 extrapolate=True)
-            array = np.ma.masked_greater(array, limit)
-            below_slices = np.ma.clump_unmasked(array)
+            below_slices = runs_of_ones(array < limit)
             
             for below_slice in below_slices:
                 
                 if (below_slice.start == 0 or
-                    slice_duration(below_slice, self.hz) < 6):
-                    # Small dip or reached the end of the array.
+                    slice_duration(below_slice, self.hz) < 6 or
+                    eng_nx.array[below_slice.start - 1] is np.ma.masked):
+                    # Small dip, reached the end of the array or 
+                    # following masked data.
                     continue
                 
                 self.create_kti(below_slice.start,

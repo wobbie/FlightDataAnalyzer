@@ -2380,6 +2380,12 @@ class Attribute(object):
         '''
         return self
 
+    def todict(self):
+        return {
+            'name': self.name,
+            'value': self.value
+        }
+
 
 # The following acronyms are intended to be used as placeholder values
 # for kwargs in Node derive methods. Cannot instantiate Node subclass without

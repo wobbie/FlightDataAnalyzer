@@ -4410,6 +4410,9 @@ class MagneticVariation(DerivedParameterNode):
     altitude and date. Uses Latitude/Longitude or
     Latitude (Coarse)/Longitude (Coarse) parameters instead of Prepared or
     Smoothed to avoid cyclical dependencies.
+    
+    Example: A Magnetic Variation of +5 deg means one adds 5 degrees to
+    the Magnetic Heading to obtain the True Heading.
     '''
 
     align_frequency = 1 / 4.0
@@ -4488,6 +4491,9 @@ class MagneticVariationFromRunway(DerivedParameterNode):
     upon magnetic variation from out of date databases. Also, by using the
     aircraft compass values to work out the variation, we inherently
     accommodate compass drift for that day.
+    
+    Example: A Magnetic Variation of +5 deg means one adds 5 degrees to
+    the Magnetic Heading to obtain the True Heading.
     '''
 
     # TODO: Instead of linear interpolation, perhaps base it on distance flown.
@@ -4515,8 +4521,10 @@ class MagneticVariationFromRunway(DerivedParameterNode):
                 # runway does not have coordinates to calculate true heading
                 pass
             else:
-                dev[tof_hdg_mag_kpv.index] = heading_diff(takeoff_hdg_true,
-                                                          takeoff_hdg_mag)
+                # magnetic variation/declination is the difference from
+                # magnetic to true heading
+                dev[tof_hdg_mag_kpv.index] = heading_diff(takeoff_hdg_mag,
+                                                          takeoff_hdg_true)
         
         # landing
         ldg_hdg_mag_kpv = head_land.get_last()
@@ -4528,8 +4536,10 @@ class MagneticVariationFromRunway(DerivedParameterNode):
                 # runway does not have coordinates to calculate true heading
                 pass
             else:
-                dev[ldg_hdg_mag_kpv.index] = heading_diff(landing_hdg_true,
-                                                          landing_hdg_mag)
+                # magnetic variation/declination is the difference from
+                # magnetic to true heading
+                dev[ldg_hdg_mag_kpv.index] = heading_diff(landing_hdg_mag,
+                                                          landing_hdg_true)
 
         # linearly interpolate between values and extrapolate to ends of the
         # array, even if only the takeoff variation is calculated as the
@@ -6301,7 +6311,7 @@ class V2(DerivedParameterNode):
 
         airbus = all_of((
             'Airspeed',
-            'Selected Speed',
+            'Airspeed Selected',
             'Speed Control',
             'Liftoff',
             'Climb Start',
@@ -6320,7 +6330,7 @@ class V2(DerivedParameterNode):
     def derive(self,
                airspeed=P('Airspeed'),
                v2_vac=A('V2-Vac'),
-               spd_sel=P('Selected Speed'),
+               spd_sel=P('Airspeed Selected'),
                spd_ctl=P('Speed Control'),
                afr_v2=A('AFR V2'),
                liftoffs=KTI('Liftoff'),
