@@ -77,15 +77,29 @@ def node_to_json(node):
     return json.dumps(node_to_jsondict(node))
 
 
+def get_node_class(name):
+    """
+    Return a node class object for given name.
+
+    This logic is needed mainly because our named_tuples exist in multiple
+    modules, we need to find the correct class we are after.
+    """
+    from analysis_engine import node
+    from analysis_engine import datastructures
+
+    modules = (node, datastructures)
+    for module in modules:
+        if getattr(module, name, None):
+            return getattr(module, name)
+
+
 def jsondict_to_node(d):
     """
     Convert a dictionary as returnd from node_to_jsondict back into
     analysis_engine.node.Node.
     """
-    import analysis_engine.node
-
     node_cls_name = d.pop('__class__')
-    cls = getattr(analysis_engine.node, node_cls_name)
+    cls = get_node_class(node_cls_name)
     kw = {}
     for k, n in d.items():
         if isinstance(n, dict) and 'value' in n and 'type' in n:
