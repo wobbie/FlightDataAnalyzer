@@ -392,7 +392,7 @@ class TestILSLocalizerEstablished(unittest.TestCase):
         app = S(items=[Section('Approach', slice(0, 10), 0, 10)])
         establish = ILSLocalizerEstablished()
         establish.derive(ils, alt_aal, app, None)
-        expected = buildsection('ILS Localizer Established', 10*2.0/3.0, 10)
+        expected = buildsection('ILS Localizer Established', 7, 10)
         # Slightly daft choice of ils array makes exact equality impossible!
         self.assertAlmostEqual(establish.get_first().start_edge,
                                expected.get_first().start_edge)
@@ -422,7 +422,7 @@ class TestILSLocalizerEstablished(unittest.TestCase):
         app = S(items=[Section('Approach', slice(0, 50), 0, 50)])
         establish = ILSLocalizerEstablished()
         establish.derive(ils, alt_aal, app, None)
-        expected = buildsection('ILS Localizer Established', 20+(10*2.0/3.0), 30)
+        expected = buildsection('ILS Localizer Established', 20+7, 30)
         # Slightly daft choice of ils array makes exact equality impossible!
         self.assertAlmostEqual(establish.get_first().start_edge,
                                expected.get_first().start_edge)
@@ -436,7 +436,7 @@ class TestILSLocalizerEstablished(unittest.TestCase):
 
     def test_ils_localizer_established_always_on_loc(self):
         ils = P('ILS Localizer',np.ma.array([-0.2]*10))
-        alt_aal = P('Alttiude AAL For Flight Phases', np.ma.arange(1000, 0,-100))
+        alt_aal = P('Altitude AAL For Flight Phases', np.ma.arange(1000, 0,-100))
         app = S(items=[Section('Approach', slice(2, 9), 2, 9)])
         establish = ILSLocalizerEstablished()
         establish.derive(ils, alt_aal, app, None)
