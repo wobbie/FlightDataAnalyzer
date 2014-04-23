@@ -47,6 +47,7 @@ from analysis_engine.settings import (
     HOLDING_MAX_GSPD,
     HOLDING_MIN_TIME,
     HYSTERESIS_FPALT_CCD,
+    ILS_CAPTURE,
     INITIAL_CLIMB_THRESHOLD,
     KTS_TO_MPS,
     LANDING_THRESHOLD_HEIGHT,
@@ -651,7 +652,7 @@ class GearRetracted(FlightPhaseNode):
 
 def scan_ils(beam, ils_dots, height, scan_slice, frequency, duration=10):
     '''
-    Scans ils dots and returns last slice where ils dots fall below 1 and remain below 2.5 dots
+    Scans ils dots and returns last slice where ils dots fall below ILS_CAPTURE and remain below 2.5 dots
     if beam is glideslope slice will not extend below 200ft.
 
     :param beam: 'localizer' or 'glideslope'
@@ -679,7 +680,7 @@ def scan_ils(beam, ils_dots, height, scan_slice, frequency, duration=10):
     if valid_ends is None:
         return None
     valid_slice = slice(*(valid_ends+scan_slice.start))
-    if np.ma.count(ils_dots[valid_slice])/float(len(ils_dots[valid_slice])) < 0.4:
+    if np.ma.count(ils_dots[valid_slice])/float(len(ils_dots[valid_slice])) < ILS_CAPTURE*0.4:
         # less than 40% valid data within valid data slice
         return None
 
@@ -724,18 +725,18 @@ def scan_ils(beam, ils_dots, height, scan_slice, frequency, duration=10):
     if scan_start_idx:
         # Found a point to start scanning from, now look for the ILS goes
         # below 1 dot.
-        ils_capture_idx = index_at_value(ils_abs, 1.0, slice(scan_start_idx, ils_lost_idx))
+        ils_capture_idx = index_at_value(ils_abs, ILS_CAPTURE, slice(scan_start_idx, ils_lost_idx))
     else:
         # Reached start of section without passing 2.5 dots so check if we
         # started established
         first_valid_idx, first_valid_value = first_valid_sample(ils_abs[slice(scan_slice.start, ils_lost_idx)])
 
-        if first_valid_value < 1.0:
+        if first_valid_value < ILS_CAPTURE:
             # started established
             ils_capture_idx = scan_slice.start + first_valid_idx
         else:
-            # Find first index of 1.0 dots from start of scan slice
-            ils_capture_idx = index_at_value(ils_abs, 1.0, slice(scan_slice.start, ils_lost_idx))
+            # Find first index of ILS_CAPTURE dots from start of scan slice
+            ils_capture_idx = index_at_value(ils_abs, ILS_CAPTURE, slice(scan_slice.start, ils_lost_idx))
 
     if ils_capture_idx is None or ils_lost_idx is None:
         return None
