@@ -6,7 +6,6 @@ from analysis_engine.library import (all_of,
                                      coreg,
                                      find_edges_on_state_change,
                                      find_toc_tod,
-                                     first_valid_sample,
                                      index_at_value,
                                      max_value,
                                      minimum_unmasked,
@@ -295,16 +294,17 @@ class EngStart(KeyTimeInstanceNode):
             if not eng_nx:
                 continue
             
-            array = repair_mask(eng_nx.array, repair_duration=None,
+            array = repair_mask(eng_nx.array,
+                                repair_duration=60 / self.frequency,
                                 extrapolate=True)
-            array = np.ma.masked_greater(array, limit)
-            below_slices = np.ma.clump_unmasked(array)
+            below_slices = runs_of_ones(array < limit)
             
             for below_slice in below_slices:
                 
                 if ((below_slice.start != 0 and
                      slice_duration(below_slice, self.hz) < 6) or 
-                    below_slice.stop == len(array)):
+                    below_slice.stop == len(array) or 
+                    eng_nx.array[below_slice.stop] is np.ma.masked):
                     # Small dip or reached the end of the array.
                     continue
                 
@@ -389,16 +389,18 @@ class EngStop(KeyTimeInstanceNode):
             if not eng_nx:
                 continue
             
-            array = repair_mask(eng_nx.array, repair_duration=None,
+            array = repair_mask(eng_nx.array,
+                                repair_duration=60 / self.frequency,
                                 extrapolate=True)
-            array = np.ma.masked_greater(array, limit)
-            below_slices = np.ma.clump_unmasked(array)
+            below_slices = runs_of_ones(array < limit)
             
             for below_slice in below_slices:
                 
                 if (below_slice.start == 0 or
-                    slice_duration(below_slice, self.hz) < 6):
-                    # Small dip or reached the end of the array.
+                    slice_duration(below_slice, self.hz) < 6 or
+                    eng_nx.array[below_slice.start - 1] is np.ma.masked):
+                    # Small dip, reached the end of the array or 
+                    # following masked data.
                     continue
                 
                 self.create_kti(below_slice.start,
@@ -414,15 +416,23 @@ class LastEngStopAfterTouchdown(KeyTimeInstanceNode):
     def derive(self, eng_stops=KTI('Eng Stop'), eng_count=A('Engine Count'),
                touchdowns=KTI('Touchdown'), duration=A('HDF Duration')):
         eng_stops_after_touchdown = []
+
         for x in range(eng_count.value):
             kti_name = eng_stops.format_name(number=x + 1)
-            eng_stop_after_touchdown = eng_stops.get_next(
-                touchdowns.get_last().index, name=kti_name)
+           
+            if touchdowns.get_last():
+                eng_stop_after_touchdown = eng_stops.get_next(
+                    touchdowns.get_last().index, name=kti_name)
+            else:
+                eng_stop_after_touchdown = None
+                
             if not eng_stop_after_touchdown:
                 self.warning("Could not find '%s after Touchdown.",
                              kti_name)
                 continue
+
             eng_stops_after_touchdown.append(eng_stop_after_touchdown.index)
+
         if eng_stops_after_touchdown:
             self.create_kti(max(eng_stops_after_touchdown))
         else:

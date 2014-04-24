@@ -60,6 +60,7 @@ from analysis_engine.derived_parameters import (
     #AltitudeForFlightPhases,
     AltitudeQNH,
     AltitudeRadio,
+    AltitudeSTDSmoothed,
     #AltitudeRadioForFlightPhases,
     #AltitudeSTD,
     AltitudeTail,
@@ -117,6 +118,8 @@ from analysis_engine.derived_parameters import (
     EngTPRLimitDifference,
     FlapAngle,
     FuelQty,
+    FuelQtyL,
+    FuelQtyR,
     GrossWeight,
     GrossWeightSmoothed,
     Groundspeed,
@@ -188,6 +191,7 @@ from analysis_engine.derived_parameters import (
     Vref,
     VrefLookup,
     VMOLookup,
+    ZeroFuelWeight,
 )
 
 
@@ -653,6 +657,25 @@ class TestAirspeedTrue(unittest.TestCase):
         tas.derive(cas, alt, None, None, None, rtos, None, acc)
         expected = speed+speed[::-1]
         ma_test.assert_array_almost_equal(tas.array, expected, decimal=1)
+
+
+class TestAltitudeSTDSmoothed(unittest.TestCase):
+    def test_can_operate(self):
+        opts = AltitudeSTDSmoothed.get_operational_combinations()
+        self.assertTrue(('Altitude STD', 'Frame',) in opts)
+        self.assertTrue(('Altitude STD (Fine)', 'Altitude STD', 'Frame') in opts)
+        self.assertTrue(('Altitude STD (Capt)', 'Altitude STD (FO)', 'Frame') in opts)
+    
+    def test_derive_atr_42(self):
+        frame = Attribute('Frame', 'ATR42_V2_Quad')
+        alt = load(os.path.join(test_data_path, 'AltitudeSTDSmoothed_alt.nod'))
+        node = AltitudeSTDSmoothed()
+        node.derive(None, alt, None, None, frame)
+        # np.ma.sum(np.ma.abs(np.ma.diff(alt.array[4800:5000]))) == 2000
+        linear_diff = np.ma.sum(np.ma.abs(np.ma.diff(node.array[4800:5000])))
+        self.assertTrue(linear_diff < 200)
+        max_diff = np.ma.max(np.ma.abs(alt.array - node.array))
+        self.assertTrue(max_diff < 100)
 
 
 class TestAltitudeAAL(unittest.TestCase):
@@ -2190,18 +2213,19 @@ class TestFuelQty(unittest.TestCase):
         # least one of the listed parameters. Not listing all operational
         # combinations as this can get very large (2**n-1) where n is the
         # number of parameters (-1 as none is not a option)
-        self.assertEqual(len(FuelQty.get_operational_combinations()), 2**9-1)
+        self.assertEqual(len(FuelQty.get_operational_combinations()), 2**7-1)
     
     def test_three_tanks(self):
-        fuel_qty1 = P('Fuel Qty (1)', 
+        fuel_qty1 = P('Fuel Qty (L)', 
                       array=np.ma.array([1,2,3], mask=[False, False, False]))
-        fuel_qty2 = P('Fuel Qty (2)', 
+        fuel_qty2 = P('Fuel Qty (C)', 
                       array=np.ma.array([2,4,6], mask=[False, False, False]))
         # Mask will be interpolated by repair_mask.
-        fuel_qty3 = P('Fuel Qty (3)',
+        fuel_qty3 = P('Fuel Qty (R)',
                       array=np.ma.array([3,6,9], mask=[False, True, False]))
         fuel_qty_node = FuelQty()
-        fuel_qty_node.derive(fuel_qty1, fuel_qty2, fuel_qty3, None)
+        fuel_qty_node.derive(fuel_qty1, fuel_qty2, None, None, fuel_qty3,
+                             None, None)
         np.testing.assert_array_equal(fuel_qty_node.array,
                                       np.ma.array([6, 12, 18]))
         # Works without all parameters.
@@ -2210,30 +2234,103 @@ class TestFuelQty(unittest.TestCase):
                                       np.ma.array([1, 2, 3]))
 
     def test_four_tanks(self):
-        fuel_qty1 = P('Fuel Qty (1)', 
+        fuel_qty1 = P('Fuel Qty (L)', 
                       array=np.ma.array([1,2,3], mask=[False, False, False]))
-        fuel_qty2 = P('Fuel Qty (2)', 
+        fuel_qty2 = P('Fuel Qty (C)', 
                       array=np.ma.array([2,4,6], mask=[False, False, False]))
         # Mask will be interpolated by repair_mask.
-        fuel_qty3 = P('Fuel Qty (3)',
+        fuel_qty3 = P('Fuel Qty (R)',
                       array=np.ma.array([3,6,9], mask=[False, True, False]))
         fuel_qty_a = P('Fuel Qty (Aux)',
                       array=np.ma.array([11,12,13], mask=[False, False, False]))
         fuel_qty_node = FuelQty()
-        fuel_qty_node.derive(fuel_qty1, fuel_qty2, fuel_qty3, fuel_qty_a)
+        fuel_qty_node.derive(fuel_qty1, fuel_qty2, None, None, fuel_qty3,
+                             fuel_qty_a, None)
         np.testing.assert_array_equal(fuel_qty_node.array,
                                       np.ma.array([17, 24, 31]))
     
     def test_masked_tank(self):
-        fuel_qty1 = P('Fuel Qty (1)', 
+        fuel_qty1 = P('Fuel Qty (L)', 
                       array=np.ma.array([1,2,3], mask=[False, False, False]))
-        fuel_qty2 = P('Fuel Qty (2)', 
+        fuel_qty2 = P('Fuel Qty (R)', 
                       array=np.ma.array([2,4,6], mask=[True, True, True]))
         # Mask will be interpolated by repair_mask.
         fuel_qty_node = FuelQty()
-        fuel_qty_node.derive(fuel_qty1, fuel_qty2, None, None)
+        fuel_qty_node.derive(fuel_qty1, None, None, None, fuel_qty2, None, None)
         np.testing.assert_array_equal(fuel_qty_node.array,
-                                      np.ma.array([1, 2, 3]))    
+                                      np.ma.array([1, 2, 3]))
+
+
+class TestFuelQtyL(unittest.TestCase):
+    def test_can_operate(self):
+        # testing for number of combinations possible, will operate with at
+        # least one of the listed parameters. Not listing all operational
+        # combinations as this can get very large (2**n-1) where n is the
+        # number of parameters (-1 as none is not a option)
+        opts = FuelQtyL.get_operational_combinations()
+        self.assertTrue(('Fuel Qty (L1)',) in opts)
+        self.assertTrue(('Fuel Qty (L2)',) in opts)
+        self.assertTrue(('Fuel Qty (L3)',) in opts)
+        self.assertTrue(('Fuel Qty (L1)', 'Fuel Qty (L2)', 'Fuel Qty (L3)') in opts)
+    
+    def test_three_tanks(self):
+        fuel_qty1 = P('Fuel Qty (L1)', 
+                      array=np.ma.array([1,2,3], mask=[False, False, False]))
+        fuel_qty2 = P('Fuel Qty (L2)', 
+                      array=np.ma.array([2,4,6], mask=[False, False, False]))
+        fuel_qty3 = P('Fuel Qty (L3)',
+                      array=np.ma.array([3,6,9], mask=[False, True, False]))
+        fuel_qty_node = FuelQtyL()
+        fuel_qty_node.derive(fuel_qty1, None, None)
+        np.testing.assert_array_equal(fuel_qty_node.array,
+                                      np.ma.array([1, 2, 3]))
+        fuel_qty_node.derive(None, fuel_qty2, None)
+        np.testing.assert_array_equal(fuel_qty_node.array,
+                                      np.ma.array([2, 4, 6]))
+        fuel_qty_node.derive(None, fuel_qty2, fuel_qty3)
+        np.testing.assert_array_equal(fuel_qty_node.array,
+                                      np.ma.array([5, 10, 15],
+                                                  mask=[False, True, False]))
+        fuel_qty_node.derive(fuel_qty1, fuel_qty2, fuel_qty3)
+        np.testing.assert_array_equal(fuel_qty_node.array,
+                                      np.ma.array([6, 12, 18],
+                                                  mask=[False, True, False]))
+
+
+class TestFuelQtyR(unittest.TestCase):
+    def test_can_operate(self):
+        # testing for number of combinations possible, will operate with at
+        # least one of the listed parameters. Not listing all operational
+        # combinations as this can get very large (2**n-1) where n is the
+        # number of parameters (-1 as none is not a option)
+        opts = FuelQtyR.get_operational_combinations()
+        self.assertTrue(('Fuel Qty (R1)',) in opts)
+        self.assertTrue(('Fuel Qty (R2)',) in opts)
+        self.assertTrue(('Fuel Qty (R3)',) in opts)
+        self.assertTrue(('Fuel Qty (R1)', 'Fuel Qty (R2)', 'Fuel Qty (R3)') in opts)
+    
+    def test_three_tanks(self):
+        fuel_qty1 = P('Fuel Qty (R1)', 
+                      array=np.ma.array([3,2,1], mask=[False, False, False]))
+        fuel_qty2 = P('Fuel Qty (R2)', 
+                      array=np.ma.array([6,4,2], mask=[False, False, False]))
+        fuel_qty3 = P('Fuel Qty (R3)',
+                      array=np.ma.array([9,6,3], mask=[False, True, False]))
+        fuel_qty_node = FuelQtyR()
+        fuel_qty_node.derive(fuel_qty1, None, None)
+        np.testing.assert_array_equal(fuel_qty_node.array,
+                                      np.ma.array([3, 2, 1]))
+        fuel_qty_node.derive(None, fuel_qty2, None)
+        np.testing.assert_array_equal(fuel_qty_node.array,
+                                      np.ma.array([6, 4, 2]))
+        fuel_qty_node.derive(None, fuel_qty2, fuel_qty3)
+        np.testing.assert_array_equal(fuel_qty_node.array,
+                                      np.ma.array([15, 10, 5],
+                                                  mask=[False, True, False]))
+        fuel_qty_node.derive(fuel_qty1, fuel_qty2, fuel_qty3)
+        np.testing.assert_array_equal(fuel_qty_node.array,
+                                      np.ma.array([18, 12, 6],
+                                                  mask=[False, True, False]))
 
 
 class TestGrossWeightSmoothed(unittest.TestCase):
@@ -3971,20 +4068,20 @@ class TestMagneticVariation(unittest.TestCase):
         start_datetime = A('Start Datetime',
                            value=datetime.datetime(2013, 3, 23))
         mag_var.derive(lat, None, lon, None, alt_aal, start_datetime)
-        ma_test.assert_masked_array_almost_equal (
+        ma_test.assert_masked_array_almost_equal(
             mag_var.array[0:10],
-            [-6.064445460989708, -6.065693019716132, -6.066940578442557,
-             -6.068188137168981, -6.069435695895405, -6.070683254621829,
-             -6.071930813348254, -6.073178372074678, -6.074425930801103,
-             -6.075673489527527])
+            np.ma.array([-6.064445460989708, -6.065693019716132, -6.066940578442557,
+                         -6.068188137168981, -6.069435695895405, -6.070683254621829,
+                         -6.071930813348254, -6.073178372074678, -6.074425930801103,
+                         -6.075673489527527]))
         # Test with Coarse parameters.
         mag_var.derive(None, lat, None, lon, alt_aal, start_datetime)
-        ma_test.assert_masked_array_almost_equal (
+        ma_test.assert_masked_array_almost_equal(
             mag_var.array[300:310],
-            [-6.506129083442324, -6.507848687633959, -6.509568291825593,
-             -6.511287896017228, -6.513007500208863, -6.514727104400498,
-             -6.516446708592133, -6.518166312783767, -6.519885916975402,
-             -6.521605521167037])
+            np.ma.array([-6.506129083442324, -6.507848687633959, -6.509568291825593,
+                         -6.511287896017228, -6.513007500208863, -6.514727104400498,
+                         -6.516446708592133, -6.518166312783767, -6.519885916975402,
+                         -6.521605521167037]))
 
 class TestMagneticVariationFromRunway(unittest.TestCase):
     def test_can_operate(self):
@@ -4084,7 +4181,7 @@ class TestMagneticVariationFromRunway(unittest.TestCase):
         # 0 to takeoff index variation
         self.assertTrue(np.all(mag_var_rwy.array[:149] == -5.1902489670943481))
         # landing index to end
-        self.assertTrue(np.all(mag_var_rwy.array[1580:] == -1.8087827938368832))
+        self.assertTrue(np.all(mag_var_rwy.array[1580:] == 1.8087827938368832))
 
 
 class TestPitchRate(unittest.TestCase):
@@ -4749,11 +4846,10 @@ class TestApproachRange(TemporaryFileTest, unittest.TestCase):
 
     def test_can_operate(self):
         operational_combinations = ApproachRange.get_operational_combinations()
-        self.assertTrue(('Heading True', 'Airspeed True', 'Altitude AAL', 'Approach Information') in operational_combinations, msg="Missing 'Heading True' combination")
-        self.assertTrue(('Track True', 'Airspeed True', 'Altitude AAL', 'Approach Information') in operational_combinations, msg="Missing 'Track True' combination")
-        self.assertTrue(('Track', 'Airspeed True', 'Altitude AAL', 'Approach Information') in operational_combinations, msg="Missing 'Track' combination")
-        self.assertTrue(('Heading', 'Airspeed True', 'Altitude AAL', 'Approach Information') in operational_combinations, msg="Missing 'Heading' combination")
-
+        self.assertTrue(('Heading True Continuous', 'Airspeed True', 'Altitude AAL', 'Approach Information') in operational_combinations, msg="Missing 'Heading True' combination")
+        self.assertTrue(('Track True Continuous', 'Airspeed True', 'Altitude AAL', 'Approach Information') in operational_combinations, msg="Missing 'Track True' combination")
+        self.assertTrue(('Track Continuous', 'Airspeed True', 'Altitude AAL', 'Approach Information') in operational_combinations, msg="Missing 'Track' combination")
+        self.assertTrue(('Heading Continuous', 'Airspeed True', 'Altitude AAL', 'Approach Information') in operational_combinations, msg="Missing 'Heading' combination")
 
     def test_range_basic(self):
         with hdf_file(self.test_file_path) as hdf:
@@ -4787,6 +4883,43 @@ class TestApproachRange(TemporaryFileTest, unittest.TestCase):
                                  slice(12928, 13440, None)])
 
 
+class TestZeroFuelWeight(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = ZeroFuelWeight
+        self.operational_combinations = [
+            ('HDF Duration', 'Fuel Qty', 'Gross Weight'),
+            ('HDF Duration', 'Dry Operating Weight',),
+            ('HDF Duration', 'Dry Operating Weight', 'Payload'),
+        ]
+        self.duration = A('HDF Duration', 10)
+
+    def test_derive_fuel_qty_gross_wgt(self):
+        fuel_qty = P('Fuel Qty', np.ma.array([1, 2, 3, 4]))
+        gross_wgt = P('Gross Weight', np.ma.array([11, 12, 13, 14]))
+        zfw = ZeroFuelWeight()
+        zfw.derive(fuel_qty, gross_wgt, None, None, self.duration)
+        self.assertTrue((zfw.array == 10).all())
+    
+    def test_derive_dry_operating_wgt(self):
+        dry_operating_wgt = A('Dry Operating Weight', 100000)
+        zfw = ZeroFuelWeight()
+        zfw.derive(None, None, dry_operating_wgt, None, self.duration)
+        self.assertTrue((zfw.array == dry_operating_wgt.value).all())
+    
+    def test_derive_dry_operating_wgt_payload(self):
+        dry_operating_wgt = A('Dry Operating Weight', 100000)
+        payload = A('Payload', None)
+        zfw = ZeroFuelWeight()
+        zfw.derive(None, None, dry_operating_wgt, payload, self.duration)
+        self.assertTrue((zfw.array == dry_operating_wgt.value).all())
+        
+        payload = A('Payload', 1000)
+        zfw = ZeroFuelWeight()
+        zfw.derive(None, None, dry_operating_wgt, payload, self.duration)
+        self.assertTrue((zfw.array == 101000).all())
+
+
 class TestGrossWeight(unittest.TestCase):
     def test_can_operate(self):
         combinations = GrossWeight.get_operational_combinations()
@@ -4800,7 +4933,7 @@ class TestGrossWeight(unittest.TestCase):
     
     def test_derive_fuel_qty_zfw(self):
         fq = P('Fuel Qty', array=np.ma.array([40,30,20,10]))
-        zfw = KPV('Zero Fuel Weight', items=[KeyPointValue(0, 1000)])
+        zfw = P('Zero Fuel Weight', array=np.ma.array([990, 1000, 1000, 1100]))
         node = GrossWeight()
         node.derive(zfw, fq, None, None, None, None, None)
         self.assertEqual(node.array.tolist(), [1040, 1030, 1020, 1010])
@@ -4834,12 +4967,12 @@ class TestGrossWeight(unittest.TestCase):
         self.assertAlmostEqual(result[50], 1493.7, 1)
     
     def test_using_zero_fuel_weight(self):
-        zfw = KPV('Zero Fuel Weight',
-                  items=[KeyPointValue('Zero Fuel Weight', 17400)])
-        
         fuel_qty_array = np.ma.arange(10000, 4000, -100)
         fuel_qty_array[10] *= 0.9
         fuel_qty = P('Fuel Qty', array=fuel_qty_array)
+        
+        zfw_array = np_ma_ones_like(fuel_qty_array) * 17400
+        zfw = P('Zero Fuel Weight', array=zfw_array)
         
         gw = GrossWeight()
         gw.derive(zfw, fuel_qty, None, None, None, None, None)
@@ -4892,7 +5025,7 @@ class TestV2(unittest.TestCase, NodeTest):
         ))
         # Airbus:
         self.assertTrue(self.node_class.can_operate(
-            ('Airspeed', 'Selected Speed', 'Speed Control', 'Liftoff', 'Climb Start', 'Manufacturer'),
+            ('Airspeed', 'Airspeed Selected', 'Speed Control', 'Liftoff', 'Climb Start', 'Manufacturer'),
             manufacturer=A('Manufacturer', 'Airbus'),
         ))
 
@@ -4914,7 +5047,7 @@ class TestV2(unittest.TestCase, NodeTest):
     def test_derive__airbus(self):
         manufacturer = A(name='Manufacturer', value='Airbus')
         spd_ctl = M('Speed Control', np.ma.repeat((1, 0), (320, 960)), values_mapping={0: 'Manual', 1: 'Auto'})
-        spd_sel = P('Selected Speed', np.ma.repeat((400, 120, 170), (10, 630, 640)))
+        spd_sel = P('Airspeed Selected', np.ma.repeat((400, 120, 170), (10, 630, 640)))
         spd_sel.array[:10] = np.ma.masked
         node = self.node_class()
         node.derive(self.airspeed, None, spd_sel, spd_ctl, None, self.liftoffs, self.climbs, manufacturer)
@@ -6085,19 +6218,19 @@ class TestAirspeedMinusV2For3Sec(unittest.TestCase, NodeTest):
             frequency=2,
         )
 
-    def test_derive__basic(self):
+    def test_derive_basic(self):
         node = self.node_class()
         node.get_derived([self.airspeed])
         expected = np.ma.repeat((100, 110, 100), (6, 8, 6))
-        expected[-3:] = np.ma.masked
+        expected[-6:] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
-    def test_derive__align(self):
+    def test_derive_align(self):
         self.airspeed.frequency = 1
         node = self.node_class()
         node.get_derived([self.airspeed])
         expected = np.ma.repeat((100, 105, 110, 100), (11, 1, 16, 12))
-        expected[-4:] = np.ma.masked
+        expected[-7:] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
 
@@ -6188,20 +6321,20 @@ class TestAirspeedMinusVrefFor3Sec(unittest.TestCase, NodeTest):
             frequency=2,
         )
 
-    def test_derive__basic(self):
+    def test_derive_basic(self):
         node = self.node_class()
         node.get_derived([self.airspeed])
         expected = np.ma.repeat((100, 110, 100), (6, 8, 6))
-        expected[-3:] = np.ma.masked
+        expected[-6:] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
-    def test_derive__align(self):
+    def test_derive_align(self):
         self.airspeed.frequency = 1
         node = self.node_class()
         node.get_derived([self.airspeed])
         expected = np.ma.array([100.0] * 11 + [105] + [110] * 16 + [100] * 12)
         expected = np.ma.repeat((100, 105, 110, 100), (11, 1, 16, 12))
-        expected[-4:] = np.ma.masked
+        expected[-7:] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
 
@@ -6292,19 +6425,19 @@ class TestAirspeedMinusVappFor3Sec(unittest.TestCase, NodeTest):
             frequency=2,
         )
 
-    def test_derive__basic(self):
+    def test_derive_basic(self):
         node = self.node_class()
         node.get_derived([self.airspeed])
         expected = np.ma.repeat((100, 110, 100), (6, 8, 6))
-        expected[-3:] = np.ma.masked
+        expected[-6:] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
-    def test_derive__align(self):
+    def test_derive_align(self):
         self.airspeed.frequency = 1
         node = self.node_class()
         node.get_derived([self.airspeed])
         expected = np.ma.repeat((100, 105, 110, 100), (11, 1, 16, 12))
-        expected[-4:] = np.ma.masked
+        expected[-7:] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
 
@@ -6352,19 +6485,19 @@ class TestAirspeedMinusMinimumAirspeedFor3Sec(unittest.TestCase, NodeTest):
             frequency=2,
         )
 
-    def test_derive__basic(self):
+    def test_derive_basic(self):
         node = self.node_class()
         node.get_derived([self.airspeed])
         expected = np.ma.repeat((100, 110, 100), (6, 8, 6))
-        expected[-3:] = np.ma.masked
+        expected[-6:] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
-    def test_derive__align(self):
+    def test_derive_align(self):
         self.airspeed.frequency = 1
         node = self.node_class()
         node.get_derived([self.airspeed])
         expected = np.ma.repeat((100, 105, 110, 100), (11, 1, 16, 12))
-        expected[-4:] = np.ma.masked
+        expected[-7:] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
 
@@ -6412,19 +6545,19 @@ class TestAirspeedMinusFlapManoeuvreSpeedFor3Sec(unittest.TestCase, NodeTest):
             frequency=2,
         )
 
-    def test_derive__basic(self):
+    def test_derive_basic(self):
         node = self.node_class()
         node.get_derived([self.airspeed])
         expected = np.ma.repeat((100, 110, 100), (6, 8, 6))
-        expected[-3:] = np.ma.masked
+        expected[-6:] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
-    def test_derive__align(self):
+    def test_derive_align(self):
         self.airspeed.frequency = 1
         node = self.node_class()
         node.get_derived([self.airspeed])
         expected = np.ma.repeat((100, 105, 110, 100), (11, 1, 16, 12))
-        expected[-4:] = np.ma.masked
+        expected[-7:] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
 

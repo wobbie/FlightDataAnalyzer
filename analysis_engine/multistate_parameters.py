@@ -118,7 +118,6 @@ class APEngaged(MultistateDerivedParameterNode):
     '''
 
     name = 'AP Engaged'
-    align = False  #TODO: Should this be here?
     values_mapping = {0: '-', 1: 'Engaged'}
 
     @classmethod
@@ -134,12 +133,6 @@ class APEngaged(MultistateDerivedParameterNode):
             (ap3, 'Engaged'),
             )
         self.array = stacked.any(axis=0)
-        if ap1:
-            self.frequency = ap1.frequency
-        elif ap2:
-            self.frequency = ap2.frequency
-        else:
-            self.frequency = ap3.frequency
         self.offset = offset_select('mean', [ap1, ap2, ap3])
 
 
@@ -152,7 +145,6 @@ class APChannelsEngaged(MultistateDerivedParameterNode):
     2 APs, Boeing is happier with 3 though some older types may only have 2.
     '''
     name = 'AP Channels Engaged'
-    align = False  # TODO: Should this be here?
     values_mapping = {0: '-', 1: 'Single', 2: 'Dual', 3: 'Triple'}
 
     @classmethod
@@ -169,8 +161,6 @@ class APChannelsEngaged(MultistateDerivedParameterNode):
             (ap3, 'Engaged'),
         )
         self.array = stacked.sum(axis=0)
-        # Assume all are sampled at the same frequency
-        self.frequency = ap1.frequency
         self.offset = offset_select('mean', [ap1, ap2, ap3])
 
 
@@ -342,6 +332,26 @@ class APVerticalMode(MultistateDerivedParameterNode):
             self.array[expedite_descent_mode.array == 'Activated'] = 'EXPED DES'
 
 
+class APUOn(MultistateDerivedParameterNode):
+    '''
+    Combine APU (1) On and APU (2) On parameters.
+    '''
+    
+    name = 'APU On'
+    
+    values_mapping = {0: '-', 1: 'On'}
+    
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(('APU (1) On', 'APU (2) On'), available)
+    
+    def derive(self, apu_1=M('APU (1) On'), apu_2=M('APU (2) On')):
+        self.array = vstack_params_where_state(
+            (apu_1, 'On'),
+            (apu_2, 'On'),
+        ).any(axis=0)
+
+
 class APURunning(MultistateDerivedParameterNode):
     '''
     Simple measure of APU status, suitable for plotting if you want an on/off
@@ -350,19 +360,24 @@ class APURunning(MultistateDerivedParameterNode):
 
     name = 'APU Running'
 
-    values_mapping = {0 : '-',  1 : 'Running'}
+    values_mapping = {0 : '-',  1: 'Running'}
     
     @classmethod
     def can_operate(cls, available):
-        return any_of(('APU N1', 'APU Generator AC Voltage'), available)
+        return any_of(('APU N1',
+                       'APU Generator AC Voltage',
+                       'APU Bleed Valve Open'), available)
 
     def derive(self, apu_n1=P('APU N1'),
-               apu_voltage=P('APU Generator AC Voltage')):
+               apu_voltage=P('APU Generator AC Voltage'),
+               apu_bleed_valve_open=M('APU Bleed Valve Open')):
         if apu_n1:
             self.array = np.ma.where(apu_n1.array > 50.0, 'Running', '-')
-        else:
+        elif apu_voltage:
             # XXX: APU Generator AC Voltage > 100 volts.
             self.array = np.ma.where(apu_voltage.array > 100.0, 'Running', '-')
+        else:
+            self.array = apu_bleed_valve_open.array == 'Open'
 
 
 class Configuration(MultistateDerivedParameterNode):
@@ -996,18 +1011,30 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
             return False
 
         try:
-            at.get_conf_angles(model.value, series.value, family.value)
+            angles = at.get_conf_angles(model.value, series.value, family.value)
         except KeyError:
             pass  # try lever map
 
         try:
-            at.get_lever_angles(model.value, series.value, family.value)
+            angles = at.get_lever_angles(model.value, series.value, family.value)
         except KeyError:
             cls.warning("No lever angles available for '%s', '%s', '%s'.",
                         model.value, series.value, family.value)
             return False
-
-        return True
+        
+        can_operate = True
+        
+        slat_required = any(slat is not None for slat, flap, flaperon in 
+                            angles.values())
+        if slat_required:
+            can_operate = can_operate and 'Slat' in available
+        
+        flaperon_required = any(flaperon is not None for slat, flap, flaperon in
+                                angles.values())
+        if flaperon_required:
+            can_operate = can_operate and 'Flaperon' in available
+        
+        return can_operate
 
     def derive(self, flap=M('Flap'), slat=M('Slat'), flaperon=M('Flaperon'),
                model=A('Model'), series=A('Series'), family=A('Family')):
@@ -1102,12 +1129,12 @@ class FuelQty_Low(MultistateDerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available):
-        return any_of(('Fuel Qty Low', 'Fuel Qty (1) Low', 'Fuel Qty (2) Low'),
+        return any_of(('Fuel Qty Low', 'Fuel Qty (L) Low', 'Fuel Qty (R) Low'),
                       available)
 
     def derive(self, fqty = M('Fuel Qty Low'),
-               fqty1 = M('Fuel Qty (1) Low'),
-               fqty2 = M('Fuel Qty (2) Low')):
+               fqty1 = M('Fuel Qty (L) Low'),
+               fqty2 = M('Fuel Qty (R) Low')):
         warning = vstack_params_where_state(
             (fqty,  'Warning'),
             (fqty1, 'Warning'),

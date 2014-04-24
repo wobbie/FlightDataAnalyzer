@@ -269,6 +269,7 @@ from analysis_engine.key_point_values import (
     FuelQtyAtLiftoff,
     FuelQtyAtTouchdown,
     FuelQtyLowWarningDuration,
+    FuelQtyWingDifferenceMax,
     GrossWeightAtLiftoff,
     GrossWeightAtTouchdown,
     GrossWeightDelta60SecondsInFlightMax,
@@ -480,7 +481,6 @@ from analysis_engine.key_point_values import (
     WindAcrossLandingRunwayAt50Ft,
     WindDirectionAtAltitudeDuringDescent,
     WindSpeedAtAltitudeDuringDescent,
-    ZeroFuelWeight,
 )
 from analysis_engine.key_time_instances import (
     AltitudeWhenDescending,
@@ -5825,6 +5825,18 @@ class TestEngTorquePercent65KtsTo35FtMin(unittest.TestCase):
         self.assertEqual(node[0].value, 73)
         self.assertEqual(node[0].index, 13)
 
+    def test_derive_above_65(self):
+        # Very similar to above but checks when airspeed starts above 65 kts
+        eng_torq_min = P('Eng (*) Torque [%] Min', array=np.ma.arange(60, 100))
+        air_spd = P('Airspeed', array=np.ma.arange(0.1, 200.1, 5))
+        air_spd.array = np.ma.masked_less(air_spd.array, 65)
+        toff = buildsection('Takeoff', 1,30)
+        node = self.node_class()
+        node.derive(eng_torq_min, air_spd, toff)
+
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].value, 73)
+        self.assertEqual(node[0].index, 13)
 
 class TestEngTorquePercentDuringGoAround5MinRatingMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
 
@@ -6675,7 +6687,7 @@ class TestElevatorDuringLandingMin(unittest.TestCase,
             node,
             KPV('Elevator During Landing Min',
                 items=[KeyPointValue(
-                    index=8.0, value=42.0,
+                    index=9.0, value=41.0,
                     name='Elevator During Landing Min')]))
 
 
@@ -7105,6 +7117,21 @@ class TestFuelQtyAtTouchdown(unittest.TestCase):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test Not Implemented')
+
+
+class TestFuelQtyWingDifferenceMax(unittest.TestCase):
+    def test_can_operate(self):
+        opts = FuelQtyWingDifferenceMax.get_operational_combinations()
+        self.assertEqual(opts, [('Fuel Qty (L)', 'Fuel Qty (R)')])
+    
+    def test_derive_basic(self):
+        qty_l = P('Fuel Qty (L)', array=np.ma.array([100, 90, 80, 70, 60, 50]))
+        qty_r = P('Fuel Qty (R)', array=np.ma.array([110, 100, 95, 80, 70, 60]))
+        node = FuelQtyWingDifferenceMax()
+        node.derive(qty_l, qty_r)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 2)
+        self.assertEqual(node[0].value, 15)
 
 
 class TestFuelJettisonDuration(unittest.TestCase, CreateKPVsWhereTest):
@@ -9894,48 +9921,6 @@ class TestDualInputByFODuration(unittest.TestCase, NodeTest):
 
 
 ##############################################################################
-
-
-class TestZeroFuelWeight(unittest.TestCase, NodeTest):
-
-    def setUp(self):
-        self.node_class = ZeroFuelWeight
-        self.operational_combinations = [('Fuel Qty', 'Gross Weight'),
-                                         ('Dry Operating Weight',),
-                                         ('Dry Operating Weight', 'Payload')]
-
-    def test_derive_fuel_qty_gross_wgt(self):
-        fuel_qty = P('Fuel Qty', np.ma.array([1, 2, 3, 4]))
-        gross_wgt = P('Gross Weight', np.ma.array([11, 12, 13, 14]))
-        zfw = ZeroFuelWeight()
-        zfw.derive(fuel_qty, gross_wgt, None, None)
-        self.assertEqual(len(zfw), 1)
-        self.assertEqual(zfw[0].index, 0)  # Note: Index should always be 0!
-        self.assertEqual(zfw[0].value, 10.0)
-    
-    def test_derive_dry_operating_wgt(self):
-        dry_operating_wgt = A('Dry Operating Weight', 100000)
-        zfw = ZeroFuelWeight()
-        zfw.derive(None, None, dry_operating_wgt, None)
-        self.assertEqual(len(zfw), 1)
-        self.assertEqual(zfw[0].index, 0)  # Note: Index should always be 0!
-        self.assertEqual(zfw[0].value, dry_operating_wgt.value)
-    
-    def test_derive_dry_operating_wgt_payload(self):
-        dry_operating_wgt = A('Dry Operating Weight', 100000)
-        payload = A('Payload', None)
-        zfw = ZeroFuelWeight()
-        zfw.derive(None, None, dry_operating_wgt, payload)
-        self.assertEqual(len(zfw), 1)
-        self.assertEqual(zfw[0].index, 0)  # Note: Index should always be 0!
-        self.assertEqual(zfw[0].value, dry_operating_wgt.value)
-        
-        payload = A('Payload', 1000)
-        zfw = ZeroFuelWeight()
-        zfw.derive(None, None, dry_operating_wgt, payload)
-        self.assertEqual(len(zfw), 1)
-        self.assertEqual(zfw[0].index, 0)  # Note: Index should always be 0!
-        self.assertEqual(zfw[0].value, 101000)
 
 
 ##############################################################################

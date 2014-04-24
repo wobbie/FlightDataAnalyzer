@@ -794,10 +794,11 @@ class TestAlign(unittest.TestCase):
         result = align(slave, master)
         ma_test.assert_masked_array_almost_equal (
             result,
-            [22.0, 22.0, 22.0, 22.0, 22.0, 21.9990234375, 21.9833984375,
-             21.9677734375, 21.9521484375, 21.9365234375, 21.9208984375,
-             21.9052734375, 21.8896484375, 21.875, 21.875, 21.875, 21.875,
-             21.875, 21.875, 21.875])
+            np.ma.masked_array(
+                [22.0, 22.0, 22.0, 22.0, 22.0, 21.9990234375, 21.9833984375,
+                 21.9677734375, 21.9521484375, 21.9365234375, 21.9208984375,
+                 21.9052734375, 21.8896484375, 21.875, 21.875, 21.875, 21.875,
+                 21.875, 21.875, 21.875]))
 
     def test_align_5hz(self):
         master = P('master', array=[1,2,3], frequency=1.0, offset=0.0)
@@ -2303,13 +2304,17 @@ class TestHeadingDiff(unittest.TestCase):
         self.assertRaises(AssertionError, heading_diff, 500, 400)
         self.assertRaises(AssertionError, heading_diff, -86.2, -152)
         self.assertEqual(heading_diff(0, 0), 0)
-        self.assertEqual(heading_diff(10, 0), 10)
-        self.assertEqual(heading_diff(0, 10), -10)
+        self.assertEqual(heading_diff(10, 0), -10)
+        self.assertEqual(heading_diff(0, 10), 10)
         self.assertEqual(heading_diff(0, 180), 180)
         self.assertEqual(heading_diff(47.81925103290594,
-                                      53.00950000000029), -5.1902489670943481)
+                                      53.00950000000029), 5.1902489670943481)
         self.assertEqual(heading_diff(1.6407827938370874,
                                       359.8320000000002), -1.8087827938368832)
+        self.assertEqual(heading_diff(10, 350), -20)
+        self.assertEqual(heading_diff(350, 10), 20)
+        self.assertEqual(heading_diff(320, 340), 20)
+        self.assertEqual(heading_diff(340, 320), -20)
 
 
 class TestHysteresis(unittest.TestCase):
@@ -3206,9 +3211,8 @@ class TestBlendParameters(unittest.TestCase):
     def test_blend_params_complex_example(self):
         result = blend_parameters(self.params, offset=0.0, frequency=2.0, debug=False)
         expected = []
-        ma_test.assert_masked_array_almost_equal (result[30], 14.225, decimal=2)
-        ma_test.assert_masked_array_almost_equal (result[80], 1208.451, decimal=2)
-        
+        self.assertAlmostEqual(result[30], 14.225, places=2)
+        self.assertAlmostEqual(result[80], 1208.451, places=2)
         
     def test_blend_two_parameters_p2_before_p1_equal_spacing(self):
         p1 = P(array=[0,0,0,1.0,2], frequency=1, offset=0.9)
@@ -3258,23 +3262,23 @@ class TestBlendParametersWeighting(unittest.TestCase):
         array=np.ma.array(data=[0,0,0,0,0,0],
                           mask=[1,1,1,0,0,0])
         result = blend_parameters_weighting(array, 2.0)
-        expected = [0.0, 0.0, 0.0, 0.0, 0.0, 0.05, 0.1, 0.3, 0.5, 0.5, 0.5, 0.5]
-        ma_test.assert_masked_array_almost_equal (result.data, expected)
+        expected = np.ma.masked_array([0.0, 0.0, 0.0, 0.0, 0.0, 0.05, 0.1, 0.3, 0.5, 0.5, 0.5, 0.5])
+        ma_test.assert_masked_array_almost_equal(result, expected)
         
     def test_weighting_decreased_freq(self):
         array=np.ma.array(data=[0,0,0,0,0,0],
                           mask=[1,1,1,0,0,0])
         result = blend_parameters_weighting(array, 0.5)
-        expected = [0.0, 0.05, 2.0]
-        ma_test.assert_masked_array_almost_equal (result.data, expected)
+        expected = np.ma.array([0.0, 0.05, 2.0])
+        ma_test.assert_masked_array_almost_equal(result, expected)
         
     def test_weighting_decreased_freq_odd_samples(self):
         array=np.ma.array(data=[0,0,0,0,0,0,0],
                           mask=[1,1,1,0,0,0,0])
         result = blend_parameters_weighting(array, 0.5)
-        expected = [0.0, 0.05, 2.0]
+        expected = np.ma.array([0.0, 0.05, 2.0])
         # When first run, the length of this array was 4, not 3 (!)
-        ma_test.assert_masked_array_almost_equal (len(result.data), 3)
+        ma_test.assert_masked_array_almost_equal(result, expected)
 
 
 class TestBlendTwoParameters(unittest.TestCase):
@@ -5814,6 +5818,12 @@ class TestLevelOffIndex(unittest.TestCase):
         self.assertEqual(index, 100)
         index = level_off_index(array, 1, 10, 1, _slice=slice(3625, None))
         self.assertEqual(index, 3674)
+    
+    def test_level_off_masked(self):
+        array = np.ma.load(os.path.join(test_data_path,
+                                        'level_off_index_eng_n3.npy'))
+        index = level_off_index(array, 1, 10, 1)
+        self.assertEqual(index, 28)
 
 
 class TestDpOverP2mach(unittest.TestCase):

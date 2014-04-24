@@ -12,14 +12,14 @@ from hdfaccess.parameter import MappedArray
 
 from flightdatautilities import aircrafttables as at
 
-from settings import (DESCENT_LOW_CLIMB_THRESHOLD,
-                      INITIAL_APPROACH_THRESHOLD,
-                      KTS_TO_MPS,
-                      METRES_TO_FEET,
-                      REPAIR_DURATION,
-                      SLOPE_FOR_TOC_TOD,
-                      TRUCK_OR_TRAILER_INTERVAL,
-                      TRUCK_OR_TRAILER_PERIOD)
+from settings import (
+    KTS_TO_MPS,
+    METRES_TO_FEET,
+    REPAIR_DURATION,
+    SLOPE_FOR_TOC_TOD,
+    TRUCK_OR_TRAILER_INTERVAL,
+    TRUCK_OR_TRAILER_PERIOD,
+)
 
 # There is no numpy masked array function for radians, so we just multiply thus:
 deg2rad = radians(1.0)
@@ -2142,11 +2142,9 @@ def heading_diff(heading1, heading2):
     :type heading2: int or float
     '''
     assert (0 <= heading1 < 360) and (0 <= heading2 < 360)
-    diff = heading1 - heading2
+    diff = heading2 - heading1
     abs_diff = abs(diff)
-    if abs_diff == 180:
-        return abs_diff
-    elif abs_diff < 180:
+    if abs_diff <= 180:
         return diff
     elif heading2 > heading1:
         return abs_diff - 360
@@ -4127,23 +4125,23 @@ def blend_parameters_weighting(array, wt):
     :type wt: float
     '''
     mask = np.ma.getmaskarray(array)
-    param_weight = (1.0-mask)
-    result_weight = np_ma_masked_zeros_like(np.ma.arange(floor(len(param_weight)*wt)))
-    final_weight = np_ma_masked_zeros_like(np.ma.arange(floor(len(param_weight)*wt)))
-    result_weight[0]=param_weight[0]/wt
-    result_weight[-1]=param_weight[-1]/wt
+    param_weight = (1.0 - mask)
+    result_weight = np_ma_masked_zeros_like(np.ma.arange(floor(len(param_weight) * wt)))
+    final_weight = np_ma_masked_zeros_like(np.ma.arange(floor(len(param_weight) * wt)))
+    result_weight[0] = param_weight[0] / wt
+    result_weight[-1] = param_weight[-1] / wt
 
-    for i in range(1, len(param_weight)-1):
-        if param_weight[i]==0.0:
-            result_weight[i*wt]=0.0
+    for i in range(1, len(param_weight) - 1):
+        if param_weight[i] == 0.0:
+            result_weight[i * wt] = 0.0
             continue
-        if param_weight[i-1]==0.0 or param_weight[i+1]==0.0:
-            result_weight[i*wt]=0.1 # Low weight to tail of valid data. Non-zero to avoid problems of overlapping invalid sections.
+        if param_weight[i - 1] == 0.0 or param_weight[i + 1] == 0.0:
+            result_weight[i * wt] = 0.1 # Low weight to tail of valid data. Non-zero to avoid problems of overlapping invalid sections.
             continue
-        result_weight[i*wt]=1.0/wt
+        result_weight[i * wt] = 1.0 / wt
 
-    for i in range(1, len(result_weight)-1):
-        if result_weight[i-1]==0.0 or result_weight[i+1]==0.0:
+    for i in range(1, len(result_weight) - 1):
+        if result_weight[i-1]==0.0 or result_weight[i + 1] == 0.0:
             final_weight[i]=result_weight[i]/2.0
         else:
             final_weight[i]=result_weight[i]
@@ -5682,7 +5680,7 @@ def level_off_index(array, frequency, seconds, variance, _slice=None,
         
         if not stable.any():
             # All data is not level.
-            return None
+            continue
         
         index = np.argmax(stable) + unmasked_slice.start
         
@@ -5693,6 +5691,8 @@ def level_off_index(array, frequency, seconds, variance, _slice=None,
             index += samples
         
         return index
+    
+    return None
 
 
 """
@@ -6538,7 +6538,7 @@ def value_at_time(array, hz, offset, time_index):
     :raises ValueError: From value_at_index if time_index is outside of array range.
     '''
     # Timedelta truncates to 6 digits, therefore round offset down.
-    time_into_array = time_index - round(offset-0.0000005, 6)
+    time_into_array = time_index - round(offset - 0.0000005, 6)
     location_in_array = time_into_array * hz
 
     # Trap overruns which arise from compensation for timing offsets.
@@ -6546,7 +6546,7 @@ def value_at_time(array, hz, offset, time_index):
     if location_in_array < 0:
         location_in_array = 0
     if diff > 0:
-        location_in_array = len(array)-1
+        location_in_array = len(array) - 1
 
     return value_at_index(array, location_in_array)
 
@@ -6591,11 +6591,11 @@ def value_at_index(array, index, interpolate=True):
 
     if index < 0.0:  # True if index is None
         return array[0]
-    elif index > len(array)-1:
+    elif index > len(array) - 1:
         return array[-1]
 
     low = int(index)
-    if (low==index):
+    if low == index:
         # I happen to have arrived at exactly the right value by a fluke...
         return None if np.ma.is_masked(array[low]) else array[low]
     else:
@@ -6617,7 +6617,7 @@ def value_at_index(array, index, interpolate=True):
         if not interpolate:
             return array[index + 0.5]
         # In the cases of no mask, or neither sample masked, interpolate.
-        return r*high_value + (1-r) * low_value
+        return r * high_value + (1 - r) * low_value
 
 
 def vstack_params(*params):

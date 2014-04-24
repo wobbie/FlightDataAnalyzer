@@ -8,6 +8,56 @@ You can view the differences in tagged versions as follows:
 
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
+v0.10.1
+------
+ - Change to magnetic variation from runway as magnetic variation should be
+   difference from magnetic to true heading
+ - fixed EngTorquePercent65KtsTo35FtMin
+ - Fixed Eng Stop detection through interpolation
+ - Renamed Selected Speed to Airspeed Selected following standardisation of
+   parameter name
+ - JSON tools: convert Nodes to and from JSON
+ - KML: Improved coordinate param fallback code
+ - Added local API logging to find file paths
+ - Changes to accommodate aircraft with only Latitude (Coarse) and Longitude
+   (Coarse) recorded.
+ - fix to heading_diff to correct sign of returned value when not passing 0
+ - KML: Altitude STD used in preference to AAL
+ - KML: Fixed altitude param fallback
+ - process_flight: Added verbose option
+ - KML: Allow altitude parameter fallback.
+ - process_flight: Fixed series and family args
+ - Trap for rare error condition in Altitude AAL
+ - Fixed derived parameter creation in kml writing
+ - Write KML with any lat and lon, improved arguments
+ - FlapManoeuvreSpeed: Fix for missing manufacturer attribute
+ - Fixed test cases broken by assert_masked_array_almost_equal
+
+v0.9.1
+------
+ - Fixed Fuel Qty parameter names (L and R)
+ - Added FuelQtyWingDifferenceMax derived parameter
+ - Takeoff5MinRating now usesTakeoffAccelerationStart
+ - Amendment to _qnh_adjust to allow for the fact that the climb and descent
+   phases don't start and end at the airfield
+ - Fast section does not extrapolate, improved tests
+ - FlapLeverSynthetic dependencies reflect mapping
+ - Altitude smoothing added for Beech 1900D
+ - Changed level_off_index to not bail after first masked data
+ - Changed EngGasTempDuringEngStartMax search to 5 mins
+ - ZeroFuelWeight changed to derived parameter
+ - Align parameters used by APChannelsEngaged
+ - Support case when input data is masked
+ - Align the AP Engaged arguments
+ - Added moving_average to AltitudeSTDSmoothed
+ - Fix: V-Vapp wasn't following changing Vapp signal Invalid test case for
+   superframe Vapp removed - not seen in LFLs
+ - level_off_index will round up sample window sizes.
+ - Fix for LastEngStop outside of data.
+ - Fixed overflow_correction max_val in a320 test
+ - find_toc_tod improved to use frequency in creating the slope
+
+
 v0.8.1
 ------
  - fix for APVerticalMode where only flare mode is avaliable

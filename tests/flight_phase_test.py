@@ -156,7 +156,7 @@ class TestAirborne(unittest.TestCase):
     def test_airborne_phase_not_fast(self):
         altitude_data = np.ma.array(range(0,10))
         alt_aal = Parameter('Altitude AAL For Flight Phases', altitude_data)
-        fast = []
+        fast = SectionNode('Fast')
         air = Airborne()
         air.derive(alt_aal, fast)
         self.assertEqual(air, [])
@@ -392,7 +392,7 @@ class TestILSLocalizerEstablished(unittest.TestCase):
         app = S(items=[Section('Approach', slice(0, 10), 0, 10)])
         establish = ILSLocalizerEstablished()
         establish.derive(ils, alt_aal, app, None)
-        expected = buildsection('ILS Localizer Established', 10*2.0/3.0, 10)
+        expected = buildsection('ILS Localizer Established', 7, 10)
         # Slightly daft choice of ils array makes exact equality impossible!
         self.assertAlmostEqual(establish.get_first().start_edge,
                                expected.get_first().start_edge)
@@ -422,7 +422,7 @@ class TestILSLocalizerEstablished(unittest.TestCase):
         app = S(items=[Section('Approach', slice(0, 50), 0, 50)])
         establish = ILSLocalizerEstablished()
         establish.derive(ils, alt_aal, app, None)
-        expected = buildsection('ILS Localizer Established', 20+(10*2.0/3.0), 30)
+        expected = buildsection('ILS Localizer Established', 20+7, 30)
         # Slightly daft choice of ils array makes exact equality impossible!
         self.assertAlmostEqual(establish.get_first().start_edge,
                                expected.get_first().start_edge)
@@ -436,7 +436,7 @@ class TestILSLocalizerEstablished(unittest.TestCase):
 
     def test_ils_localizer_established_always_on_loc(self):
         ils = P('ILS Localizer',np.ma.array([-0.2]*10))
-        alt_aal = P('Alttiude AAL For Flight Phases', np.ma.arange(1000, 0,-100))
+        alt_aal = P('Altitude AAL For Flight Phases', np.ma.arange(1000, 0,-100))
         app = S(items=[Section('Approach', slice(2, 9), 2, 9)])
         establish = ILSLocalizerEstablished()
         establish.derive(ils, alt_aal, app, None)
@@ -915,7 +915,8 @@ class TestFast(unittest.TestCase):
         ias = Parameter('Airspeed For Flight Phases', fast_data, 1, 0)
         phase_fast = Fast()
         phase_fast.derive(ias)
-        expected = buildsection('Fast', None, None)
+        # Q: Should we really create no fast sections?
+        expected = buildsection('Fast', 0, 10)
         self.assertEqual(phase_fast, expected)
 
     def test_fast_all_slow(self):
@@ -930,7 +931,7 @@ class TestFast(unittest.TestCase):
         ias = Parameter('Airspeed For Flight Phases', fast_data, 1, 0)
         phase_fast = Fast()
         phase_fast.derive(ias)
-        expected = buildsection('Fast', None, 4)
+        expected = buildsection('Fast', 0, 4)
         self.assertEqual(phase_fast, expected)
 
     def test_fast_speeding_only(self):
@@ -938,8 +939,34 @@ class TestFast(unittest.TestCase):
         ias = Parameter('Airspeed For Flight Phases', fast_data, 1, 0)
         phase_fast = Fast()
         phase_fast.derive(ias)
-        expected = buildsection('Fast', 2, None)
+        expected = buildsection('Fast', 2, 6)
         self.assertEqual(phase_fast, expected)
+    
+    def test_fast_real_data_1(self):
+        airspeed = load(os.path.join(test_data_path, 'Fast_airspeed.nod'))
+        node = Fast()
+        node.derive(airspeed)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].slice.start, 2258)
+        self.assertEqual(node[0].slice.stop, 14976)
+        
+        # Test short masked section does not create two fast slices.
+        airspeed.array[5000:5029] = np.ma.masked
+        node = Fast()
+        node.derive(airspeed)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].slice.start, 2258)
+        self.assertEqual(node[0].slice.stop, 14976)
+        
+        # Test long masked section splits up fast into two slices.
+        airspeed.array[6000:10000] = np.ma.masked
+        node = Fast()
+        node.derive(airspeed)
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].slice.start, 2258)
+        self.assertEqual(node[0].slice.stop, 6000)
+        self.assertEqual(node[1].slice.start, 10000)
+        self.assertEqual(node[1].slice.stop, 14976)
 
     #def test_fast_phase_with_masked_data(self): # These tests were removed.
     #We now use Airspeed For Flight Phases which has a repair mask function,
@@ -1780,11 +1807,16 @@ class TestGoAround5MinRating(unittest.TestCase):
 class TestTakeoff5MinRating(unittest.TestCase):
     def test_can_operate(self):
         self.assertEqual(Takeoff5MinRating.get_operational_combinations(),
-                         [('Takeoff',)])
+                         [('Takeoff Acceleration Start',)])
 
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+    def test_derive_basic(self):
+        toffs = KTI('Takeoff Acceleration Start',
+                    items=[KeyTimeInstance(index=100)])
+        node = Takeoff5MinRating()
+        node.derive(toffs)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].slice.start, 100)
+        self.assertEqual(node[0].slice.stop, 400)
 
 
 class TestTakeoffRoll(unittest.TestCase):

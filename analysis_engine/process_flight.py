@@ -535,12 +535,12 @@ def main():
     parser = argparse.ArgumentParser(description="Process a flight.")
     parser.add_argument('file', type=str,
                         help='Path of file to process.')
-    help = 'Write CSV of processing results. Set "False" to disable.'
-    parser.add_argument('-csv', dest='write_csv', type=str, default='True',
-                        help=help)
-    help = 'Write KML of flight track. Set "False" to disable.'
-    parser.add_argument('-kml', dest='write_kml', type=str, default='True',
-                        help=help)
+    help = 'Disable writing a CSV of the processing results.'
+    parser.add_argument('-disable-csv', dest='disable_csv',
+                        action='store_true', help=help)
+    help = 'Disable writing a KML of the flight track.'
+    parser.add_argument('-disable-kml', dest='disable_kml',
+                        action='store_true', help=help)
     parser.add_argument('-r', '--requested', type=str, nargs='+', dest='requested',
                         default=[], help='Requested nodes.')
     parser.add_argument('--required', type=str, nargs='+', dest='required',
@@ -550,6 +550,8 @@ def main():
                         help='Aircraft tail number.')
     parser.add_argument('--strip', default=False, action='store_true',
                         help='Strip the HDF5 file to only the LFL parameters')
+    parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
+                        help='Verbose logging')
 
     # Aircraft info
     parser.add_argument('-aircraft-family', dest='aircraft_family', type=str,
@@ -596,10 +598,16 @@ def main():
                         help='Engine type.')
 
     args = parser.parse_args()
+    
+    if args.verbose:
+        logger.setLevel(logging.DEBUG)
+    
     aircraft_info = {}
     if args.aircraft_model:
         aircraft_info['Model'] = args.aircraft_model
     if args.aircraft_family:
+        aircraft_info['Family'] = args.aircraft_family
+    if args.aircraft_series:
         aircraft_info['Series'] = args.aircraft_series
     if args.aircraft_manufacturer:
         aircraft_info['Manufacturer'] = args.aircraft_manufacturer
@@ -642,16 +650,16 @@ def main():
         requested=args.requested, required=args.required)
     logger.info("Derived parameters stored in hdf: %s", hdf_copy)
     # Write CSV file
-    if args.write_csv.lower() == 'true':
+    if not args.disable_csv:
         csv_dest = os.path.splitext(hdf_copy)[0] + '.csv'
         csv_flight_details(hdf_copy, res['kti'], res['kpv'], res['phases'],
                            dest_path=csv_dest)
         logger.info("KPV, KTI and Phases writen to csv: %s", csv_dest)
     # Write KML file
-    if args.write_kml.lower() == 'true':
+    if not args.disable_kml:
         kml_dest = os.path.splitext(hdf_copy)[0] + '.kml'
         dest = track_to_kml(hdf_copy, res['kti'], res['kpv'], res['approach'],
-                     plot_altitude='Altitude QNH', dest_path=kml_dest)
+                     dest_path=kml_dest)
         if dest:
             logger.info("Flight Track with attributes writen to kml: %s", dest)
 
