@@ -5068,38 +5068,69 @@ masked_array(data = [0 1 -- -- -- -- 6 7 -- 9 10 11 -- -- -- -- 16 17 -- 19],
 array([ 0,  1,  6,  6,  6,  6,  6,  7,  9,  9, 10, 11, 16, 16, 16, 16, 16,
        17, 19, 19])
        
-'''
+"""
+
+
+def fill_masked_edges(array, fill_value):
+    '''
+    :type array: np.ma.array
+    :type fill_value: float or int
+    :returns: Array with masked beginning and end masked.
+    :rtype: np.ma.masked_array
+    '''
+    if array.mask.all() or not array.mask.any():
+        # Array is entirely masked or entirely unmasked.
+        return array
+    
+    masked_slices = np.ma.clump_masked(array)
+    if masked_slices[0].start == 0:
+        # Fill the start of the array.
+        array[masked_slices[0]] = fill_value
+    if masked_slices[-1].stop == len(array):
+        # Fill the end of the array.
+        array[masked_slices[-1]] = fill_value
+    
+    return array
 
 
 def repair_mask(array, frequency=1, repair_duration=REPAIR_DURATION,
-                raise_duration_exceedance=False, copy=False, extrapolate=False,
-                zero_if_masked=False, repair_above=None):
+                copy=False, extrapolate=False, repair_above=None,
+                method='interpolate', raise_duration_exceedance=False,
+                raise_entirely_masked=True):
     '''
     This repairs short sections of data ready for use by flight phase algorithms
     It is not intended to be used for key point computations, where invalid data
     should remain masked.
 
     :param copy: If True, returns modified copy of array, otherwise modifies the array in-place.
-    :param zero_if_masked: If True, returns a fully masked zero-filled array if all incoming data is masked.
+    :param method: Repair method to apply in masked sections, either interpolate, fill_start (fill with value at start of masked section), fill_stop (fill with stop of masked section).
+    :param raise_entirely_masked: If True, an exception is raised if the incoming data is entirely masked.
     :param repair_duration: If None, any length of masked data will be repaired.
     :param raise_duration_exceedance: If False, no warning is raised if there are masked sections longer than repair_duration. They will remain unrepaired.
     :param extrapolate: If True, data is extrapolated at the start and end of the array.
     :param repair_above: If value provided only masked ranges where first and last unmasked values are this value will be repaired.
     :raises ValueError: If the entire array is masked.
     '''
-    if not np.ma.count(array):
-        if zero_if_masked:
-            return np_ma_zeros_like(array, mask=True)
-        else:
+    if array.mask.all():
+        # Cannot repair entierly masked array.
+        if raise_entirely_masked:
             raise ValueError("Array cannot be repaired as it is entirely masked")
+        else:
+            return array
+    elif not array.mask.any():
+        # Array entirely unmasked - nothing to do.
+        return array
+    
     if copy:
         array = array.copy()
+    
     if repair_duration:
         repair_samples = repair_duration * frequency
     else:
         repair_samples = None
 
     masked_sections = np.ma.clump_masked(array)
+    
     for section in masked_sections:
         length = section.stop - section.start
         if repair_samples and length > repair_samples:

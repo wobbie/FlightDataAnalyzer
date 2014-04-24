@@ -1705,6 +1705,26 @@ class TestDatetimeOfIndex(unittest.TestCase):
         self.assertEqual(dt, start_datetime + timedelta(seconds=40))
 
 
+class TestFillMaskedEdges(unittest.TestCase):
+    def test_fill_masked_edges(self):
+        array = np.ma.arange(10)
+        self.assertEqual(fill_masked_edges(array, 0).tolist(),
+                         np.arange(10).tolist())
+        array.mask = True
+        self.assertEqual(fill_masked_edges(array, 0).tolist(),
+                         [None] * 10)
+        array.mask = False
+        array.mask[:3] = True
+        self.assertEqual(fill_masked_edges(array, 0).tolist(),
+                         [0, 0, 0, 3, 4, 5, 6, 7, 8, 9])
+        array.mask[-2:] = True
+        self.assertEqual(fill_masked_edges(array, 0).tolist(),
+                         [0, 0, 0, 3, 4, 5, 6, 7, 0, 0])
+        array.mask[4:6] = True
+        self.assertEqual(fill_masked_edges(array, 0).tolist(),
+                         [0, 0, 0, 3, None, None, 6, 7, 0, 0])
+
+
 class TestFilterSlicesLength(unittest.TestCase):
     def test_filter_slices_length(self):
         slices = [slice(1, 5), slice(4, 6), slice (5, 10)]
