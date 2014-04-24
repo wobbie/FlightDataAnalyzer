@@ -1165,7 +1165,7 @@ class AltitudeQNH(DerivedParameterNode):
                                  -1) 
             adjust_down = self._qnh_adjust(alt_aal.array[last_descent], 
                                       alt_std.array[last_descent], 
-                                      l_elev, 'descend')
+                                      l_elev, 'descent')
             # Last descent adjusted
             alt_qnh[last_descent] = alt_aal.array[last_descent] + adjust_down
             
