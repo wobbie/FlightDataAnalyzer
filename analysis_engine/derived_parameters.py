@@ -90,12 +90,14 @@ from analysis_engine.library import (actuator_mismatch,
 from settings import (AIRSPEED_THRESHOLD,
                       AZ_WASHOUT_TC,
                       BOUNCED_LANDING_THRESHOLD,
+                      CLIMB_THRESHOLD,
                       FEET_PER_NM,
                       HYSTERESIS_FPIAS,
                       HYSTERESIS_FPROC,
                       GRAVITY_IMPERIAL,
                       KTS_TO_FPS,
                       KTS_TO_MPS,
+                      LANDING_THRESHOLD_HEIGHT,
                       METRES_TO_FEET,
                       METRES_TO_NM,
                       VERTICAL_SPEED_LAG_TC)
@@ -795,8 +797,9 @@ class AltitudeAAL(DerivedParameterNode):
                     land_pitch=land_pitch)
             
             # Reset end sections
-            alt_aal[quick.start:alt_idxs[0]+1] = 0.0
-            alt_aal[alt_idxs[-1]+1:quick.stop] = 0.0
+            if len(alt_idxs):
+                alt_aal[quick.start:alt_idxs[0]+1] = 0.0
+                alt_aal[alt_idxs[-1]+1:quick.stop] = 0.0
         
         '''
         # Quick visual check of the altitude aal.
@@ -975,7 +978,9 @@ class AltitudeSTDSmoothed(DerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
 
-        return 'Altitude STD' in available
+        return ('Frame' in available and 
+                (('Altitude STD' in available) or 
+                 all_of(('Altitude STD (Capt)', 'Altitude STD (FO)'), available)))
 
     def derive(self, fine = P('Altitude STD (Fine)'), 
                alt = P('Altitude STD'),
@@ -985,7 +990,7 @@ class AltitudeSTDSmoothed(DerivedParameterNode):
 
         frame_name = frame.value if frame else ''
 
-        if frame_name in ['737-i', '757-DHL', '767-3A', 'L382-Hercules'] or \
+        if frame_name in ['737-i', '757-DHL', '767-3A', 'L382-Hercules', '1900D-SS542A'] or \
            frame_name.startswith('737-6'):
             # The altitude signal is measured in steps of 32 ft (10ft for
             # 757-DHL) so needs smoothing. A 5-point Gaussian distribution
@@ -1016,6 +1021,10 @@ class AltitudeSTDSmoothed(DerivedParameterNode):
 
         else:
             self.array = alt.array
+        
+        # Applying moving_window of a moving_window to avoid a large weighting/
+        # window size which would skew sharp curves.
+        self.array = moving_average(moving_average(self.array))
 
 
 # TODO: Account for 'Touch & Go' - need to adjust QNH for additional airfields!
@@ -1082,15 +1091,16 @@ class AltitudeQNH(DerivedParameterNode):
             return  # BAIL OUT!
         elif t_elev is None:
             self.warning("No Takeoff elevation, using %dft at Landing", l_elev)
-            smooth = False
+            #smooth = False
             t_elev = l_elev
         elif l_elev is None:
             self.warning("No Landing elevation, using %dft at Takeoff", t_elev)
-            smooth = False
+            #smooth = False
             l_elev = t_elev
         else:
             # both have valid values
-            smooth = True
+            #smooth = True
+            pass
 
         ### Break the "journey" at the "midpoint" - actually max altitude aal -
         ### and be sure to account for rise/fall in the data and stick the peak
@@ -1141,7 +1151,7 @@ class AltitudeQNH(DerivedParameterNode):
                                 climbs[0].slice.stop+1)
             adjust_up = self._qnh_adjust(alt_aal.array[first_climb], 
                                     alt_std.array[first_climb], 
-                                    t_elev)
+                                    t_elev, 'climb')
             # Before first climb
             alt_qnh[:first_climb.start] = alt_aal.array[:first_climb.start] + t_elev
 
@@ -1155,14 +1165,13 @@ class AltitudeQNH(DerivedParameterNode):
                                  -1) 
             adjust_down = self._qnh_adjust(alt_aal.array[last_descent], 
                                       alt_std.array[last_descent], 
-                                      l_elev)
+                                      l_elev, 'descend')
             # Last descent adjusted
             alt_qnh[last_descent] = alt_aal.array[last_descent] + adjust_down
             
             # After last descent
             alt_qnh[last_descent.start:] = alt_aal.array[last_descent.start:] + l_elev
         
-                
         # Use pressure altitude in the cruise
         cruise_start = first_climb.stop if climbs else 0
         cruise_stop = last_descent.stop+1 if descends else len(alt_std.array)
@@ -1171,9 +1180,15 @@ class AltitudeQNH(DerivedParameterNode):
         self.array = np.ma.array(data=alt_qnh, mask=alt_aal.array.mask)
 
     @staticmethod
-    def _qnh_adjust(aal, std, elev):
+    def _qnh_adjust(aal, std, elev, mode):
+        if mode == 'climb':
+            datum = CLIMB_THRESHOLD
+        elif mode == 'descent':
+            datum = LANDING_THRESHOLD_HEIGHT
+        else:
+            raise ValueError("Unrecognised mode in _qnh_adjust")
         # numpy.linspace(start, stop, num=50, endpoint=True)
-        press_offset = std[0] - elev
+        press_offset = std[0] - elev - datum
         if abs(press_offset) > 4000.0:
             raise ValueError("Excessive difference between pressure altitude (%s) and airport elevation (%s) of '%s' implies incorrect altimeter scaling.",
                              std[0], elev, press_offset)
@@ -3146,17 +3161,16 @@ class FuelQty(DerivedParameterNode):
         return any_of(cls.get_dependency_names(), available)
 
     def derive(self,
-               fuel_qty1=P('Fuel Qty (1)'),
-               fuel_qty2=P('Fuel Qty (2)'),
-               fuel_qty3=P('Fuel Qty (3)'),
-               fuel_qty4=P('Fuel Qty (4)'),
-               fuel_qty5=P('Fuel Qty (5)'),
-               fuel_qty6=P('Fuel Qty (6)'),
-               fuel_qty7=P('Fuel Qty (7)'),
+               fuel_qty_l=P('Fuel Qty (L)'),
+               fuel_qty_c=P('Fuel Qty (C)'),
+               fuel_qty_c_1=P('Fuel Qty (C1)'),
+               fuel_qty_c_2=P('Fuel Qty (C2)'),
+               fuel_qty_r=P('Fuel Qty (R)'),
                fuel_qty_trim=P('Fuel Qty (Trim)'),
                fuel_qty_aux=P('Fuel Qty (Aux)')):
         params = []
-        for param in (fuel_qty1, fuel_qty2, fuel_qty3, fuel_qty4, fuel_qty5, fuel_qty6, fuel_qty7, fuel_qty_trim, fuel_qty_aux):
+        for param in (fuel_qty_l, fuel_qty_c, fuel_qty_c_1, fuel_qty_c_2,
+                      fuel_qty_r, fuel_qty_trim, fuel_qty_aux):
             if not param:
                 continue
             # Repair array masks to ensure that the summed values are not too small
@@ -3187,6 +3201,52 @@ class FuelQty(DerivedParameterNode):
             self.offset = 0.0
 
 
+class FuelQtyL(DerivedParameterNode):
+    '''
+    Total fuel quantity measured in the left wing.
+    '''
+    name = 'Fuel Qty (L)'
+
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self, fuel_qty_l_1=P('Fuel Qty (L1)'),
+               fuel_qty_l_2=P('Fuel Qty (L2)'),
+               fuel_qty_l_3=P('Fuel Qty (L3)'),):
+        # Sum all the available measurements! Masked values are maintained as
+        # all tanks must be reading valid values to be summed together. Fuel in
+        # both tanks but a masked value in one should not result in half the
+        # measured fuel quantity!
+        params = [p.array for p in (fuel_qty_l_1,
+                                    fuel_qty_l_2,
+                                    fuel_qty_l_3) if p is not None]
+        self.array = np.ma.sum(np.ma.vstack(params), axis=0)
+
+
+class FuelQtyR(DerivedParameterNode):
+    '''
+    Total fuel quantity measured in the right wing.
+    '''
+    name = 'Fuel Qty (R)'
+
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self, fuel_qty_r_1=P('Fuel Qty (R1)'),
+               fuel_qty_r_2=P('Fuel Qty (R2)'),
+               fuel_qty_r_3=P('Fuel Qty (R3)'),):
+        # Sum all the available measurements! Masked values are maintained as
+        # all tanks must be reading valid values to be summed together. Fuel in
+        # both tanks but a masked value in one should not result in half the
+        # measured fuel quantity!
+        params = [p.array for p in (fuel_qty_r_1,
+                                    fuel_qty_r_2,
+                                    fuel_qty_r_3) if p is not None]
+        self.array = np.ma.sum(np.ma.vstack(params), axis=0)
+
+
 ##############################################################################
 
 class GrossWeight(DerivedParameterNode):
@@ -3202,7 +3262,7 @@ class GrossWeight(DerivedParameterNode):
         return (all_of(('AFR Landing Gross Weight', 'HDF Duration'), available) or
                 all_of(('Zero Fuel Weight', 'Fuel Qty'), available))
     
-    def derive(self, zfw=KPV('Zero Fuel Weight'), fq=P('Fuel Qty'),
+    def derive(self, zfw=P('Zero Fuel Weight'), fq=P('Fuel Qty'),
                duration=A('HDF Duration'),
                afr_land_wgt=A('AFR Landing Gross Weight'),
                afr_takeoff_wgt=A('AFR Takeoff Gross Weight'),
@@ -3223,7 +3283,43 @@ class GrossWeight(DerivedParameterNode):
             else:
                 self.array.fill(afr_land_wgt.value)
         else:
-            self.array = fq.array + zfw.get_first().value
+            zfw_value = np.bincount(zfw.array.compressed().astype(np.int)).argmax()
+            self.array = fq.array + zfw_value
+
+
+class ZeroFuelWeight(DerivedParameterNode):
+    '''
+    The aircraft zero fuel weight is computed from the recorded gross weight
+    and fuel data.
+
+    See also the GrossWeightSmoothed calculation which uses fuel flow data to
+    obtain a higher sample rate solution to the aircraft weight calculation,
+    with a best fit to the available weight data.
+    
+    TODO: Move to a FlightAttribute which is stored in the database.
+    '''
+
+    units = ut.KG
+    # Force align for cases when only attribute dependencies are available.
+    align_frequency = 1
+    align_offset = 0
+    
+    @classmethod
+    def can_operate(cls, available):
+        return ('HDF Duration' in available and 
+                ('Dry Operating Weight' in available or
+                 all_of(('Fuel Qty', 'Gross Weight'), available)))
+    
+    def derive(self, fuel_qty=P('Fuel Qty'), gross_wgt=P('Gross Weight'),
+               dry_operating_wgt=A('Dry Operating Weight'),
+               payload=A('Payload'), duration=A('HDF Duration')):
+        if gross_wgt and fuel_qty:
+            weight = np.ma.median(gross_wgt.array - fuel_qty.array)
+        else:
+            weight = dry_operating_wgt.value
+            if payload and payload.value:
+                weight += payload.value
+        self.array = np.ma.ones(duration.value * self.frequency) * weight
 
 
 class GrossWeightSmoothed(DerivedParameterNode):
@@ -4324,6 +4420,9 @@ class MagneticVariation(DerivedParameterNode):
     altitude and date. Uses Latitude/Longitude or
     Latitude (Coarse)/Longitude (Coarse) parameters instead of Prepared or
     Smoothed to avoid cyclical dependencies.
+    
+    Example: A Magnetic Variation of +5 deg means one adds 5 degrees to
+    the Magnetic Heading to obtain the True Heading.
     '''
 
     align_frequency = 1 / 4.0
@@ -4363,7 +4462,12 @@ class MagneticVariation(DerivedParameterNode):
                 mag_vars.append(geomag.declination(lat_val, lon_val,
                                                    alt_aal_val,
                                                    time=start_date))
-        
+
+        if not any(mag_vars):
+            # all masked array
+            self.array = np_ma_masked_zeros_like(lat.array)
+            return
+
         # Repair mask to avoid interpolating between masked values.
         mag_vars = repair_mask(np.ma.array(mag_vars), extrapolate=True)
         interpolator = interp1d(
@@ -4372,7 +4476,7 @@ class MagneticVariation(DerivedParameterNode):
         array = np_ma_masked_zeros_like(lat.array)
         array[:interpolation_length] = \
             interpolator(np.arange(interpolation_length))
-        
+
         # Exclude masked values.
         mask = lat.array.mask | lon.array.mask | alt_aal.array.mask
         array = np.ma.masked_where(mask, array)
@@ -4397,6 +4501,9 @@ class MagneticVariationFromRunway(DerivedParameterNode):
     upon magnetic variation from out of date databases. Also, by using the
     aircraft compass values to work out the variation, we inherently
     accommodate compass drift for that day.
+    
+    Example: A Magnetic Variation of +5 deg means one adds 5 degrees to
+    the Magnetic Heading to obtain the True Heading.
     '''
 
     # TODO: Instead of linear interpolation, perhaps base it on distance flown.
@@ -4424,8 +4531,10 @@ class MagneticVariationFromRunway(DerivedParameterNode):
                 # runway does not have coordinates to calculate true heading
                 pass
             else:
-                dev[tof_hdg_mag_kpv.index] = heading_diff(takeoff_hdg_true,
-                                                          takeoff_hdg_mag)
+                # magnetic variation/declination is the difference from
+                # magnetic to true heading
+                dev[tof_hdg_mag_kpv.index] = heading_diff(takeoff_hdg_mag,
+                                                          takeoff_hdg_true)
         
         # landing
         ldg_hdg_mag_kpv = head_land.get_last()
@@ -4437,8 +4546,10 @@ class MagneticVariationFromRunway(DerivedParameterNode):
                 # runway does not have coordinates to calculate true heading
                 pass
             else:
-                dev[ldg_hdg_mag_kpv.index] = heading_diff(landing_hdg_true,
-                                                          landing_hdg_mag)
+                # magnetic variation/declination is the difference from
+                # magnetic to true heading
+                dev[ldg_hdg_mag_kpv.index] = heading_diff(landing_hdg_mag,
+                                                          landing_hdg_true)
 
         # linearly interpolate between values and extrapolate to ends of the
         # array, even if only the takeoff variation is calculated as the
@@ -5852,7 +5963,7 @@ class ApproachRange(DerivedParameterNode):
 
             # Shift the values in this approach so that the range = 0 at
             # 0ft on the projected ILS or approach slope.
-            app_range[this_app_slice] += extend - offset
+            app_range[this_app_slice] += extend - (offset or 0)
 
         self.array = app_range
 
@@ -6210,7 +6321,7 @@ class V2(DerivedParameterNode):
 
         airbus = all_of((
             'Airspeed',
-            'Selected Speed',
+            'Airspeed Selected',
             'Speed Control',
             'Liftoff',
             'Climb Start',
@@ -6229,7 +6340,7 @@ class V2(DerivedParameterNode):
     def derive(self,
                airspeed=P('Airspeed'),
                v2_vac=A('V2-Vac'),
-               spd_sel=P('Selected Speed'),
+               spd_sel=P('Airspeed Selected'),
                spd_ctl=P('Speed Control'),
                afr_v2=A('AFR V2'),
                liftoffs=KTI('Liftoff'),
@@ -6909,7 +7020,7 @@ class FlapManoeuvreSpeed(DerivedParameterNode):
                     model=A('Model'), series=A('Series'), family=A('Family'),
                     engine_type=A('Engine Type'), engine_series=A('Engine Series')):
 
-        if not manufacturer.value == 'Boeing':
+        if not manufacturer or not manufacturer.value == 'Boeing':
             return False
 
         try:
