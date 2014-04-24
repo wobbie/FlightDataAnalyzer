@@ -607,7 +607,8 @@ class GearExtended(FlightPhaseNode):
     '''
     def derive(self, gear_down=M('Gear Down')):
         repaired = repair_mask(gear_down.array, gear_down.frequency, 
-                               repair_duration=120, extrapolate=True)
+                               repair_duration=120, extrapolate=True,
+                               method='fill_start')
         gear_dn = runs_of_ones(repaired == 'Down')
         # remove single sample changes from this phase
         # note: order removes gaps before slices for Extended
@@ -641,7 +642,8 @@ class GearRetracted(FlightPhaseNode):
     def derive(self, gear_down=M('Gear Down')):
         #TODO: self = 1 - 'Gear Extended'
         repaired = repair_mask(gear_down.array, gear_down.frequency, 
-                               repair_duration=120, extrapolate=True)
+                               repair_duration=120, extrapolate=True,
+                               method='fill_start')
         gear_up = runs_of_ones(repaired == 'Up')
         # remove single sample changes from this phase
         # note: order removes slices before gaps for Retracted

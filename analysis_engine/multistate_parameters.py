@@ -2139,7 +2139,8 @@ class StableApproach(MultistateDerivedParameterNode):
         self.array = np.ma.zeros(len(alt.array), dtype=np.short)
         self.array.mask = True
         # shortcut for repairing masks
-        repair = lambda ar, ap: repair_mask(ar[ap], zero_if_masked=True)
+        repair = lambda ar, ap, method='interpolate': repair_mask(
+            ar[ap], raise_entirely_masked=False, method=method)
 
         for approach in apps:
             # FIXME: approaches shorter than 10 samples will not work due to
@@ -2154,8 +2155,8 @@ class StableApproach(MultistateDerivedParameterNode):
                 stop = approach.slice.stop
             _slice = slice(approach.slice.start, stop)
             # prepare data for this appproach:
-            gear_down = repair(gear.array, _slice)
-            flap_lever = repair(flap.array, _slice)
+            gear_down = repair(gear.array, _slice, method='fill_start')
+            flap_lever = repair(flap.array, _slice, method='fill_start')
             track_dev = repair(tdev.array, _slice)
             airspeed = repair(aspd.array, _slice) if aspd else None  # optional
             glideslope = repair(gdev.array, _slice) if gdev else None  # optional

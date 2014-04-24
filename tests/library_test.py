@@ -2853,8 +2853,7 @@ class TestIntegrate (unittest.TestCase):
         data = np.ma.array(data = [1,1,2,99],
                            mask = [0,0,0,1])
         result = integrate(data,1.0, repair=True)
-        ma_test.assert_array_equal(np.ma.array(data=[0,1,2.5,3.5], mask=[0,0,0,0]),
-                                   result)
+        ma_test.assert_array_equal(np.ma.array([0,1,2.5,4.5]), result)
 
     def test_integration_extended(self):
         data = np.ma.array([1,3,5,7.0])
@@ -3988,6 +3987,27 @@ class TestRateOfChange(unittest.TestCase):
 
 
 class TestRepairMask(unittest.TestCase):
+    def setUp(self):
+        self.basic_data = np.ma.array(
+            [0, 0, 10, 0, 0, 20, 23, 26, 30, 0, 0],
+            mask=[True] * 2 + [False] + [True] * 2 + [False] * 4 + [True] * 2)
+    
+    def test_repair_mask_basic_fill_start(self):
+        self.assertEqual(repair_mask(self.basic_data,
+                                     method='fill_start').tolist(),
+                         [None, None, 10, 10, 10, 20, 23, 26, 30, 30, 30])
+        self.assertEqual(repair_mask(self.basic_data, extrapolate=True,
+                                     method='fill_start').tolist(),
+                         [10, 10, 10, 10, 10, 20, 23, 26, 30, 30, 30])
+    
+    def test_repair_mask_basic_fill_stop(self):
+        self.assertEqual(repair_mask(self.basic_data,
+                                     method='fill_stop').tolist(),
+                         [10, 10, 10, 20, 20, 20, 23, 26, 30, None, None])
+        self.assertEqual(repair_mask(self.basic_data, extrapolate=True,
+                                     method='fill_stop').tolist(),
+                         [10, 10, 10, 20, 20, 20, 23, 26, 30, 30, 30])
+    
     def test_repair_mask_basic_1(self):
         array = np.ma.arange(10)
         array[3] = np.ma.masked
@@ -4041,11 +4061,9 @@ class TestRepairMask(unittest.TestCase):
         # fully masked raises ValueError
         self.assertRaises(ValueError, repair_mask, array)
         # fully masked returns a masked zero array
-        res = repair_mask(array, zero_if_masked=True)
-        expected = np.ma.zeros(10)
-        expected.mask = True
-        ma_test.assert_array_equal(res.data, expected.data)
-        ma_test.assert_array_equal(res.mask, expected.mask)
+        res = repair_mask(array, raise_entirely_masked=False)
+        ma_test.assert_array_equal(res.data, array.data)
+        ma_test.assert_array_equal(res.mask, True)
 
     def test_repair_mask_basic_2(self):
         array = np.ma.arange(10)
@@ -4060,12 +4078,6 @@ class TestRepairMask(unittest.TestCase):
         self.assertFalse(np.ma.is_masked(res[7]))
         self.assertFalse(np.ma.is_masked(res[8]))
         self.assertFalse(np.ma.is_masked(res[9]))
-
-    def test_zero_if_masked(self):
-        array = np.ma.array([2,4,6,7,5,3,1],mask=[1,1,0,0,1,1,1])
-        res = repair_mask(array, zero_if_masked=True)
-        expected = np.ma.array([0,0,6,7,0,0,0],mask=[0,0,0,0,0,0,0])
-        ma_test.assert_array_equal(res, expected)
 
 
 class TestResample(unittest.TestCase):

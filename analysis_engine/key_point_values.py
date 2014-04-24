@@ -2475,7 +2475,8 @@ class AirspeedTopOfDescentTo10000FtMax(KeyPointValueNode):
         alt = alt_qnh.array if country == 'United States' else alt_std.array
         alt = hysteresis(alt, HYSTERESIS_FPALT)
 
-        height_bands = np.ma.clump_unmasked(np.ma.masked_less(repair_mask(alt), 10000))
+        height_bands = np.ma.clump_unmasked(np.ma.masked_less(repair_mask(alt),
+                                                              10000))
         descent_bands = slices_and(height_bands, descent.get_slices())
         self.create_kpvs_within_slices(air_spd.array, descent_bands, max_value)
 
@@ -2510,7 +2511,8 @@ class AirspeedTopOfDescentTo4000FtMax(KeyPointValueNode):
         alt = alt_qnh.array if country == 'United States' else alt_std.array
         alt = hysteresis(alt, HYSTERESIS_FPALT)
 
-        height_bands = np.ma.clump_unmasked(np.ma.masked_less(repair_mask(alt), 4000))
+        height_bands = np.ma.clump_unmasked(np.ma.masked_less(repair_mask(alt),
+                                                              4000))
         descent_bands = slices_and(height_bands, descent.get_slices())
         self.create_kpvs_within_slices(air_spd.array, descent_bands, max_value)
 
@@ -2545,7 +2547,8 @@ class AirspeedTopOfDescentTo4000FtMin(KeyPointValueNode):
         alt = alt_qnh.array if country == 'United States' else alt_std.array
         alt = hysteresis(alt, HYSTERESIS_FPALT)
 
-        height_bands = np.ma.clump_unmasked(np.ma.masked_less(repair_mask(alt), 4000))
+        height_bands = np.ma.clump_unmasked(np.ma.masked_less(repair_mask(alt),
+                                                              4000))
         descent_bands = slices_and(height_bands, descent.get_slices())
         self.create_kpvs_within_slices(air_spd.array, descent_bands, min_value)
 

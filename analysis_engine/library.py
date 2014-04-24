@@ -345,7 +345,7 @@ def align(slave, master, interpolate=True):
             dur_between_slave_samples = 1.0 / slave.frequency
             return repair_mask(slave_aligned, frequency=master.frequency,
                                repair_duration=dur_between_slave_samples,
-                               zero_if_masked=True)
+                               raise_entirely_masked=False)
 
         else:
             # step through slave taking the required samples
@@ -1107,7 +1107,8 @@ def clip(array, period, hz=1.0, remove='peaks_and_troughs'):
 
     # OK - normal operation here. We repair the mask to avoid propogating
     # invalid samples unreasonably.
-    source = np.ma.array(repair_mask(array_copy, frequency=hz, repair_duration=period-(1/hz)))
+    source = np.ma.array(repair_mask(array_copy, frequency=hz,
+                                     repair_duration=period-(1/hz)))
 
     if source is None or np.ma.count(source)==0:
         return np_ma_masked_zeros_like(source)
@@ -2813,11 +2814,9 @@ def integrate(array, frequency, initial_value=0.0, scale=1.0,
         return np_ma_masked_zeros_like(array)
 
     if repair:
-        integrand = repair_mask(array,
-                                     repair_duration=None,
-                                     zero_if_masked=True,
-                                     extrapolate=True,
-                                     copy=True)
+        integrand = repair_mask(array, repair_duration=None,
+                                raise_entirely_masked=False, extrapolate=True,
+                                copy=True)
     elif contiguous:
         blocks = np.ma.clump_unmasked(array)
         longest_index = None
@@ -5011,12 +5010,7 @@ def rate_of_change(diff_param, width, method='two_points'):
     return rate_of_change_array(to_diff, hz, width, method=method)
 
 
-#def repair():
-    ## left step
-    #for s in np.ma.clump_masked(x):
-        #x[s] = x.data[s.start-1]    
-
-    
+"""
 def runs_of_ones_array(bits, min_len=0, max_len=None):
     '''
     :type bits: np.ma.masked_array
@@ -5026,11 +5020,11 @@ def runs_of_ones_array(bits, min_len=0, max_len=None):
     :rtype: (int, int, int)
     '''
     # make sure all runs of ones are well-bounded
-    bounded = np.hstack(([0], bits, [0]))
+    bounded = np.ma.hstack(([0], bits, [0]))
     # get 1 at run starts and -1 at run ends
-    difs = np.diff(bounded)
-    run_starts, = np.where(difs > 0)
-    run_ends, = np.where(difs < 0)
+    difs = np.ma.diff(bounded)
+    run_starts, = np.ma.where(difs > 0)
+    run_ends, = np.ma.where(difs < 0)
     run_dur = run_ends - run_starts
     filtered = run_dur >= min_len
     if max_len:
@@ -5038,23 +5032,26 @@ def runs_of_ones_array(bits, min_len=0, max_len=None):
     # return duration and starting locations
     return run_starts[filtered], run_ends[filtered], run_dur[filtered]
 
+
 def repair(array, fill_with='starts'):
+    if not np.ma.count(array):
+        return array
     #TODO: Move to repair_mask...
-    data = np.copy(array.data)
+    #data = array
     starts, ends, durs = runs_of_ones_array(array.mask)
-    repeats = np.diff(np.hstack(([0], ends)))
+    repeats = np.diff(np.ma.hstack(([0], ends)))
     # use starts-1 or just ends
     if fill_with == 'starts':
-        fill = np.repeat(data[starts-1], repeats)
+        fill = np.repeat(array[starts-1], repeats)
     else:
-        fill = np.repeat(data[ends], repeats)
-    pad = np.zeros(len(data) - len(fill))
+        fill = np.repeat(array[ends], repeats)
+    pad = np.zeros(len(array) - len(fill))
     vals = np.hstack((fill, pad))
     # fill data, where masked, using repeated vals
-    np.copyto(data, vals, where=array.mask, casting='unsafe')
-    return data
+    np.copyto(array, vals, where=array.mask, casting='unsafe')
+    return array
 
-'''
+
 >>> repair(y)
 array([ 0,  1,  1,  1,  1,  1,  6,  7,  7,  9, 10, 11, 11, 11, 11, 11, 16,
        17, 17, 19])
@@ -5141,34 +5138,36 @@ def repair_mask(array, frequency=1, repair_duration=REPAIR_DURATION,
             else:
                 continue # Too long to repair
         elif section.start == 0:
-            if extrapolate:
+            if extrapolate or method == 'fill_stop':
                 # TODO: Does it make sense to subtract 1 from the section stop??
                 #array.data[section] = array.data[section.stop - 1]
-                if zero_if_masked:
-                    array.data[section]=0.0
-                else:
-                    array.data[section] = array.data[section.stop]
-                array.mask[section] = False
+                array[section] = array[section.stop]
             else:
                 continue # Can't interpolate if we don't know the first sample
 
         elif section.stop == len(array):
-            if extrapolate:
-                if zero_if_masked:
-                    array.data[section]=0.0
-                else:
-                    array.data[section] = array.data[section.start - 1]
-                array.mask[section] = False
+            if extrapolate or method == 'fill_start':
+                array[section] = array[section.start - 1]
             else:
                 continue # Can't interpolate if we don't know the last sample
+            
         else:
-            start_value = array.data[section.start - 1]
-            end_value = array.data[section.stop]
-            if repair_above is None or (start_value > repair_above and end_value > repair_above):
-                array.data[section] = np.interp(np.arange(length) + 1,
-                                                [0, length + 1],
-                                                [start_value, end_value])
-                array.mask[section] = False
+            start_value = array[section.start - 1]
+            stop_value = array[section.stop]
+            if method == 'interpolate':
+                if (repair_above is None or 
+                    (start_value > repair_above and stop_value > repair_above)):
+                    array.data[section] = np.interp(np.arange(length) + 1,
+                                                    [0, length + 1],
+                                                    [start_value, stop_value])
+                    array.mask[section] = False
+            elif method == 'fill_start':
+                array[section] = start_value
+            elif method == 'fill_stop':
+                array[section] = stop_value
+            else:
+                raise NotImplementedError('Repair method %s not implemented.',
+                                          method)
 
     return array
 

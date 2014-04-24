@@ -29,6 +29,7 @@ from analysis_engine.library import (actuator_mismatch,
                                      cycle_finder,
                                      dp2tas,
                                      dp_over_p2mach,
+                                     fill_masked_edges,
                                      filter_vor_ils_frequencies,
                                      first_valid_parameter,
                                      first_valid_sample,
@@ -292,10 +293,9 @@ class AirspeedForFlightPhases(DerivedParameterNode):
     units = ut.KT
 
     def derive(self, airspeed=P('Airspeed')):
-
         self.array = hysteresis(
             repair_mask(airspeed.array, repair_duration=None,
-                        zero_if_masked=True), HYSTERESIS_FPIAS)
+                        raise_entirely_masked=True), HYSTERESIS_FPIAS)
 
 
 class AirspeedTrue(DerivedParameterNode):
@@ -1992,8 +1992,7 @@ class Eng_1_FuelBurn(DerivedParameterNode):
     name = 'Eng (1) Fuel Burn'
     units = ut.KG
 
-    def derive(self,
-               ff=P('Eng (1) Fuel Flow')):
+    def derive(self, ff=P('Eng (1) Fuel Flow')):
 
         flow = repair_mask(ff.array)
         flow = np.ma.where(flow.mask==True, 0.0, flow)
@@ -2008,8 +2007,7 @@ class Eng_2_FuelBurn(DerivedParameterNode):
     name = 'Eng (2) Fuel Burn'
     units = ut.KG
 
-    def derive(self,
-               ff=P('Eng (2) Fuel Flow')):
+    def derive(self, ff=P('Eng (2) Fuel Flow')):
 
         flow = repair_mask(ff.array)
         flow = np.ma.where(flow.mask==True, 0.0, flow)
@@ -2024,8 +2022,7 @@ class Eng_3_FuelBurn(DerivedParameterNode):
     name = 'Eng (3) Fuel Burn'
     units = ut.KG
 
-    def derive(self,
-               ff=P('Eng (3) Fuel Flow')):
+    def derive(self, ff=P('Eng (3) Fuel Flow')):
 
         flow = repair_mask(ff.array)
         flow = np.ma.where(flow.mask==True, 0.0, flow)
@@ -2040,8 +2037,7 @@ class Eng_4_FuelBurn(DerivedParameterNode):
     name = 'Eng (4) Fuel Burn'
     units = ut.KG
 
-    def derive(self,
-               ff=P('Eng (4) Fuel Flow')):
+    def derive(self, ff=P('Eng (4) Fuel Flow')):
 
         flow = repair_mask(ff.array)
         flow = np.ma.where(flow.mask==True, 0.0, flow)
@@ -3676,7 +3672,8 @@ class HeadingContinuous(DerivedParameterNode):
         if frame_name in ['L382-Hercules']:
             gauss = [0.054488683, 0.244201343, 0.402619948, 0.244201343, 0.054488683]
             self.array = moving_average(
-                straighten_headings(repair_mask(head_mag.array, repair_duration=None)),
+                straighten_headings(repair_mask(head_mag.array,
+                                                repair_duration=None)),
                 window=5, weightings=gauss)
             
         else:
@@ -4679,10 +4676,8 @@ class VerticalSpeedInertial(DerivedParameterNode):
         
         for speedy in fast:
             # Fix minor dropouts
-            az_repair = repair_mask(az.array[speedy.slice], 
-                                    frequency=hz)
-            alt_rad_repair = repair_mask(alt_rad.array[speedy.slice], 
-                                         frequency=hz,
+            az_repair = repair_mask(az.array[speedy.slice], frequency=hz)
+            alt_rad_repair = repair_mask(alt_rad.array[speedy.slice], frequency=hz,
                                          repair_duration=None)
             alt_std_repair = repair_mask(alt_std.array[speedy.slice], 
                                          frequency=hz)

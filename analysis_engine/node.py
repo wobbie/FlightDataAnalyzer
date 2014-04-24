@@ -1559,7 +1559,9 @@ class KeyTimeInstanceNode(FormattedNameNode):
                         self.create_kti(stop - 0.5, **kwargs)
             return
 
-        repaired_array = repair_mask(array, frequency=self.frequency, repair_duration=64, zero_if_masked=True)
+        repaired_array = repair_mask(
+            array, frequency=self.hz, repair_duration=64,
+            raise_entirely_masked=True, method='fill_start')
         if np.ma.count(repaired_array)==0:
             return
         # High level function scans phase blocks or complete array and
