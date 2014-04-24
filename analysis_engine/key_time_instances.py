@@ -320,6 +320,8 @@ class FirstEngStartBeforeLiftoff(KeyTimeInstanceNode):
     
     def derive(self, eng_starts=KTI('Eng Start'), eng_count=A('Engine Count'),
                liftoffs=KTI('Liftoff')):
+        if not liftoffs:
+            return
         eng_starts_before_liftoff = []
         for x in range(eng_count.value):
             kti_name = eng_starts.format_name(number=x + 1)
@@ -334,7 +336,7 @@ class FirstEngStartBeforeLiftoff(KeyTimeInstanceNode):
             self.create_kti(min(eng_starts_before_liftoff))
         else:
             # Q: Should we be creating a KTI if the first engine start cannot
-            # be found? 
+            # be found? - I don't think so, so lets remove the following line and log a warning?
             self.create_kti(0)
 
 
@@ -954,6 +956,10 @@ class Liftoff(KeyTimeInstanceNode):
             if index_air == None:
                 continue
             back_3 = (air.slice.start - 3.0*self.frequency)
+            if back_3 < 0:
+                # unlikely to have lifted off within 3 seconds of data start
+                # STOP ONLY slice without a liftoff in this Airborne section
+                continue
             on_3 = (air.slice.start + 3.0*self.frequency) + 1 # For indexing
             to_scan = slice(back_3, on_3)
 

@@ -1779,39 +1779,50 @@ class TestFindEdges(unittest.TestCase):
     # Reminder: find_edges(array, _slice, direction='rising_edges')
 
     def test_find_edges_basic(self):
-        array=np.ma.array([0,0,0,1,1,1])
+        array = np.ma.array([0,0,0,1,1,1])
         result = find_edges(array, slice(0,6))
         expected = [2.5]
         self.assertEqual(expected, result)
 
     def test_find_edges_slice(self):
-        array=np.ma.array([0,0,0,1,1,1])
+        array = np.ma.array([0,0,0,1,1,1])
         result = find_edges(array, slice(0,2))
         expected = []
         self.assertEqual(expected, result)
 
     def test_find_edges_default_direction(self):
-        array=np.ma.array([0,0,0,-1,-1,-1])
+        array = np.ma.array([0,0,0,-1,-1,-1])
         result = find_edges(array, slice(0,6))
         expected = []
         self.assertEqual(expected, result)
 
     def test_find_edges_falling(self):
-        array=np.ma.array([2,2,2,2,0,0])
+        array = np.ma.array([2,2,2,2,0,0])
         result = find_edges(array, slice(0,6), direction='falling_edges')
         expected = [3.5]
         self.assertEqual(expected, result)
 
     def test_find_edges_all(self):
-        array=np.ma.array([1,1,0,0,2,2,0,0,-1-1])
+        array = np.ma.array([1,1,0,0,2,2,0,0,-1-1])
         result = find_edges(array, slice(0,10), direction='all_edges')
         expected = [1.5,3.5,5.5,7.5]
         self.assertEqual(expected, result)
 
     def test_find_edges_failure(self):
-        array=np.ma.array([1])
+        array = np.ma.array([1])
         self.assertRaises(ValueError, find_edges, array, slice(0,1),
                           direction='anything')
+        
+    def test_find_edges_masked_edge(self):
+        edges = np.ma.array([1,1,0,0,0,1,1], mask=\
+                            [0,0,0,0,1,1,0])
+        self.assertEqual(find_edges(edges, direction='all_edges'),
+                         [1.5, 5.5])
+        
+        no_edges = np.ma.array([1,1,0,0,0,1,1], mask=\
+                               [0,0,1,1,1,0,0])
+        self.assertFalse(find_edges(no_edges, direction='all_edges'))
+        
 
 
 class TestFindEdgesOnStateChange(unittest.TestCase):
@@ -5127,15 +5138,25 @@ class TestStepValues(unittest.TestCase):
         flap = load(os.path.join(test_data_path,
                                  'flap_transition_test_data.nod'))
         # including transition
-        res = step_values(flap.array, (0, 1, 5, 15, 20, 25, 30), 'including_transition')
+        res = step_values(flap.array, (0, 1, 5, 15, 20, 25, 30), step_at='including_transition')
         inc_edges = find_edges(res)
         self.assertEqual(inc_edges, 
             [364.5, 387.5, 410.5, 5727.5, 5816.5, 5926.5, 5939.5, 5989.5, 6017.5])
         # excluding transition
-        res = step_values(flap.array, (0, 1, 5, 15, 20, 25, 30), 'excluding_transition')
+        res = step_values(flap.array, (0, 1, 5, 15, 20, 25, 30), step_at='excluding_transition')
         exc_edges = find_edges(res)
         self.assertEqual(exc_edges,
             [369.5, 407.5, 421.5, 5732.5, 5839.5, 5938.5, 5945.5, 5995.5, 6024.5])
+        
+    def test_flap_transitions_in_masked_data(self):
+        # Ensure flap angle is corrected when masked data hides transition
+        flap_angle = np.ma.array([0.004763]*30 + [0.0]*100 + [0.99]*200 + list(np.arange(0.99, 0.001, -0.1)) + [0.0]*100)
+        flap_angle[30:130] = np.ma.masked
+        #flap_angle = np.ma.array([0.004763]*3 + [0.0]*10 + [0.99]*4)
+        #flap_angle[3:13] = np.ma.masked
+        res = step_values(flap_angle, (0, 1, 5, 15, 20, 25, 30), hz=1, step_at='move_start')
+        self.assertEqual(find_edges(res),
+                         [29.5, 230.5])
                          
 class TestCompressIterRepr(unittest.TestCase):
     def test_compress_iter_repr(self):

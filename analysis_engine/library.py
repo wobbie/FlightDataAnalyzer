@@ -5011,6 +5011,66 @@ def rate_of_change(diff_param, width, method='two_points'):
     return rate_of_change_array(to_diff, hz, width, method=method)
 
 
+#def repair():
+    ## left step
+    #for s in np.ma.clump_masked(x):
+        #x[s] = x.data[s.start-1]    
+
+    
+def runs_of_ones_array(bits, min_len=0, max_len=None):
+    '''
+    :type bits: np.ma.masked_array
+    :type min_len: int
+    :type max_len: int or None
+    :returns: Start, stop and duration of ones.
+    :rtype: (int, int, int)
+    '''
+    # make sure all runs of ones are well-bounded
+    bounded = np.hstack(([0], bits, [0]))
+    # get 1 at run starts and -1 at run ends
+    difs = np.diff(bounded)
+    run_starts, = np.where(difs > 0)
+    run_ends, = np.where(difs < 0)
+    run_dur = run_ends - run_starts
+    filtered = run_dur >= min_len
+    if max_len:
+        filtered &= run_dur <= max_len
+    # return duration and starting locations
+    return run_starts[filtered], run_ends[filtered], run_dur[filtered]
+
+def repair(array, fill_with='starts'):
+    #TODO: Move to repair_mask...
+    data = np.copy(array.data)
+    starts, ends, durs = runs_of_ones_array(array.mask)
+    repeats = np.diff(np.hstack(([0], ends)))
+    # use starts-1 or just ends
+    if fill_with == 'starts':
+        fill = np.repeat(data[starts-1], repeats)
+    else:
+        fill = np.repeat(data[ends], repeats)
+    pad = np.zeros(len(data) - len(fill))
+    vals = np.hstack((fill, pad))
+    # fill data, where masked, using repeated vals
+    np.copyto(data, vals, where=array.mask, casting='unsafe')
+    return data
+
+'''
+>>> repair(y)
+array([ 0,  1,  1,  1,  1,  1,  6,  7,  7,  9, 10, 11, 11, 11, 11, 11, 16,
+       17, 17, 19])
+>>> y
+masked_array(data = [0 1 -- -- -- -- 6 7 -- 9 10 11 -- -- -- -- 16 17 -- 19],
+             mask = [False False  True  True  True  True False False  True False False False
+  True  True  True  True False False  True False],
+       fill_value = 999999)
+
+>>> repair(y, 'ends')
+array([ 0,  1,  6,  6,  6,  6,  6,  7,  9,  9, 10, 11, 16, 16, 16, 16, 16,
+       17, 19, 19])
+       
+'''
+
+
 def repair_mask(array, frequency=1, repair_duration=REPAIR_DURATION,
                 raise_duration_exceedance=False, copy=False, extrapolate=False,
                 zero_if_masked=False, repair_above=None):
