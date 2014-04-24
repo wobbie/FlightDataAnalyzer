@@ -3667,61 +3667,68 @@ class TestOffsetSelect(unittest.TestCase):
 
 
 class TestOverflowCorrection(unittest.TestCase):
-    def test_with_a320(self):
+    def test_overflow_correction_a320(self):
         fast = S(items=[Section('Fast', slice(336, 5397), 336, 5397),
                         Section('Fast', slice(5859, 11520), 5859, 11520)])
         radioA = load(os.path.join(
             test_data_path, 'A320_Altitude_Radio_A_overflow.nod'))
         resA = overflow_correction(radioA, fast, max_val=4095)
         sects = np.ma.clump_unmasked(resA)
-        self.assertEqual(len(sects), 4)
-        for sect in sects[0::2]:
-            # takeoffs
-            self.assertAlmostEqual(resA[sect.start] / 10., 0, 0)
-        for sect in sects[1::2]:
-            # landings
-            self.assertAlmostEqual(resA[sect.stop - 1] / 10., 0, 0)
+        self.assertEqual(len(sects), 7)
+        self.assertEqual(resA.max(), 8191)
+        self.assertEqual(resA.min(), -1)
+        ##for sect in sects[0::2]:
+            ### takeoffs
+            ##self.assertAlmostEqual(resA[sect.start] / 10., 0, 0)
+        ##for sect in sects[1::2]:
+            ### landings
+            ##self.assertAlmostEqual(resA[sect.stop - 1] / 10., 0, 0)
 
         radioB = load(os.path.join(
             test_data_path, 'A320_Altitude_Radio_B_overflow.nod'))
         resB = overflow_correction(radioB, max_val=4095)
         sects = np.ma.clump_unmasked(resB)
-        self.assertEqual(len(sects), 4)
-        for sect in sects[0::2]:
-            # takeoffs
-            self.assertAlmostEqual(resB[sect.start] / 10., 0, 0)
-        for sect in sects[1::2]:
-            # landings
-            self.assertAlmostEqual(resB[sect.stop - 1] / 10., 0, 0)
+        self.assertEqual(len(sects), 8)
+        self.assertEqual(resB.max(), 5917)
+        self.assertEqual(resB.min(), -2)
+        ##for sect in sects[0::2]:
+            ### takeoffs
+            ##self.assertAlmostEqual(resB[sect.start] / 10., 0, 0)
+        ##for sect in sects[1::2]:
+            ### landings
+            ##self.assertAlmostEqual(resB[sect.stop - 1] / 10., 0, 0)
 
-
-    def test_with_a340(self):
+    def test_overflow_correction_a340(self):
         fast = S(items=[Section('Fast', slice(2000, 6500), 2000, 6500)])
         radioA = load(os.path.join(
             test_data_path, 'A340_Altitude_Radio_A_overflow.nod'))
-        resA = overflow_correction(radioA, fast)
+        resA = overflow_correction(radioA, fast, max_val=4095)
         sects = np.ma.clump_unmasked(resA)
         # 1 section for climb, one for descent
-        self.assertEqual(len(sects), 2)
-        for sect in sects[0::2]:
-            # takeoffs
-            self.assertAlmostEqual(resA[sect.start] / 10., 0, 0)
-        for sect in sects[1::2]:
-            # landings
-            self.assertAlmostEqual(resA[sect.stop - 1] / 10., 0, 0)
+        self.assertEqual(len(sects), 3)
+        self.assertEqual(resA.max(), 7852)
+        self.assertEqual(resA.min(), -2)
+        ##for sect in sects[0::2]:
+            ### takeoffs
+            ##self.assertAlmostEqual(resA[sect.start] / 10., 0, 0)
+        ##for sect in sects[1::2]:
+            ### landings
+            ##self.assertAlmostEqual(resA[sect.stop - 1] / 10., 0, 0)
 
         radioB = load(os.path.join(
             test_data_path, 'A340_Altitude_Radio_B_overflow.nod'))
-        resB = overflow_correction(radioB, fast)
+        resB = overflow_correction(radioB, fast, max_val=4095)
         sects = np.ma.clump_unmasked(resB)
         # 1 section for climb, one for descent
-        self.assertEqual(len(sects), 2)
-        for sect in sects[0::2]:
-            # takeoffs
-            self.assertAlmostEqual(resB[sect.start] / 10., 0, 0)
-        for sect in sects[1::2]:
-            # landings
-            self.assertAlmostEqual(resB[sect.stop - 1] / 10., 0, 0)
+        self.assertEqual(len(sects), 3)
+        self.assertEqual(resB.max(), 7841)
+        self.assertEqual(resB.min(), -2)
+        ##for sect in sects[0::2]:
+            ### takeoffs
+            ##self.assertAlmostEqual(resB[sect.start] / 10., 0, 0)
+        ##for sect in sects[1::2]:
+            ### landings
+            ##self.assertAlmostEqual(resB[sect.stop - 1] / 10., 0, 0)
 
 
 class TestPeakCurvature(unittest.TestCase):
