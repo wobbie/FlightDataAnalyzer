@@ -5898,7 +5898,8 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
     # create new array, initialised with first flap setting
     new_array = np_ma_ones_like(array) * first_valid_sample(stepped_array).value
 
-    # create a list of tuples with index of midpoint change and direction of travel
+    # create a list of tuples with index of midpoint change and direction of
+    # travel
     flap_increase = find_edges(stepped_array, direction='rising_edges')
     flap_decrease = find_edges(stepped_array, direction='falling_edges')
     transitions = [(idx, 'increase') for idx in flap_increase] + \
