@@ -39,11 +39,11 @@ def geo_locate(hdf, items):
 
     lat_pos = derived_param_from_hdf(hdf['Latitude Smoothed'])
     lon_pos = derived_param_from_hdf(hdf['Longitude Smoothed'])
-    lat_rep = repair_mask(lat_pos, extrapolate=True)
-    lon_rep = repair_mask(lon_pos, extrapolate=True)
+    lat_pos.array = repair_mask(lat_pos.array, extrapolate=True)
+    lon_pos.array = repair_mask(lon_pos.array, extrapolate=True)
     for item in items:
-        item.latitude = lat_rep.at(item.index) or None
-        item.longitude = lon_rep.at(item.index) or None
+        item.latitude = lat_pos.at(item.index) or None
+        item.longitude = lon_pos.at(item.index) or None
     return items
 
 
