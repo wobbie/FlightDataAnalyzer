@@ -2017,7 +2017,8 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         elif family_name == 'Learjet':
             self.array = self.learjet_speedbrake(spdsw)
 
-        elif family_name in ['G-V',
+        elif family_name in ['G-IV',
+                             'G-V',
                              'CL-600',
                              'BAE 146',
                              'ERJ-170/175',
