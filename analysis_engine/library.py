@@ -4029,13 +4029,32 @@ def blend_two_parameters(param_one, param_two):
     :type offset: Float (sec)
 
     '''
+    def _interp(a, freq, off):
+        '''
+        Simple linear interpolation to double sample rate when one of the
+        arrays to merge is invariant or corrupt. This allows the subsequent
+        analysis processes to proceed without failing due to differing sample
+        rates.
+        '''
+        b = np.empty(2*a.size,)
+        if off > 0.5/freq:
+            b[1::2] = a
+            b[2::2] = (a[:-1]+a[1:]) / 2.0 
+            b[0] = b[1]
+            off -= 0.5/freq
+        else:
+            b[0::2] = a
+            b[1:-1:2] = (a[:-1]+a[1:]) / 2.0 
+            b[-1] = b[-2]
+        return b, 2.0*freq, off 
+    
     if param_one == None and param_two == None:
         raise ValueError('blend_two_parameters called with both parameters = None')
     if param_one == None:
-        return param_two.array, param_two.frequency, param_two.offset
+        return _interp(param_two.array, param_two.frequency, param_two.offset)
 
     if param_two == None:
-        return param_one.array, param_one.frequency, param_one.offset
+        return _interp(param_one.array, param_one.frequency, param_one.offset)
 
     assert param_one.frequency == param_two.frequency, \
         'The frequency of blended parameters must be the same: ' \
@@ -4055,15 +4074,15 @@ def blend_two_parameters(param_one, param_two):
         logger.warning("Neither '%s' or '%s' has valid data available.",
                        param_one.name, param_two.name)
         # Return empty space of the right shape...
-        return np_ma_masked_zeros_like(param_one.array), param_one.frequency, param_one.offset
+        return np_ma_masked_zeros_like(len(param_one.array)*2), 2.0*param_one.frequency, param_one.offset
 
     if a < b*0.8:
         logger.warning("Little valid data available for %s (%d valid samples), using %s (%d valid samples).", param_one.name, float(a)/len(param_one.array)*100, param_two.name, float(b)/len(param_two.array)*100)
-        return param_two.array, param_two.frequency, param_two.offset
+        return _interp(param_two.array, param_two.frequency, param_two.offset)
 
     elif b < a*0.8:
         logger.warning("Little valid data available for %s (%d valid samples), using %s (%d valid samples).", param_two.name, float(b)/len(param_two.array)*100, param_one.name, float(a)/len(param_one.array)*100)
-        return param_one.array, param_one.frequency, param_one.offset
+        return _interp(param_one.array, param_one.frequency, param_one.offset)
 
     # A second problem is where both sensor may appear to be serviceable but
     # one is invariant. If the parameters were similar, a/(a+b)=0.5 so we are
@@ -4073,15 +4092,15 @@ def blend_two_parameters(param_one, param_two):
 
     if c+d == 0.0:
         logger.warning("No variation in %s or %s, returning %s.", param_one.name, param_two.name, param_one.name)
-        return param_one.array, param_one.frequency, param_one.offset
+        return _interp(param_one.array, param_one.frequency, param_one.offset)
 
     if c/(c+d) < 0.1:
         logger.warning("No variation in %s, using only %s.", param_one.name, param_two.name)
-        return param_two.array, param_two.frequency, param_two.offset
+        return _interp(param_two.array, param_two.frequency, param_two.offset)
 
     elif d/(c+d) < 0.1:
         logger.warning("No variation in %s, using only %s.", param_two.name, param_one.name)
-        return param_one.array, param_one.frequency, param_one.offset
+        return _interp(param_one.array, param_one.frequency, param_one.offset)
 
     else:
         frequency = param_one.frequency * 2.0
