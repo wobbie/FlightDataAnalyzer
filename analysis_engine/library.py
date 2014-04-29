@@ -6020,112 +6020,8 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
         # floor +1 to ensure transitions start at the next sample
         new_array[floor(idx)+1:] = next_flap
 
-    # Reapply mask
-    #Q: must we maintain the mask?
-    new_array.mask = np.ma.getmaskarray(array)
-    return new_array
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    ##if step_at != 'midpoint':
-
-        ### We are being asked to adjust the step point to either the beginning or
-        ### end of a change period. First find where the changes took place:
-        ##spans = np.ma.clump_unmasked(np.ma.masked_inside(np.ediff1d(array),-rt,rt))
-        ##if skip:
-            ### We change to cover the movements of the output array
-            ##for span in spans:
-                ##if step_at == 'move_start':
-                    ##stepped_array[span] = stepped_array[span.stop+1]
-                ##else:
-                    ##stepped_array[span] = stepped_array[span.start-1]
-        ##else:
-            ### We change to cover the movements of the stepped array
-            ###spans = np.ma.clump_unmasked(np.ma.masked_equal(np.ediff1d(stepped_array),0.0))
-
-            ### Compute the slices between change points.
-
-            ### We are being asked to adjust the step point to either the beginning or
-            ### end of a change period. First find where the changes took place,
-            ### including endpoints to the array to allow indexing of the start and end
-            ### cases.
-            ##changes = [0] + \
-                ##list(np.ediff1d(stepped_array, to_end=0.0).nonzero()[0]) + \
-                ##[len(stepped_array)]
-
-            ###spans = []
-            ##for i in range(len(changes) - 1):
-                ##if step_at == 'move_start' or\
-                   ##step_at == 'excluding_transition' and stepped_array[changes[i]+1]<stepped_array[changes[i]] or\
-                   ##step_at == 'including_transition' and stepped_array[changes[i]+1]>stepped_array[changes[i]]:
-                    ##mode = 'backwards'
-                    ##span = slice(changes[i], changes[i-1], -1)
-                ##else:
-                    ##mode='forwards'
-                    ##span = slice(changes[i], changes[i+1], +1)
-
-                ##to_chg = step_local_cusp(array, span)
-
-                ##if to_chg==0:
-                    ### Continuous movement, so change at the step value if this passes through a step.
-                    ##big = np.ma.max(array[span])
-                    ##little = np.ma.min(array[span])
-                    ### See if the step in question is within this range:
-                    ##this_step = None
-                    ##for step in steps:
-                        ##if little <= step <= big:
-                            ##this_step = step
-                            ##break
-                    ##if this_step is None:
-                        ### Is this transition to an increasing/decreasing flap
-                        ##if mode == 'backwards':
-                            ##array[span.start+1] else array[ceil(span.stop)-1]
-                        ### Find where we passed through this value...
-                        ##idx = index_at_value(array, this_step+0.1, span)  # or -0.1 if we're going down?
-                        ### if we passed through the value and the value
-                        ##if idx: ## and this_step+0.1 > big:
-                            ##if mode == 'backwards':
-                                ##stepped_array[ceil(idx):span.start+1] = stepped_array[span.start+1]
-                            ##else:
-                                ##stepped_array[span.start:floor(idx)] = stepped_array[span.start]
-                    ##else:
-                        ### OK - just ran from one step to another without dwelling, so fill with the start or end values.
-                        ##if mode == 'backwards':
-                            ##stepped_array[span] = first_valid_sample(stepped_array[span]).value
-                        ##else:
-                            ##stepped_array[span] = first_valid_sample(stepped_array[span]).value
-
-                ##elif mode == 'backwards':
-                    ##stepped_array[span][:to_chg] = stepped_array[span.start+1]
-                ##else:
-                    ##stepped_array[span][:to_chg] = stepped_array[span.start]
-    ##'''
-    ##import matplotlib.pyplot as plt
-    ##one = np_ma_ones_like(array)
-    ##for step in steps:
-        ##plt.plot(one*step)
-    ##plt.plot(array, '-b')
-    ##plt.plot(stepped_array, '-k')
-    ##plt.show()
-    ##'''
-    ##return np.ma.array(stepped_array, mask=array.mask)
+    # Mask edges of array to avoid extrapolation.
+    return np.ma.array(new_array, mask=mask_edges(array))
 
 
 def touchdown_inertial(land, roc, alt):
@@ -6518,10 +6414,12 @@ def index_at_value(array, threshold, _slice=slice(None), endpoint='exact'):
             # Rescan the data to find the last point where the array data is
             # closing.
             diff = np.ma.ediff1d(array[_slice])
-            try:
-                value = closest_unmasked_value(array, _slice.start or 0,
-                                               _slice=_slice)[1]
-            except:  # IndexError? tuple index out of range
+            value = closest_unmasked_value(array, _slice.start or 0,
+                                           start_index=_slice.start,
+                                           stop_index=_slice.stop)
+            if value:
+                value = value.value
+            else:
                 return None
             if threshold >= value:
                 diff_where = np.ma.where(diff < 0)
