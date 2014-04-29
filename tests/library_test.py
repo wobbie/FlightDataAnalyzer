@@ -1259,44 +1259,61 @@ class TestCoReg(unittest.TestCase):
         self.assertAlmostEqual(offset, -2.54545454545455)
 
 
+class TestPositiveValue(unittest.TestCase):
+    def test_positive_value(self):
+        array = np.arange(10)
+        self.assertEqual(positive_index(array, 0), 0)
+        self.assertEqual(positive_index(array, 5), 5)
+        self.assertEqual(positive_index(array, -3), 7)
+
+
+class TestNextUnmaskedValue(unittest.TestCase):
+    def test_next_unmasked_value(self):
+        # Entirely unmasked
+        array = np.ma.arange(10)
+        self.assertEqual(next_unmasked_value(array, 7), Value(7, 7))
+        # Entirely masked.
+        array.mask = True
+        self.assertEqual(next_unmasked_value(array, 3), None)
+        array.mask = False
+        array.mask[3:8] = True
+        self.assertEqual(next_unmasked_value(array, 4), Value(8, 8))
+
+
+class TestPrevUnmaskedValue(unittest.TestCase):
+    def test_prev_unmasked_value(self):
+        # Entirely unmasked
+        array = np.ma.arange(10)
+        self.assertEqual(prev_unmasked_value(array, 7), Value(7, 7))
+        # Entirely masked.
+        array.mask = True
+        self.assertEqual(prev_unmasked_value(array, 3), None)
+        array.mask = False
+        array.mask[2:8] = True
+        self.assertEqual(prev_unmasked_value(array, 5), Value(1, 1))
+
+
 class TestClosestUnmaskedValue(unittest.TestCase):
     def test_closest_unmasked_value(self):
         array = np.ma.arange(10)
-        self.assertEqual(closest_unmasked_value(array, 5), Value(5, 5))
+        #self.assertEqual(closest_unmasked_value(array, 5), Value(5, 5))
         self.assertEqual(closest_unmasked_value(array, -3), Value(7, 7))
         array[5:8] = np.ma.masked
-        self.assertEqual(closest_unmasked_value(array, 6), Value(4, 4))
+        self.assertEqual(closest_unmasked_value(array, 5), Value(4, 4))
         array[5:8] = np.ma.masked
         self.assertEqual(closest_unmasked_value(array, 7), Value(8, 8))
-        self.assertEqual(closest_unmasked_value(array, 3, _slice=slice(2, 5)),
+        self.assertEqual(closest_unmasked_value(array, 3, start_index=2,
+                                                stop_index=5),
                          Value(3, 3))
-        # negative index and slice not supported
-        self.assertRaises(NotImplementedError, closest_unmasked_value,
-                          array, -8, _slice=slice(2, 5))
-        # index out of range
-        self.assertRaises(IndexError, closest_unmasked_value, array, 20)
         
     def test_closest_unmasked_index_relative_to_start(self):
         array = np.ma.arange(10)
-        self.assertEqual(closest_unmasked_value(array, 6, slice(0, None)),
+        self.assertEqual(closest_unmasked_value(array, 6, start_index=0),
                                                 Value(6, 6))
-        self.assertEqual(closest_unmasked_value(array, 6, slice(3, 7)),
-                                                Value(6, 6))
-        # test index out of range
-        self.assertRaises(IndexError, closest_unmasked_value, array, 0, slice(3, 4))
-        self.assertRaises(IndexError, closest_unmasked_value, array, 6, slice(3, 4))
-        self.assertRaises(IndexError, closest_unmasked_value, array, 6, slice(0, 3))
-        self.assertRaises(IndexError, closest_unmasked_value, array, 200, slice(3, 4))
+        self.assertEqual(closest_unmasked_value(array, 6, start_index=3,
+                                                stop_index=7), Value(6, 6))
 
-    def test_negative_step_now_available(self):
-        array = 20.0 - np.ma.arange(20)
-        array[7:19] = np.ma.masked
-        self.assertEqual(closest_unmasked_value(array, 8, slice(18,3,-1)).index, 6)
-        self.assertEqual(closest_unmasked_value(array, 8, slice(16,3,-1)).value, 14.0)
-        self.assertEqual(closest_unmasked_value(array, 8.5, slice(None,3,-1)).index, 6)
-        self.assertEqual(closest_unmasked_value(array, 9, slice(18,None,-1)).index, 6)
-        
-        
+
 class TestActuatorMismatch(unittest.TestCase):
     '''
     Originally written to monitor 737 elevator actuators, this may be

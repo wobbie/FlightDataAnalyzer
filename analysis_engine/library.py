@@ -1196,77 +1196,96 @@ def clip(array, period, hz=1.0, remove='peaks_and_troughs'):
     return result
 
 
-def closest_unmasked_value(array, index, _slice=None):
+def positive_index(container, index):
     '''
-    Find the closest unmasked value in the array that's close to the index.
-    The index is relative to the start of the array, NOT the _slice
-    subsection. Supports negative index which is relative to the end of the
-    array however _slice argument cannot be used at the same time.
+    Always return a positive index.
+    e.g. 7 if len(container) == 10 and index == -3.
+    
+    :param container: Container with a length.
+    :param index: Positive or negative index within the array.
+    :type index: int or float
+    :returns: Positive index.
+    :rtype: int or float
+    '''
+    if index < 0:
+        index += len(container)
+    return index
 
-    :param array: Array to find the closest unmasked value within.
-    :type array: np.ma.array
-    :param index: Find the closest unmasked value to this index.
+
+def next_unmasked_value(array, index, stop_index=None):
+    '''
+    Find the next unmasked value from index in the array.
+    
+    :type array: np.ma.masked_array
+    :param index: Start index of search.
     :type index: int
-    :param _slice: Find closest unmasked value within this slice.
-    :type _slice: slice
-    :returns: The closest index and value of an unmasked value.
-    :rtype: Value
+    :param stop_index: Optional stop index of search, otherwise searches to the end of the array.
+    :type stop_index: int or None
+    :returns: Next unmasked value or None.
+    :rtype: Value or None
     '''
-    # Validate _slice and index.
-    if _slice:
-        if index < 0:
-            # hard to understand what the programmer is expecting to be returned
-            raise NotImplementedError("Negative indexing on slice not supported")
-        if not is_index_within_slice(index, _slice):
-            raise IndexError('Index %s outside of slice %s' % (index, _slice))
+    array.mask = np.ma.getmaskarray(array)
+    try:
+        unmasked_index = np.where(np.invert(array.mask[index:stop_index]))[0][0]
+    except IndexError:
+        return None
     else:
-        _slice = slice(None)
+        unmasked_index += positive_index(array, index)
+        return Value(index=unmasked_index, value=array[unmasked_index])
+
+
+def prev_unmasked_value(array, index, start_index=None):
+    '''
+    Find the previous unmasked value from index in the array.
     
-    slice_start = (_slice.start or 0)
-    slice_stop = (_slice.stop or len(array))
-    
-    if _slice.step > 0:
-        if index >= 0 and index > slice_stop:
-            raise IndexError("index is beyond length of sliced data")
-        elif index < 0 and abs(index) > len(array):
-            raise IndexError("negative index goes beyond array length")    
-    
-    value = value_at_index(array[_slice], index - slice_start)
-    if value:
-        return Value(index=index, value=value)
-
-    def find_unmasked_value(_slice, array, index):
-        
-        if index < 0:
-            index = abs(len(array) + index)
-
-        sliced_array = array[_slice]
-        # make index relative to the sliced section
-        rel_index = index - slice_start
-        if not np.ma.count(sliced_array): #or abs(rel_index) > len(sliced_array):
-            # slice contains no valid data or index is outside of the length of
-            # the array
-            #return Value(None, None)
-            raise IndexError("No valid data to find at index '%d' in sliced array "
-                             "of length '%d'" % (index, len(sliced_array)))
-
-        indices = np.ma.arange(len(sliced_array))
-        indices.mask = sliced_array.mask
-        relative_pos = np.ma.abs(indices - rel_index).argmin()
-        pos = relative_pos + slice_start
-        return pos
-
-    if (_slice.step and _slice.step == -1):
-        # OK neg_pos is a crazy name. The position in the array with negative indexing.
-        neg_pos = find_unmasked_value(slice(len(array)-(_slice.start or len(array)),
-                                            len(array)-(_slice.stop or 0)),
-                                      array[::-1],
-                                      len(array)-(_slice.start or len(array)))
-        pos = len(array) - neg_pos -1
+    :type array: np.ma.masked_array
+    :param index: Stop index of search (searches backwards).
+    :type index: int
+    :param start_index: Optional start index of search, otherwise searches to the beginning of the array.
+    :type start_index: int or None
+    :returns: Previous unmasked value or None.
+    :rtype: Value or None
+    '''
+    array.mask = np.ma.getmaskarray(array)
+    try:
+        unmasked_index = np.where(np.invert(array.mask[start_index:index + 1]))[0][-1]
+    except IndexError:
+        return None
     else:
-        pos = find_unmasked_value(_slice, array, index)
+        if start_index:
+            unmasked_index += positive_index(array, start_index)
+        return Value(index=unmasked_index, value=array[unmasked_index])
 
-    return Value(index=pos, value=array[pos])
+
+def closest_unmasked_value(array, index, start_index=None, stop_index=None):
+    '''
+    Find the closest unmasked value from index in the array, optionally
+    specifying a search range with start_index and stop_index.
+    
+    :type array: np.ma.masked_array
+    :param index: Start index of search.
+    :type index: int
+    :param start_index: Optional start index of search.
+    :type start_index: int
+    '''
+    array.mask = np.ma.getmaskarray(array)
+    
+    if not array.mask[index]:
+        return Value(positive_index(array, index), array[index])
+    
+    prev_value = prev_unmasked_value(array, index, start_index=start_index)
+    next_value = next_unmasked_value(array, index, stop_index=stop_index)
+    if prev_value and next_value:
+        if abs(prev_value.index - index) < abs(next_value.index - index):
+            return prev_value
+        else:
+            return next_value
+    elif prev_value:
+        return prev_value
+    elif next_value:
+        return next_value
+    else:
+        return None
 
 
 def clump_multistate(array, state, _slices=[slice(None)], condition=True):
@@ -1709,6 +1728,11 @@ def find_edges(array, _slice=slice(None), direction='rising_edges'):
     transition took place (with highest probability) midway between the two
     recorded states.
     '''
+    if direction == 'rising_edges':
+        method = 'fill_start'
+    else:
+        method = 'fill_stop'
+    array = repair_mask(array, method=method, repair_duration=None, copy=True)
     # Find increments. Extrapolate at start to keep array sizes straight.
     deltas = np.ma.ediff1d(array[_slice], to_begin=array[_slice][0])
     deltas[0]=0 # Ignore the first value
@@ -3635,6 +3659,7 @@ def latitudes_and_longitudes(bearings, distances, reference):
     lon_array = np.ma.array(data = np.rad2deg(lon),mask = joined_mask)
     return lat_array, lon_array
 
+
 def localizer_scale(runway):
     """
     Compute the ILS localizer scaling factor from runway or nominal data.
@@ -3657,6 +3682,7 @@ def localizer_scale(runway):
         # scale.
         scale = np.degrees(np.arctan2(106.68, length)) / 2.0
     return scale
+
 
 def mask_inside_slices(array, slices):
     '''
@@ -3690,6 +3716,34 @@ def mask_outside_slices(array, slices):
     for slice_ in slices:
         mask[slice_] = False
     return np.ma.array(array, mask=np.ma.mask_or(mask, array.mask))
+
+
+def mask_edges(mask):
+    '''
+    Return a mask with sections masked only at the beginning and end of the
+    data.
+    
+    :type mask: np.array
+    :returns: Mask with only the edges masked.
+    :rtype: np.array
+    '''
+    if isinstance(mask, np.ma.MaskedArray):
+        mask = np.ma.getmaskarray(mask)
+    
+    edge_mask = np.zeros_like(mask, dtype=np.bool)
+    
+    if not len(mask) or mask.all() or (not mask[0] and not mask[-1]):
+        return edge_mask
+    
+    masked_slices = runs_of_ones(mask)
+    
+    if masked_slices[0].start == 0:
+        edge_mask[masked_slices[0]] = True
+    
+    if masked_slices[-1].stop == len(mask):
+        edge_mask[masked_slices[-1]] = True
+    
+    return edge_mask
 
 
 def max_continuous_unmasked(array, _slice=slice(None)):
