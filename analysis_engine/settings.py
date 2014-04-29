@@ -215,6 +215,9 @@ HOLDING_MAX_GSPD = 60.0  # kts
 # Threshold for flight phase altitude hysteresis.
 HYSTERESIS_FPALT = 200  # ft
 
+# Hysteresis for engine start & stop. Stops nuisance engine start/stop changes.
+HYSTERESIS_ENG_START_STOP = 2.5 #%
+
 # Threshold for flight phase airspeed hysteresis.
 HYSTERESIS_FPIAS = 5  # kts
 
