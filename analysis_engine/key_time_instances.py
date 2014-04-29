@@ -6,6 +6,7 @@ from analysis_engine.library import (all_of,
                                      coreg,
                                      find_edges_on_state_change,
                                      find_toc_tod,
+                                     hysteresis,
                                      index_at_value,
                                      max_value,
                                      minimum_unmasked,
@@ -20,6 +21,7 @@ from analysis_engine.library import (all_of,
 from analysis_engine.node import A, M, P, S, KTI, KeyTimeInstanceNode
 
 from settings import (CLIMB_THRESHOLD,
+                      HYSTERESIS_ENG_START_STOP,
                       MIN_CORE_SUSTAINABLE,
                       MIN_FAN_RUNNING,
                       NAME_VALUES_CLIMB,
@@ -294,9 +296,11 @@ class EngStart(KeyTimeInstanceNode):
             if not eng_nx:
                 continue
             
-            array = repair_mask(eng_nx.array,
-                                repair_duration=60 / self.frequency,
-                                extrapolate=True)
+            array = hysteresis(
+                repair_mask(eng_nx.array,
+                            repair_duration=60 / self.frequency,
+                            extrapolate=True),
+                HYSTERESIS_ENG_START_STOP)
             below_slices = runs_of_ones(array < limit)
             
             for below_slice in below_slices:
@@ -389,9 +393,11 @@ class EngStop(KeyTimeInstanceNode):
             if not eng_nx:
                 continue
             
-            array = repair_mask(eng_nx.array,
-                                repair_duration=60 / self.frequency,
-                                extrapolate=True)
+            array = hysteresis(
+                repair_mask(eng_nx.array,
+                            repair_duration=60 / self.frequency,
+                            extrapolate=True),
+                HYSTERESIS_ENG_START_STOP)
             below_slices = runs_of_ones(array < limit)
             
             for below_slice in below_slices:

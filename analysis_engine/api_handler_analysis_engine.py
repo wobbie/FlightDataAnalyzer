@@ -339,7 +339,7 @@ class AnalysisEngineAPIHandlerLocal(AnalysisEngineAPI):
         self.aircraft = self._load_data(LOCAL_API_AIRCRAFT_PATH)
         logger.debug("Loading local API airports from '%s'",
                      LOCAL_API_AIRPORT_PATH)
-        self.airports = self._load_data(LOCAL_API_RUNWAY_PATH)
+        self.airports = self._load_data(LOCAL_API_AIRPORT_PATH)
         logger.debug("Loading local API runways from '%s'",
                      LOCAL_API_RUNWAY_PATH)
         self.runways = self._load_data(LOCAL_API_RUNWAY_PATH)

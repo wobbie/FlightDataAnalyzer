@@ -3365,25 +3365,25 @@ class TestBlendTwoParameters(unittest.TestCase):
         p2 = P(array=[1,2,3,4], frequency=2, offset=0.0, name='Second')
         p1.array.mask = True
         arr, freq, off = blend_two_parameters(p1, p2)
-        self.assertEqual(arr[2], 3)
-        self.assertEqual(freq, 2)
+        self.assertEqual(arr[4], 3)
+        self.assertEqual(freq, 4)
         self.assertEqual(off, 0.0)
 
     def test_blend_two_parameters_param_two_rubbish(self):
-        p1 = P(array=[5,10,7,8], frequency=2, offset=0.1, name='First')
+        p1 = P(array=[5,10,7,8], frequency=2, offset=0.4, name='First')
         p2 = P(array=[1,2,3,4], frequency=2, offset=0.0, name='Second')
         p2.array.mask = True
         arr, freq, off = blend_two_parameters(p1, p2)
-        self.assertEqual(arr[2], 7)
-        self.assertEqual(freq, 2)
-        self.assertEqual(off, 0.1)
+        self.assertEqual(arr[4], 8.5)
+        self.assertEqual(freq, 4)
+        self.assertAlmostEqual(off, 0.15)
 
     def test_blend_two_parameters_rejecting_no_change_data(self):
         p1 = P(array=[4.0]*4, frequency=1, offset=0.9)
         p2 = P(array=[1,2,3,4.0], frequency=1, offset=0.4)
         arr, freq, off = blend_two_parameters(p1, p2)
-        self.assertEqual(arr[1], 2)
-        self.assertEqual(freq, 1)
+        self.assertEqual(arr[2], 2)
+        self.assertEqual(freq, 2)
         self.assertAlmostEqual(off, 0.4)
 
     def test_blend_two_parameters_integer_values(self):
