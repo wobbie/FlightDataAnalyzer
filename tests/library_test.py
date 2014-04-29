@@ -5081,8 +5081,7 @@ class TestStepValues(unittest.TestCase):
         # now this:
         self.assertEqual(list(stepped),
                          [0]*3+[1]+[5]*5+[10]*2+[15]*2+[10]*3+[5]*2+[1]*5+[0]*3)
-                    
-                
+    
     def test_step_move_start(self):
         array = np.ma.array(data=[0]*5+[1,2,3,4]+[5]*5)
         stepped = step_values(array, (0, 4), step_at='move_start')
@@ -5204,16 +5203,43 @@ class TestStepValues(unittest.TestCase):
         self.assertEqual(exc_edges,
             [369.5, 407.5, 421.5, 5732.5, 5839.5, 5938.5, 5945.5, 5995.5, 6024.5])
         
-    def test_flap_transitions_in_masked_data(self):
+    def test_flap_transitions_in_masked_data_1(self):
         # Ensure flap angle is corrected when masked data hides transition
         flap_angle = np.ma.array([0.004763]*30 + [0.0]*100 + [0.99]*200 + list(np.arange(0.99, 0.001, -0.1)) + [0.0]*100)
         flap_angle[30:130] = np.ma.masked
         #flap_angle = np.ma.array([0.004763]*3 + [0.0]*10 + [0.99]*4)
         #flap_angle[3:13] = np.ma.masked
         res = step_values(flap_angle, (0, 1, 5, 15, 20, 25, 30), hz=1, step_at='move_start')
-        self.assertEqual(find_edges(res),
-                         [29.5, 230.5])
-                         
+        self.assertEqual(find_edges(res, direction='all_edges'), [129.5, 330.5])
+    
+    def test_flap_transitions_in_masked_data_2(self):
+        # Ensure flap angle is corrected when masked data hides transition
+        flap_angle = np.ma.concatenate([np.ma.arange(0, 30, 0.1),
+                                        np.ma.arange(30, 0, -0.1)])
+        #flap_angle = np.ma.array([0.004763]*30 + [0.0]*100 + [0.99]*200 + list(np.arange(0.99, 0.001, -0.1)) + [0.0]*100)
+        flap_angle[20:40] = np.ma.masked
+        flap_angle[60:80] = np.ma.masked
+        flap_angle[100:120] = np.ma.masked
+        flap_angle[140:160] = np.ma.masked
+        flap_angle[180:200] = np.ma.masked
+        flap_angle[220:240] = np.ma.masked
+        flap_angle[260:280] = np.ma.masked
+        
+        flap_angle[320:340] = np.ma.masked
+        flap_angle[360:380] = np.ma.masked
+        flap_angle[400:420] = np.ma.masked
+        flap_angle[440:460] = np.ma.masked
+        flap_angle[480:500] = np.ma.masked
+        flap_angle[520:540] = np.ma.masked
+        flap_angle[560:580] = np.ma.masked
+        
+        #flap_angle = np.ma.array([0.004763]*3 + [0.0]*10 + [0.99]*4)
+        #flap_angle[3:13] = np.ma.masked
+        res = step_values(flap_angle, (0, 1, 5, 15, 20, 25, 30), hz=1,
+                          step_at='move_start')
+        self.assertEqual(find_edges(res), [4.5, 16.5, 96.5, 173.5, 216.5, 256.5])
+
+
 class TestCompressIterRepr(unittest.TestCase):
     def test_compress_iter_repr(self):
         self.assertEqual(compress_iter_repr([0,0,1,0,2,2,2], join=' + '),
@@ -5223,7 +5249,7 @@ class TestCompressIterRepr(unittest.TestCase):
         # interesting side effect - int(5.4) == int('5')
         self.assertEqual(compress_iter_repr([4.0, 5.4, '5'], int),
                          "[4]+[5]*2")
-                         
+
 
 class TestStraightenAltitudes(unittest.TestCase):
     def test_alt_basic(self):

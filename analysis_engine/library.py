@@ -5897,19 +5897,22 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
     :returns: Stepped masked array
     :rtype: np.ma.array
     """
-    if step_at.lower() not in ('midpoint', 'move_start', 'move_stop',
-           'including_transition', 'excluding_transition'):
-        raise ValueError("Incorrect step_at choice argument '%s'" % step_at)
     step_at = step_at.lower()
+    step_at_options = ('midpoint', 'move_start', 'move_stop',
+                       'including_transition', 'excluding_transition')
+    if step_at not in step_at_options:
+        raise ValueError("Incorrect step_at choice argument '%s'" % step_at)
+    
     steps = sorted(steps)  # ensure steps are in ascending order
     stepping_points = np.ediff1d(steps, to_end=[0])/2.0 + steps
-    stepped_array = np_ma_zeros_like(array)
+    stepped_array = np_ma_zeros_like(array, mask=array.mask)
     low = None
     for level, high in zip(steps, stepping_points):
         if low is None:
-            stepped_array[(-high < array) & (array <= high)] = level
+            matching = (-high < array) & (array <= high)
         else:
-            stepped_array[(low < array) & (array <= high)] = level
+            matching = (low < array) & (array <= high)
+        stepped_array[matching] = level
         low = high
     # all the remaining values are above the top step level
     stepped_array[low < array] = level
@@ -5950,12 +5953,13 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
     are ignored until the next step is fully established.
     '''
     # create new array, initialised with first flap setting
-    new_array = np_ma_ones_like(array) * first_valid_sample(stepped_array).value
+    new_array = np.ones_like(array.data) * first_valid_sample(stepped_array).value
 
     # create a list of tuples with index of midpoint change and direction of
     # travel
     flap_increase = find_edges(stepped_array, direction='rising_edges')
     flap_decrease = find_edges(stepped_array, direction='falling_edges')
+    
     transitions = [(idx, 'increase') for idx in flap_increase] + \
                   [(idx, 'decrease') for idx in flap_decrease]
 
@@ -5971,8 +5975,13 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
 
     for prev_midpoint, (flap_midpoint, direction), next_midpoint in izip_longest(
         [0] + flap_changes[0:-1], sorted_transitions, flap_changes[1:]):
-        prev_flap = stepped_array[floor(flap_midpoint)]
-        next_flap = stepped_array[ceil(flap_midpoint)]
+        prev_flap = prev_unmasked_value(stepped_array, floor(flap_midpoint),
+                                        start_index=floor(prev_midpoint)).value
+        stop_index = ceil(next_midpoint) if next_midpoint else None
+        next_flap = next_unmasked_value(stepped_array, ceil(flap_midpoint),
+                                        stop_index=stop_index).value
+        is_masked = (array[floor(flap_midpoint)] is np.ma.masked or
+                     array[ceil(flap_midpoint)] is np.ma.masked)
         if direction == 'increase':
             # looking for where positive change reduces to this value
             roc_to_seek_for = 0.1
@@ -5983,9 +5992,10 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
         # allow a change to be 5% before the flap is reached
         flap_tolerance = (abs(prev_flap - next_flap) * 0.05)
 
-        if step_at == 'move_start' \
-           or direction == 'increase' and step_at == 'including_transition'\
-           or direction == 'decrease' and step_at == 'excluding_transition':
+        if (is_masked and direction == 'decrease'
+            or step_at == 'move_start'
+            or direction == 'increase' and step_at == 'including_transition'
+            or direction == 'decrease' and step_at == 'excluding_transition'):
             #TODO: support within 0.1 rather than 90%
             # prev_midpoint (scan stop) should be after the other scan transition...
             scan_rev = slice(flap_midpoint, prev_midpoint, -1)
@@ -5999,9 +6009,10 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
             val_idx = index_at_value(array, prev_flap + flap_tolerance, scan_rev, endpoint='closest') #???
             idx = max(val_idx, roc_idx) or flap_midpoint
 
-        elif step_at == 'move_stop' \
-             or direction == 'increase' and step_at == 'excluding_transition'\
-             or direction == 'decrease' and step_at == 'including_transition':
+        elif (is_masked and direction == 'increase'
+              or step_at == 'move_stop'
+              or direction == 'increase' and step_at == 'excluding_transition'
+              or direction == 'decrease' and step_at == 'including_transition'):
             scan_fwd = slice(flap_midpoint, next_midpoint, +1)
             ##idx = index_at_value_or_level_off(array, next_flap, scan_fwd,
                                               ##abs_threshold=0.2)
