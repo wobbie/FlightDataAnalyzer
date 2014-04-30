@@ -1864,7 +1864,7 @@ class TestFindEdges(unittest.TestCase):
 
 class TestFindEdgesOnStateChange(unittest.TestCase):
     # Reminder...
-    # find_edges_on_state_change(state, array, change='entering', phase=None)
+    # find_edges_on_state_change(state, array, change='entering', phase=None, min_samples=3)
     class Switch(M):
         values_mapping = {0: 'off', 1: 'on'}
 
@@ -1905,6 +1905,33 @@ class TestFindEdgesOnStateChange(unittest.TestCase):
         multi = self.Switch(array=np.ma.array([0,0,0,0,0,0]))
         edges = find_edges_on_state_change('on', multi.array)
         self.assertEqual(edges, [])
+        
+    def test_min_samples(self):
+        array = np.ma.zeros(30)
+        array[4] = 1  # 1 sample
+        array[7:9] = 1  # 2 samples
+        array[12:15] = 1  # 3 samples
+        array[20:] = 1  # 10 samples
+        array[25] = 0  # single sample while gear "Down" goes to "Up"
+        touchdown = KeyTimeInstance(28, 'Touchdown')
+        gear_down = MappedArray(array, values_mapping={0: 'Up', 1: 'Down'})
+        
+        gear_down_indexes = find_edges_on_state_change(
+            'Down', gear_down, change='entering', phase=[slice(0, touchdown.index)], min_samples=3)
+        self.assertEqual(len(gear_down_indexes), 1)
+        last_state_change = gear_down_indexes[-1]
+        self.assertEqual(last_state_change, 19.5)
+        
+        gear_down_indexes = find_edges_on_state_change(
+                    'Down', gear_down, change='entering', phase=[slice(0, touchdown.index)], min_samples=2)
+        self.assertEqual(gear_down_indexes, [11.5, 19.5])
+        
+        gear_down_indexes = find_edges_on_state_change(
+                    'Down', gear_down, change='entering', phase=[slice(0, touchdown.index)], min_samples=1)
+        self.assertEqual(gear_down_indexes, [6.5, 11.5, 19.5, 25.5])
+                
+        
+        
 
 
 class TestFindTocTod(unittest.TestCase):

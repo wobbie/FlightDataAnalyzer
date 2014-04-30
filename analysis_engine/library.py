@@ -1754,7 +1754,7 @@ def find_edges(array, _slice=slice(None), direction='rising_edges'):
     return list(edge_list)
 
 
-def find_edges_on_state_change(state, array, change='entering', phase=None):
+def find_edges_on_state_change(state, array, change='entering', phase=None, min_samples=1):
     '''
     Version of find_edges tailored to suit multi-state parameters.
 
@@ -1763,18 +1763,23 @@ def find_edges_on_state_change(state, array, change='entering', phase=None):
     :param array: the multistate parameter array
     :type array: numpy masked array with state attributes.
 
-    :param change: condition for detecting edge. Default 'entering', 'leaving' and 'entering_and_leaving' alternatives
+    :param change: Condition for detecting edge. Default 'entering', 'leaving' and 'entering_and_leaving' alternatives
     :type change: text
-    :param phase: flight phase or list of slices within which edges will be detected.
+    :param phase: Flight phase or list of slices within which edges will be detected.
     :type phase: list of slices, default=None
+    :param min_samples: Minimum number of samples within desired state. 
+                        Usually 1 or 2 for warnings, more for multistates which remain at their state for longer.
+    :type min_samples: int
 
     :returns: list of indexes
 
     :raises: ValueError if change not recognised
     :raises: KeyError if state not recognised
     '''
-    def state_changes(state, array, change, _slice=slice(0, -1)):
-
+    def state_changes(state, array, change, _slice=slice(0, -1), min_samples=1):
+        '''
+        min_samples of 3 means 3 or more samples must be in the state for it to be returned.
+        '''
         length = len(array[_slice])
         # The offset allows for phase slices and puts the transition midway
         # between the two conditions as this is the most probable time that
@@ -1782,6 +1787,9 @@ def find_edges_on_state_change(state, array, change='entering', phase=None):
         offset = _slice.start - 0.5
         state_periods = np.ma.clump_unmasked(
             np.ma.masked_not_equal(array[_slice], array.state[state]))
+        # ignore small periods where slice is in state, then remove small gaps where slices are not in state
+        state_periods = slices_remove_small_slices(state_periods, count=min_samples)
+        state_periods = slices_remove_small_gaps(state_periods, count=min_samples)
         edge_list = []
         for period in state_periods:
             if change == 'entering':
@@ -1803,7 +1811,7 @@ def find_edges_on_state_change(state, array, change='entering', phase=None):
         return edge_list
 
     if phase is None:
-        return state_changes(state, array, change)
+        return state_changes(state, array, change, min_samples)
 
     edge_list = []
     for period in phase:
@@ -1811,7 +1819,7 @@ def find_edges_on_state_change(state, array, change='entering', phase=None):
             _slice = period.slice
         else:
             _slice = period
-        edges = state_changes(state, array, change, _slice)
+        edges = state_changes(state, array, change, _slice, min_samples)
         edge_list.extend(edges)
     return edge_list
 
