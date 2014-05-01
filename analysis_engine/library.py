@@ -1811,7 +1811,7 @@ def find_edges_on_state_change(state, array, change='entering', phase=None, min_
         return edge_list
 
     if phase is None:
-        return state_changes(state, array, change, min_samples)
+        return state_changes(state, array, change, min_samples=min_samples)
 
     edge_list = []
     for period in phase:
@@ -1819,7 +1819,8 @@ def find_edges_on_state_change(state, array, change='entering', phase=None, min_
             _slice = period.slice
         else:
             _slice = period
-        edges = state_changes(state, array, change, _slice, min_samples)
+        edges = state_changes(state, array, change, _slice=_slice,
+                              min_samples=min_samples)
         edge_list.extend(edges)
     return edge_list
 
