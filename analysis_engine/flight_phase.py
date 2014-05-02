@@ -1247,7 +1247,13 @@ class Takeoff(FlightPhaseNode):
             # Track back to the turn
             # If he took more than 5 minutes on the runway we're not interested!
             first = max(0, takeoff_run - (300 * head.frequency))
-            takeoff_begin = index_at_value(np.ma.abs(head.array - datum),
+            # Repair small gaps incase transition is masked.
+            # XXX: This could be optimized by repairing and calling abs on
+            # the 5 minute window of the array. Shifting the index manually
+            # will be less pretty than using index_at_value.
+            head_abs_array = np.ma.abs(repair_mask(
+                head.array, frequency=head.frequency, repair_duration=30))
+            takeoff_begin = index_at_value(head_abs_array - datum,
                                            HEADING_TURN_ONTO_RUNWAY,
                                            slice(takeoff_run, first, -1))
 
