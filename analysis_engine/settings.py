@@ -69,6 +69,9 @@ CACHE_PARAMETER_MIN_USAGE = 0
 # TODO: Find sensible value.
 MINIMUM_SPLIT_DURATION = 100 #120
 
+# Minimum duration of a fast airspeed to splt into a segment.
+MINIMUM_FAST_DURATION = 100
+
 # When the average normalised value of selected parameters drops below this
 # value, a flight split can be made.
 MINIMUM_SPLIT_PARAM_VALUE = 0.175

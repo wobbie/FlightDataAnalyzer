@@ -373,6 +373,7 @@ def split_segments(hdf):
 
     segments = []
     start = 0
+    last_fast_index = None
     for slow_slice in slow_slices:
         if slow_slice.start == 0:
             # Do not split if slow_slice is at the beginning of the data.
@@ -382,6 +383,14 @@ def split_segments(hdf):
         if slow_slice.stop == len(airspeed_array):
             # After the loop we will add the remaining data to a segment.
             break
+        
+        if last_fast_index is not None:
+            fast_duration = (slow_slice.start - last_fast_index) / airspeed.frequency
+            if fast_duration < settings.MINIMUM_FAST_DURATION:
+                logger.info("Disregarding short period of fast airspeed %s",
+                            fast_duration)
+                continue
+        last_fast_index = slow_slice.stop
 
         # Get start and stop at 1Hz.
         slice_start_secs = slow_slice.start / airspeed.frequency
@@ -544,7 +553,7 @@ def _calculate_start_datetime(hdf, fallback_dt=None):
         else:
             raise TimebaseError("Required parameter '%s' not available" % name)
 
-    length = max([len(array) for array in dt_arrays])
+    length = max([len(a) for a in dt_arrays])
     if length > 1:
         # ensure all arrays are the same length
         for n, arr in enumerate(dt_arrays):
