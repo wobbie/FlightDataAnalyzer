@@ -1296,7 +1296,7 @@ class TestPrevUnmaskedValue(unittest.TestCase):
 class TestClosestUnmaskedValue(unittest.TestCase):
     def test_closest_unmasked_value(self):
         array = np.ma.arange(10)
-        #self.assertEqual(closest_unmasked_value(array, 5), Value(5, 5))
+        self.assertEqual(closest_unmasked_value(array, 5), Value(5, 5))
         self.assertEqual(closest_unmasked_value(array, -3), Value(7, 7))
         array[5:8] = np.ma.masked
         self.assertEqual(closest_unmasked_value(array, 5), Value(4, 4))
@@ -1306,6 +1306,20 @@ class TestClosestUnmaskedValue(unittest.TestCase):
                                                 stop_index=5),
                          Value(3, 3))
         
+    def test_closest_unmasked_value_negative_index(self):
+        values = [
+            0, 2503, 5012, 5003, 4968, 4925, 4844, 4893, 4476, 4385, 4395, 4332,
+            4243, 4161, 4106, 4056, 3993, 3934, 3884, 3838, 3814, 3784, 3752,
+            3720, 3688, 3656, 3625, 3597, 3561, 3530, 3502, 3479, 3452, 3425,
+            3389, 3361, 3339, 3307, 3280, 3253, 3221, 3189, 3130, 3103, 3098,
+            3098, 3093, 3084, 3066, 3053, 3039, 3030, 3021, 3003, 2989, 2984,
+            2971, 2962, 2953, 2965, 2971, 2905, 2889, 2867, 2853, 2834, 2900,
+            2767, 2753, 2708, 0,
+        ]
+        array = np.ma.array(values, mask=[True] * 2 + [False] * 68 + [True])
+        self.assertEqual(closest_unmasked_value(array, -25), Value(46, 3093))
+        self.assertEqual(closest_unmasked_value(array, -0.45), Value(69, 2708))
+    
     def test_closest_unmasked_index_relative_to_start(self):
         array = np.ma.arange(10)
         self.assertEqual(closest_unmasked_value(array, 6, start_index=0),
