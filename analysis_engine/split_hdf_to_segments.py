@@ -390,7 +390,6 @@ def split_segments(hdf):
                 logger.info("Disregarding short period of fast airspeed %s",
                             fast_duration)
                 continue
-        last_fast_index = slow_slice.stop
 
         # Get start and stop at 1Hz.
         slice_start_secs = slow_slice.start / airspeed.frequency
@@ -403,6 +402,8 @@ def split_segments(hdf):
                         "('%s').", settings.AIRSPEED_THRESHOLD, slow_duration,
                         settings.MINIMUM_SPLIT_DURATION)
             continue
+        
+        last_fast_index = slow_slice.stop
 
         # Find split based on minimum of engine parameters.
         if split_params_min is not None:
