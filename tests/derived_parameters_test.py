@@ -2211,9 +2211,10 @@ class TestFuelQty(unittest.TestCase):
     def test_can_operate(self):
         # testing for number of combinations possible, will operate with at
         # least one of the listed parameters. Not listing all operational
-        # combinations as this can get very large (2**n-1) where n is the
-        # number of parameters (-1 as none is not a option)
-        self.assertEqual(len(FuelQty.get_operational_combinations()), 2**8-1)
+        # combinations as this can get very large (2**(n-1)-1) where n is the
+        # number of parameters n-1 as both left and right are required if
+        # either is avalibale (-1 as none is not a option)
+        self.assertEqual(len(FuelQty.get_operational_combinations()), 2**7-1)
     
     def test_three_tanks(self):
         fuel_qty1 = P('Fuel Qty (L)', 
