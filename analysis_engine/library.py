@@ -1207,8 +1207,12 @@ def positive_index(container, index):
     :returns: Positive index.
     :rtype: int or float
     '''
+    if index is None:
+        return index
+    
     if index < 0:
         index += len(container)
+    
     return index
 
 
@@ -1225,12 +1229,17 @@ def next_unmasked_value(array, index, stop_index=None):
     :rtype: Value or None
     '''
     array.mask = np.ma.getmaskarray(array)
+    
+    # Normalise indices.
+    index = positive_index(array, index)
+    stop_index = positive_index(array, stop_index)
+    
     try:
         unmasked_index = np.where(np.invert(array.mask[index:stop_index]))[0][0]
     except IndexError:
         return None
     else:
-        unmasked_index += positive_index(array, index)
+        unmasked_index += index
         return Value(index=unmasked_index, value=array[unmasked_index])
 
 
@@ -1247,13 +1256,18 @@ def prev_unmasked_value(array, index, start_index=None):
     :rtype: Value or None
     '''
     array.mask = np.ma.getmaskarray(array)
+    
+    # Normalise indices.
+    index = positive_index(array, index)
+    start_index = positive_index(array, start_index)
+    
     try:
         unmasked_index = np.where(np.invert(array.mask[start_index:index + 1]))[0][-1]
     except IndexError:
         return None
     else:
         if start_index:
-            unmasked_index += positive_index(array, start_index)
+            unmasked_index += start_index
         return Value(index=unmasked_index, value=array[unmasked_index])
 
 
@@ -1270,8 +1284,15 @@ def closest_unmasked_value(array, index, start_index=None, stop_index=None):
     '''
     array.mask = np.ma.getmaskarray(array)
     
+    # Normalise indices.
+    index = positive_index(array, index)
+    
     if not array.mask[index]:
-        return Value(positive_index(array, index), array[index])
+        return Value(index, array[index])
+    
+    # Normalise indices.
+    start_index = positive_index(array, start_index)
+    stop_index = positive_index(array, stop_index)
     
     prev_value = prev_unmasked_value(array, index, start_index=start_index)
     next_value = next_unmasked_value(array, index, stop_index=stop_index)

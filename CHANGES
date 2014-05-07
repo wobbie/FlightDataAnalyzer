@@ -8,6 +8,20 @@ You can view the differences in tagged versions as follows:
 
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
+v0.10.2
+-------
+ - Splitting algorithm improved to not split flights based on insignificant sections of high airspeed.
+ - Detection of turning onto the runway improved to handle invalid data.
+ - Derived Fuel Qty parameter now includes Fuel Qty (Tail) in aggregation.
+ - Speedbrake parameter improved to support Global and G-IV aircraft families.
+ - Speedbrake Selected parameter improved to support G-IV aircraft family.
+ - blend_two_parameters amended to return a result of the correct sample rate if one parameter is faulty.
+ - Flap and Flap Lever algorithm improved to handle masked sections of data between flap changes.
+ - closest_unmasked_value rewritten to provide more consistent results.
+ - Repairing sections of invalid data has been improved to support fill_start and fill_stop methods along with the default of interpolation.
+ - ILS established below 0.8 dots to avoid transient events as the localizer falls below the event threshold.
+
+
 v0.10.1
 ------
  - Change to magnetic variation from runway as magnetic variation should be
