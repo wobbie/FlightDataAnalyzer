@@ -630,7 +630,7 @@ def append_segment_info(hdf_segment_path, segment_type, segment_slice, part,
     """
     # build information about a slice
     with hdf_file(hdf_segment_path) as hdf:
-        airspeed = hdf['Airspeed'].array
+        airspeed = hdf['Airspeed']
         duration = hdf.duration
         # For now, raise TimebaseError up rather than using EPOCH
         # TODO: Review whether to revert to epoch again.
@@ -646,13 +646,14 @@ def append_segment_info(hdf_segment_path, segment_type, segment_slice, part,
     if segment_type in ('START_AND_STOP', 'START_ONLY', 'STOP_ONLY'):
         # we went fast, so get the index
         spd_above_threshold = \
-            np.ma.where(airspeed > settings.AIRSPEED_THRESHOLD)
-        go_fast_index = spd_above_threshold[0][0]
+            np.ma.where(airspeed.array > settings.AIRSPEED_THRESHOLD)
+        go_fast_index = spd_above_threshold[0][0] / airspeed.frequency
         go_fast_datetime = \
             start_datetime + timedelta(seconds=int(go_fast_index))
         # Identification of raw data airspeed hash
-        airspeed_hash_sections = runs_of_ones(airspeed.data > settings.AIRSPEED_THRESHOLD)
-        airspeed_hash = hash_array(airspeed.data,airspeed_hash_sections,
+        airspeed_hash_sections = runs_of_ones(airspeed.array.data >
+                                              settings.AIRSPEED_THRESHOLD)
+        airspeed_hash = hash_array(airspeed.array.data, airspeed_hash_sections,
                                    settings.AIRSPEED_HASH_MIN_SAMPLES)
     #elif segment_type == 'GROUND_ONLY':
         ##Q: Create a groundspeed hash?
