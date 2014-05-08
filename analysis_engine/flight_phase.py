@@ -1256,8 +1256,8 @@ class Takeoff(FlightPhaseNode):
             # the 5 minute window of the array. Shifting the index manually
             # will be less pretty than using index_at_value.
             head_abs_array = np.ma.abs(repair_mask(
-                head.array, frequency=head.frequency, repair_duration=30))
-            takeoff_begin = index_at_value(head_abs_array - datum,
+                head.array, frequency=head.frequency, repair_duration=30) - datum)
+            takeoff_begin = index_at_value(head_abs_array,
                                            HEADING_TURN_ONTO_RUNWAY,
                                            slice(takeoff_run, first, -1))
 
