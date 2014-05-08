@@ -8,6 +8,11 @@ You can view the differences in tagged versions as follows:
 
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
+v0.11.2
+-------
+ - Fix to takeoff following recent change
+
+
 v0.11.1
 -------
  - Splitting algorithm improved to not split flights based on insignificant
