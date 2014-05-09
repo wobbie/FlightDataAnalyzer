@@ -1297,6 +1297,8 @@ class TestClosestUnmaskedValue(unittest.TestCase):
     def test_closest_unmasked_value(self):
         array = np.ma.arange(10)
         self.assertEqual(closest_unmasked_value(array, 5), Value(5, 5))
+        # Floors index
+        self.assertEqual(closest_unmasked_value(array, 5.5), Value(5, 5))
         self.assertEqual(closest_unmasked_value(array, -3), Value(7, 7))
         array[5:8] = np.ma.masked
         self.assertEqual(closest_unmasked_value(array, 5), Value(4, 4))
