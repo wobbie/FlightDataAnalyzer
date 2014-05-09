@@ -1288,7 +1288,7 @@ def closest_unmasked_value(array, index, start_index=None, stop_index=None):
     index = positive_index(array, index)
     
     if not array.mask[index]:
-        return Value(index, array[index])
+        return Value(floor(index), array[index])
     
     # Normalise indices.
     start_index = positive_index(array, start_index)
