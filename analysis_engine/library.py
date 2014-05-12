@@ -1196,77 +1196,117 @@ def clip(array, period, hz=1.0, remove='peaks_and_troughs'):
     return result
 
 
-def closest_unmasked_value(array, index, _slice=None):
+def positive_index(container, index):
     '''
-    Find the closest unmasked value in the array that's close to the index.
-    The index is relative to the start of the array, NOT the _slice
-    subsection. Supports negative index which is relative to the end of the
-    array however _slice argument cannot be used at the same time.
+    Always return a positive index.
+    e.g. 7 if len(container) == 10 and index == -3.
+    
+    :param container: Container with a length.
+    :param index: Positive or negative index within the array.
+    :type index: int or float
+    :returns: Positive index.
+    :rtype: int or float
+    '''
+    if index is None:
+        return index
+    
+    if index < 0:
+        index += len(container)
+    
+    return index
 
-    :param array: Array to find the closest unmasked value within.
-    :type array: np.ma.array
-    :param index: Find the closest unmasked value to this index.
+
+def next_unmasked_value(array, index, stop_index=None):
+    '''
+    Find the next unmasked value from index in the array.
+    
+    :type array: np.ma.masked_array
+    :param index: Start index of search.
     :type index: int
-    :param _slice: Find closest unmasked value within this slice.
-    :type _slice: slice
-    :returns: The closest index and value of an unmasked value.
-    :rtype: Value
+    :param stop_index: Optional stop index of search, otherwise searches to the end of the array.
+    :type stop_index: int or None
+    :returns: Next unmasked value or None.
+    :rtype: Value or None
     '''
-    # Validate _slice and index.
-    if _slice:
-        if index < 0:
-            # hard to understand what the programmer is expecting to be returned
-            raise NotImplementedError("Negative indexing on slice not supported")
-        if not is_index_within_slice(index, _slice):
-            raise IndexError('Index %s outside of slice %s' % (index, _slice))
+    array.mask = np.ma.getmaskarray(array)
+    
+    # Normalise indices.
+    index = positive_index(array, index)
+    stop_index = positive_index(array, stop_index)
+    
+    try:
+        unmasked_index = np.where(np.invert(array.mask[index:stop_index]))[0][0]
+    except IndexError:
+        return None
     else:
-        _slice = slice(None)
+        unmasked_index += index
+        return Value(index=unmasked_index, value=array[unmasked_index])
+
+
+def prev_unmasked_value(array, index, start_index=None):
+    '''
+    Find the previous unmasked value from index in the array.
     
-    slice_start = (_slice.start or 0)
-    slice_stop = (_slice.stop or len(array))
+    :type array: np.ma.masked_array
+    :param index: Stop index of search (searches backwards).
+    :type index: int
+    :param start_index: Optional start index of search, otherwise searches to the beginning of the array.
+    :type start_index: int or None
+    :returns: Previous unmasked value or None.
+    :rtype: Value or None
+    '''
+    array.mask = np.ma.getmaskarray(array)
     
-    if _slice.step > 0:
-        if index >= 0 and index > slice_stop:
-            raise IndexError("index is beyond length of sliced data")
-        elif index < 0 and abs(index) > len(array):
-            raise IndexError("negative index goes beyond array length")    
+    # Normalise indices.
+    index = positive_index(array, index)
+    start_index = positive_index(array, start_index)
     
-    value = value_at_index(array[_slice], index - slice_start)
-    if value:
-        return Value(index=index, value=value)
-
-    def find_unmasked_value(_slice, array, index):
-        
-        if index < 0:
-            index = abs(len(array) + index)
-
-        sliced_array = array[_slice]
-        # make index relative to the sliced section
-        rel_index = index - slice_start
-        if not np.ma.count(sliced_array): #or abs(rel_index) > len(sliced_array):
-            # slice contains no valid data or index is outside of the length of
-            # the array
-            #return Value(None, None)
-            raise IndexError("No valid data to find at index '%d' in sliced array "
-                             "of length '%d'" % (index, len(sliced_array)))
-
-        indices = np.ma.arange(len(sliced_array))
-        indices.mask = sliced_array.mask
-        relative_pos = np.ma.abs(indices - rel_index).argmin()
-        pos = relative_pos + slice_start
-        return pos
-
-    if (_slice.step and _slice.step == -1):
-        # OK neg_pos is a crazy name. The position in the array with negative indexing.
-        neg_pos = find_unmasked_value(slice(len(array)-(_slice.start or len(array)),
-                                            len(array)-(_slice.stop or 0)),
-                                      array[::-1],
-                                      len(array)-(_slice.start or len(array)))
-        pos = len(array) - neg_pos -1
+    try:
+        unmasked_index = np.where(np.invert(array.mask[start_index:index + 1]))[0][-1]
+    except IndexError:
+        return None
     else:
-        pos = find_unmasked_value(_slice, array, index)
+        if start_index:
+            unmasked_index += start_index
+        return Value(index=unmasked_index, value=array[unmasked_index])
 
-    return Value(index=pos, value=array[pos])
+
+def closest_unmasked_value(array, index, start_index=None, stop_index=None):
+    '''
+    Find the closest unmasked value from index in the array, optionally
+    specifying a search range with start_index and stop_index.
+    
+    :type array: np.ma.masked_array
+    :param index: Start index of search.
+    :type index: int
+    :param start_index: Optional start index of search.
+    :type start_index: int
+    '''
+    array.mask = np.ma.getmaskarray(array)
+    
+    # Normalise indices.
+    index = positive_index(array, index)
+    
+    if not array.mask[index]:
+        return Value(floor(index), array[index])
+    
+    # Normalise indices.
+    start_index = positive_index(array, start_index)
+    stop_index = positive_index(array, stop_index)
+    
+    prev_value = prev_unmasked_value(array, index, start_index=start_index)
+    next_value = next_unmasked_value(array, index, stop_index=stop_index)
+    if prev_value and next_value:
+        if abs(prev_value.index - index) < abs(next_value.index - index):
+            return prev_value
+        else:
+            return next_value
+    elif prev_value:
+        return prev_value
+    elif next_value:
+        return next_value
+    else:
+        return None
 
 
 def clump_multistate(array, state, _slices=[slice(None)], condition=True):
@@ -1709,6 +1749,11 @@ def find_edges(array, _slice=slice(None), direction='rising_edges'):
     transition took place (with highest probability) midway between the two
     recorded states.
     '''
+    if direction == 'rising_edges':
+        method = 'fill_start'
+    else:
+        method = 'fill_stop'
+    array = repair_mask(array, method=method, repair_duration=None, copy=True)
     # Find increments. Extrapolate at start to keep array sizes straight.
     deltas = np.ma.ediff1d(array[_slice], to_begin=array[_slice][0])
     deltas[0]=0 # Ignore the first value
@@ -1730,7 +1775,7 @@ def find_edges(array, _slice=slice(None), direction='rising_edges'):
     return list(edge_list)
 
 
-def find_edges_on_state_change(state, array, change='entering', phase=None):
+def find_edges_on_state_change(state, array, change='entering', phase=None, min_samples=1):
     '''
     Version of find_edges tailored to suit multi-state parameters.
 
@@ -1739,18 +1784,23 @@ def find_edges_on_state_change(state, array, change='entering', phase=None):
     :param array: the multistate parameter array
     :type array: numpy masked array with state attributes.
 
-    :param change: condition for detecting edge. Default 'entering', 'leaving' and 'entering_and_leaving' alternatives
+    :param change: Condition for detecting edge. Default 'entering', 'leaving' and 'entering_and_leaving' alternatives
     :type change: text
-    :param phase: flight phase or list of slices within which edges will be detected.
+    :param phase: Flight phase or list of slices within which edges will be detected.
     :type phase: list of slices, default=None
+    :param min_samples: Minimum number of samples within desired state. 
+                        Usually 1 or 2 for warnings, more for multistates which remain at their state for longer.
+    :type min_samples: int
 
     :returns: list of indexes
 
     :raises: ValueError if change not recognised
     :raises: KeyError if state not recognised
     '''
-    def state_changes(state, array, change, _slice=slice(0, -1)):
-
+    def state_changes(state, array, change, _slice=slice(0, -1), min_samples=1):
+        '''
+        min_samples of 3 means 3 or more samples must be in the state for it to be returned.
+        '''
         length = len(array[_slice])
         # The offset allows for phase slices and puts the transition midway
         # between the two conditions as this is the most probable time that
@@ -1758,6 +1808,9 @@ def find_edges_on_state_change(state, array, change='entering', phase=None):
         offset = _slice.start - 0.5
         state_periods = np.ma.clump_unmasked(
             np.ma.masked_not_equal(array[_slice], array.state[state]))
+        # ignore small periods where slice is in state, then remove small gaps where slices are not in state
+        state_periods = slices_remove_small_slices(state_periods, count=min_samples)
+        state_periods = slices_remove_small_gaps(state_periods, count=min_samples)
         edge_list = []
         for period in state_periods:
             if change == 'entering':
@@ -1779,7 +1832,7 @@ def find_edges_on_state_change(state, array, change='entering', phase=None):
         return edge_list
 
     if phase is None:
-        return state_changes(state, array, change)
+        return state_changes(state, array, change, min_samples=min_samples)
 
     edge_list = []
     for period in phase:
@@ -1787,7 +1840,8 @@ def find_edges_on_state_change(state, array, change='entering', phase=None):
             _slice = period.slice
         else:
             _slice = period
-        edges = state_changes(state, array, change, _slice)
+        edges = state_changes(state, array, change, _slice=_slice,
+                              min_samples=min_samples)
         edge_list.extend(edges)
     return edge_list
 
@@ -3635,6 +3689,7 @@ def latitudes_and_longitudes(bearings, distances, reference):
     lon_array = np.ma.array(data = np.rad2deg(lon),mask = joined_mask)
     return lat_array, lon_array
 
+
 def localizer_scale(runway):
     """
     Compute the ILS localizer scaling factor from runway or nominal data.
@@ -3657,6 +3712,7 @@ def localizer_scale(runway):
         # scale.
         scale = np.degrees(np.arctan2(106.68, length)) / 2.0
     return scale
+
 
 def mask_inside_slices(array, slices):
     '''
@@ -3690,6 +3746,34 @@ def mask_outside_slices(array, slices):
     for slice_ in slices:
         mask[slice_] = False
     return np.ma.array(array, mask=np.ma.mask_or(mask, array.mask))
+
+
+def mask_edges(mask):
+    '''
+    Return a mask with sections masked only at the beginning and end of the
+    data.
+    
+    :type mask: np.array
+    :returns: Mask with only the edges masked.
+    :rtype: np.array
+    '''
+    if isinstance(mask, np.ma.MaskedArray):
+        mask = np.ma.getmaskarray(mask)
+    
+    edge_mask = np.zeros_like(mask, dtype=np.bool)
+    
+    if not len(mask) or mask.all() or (not mask[0] and not mask[-1]):
+        return edge_mask
+    
+    masked_slices = runs_of_ones(mask)
+    
+    if masked_slices[0].start == 0:
+        edge_mask[masked_slices[0]] = True
+    
+    if masked_slices[-1].stop == len(mask):
+        edge_mask[masked_slices[-1]] = True
+    
+    return edge_mask
 
 
 def max_continuous_unmasked(array, _slice=slice(None)):
@@ -5862,19 +5946,22 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
     :returns: Stepped masked array
     :rtype: np.ma.array
     """
-    if step_at.lower() not in ('midpoint', 'move_start', 'move_stop',
-           'including_transition', 'excluding_transition'):
-        raise ValueError("Incorrect step_at choice argument '%s'" % step_at)
     step_at = step_at.lower()
+    step_at_options = ('midpoint', 'move_start', 'move_stop',
+                       'including_transition', 'excluding_transition')
+    if step_at not in step_at_options:
+        raise ValueError("Incorrect step_at choice argument '%s'" % step_at)
+    
     steps = sorted(steps)  # ensure steps are in ascending order
     stepping_points = np.ediff1d(steps, to_end=[0])/2.0 + steps
-    stepped_array = np_ma_zeros_like(array)
+    stepped_array = np_ma_zeros_like(array, mask=array.mask)
     low = None
     for level, high in zip(steps, stepping_points):
         if low is None:
-            stepped_array[(-high < array) & (array <= high)] = level
+            matching = (-high < array) & (array <= high)
         else:
-            stepped_array[(low < array) & (array <= high)] = level
+            matching = (low < array) & (array <= high)
+        stepped_array[matching] = level
         low = high
     # all the remaining values are above the top step level
     stepped_array[low < array] = level
@@ -5915,12 +6002,13 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
     are ignored until the next step is fully established.
     '''
     # create new array, initialised with first flap setting
-    new_array = np_ma_ones_like(array) * first_valid_sample(stepped_array).value
+    new_array = np.ones_like(array.data) * first_valid_sample(stepped_array).value
 
     # create a list of tuples with index of midpoint change and direction of
     # travel
     flap_increase = find_edges(stepped_array, direction='rising_edges')
     flap_decrease = find_edges(stepped_array, direction='falling_edges')
+    
     transitions = [(idx, 'increase') for idx in flap_increase] + \
                   [(idx, 'decrease') for idx in flap_decrease]
 
@@ -5936,8 +6024,13 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
 
     for prev_midpoint, (flap_midpoint, direction), next_midpoint in izip_longest(
         [0] + flap_changes[0:-1], sorted_transitions, flap_changes[1:]):
-        prev_flap = stepped_array[floor(flap_midpoint)]
-        next_flap = stepped_array[ceil(flap_midpoint)]
+        prev_flap = prev_unmasked_value(stepped_array, floor(flap_midpoint),
+                                        start_index=floor(prev_midpoint)).value
+        stop_index = ceil(next_midpoint) if next_midpoint else None
+        next_flap = next_unmasked_value(stepped_array, ceil(flap_midpoint),
+                                        stop_index=stop_index).value
+        is_masked = (array[floor(flap_midpoint)] is np.ma.masked or
+                     array[ceil(flap_midpoint)] is np.ma.masked)
         if direction == 'increase':
             # looking for where positive change reduces to this value
             roc_to_seek_for = 0.1
@@ -5948,9 +6041,10 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
         # allow a change to be 5% before the flap is reached
         flap_tolerance = (abs(prev_flap - next_flap) * 0.05)
 
-        if step_at == 'move_start' \
-           or direction == 'increase' and step_at == 'including_transition'\
-           or direction == 'decrease' and step_at == 'excluding_transition':
+        if (is_masked and direction == 'decrease'
+            or step_at == 'move_start'
+            or direction == 'increase' and step_at == 'including_transition'
+            or direction == 'decrease' and step_at == 'excluding_transition'):
             #TODO: support within 0.1 rather than 90%
             # prev_midpoint (scan stop) should be after the other scan transition...
             scan_rev = slice(flap_midpoint, prev_midpoint, -1)
@@ -5964,9 +6058,10 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
             val_idx = index_at_value(array, prev_flap + flap_tolerance, scan_rev, endpoint='closest') #???
             idx = max(val_idx, roc_idx) or flap_midpoint
 
-        elif step_at == 'move_stop' \
-             or direction == 'increase' and step_at == 'excluding_transition'\
-             or direction == 'decrease' and step_at == 'including_transition':
+        elif (is_masked and direction == 'increase'
+              or step_at == 'move_stop'
+              or direction == 'increase' and step_at == 'excluding_transition'
+              or direction == 'decrease' and step_at == 'including_transition'):
             scan_fwd = slice(flap_midpoint, next_midpoint, +1)
             ##idx = index_at_value_or_level_off(array, next_flap, scan_fwd,
                                               ##abs_threshold=0.2)
@@ -5985,112 +6080,8 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
         # floor +1 to ensure transitions start at the next sample
         new_array[floor(idx)+1:] = next_flap
 
-    # Reapply mask
-    #Q: must we maintain the mask?
-    new_array.mask = np.ma.getmaskarray(array)
-    return new_array
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    ##if step_at != 'midpoint':
-
-        ### We are being asked to adjust the step point to either the beginning or
-        ### end of a change period. First find where the changes took place:
-        ##spans = np.ma.clump_unmasked(np.ma.masked_inside(np.ediff1d(array),-rt,rt))
-        ##if skip:
-            ### We change to cover the movements of the output array
-            ##for span in spans:
-                ##if step_at == 'move_start':
-                    ##stepped_array[span] = stepped_array[span.stop+1]
-                ##else:
-                    ##stepped_array[span] = stepped_array[span.start-1]
-        ##else:
-            ### We change to cover the movements of the stepped array
-            ###spans = np.ma.clump_unmasked(np.ma.masked_equal(np.ediff1d(stepped_array),0.0))
-
-            ### Compute the slices between change points.
-
-            ### We are being asked to adjust the step point to either the beginning or
-            ### end of a change period. First find where the changes took place,
-            ### including endpoints to the array to allow indexing of the start and end
-            ### cases.
-            ##changes = [0] + \
-                ##list(np.ediff1d(stepped_array, to_end=0.0).nonzero()[0]) + \
-                ##[len(stepped_array)]
-
-            ###spans = []
-            ##for i in range(len(changes) - 1):
-                ##if step_at == 'move_start' or\
-                   ##step_at == 'excluding_transition' and stepped_array[changes[i]+1]<stepped_array[changes[i]] or\
-                   ##step_at == 'including_transition' and stepped_array[changes[i]+1]>stepped_array[changes[i]]:
-                    ##mode = 'backwards'
-                    ##span = slice(changes[i], changes[i-1], -1)
-                ##else:
-                    ##mode='forwards'
-                    ##span = slice(changes[i], changes[i+1], +1)
-
-                ##to_chg = step_local_cusp(array, span)
-
-                ##if to_chg==0:
-                    ### Continuous movement, so change at the step value if this passes through a step.
-                    ##big = np.ma.max(array[span])
-                    ##little = np.ma.min(array[span])
-                    ### See if the step in question is within this range:
-                    ##this_step = None
-                    ##for step in steps:
-                        ##if little <= step <= big:
-                            ##this_step = step
-                            ##break
-                    ##if this_step is None:
-                        ### Is this transition to an increasing/decreasing flap
-                        ##if mode == 'backwards':
-                            ##array[span.start+1] else array[ceil(span.stop)-1]
-                        ### Find where we passed through this value...
-                        ##idx = index_at_value(array, this_step+0.1, span)  # or -0.1 if we're going down?
-                        ### if we passed through the value and the value
-                        ##if idx: ## and this_step+0.1 > big:
-                            ##if mode == 'backwards':
-                                ##stepped_array[ceil(idx):span.start+1] = stepped_array[span.start+1]
-                            ##else:
-                                ##stepped_array[span.start:floor(idx)] = stepped_array[span.start]
-                    ##else:
-                        ### OK - just ran from one step to another without dwelling, so fill with the start or end values.
-                        ##if mode == 'backwards':
-                            ##stepped_array[span] = first_valid_sample(stepped_array[span]).value
-                        ##else:
-                            ##stepped_array[span] = first_valid_sample(stepped_array[span]).value
-
-                ##elif mode == 'backwards':
-                    ##stepped_array[span][:to_chg] = stepped_array[span.start+1]
-                ##else:
-                    ##stepped_array[span][:to_chg] = stepped_array[span.start]
-    ##'''
-    ##import matplotlib.pyplot as plt
-    ##one = np_ma_ones_like(array)
-    ##for step in steps:
-        ##plt.plot(one*step)
-    ##plt.plot(array, '-b')
-    ##plt.plot(stepped_array, '-k')
-    ##plt.show()
-    ##'''
-    ##return np.ma.array(stepped_array, mask=array.mask)
+    # Mask edges of array to avoid extrapolation.
+    return np.ma.array(new_array, mask=mask_edges(array))
 
 
 def touchdown_inertial(land, roc, alt):
@@ -6483,10 +6474,12 @@ def index_at_value(array, threshold, _slice=slice(None), endpoint='exact'):
             # Rescan the data to find the last point where the array data is
             # closing.
             diff = np.ma.ediff1d(array[_slice])
-            try:
-                value = closest_unmasked_value(array, _slice.start or 0,
-                                               _slice=_slice)[1]
-            except:  # IndexError? tuple index out of range
+            value = closest_unmasked_value(array, _slice.start or 0,
+                                           start_index=_slice.start,
+                                           stop_index=_slice.stop)
+            if value:
+                value = value.value
+            else:
                 return None
             if threshold >= value:
                 diff_where = np.ma.where(diff < 0)

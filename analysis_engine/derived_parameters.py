@@ -3153,8 +3153,11 @@ class FuelQty(DerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available):
-
-        return any_of(cls.get_dependency_names(), available)
+        fuel_l_and_r = ('Fuel Qty (L)', 'Fuel Qty (R)')
+        if any_of(fuel_l_and_r, available):
+            return all_of(fuel_l_and_r, available)
+        else:
+            return any_of(cls.get_dependency_names(), available)
 
     def derive(self,
                fuel_qty_l=P('Fuel Qty (L)'),
@@ -3163,10 +3166,11 @@ class FuelQty(DerivedParameterNode):
                fuel_qty_c_2=P('Fuel Qty (C2)'),
                fuel_qty_r=P('Fuel Qty (R)'),
                fuel_qty_trim=P('Fuel Qty (Trim)'),
-               fuel_qty_aux=P('Fuel Qty (Aux)')):
+               fuel_qty_aux=P('Fuel Qty (Aux)'),
+               fuel_qty_tail=P('Fuel Qty (Tail)')):
         params = []
         for param in (fuel_qty_l, fuel_qty_c, fuel_qty_c_1, fuel_qty_c_2,
-                      fuel_qty_r, fuel_qty_trim, fuel_qty_aux):
+                      fuel_qty_r, fuel_qty_trim, fuel_qty_aux, fuel_qty_tail):
             if not param:
                 continue
             # Repair array masks to ensure that the summed values are not too small
@@ -5620,7 +5624,7 @@ class Speedbrake(DerivedParameterNode):
                 'Spoiler (4)' in available and
                 'Spoiler (9)' in available
             ) or
-            family_name in ['B737 Classic', 'A319', 'A320', 'A321'] and (
+            family_name in ['B737 Classic', 'A319', 'A320', 'A321', 'Global'] and (
                 'Spoiler (2)' in available and
                 'Spoiler (7)' in available
             ) or
@@ -5690,7 +5694,7 @@ class Speedbrake(DerivedParameterNode):
         if family_name == 'B737 NG':
             self.merge_spoiler(spoiler_4, spoiler_9)
             
-        elif family_name in ['B737 Classic', 'A319', 'A320', 'A321']:
+        elif family_name in ['B737 Classic', 'A319', 'A320', 'A321', 'Global']:
             self.merge_spoiler(spoiler_2, spoiler_7)
 
         elif family_name == 'B787':

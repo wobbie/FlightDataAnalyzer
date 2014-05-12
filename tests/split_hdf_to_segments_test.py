@@ -287,15 +287,15 @@ class TestSplitSegments(unittest.TestCase):
         
         segment_tuples = split_segments(hdf)
         self.assertEqual(segment_tuples,
-                         [('START_AND_STOP', slice(0, 3987.0, None)),
-                          ('START_AND_STOP', slice(3987.0, 7049.0, None)),
-                          ('START_AND_STOP', slice(7049.0, 9563.0, None)),
-                          ('START_AND_STOP', slice(9563.0, 12921.0, None)),
-                          ('START_AND_STOP', slice(12921.0, 15858.0, None)),
-                          ('START_AND_STOP', slice(15858.0, 18526.0, None)),
-                          ('START_AND_STOP', slice(18526.0, 21728.0, None)),
-                          ('START_AND_STOP', slice(21728.0, 24208.0, None)),
-                          ('START_AND_STOP', slice(24208.0, 26607.0, None)),
+                         [('START_AND_STOP', slice(0, 3989.0, None)),
+                          ('START_AND_STOP', slice(3989.0, 7049.0, None)),
+                          ('START_AND_STOP', slice(7049.0, 9569.0, None)),
+                          ('START_AND_STOP', slice(9569.0, 12889.0, None)),
+                          ('START_AND_STOP', slice(12889.0, 15867.0, None)),
+                          ('START_AND_STOP', slice(15867.0, 18526.0, None)),
+                          ('START_AND_STOP', slice(18526.0, 21726.0, None)),
+                          ('START_AND_STOP', slice(21726.0, 24209.0, None)),
+                          ('START_AND_STOP', slice(24209.0, 26607.0, None)),
                           ('START_AND_STOP', slice(26607.0, 28534.0, None)),
                           ('START_AND_STOP', slice(28534.0, 30875.0, None)),
                           ('START_AND_STOP', slice(30875.0, 33680.0, None))])
@@ -313,12 +313,22 @@ class TestSplitSegments(unittest.TestCase):
                           ('START_AND_STOP', slice(49999.0, 69999.0, None)),
                           ('START_AND_STOP', slice(69999.0, 73552.0, None))])
 
-
-    def test_split_segments_multiple_types(self):
+    @mock.patch('analysis_engine.split_hdf_to_segments.settings')
+    def test_split_segments_multiple_types(self, settings):
         '''
         Test data has multiple segments of differing segment types.
         Test data has already been validated
         '''
+        # Overriding MINIMUM_FAST_DURATION.
+        settings.AIRSPEED_THRESHOLD = 80
+        settings.AIRSPEED_THRESHOLD_TIME = 3 * 60
+        settings.HEADING_CHANGE_TAXI_THRESHOLD = 60
+        settings.MINIMUM_SPLIT_DURATION = 100
+        settings.MINIMUM_FAST_DURATION = 0
+        settings.MINIMUM_SPLIT_PARAM_VALUE = 0.175
+        settings.RATE_OF_TURN_SPLITTING_THRESHOLD = 0.1
+        settings.MAX_TIMEBASE_AGE = 365 * 10
+        
         hdf_path = os.path.join(test_data_path, "split_segments_multiple_types.hdf5")
         temp_path = copy_file(hdf_path)
         hdf = hdf_file(temp_path)

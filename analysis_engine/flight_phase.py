@@ -1199,12 +1199,16 @@ class RejectedTakeoff(FlightPhaseNode):
             # end of the data
             check_grounded_idx = min(potential_rto.stop + (60 * self.frequency),
                                      len(accel_lon.array) - 1)
-            if is_index_within_slices(check_grounded_idx, groundeds.get_slices()):
+            if is_index_within_slices(check_grounded_idx,
+                                      groundeds.get_slices()):
                 # if soon after potential rto and still grounded we have a
                 # rto, otherwise we continue to takeoff
-                self.create_phase(slice(max(potential_rto.start-(10 * self.hz), 0),
-                                    min(potential_rto.stop+(30 * self.hz),
-                                        len(accel_lon.array))))
+                duration = (potential_rto.stop - potential_rto.start) / self.hz
+                if duration >= 2:
+                    start = max(potential_rto.start - (10 * self.hz), 0)
+                    stop = min(potential_rto.stop + (30 * self.hz),
+                               len(accel_lon.array))
+                    self.create_phase(slice(start, stop))
 
 
 class Takeoff(FlightPhaseNode):
@@ -1247,7 +1251,13 @@ class Takeoff(FlightPhaseNode):
             # Track back to the turn
             # If he took more than 5 minutes on the runway we're not interested!
             first = max(0, takeoff_run - (300 * head.frequency))
-            takeoff_begin = index_at_value(np.ma.abs(head.array - datum),
+            # Repair small gaps incase transition is masked.
+            # XXX: This could be optimized by repairing and calling abs on
+            # the 5 minute window of the array. Shifting the index manually
+            # will be less pretty than using index_at_value.
+            head_abs_array = np.ma.abs(repair_mask(
+                head.array, frequency=head.frequency, repair_duration=30) - datum)
+            takeoff_begin = index_at_value(head_abs_array,
                                            HEADING_TURN_ONTO_RUNWAY,
                                            slice(takeoff_run, first, -1))
 

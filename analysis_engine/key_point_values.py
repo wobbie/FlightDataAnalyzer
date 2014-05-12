@@ -7752,6 +7752,19 @@ class FlapAtGearDownSelection(KeyPointValueNode):
         self.create_kpvs_at_ktis(flap.array, gear_dn_sel, interpolate=False)
 
 
+class FlapAtGearUpSelectionDuringGoAround(KeyPointValueNode):
+    '''
+    Flap angle at gear up selection during go around.
+
+    Note that this KPV uses the flap surface angle, not the flap lever angle.
+    '''
+    units = ut.DEGREE
+
+    def derive(self, flap=M('Flap'),
+               gear_up_sel=KTI('Gear Up Selection During Go Around')):
+        self.create_kpvs_at_ktis(flap.array, gear_up_sel, interpolate=False)
+
+
 class FlapWithGearUpMax(KeyPointValueNode):
     '''
     Maximum flap angle while the landing gear is up.

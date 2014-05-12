@@ -1259,44 +1259,77 @@ class TestCoReg(unittest.TestCase):
         self.assertAlmostEqual(offset, -2.54545454545455)
 
 
+class TestPositiveValue(unittest.TestCase):
+    def test_positive_value(self):
+        array = np.arange(10)
+        self.assertEqual(positive_index(array, 0), 0)
+        self.assertEqual(positive_index(array, 5), 5)
+        self.assertEqual(positive_index(array, -3), 7)
+
+
+class TestNextUnmaskedValue(unittest.TestCase):
+    def test_next_unmasked_value(self):
+        # Entirely unmasked
+        array = np.ma.arange(10)
+        self.assertEqual(next_unmasked_value(array, 7), Value(7, 7))
+        # Entirely masked.
+        array.mask = True
+        self.assertEqual(next_unmasked_value(array, 3), None)
+        array.mask = False
+        array.mask[3:8] = True
+        self.assertEqual(next_unmasked_value(array, 4), Value(8, 8))
+
+
+class TestPrevUnmaskedValue(unittest.TestCase):
+    def test_prev_unmasked_value(self):
+        # Entirely unmasked
+        array = np.ma.arange(10)
+        self.assertEqual(prev_unmasked_value(array, 7), Value(7, 7))
+        # Entirely masked.
+        array.mask = True
+        self.assertEqual(prev_unmasked_value(array, 3), None)
+        array.mask = False
+        array.mask[2:8] = True
+        self.assertEqual(prev_unmasked_value(array, 5), Value(1, 1))
+
+
 class TestClosestUnmaskedValue(unittest.TestCase):
     def test_closest_unmasked_value(self):
         array = np.ma.arange(10)
         self.assertEqual(closest_unmasked_value(array, 5), Value(5, 5))
+        # Floors index
+        self.assertEqual(closest_unmasked_value(array, 5.5), Value(5, 5))
         self.assertEqual(closest_unmasked_value(array, -3), Value(7, 7))
         array[5:8] = np.ma.masked
-        self.assertEqual(closest_unmasked_value(array, 6), Value(4, 4))
+        self.assertEqual(closest_unmasked_value(array, 5), Value(4, 4))
         array[5:8] = np.ma.masked
         self.assertEqual(closest_unmasked_value(array, 7), Value(8, 8))
-        self.assertEqual(closest_unmasked_value(array, 3, _slice=slice(2, 5)),
+        self.assertEqual(closest_unmasked_value(array, 3, start_index=2,
+                                                stop_index=5),
                          Value(3, 3))
-        # negative index and slice not supported
-        self.assertRaises(NotImplementedError, closest_unmasked_value,
-                          array, -8, _slice=slice(2, 5))
-        # index out of range
-        self.assertRaises(IndexError, closest_unmasked_value, array, 20)
         
+    def test_closest_unmasked_value_negative_index(self):
+        values = [
+            0, 2503, 5012, 5003, 4968, 4925, 4844, 4893, 4476, 4385, 4395, 4332,
+            4243, 4161, 4106, 4056, 3993, 3934, 3884, 3838, 3814, 3784, 3752,
+            3720, 3688, 3656, 3625, 3597, 3561, 3530, 3502, 3479, 3452, 3425,
+            3389, 3361, 3339, 3307, 3280, 3253, 3221, 3189, 3130, 3103, 3098,
+            3098, 3093, 3084, 3066, 3053, 3039, 3030, 3021, 3003, 2989, 2984,
+            2971, 2962, 2953, 2965, 2971, 2905, 2889, 2867, 2853, 2834, 2900,
+            2767, 2753, 2708, 0,
+        ]
+        array = np.ma.array(values, mask=[True] * 2 + [False] * 68 + [True])
+        self.assertEqual(closest_unmasked_value(array, -25), Value(46, 3093))
+        self.assertEqual(closest_unmasked_value(array, -0.45), Value(69, 2708))
+    
     def test_closest_unmasked_index_relative_to_start(self):
         array = np.ma.arange(10)
-        self.assertEqual(closest_unmasked_value(array, 6, slice(0, None)),
+        self.assertEqual(closest_unmasked_value(array, 6, start_index=0),
                                                 Value(6, 6))
-        self.assertEqual(closest_unmasked_value(array, 6, slice(3, 7)),
-                                                Value(6, 6))
-        # test index out of range
-        self.assertRaises(IndexError, closest_unmasked_value, array, 0, slice(3, 4))
-        self.assertRaises(IndexError, closest_unmasked_value, array, 6, slice(3, 4))
-        self.assertRaises(IndexError, closest_unmasked_value, array, 6, slice(0, 3))
-        self.assertRaises(IndexError, closest_unmasked_value, array, 200, slice(3, 4))
+        self.assertEqual(closest_unmasked_value(array, 6, start_index=3,
+                                                stop_index=7), Value(6, 6))
 
-    def test_negative_step_now_available(self):
-        array = 20.0 - np.ma.arange(20)
-        array[7:19] = np.ma.masked
-        self.assertEqual(closest_unmasked_value(array, 8, slice(18,3,-1)).index, 6)
-        self.assertEqual(closest_unmasked_value(array, 8, slice(16,3,-1)).value, 14.0)
-        self.assertEqual(closest_unmasked_value(array, 8.5, slice(None,3,-1)).index, 6)
-        self.assertEqual(closest_unmasked_value(array, 9, slice(18,None,-1)).index, 6)
-        
-        
+
 class TestActuatorMismatch(unittest.TestCase):
     '''
     Originally written to monitor 737 elevator actuators, this may be
@@ -1847,7 +1880,7 @@ class TestFindEdges(unittest.TestCase):
 
 class TestFindEdgesOnStateChange(unittest.TestCase):
     # Reminder...
-    # find_edges_on_state_change(state, array, change='entering', phase=None)
+    # find_edges_on_state_change(state, array, change='entering', phase=None, min_samples=3)
     class Switch(M):
         values_mapping = {0: 'off', 1: 'on'}
 
@@ -1888,6 +1921,33 @@ class TestFindEdgesOnStateChange(unittest.TestCase):
         multi = self.Switch(array=np.ma.array([0,0,0,0,0,0]))
         edges = find_edges_on_state_change('on', multi.array)
         self.assertEqual(edges, [])
+        
+    def test_min_samples(self):
+        array = np.ma.zeros(30)
+        array[4] = 1  # 1 sample
+        array[7:9] = 1  # 2 samples
+        array[12:15] = 1  # 3 samples
+        array[20:] = 1  # 10 samples
+        array[25] = 0  # single sample while gear "Down" goes to "Up"
+        touchdown = KeyTimeInstance(28, 'Touchdown')
+        gear_down = MappedArray(array, values_mapping={0: 'Up', 1: 'Down'})
+        
+        gear_down_indexes = find_edges_on_state_change(
+            'Down', gear_down, change='entering', phase=[slice(0, touchdown.index)], min_samples=3)
+        self.assertEqual(len(gear_down_indexes), 1)
+        last_state_change = gear_down_indexes[-1]
+        self.assertEqual(last_state_change, 19.5)
+        
+        gear_down_indexes = find_edges_on_state_change(
+                    'Down', gear_down, change='entering', phase=[slice(0, touchdown.index)], min_samples=2)
+        self.assertEqual(gear_down_indexes, [11.5, 19.5])
+        
+        gear_down_indexes = find_edges_on_state_change(
+                    'Down', gear_down, change='entering', phase=[slice(0, touchdown.index)], min_samples=1)
+        self.assertEqual(gear_down_indexes, [6.5, 11.5, 19.5, 25.5])
+                
+        
+        
 
 
 class TestFindTocTod(unittest.TestCase):
@@ -5064,8 +5124,7 @@ class TestStepValues(unittest.TestCase):
         # now this:
         self.assertEqual(list(stepped),
                          [0]*3+[1]+[5]*5+[10]*2+[15]*2+[10]*3+[5]*2+[1]*5+[0]*3)
-                    
-                
+    
     def test_step_move_start(self):
         array = np.ma.array(data=[0]*5+[1,2,3,4]+[5]*5)
         stepped = step_values(array, (0, 4), step_at='move_start')
@@ -5187,16 +5246,43 @@ class TestStepValues(unittest.TestCase):
         self.assertEqual(exc_edges,
             [369.5, 407.5, 421.5, 5732.5, 5839.5, 5938.5, 5945.5, 5995.5, 6024.5])
         
-    def test_flap_transitions_in_masked_data(self):
+    def test_flap_transitions_in_masked_data_1(self):
         # Ensure flap angle is corrected when masked data hides transition
         flap_angle = np.ma.array([0.004763]*30 + [0.0]*100 + [0.99]*200 + list(np.arange(0.99, 0.001, -0.1)) + [0.0]*100)
         flap_angle[30:130] = np.ma.masked
         #flap_angle = np.ma.array([0.004763]*3 + [0.0]*10 + [0.99]*4)
         #flap_angle[3:13] = np.ma.masked
         res = step_values(flap_angle, (0, 1, 5, 15, 20, 25, 30), hz=1, step_at='move_start')
-        self.assertEqual(find_edges(res),
-                         [29.5, 230.5])
-                         
+        self.assertEqual(find_edges(res, direction='all_edges'), [129.5, 330.5])
+    
+    def test_flap_transitions_in_masked_data_2(self):
+        # Ensure flap angle is corrected when masked data hides transition
+        flap_angle = np.ma.concatenate([np.ma.arange(0, 30, 0.1),
+                                        np.ma.arange(30, 0, -0.1)])
+        #flap_angle = np.ma.array([0.004763]*30 + [0.0]*100 + [0.99]*200 + list(np.arange(0.99, 0.001, -0.1)) + [0.0]*100)
+        flap_angle[20:40] = np.ma.masked
+        flap_angle[60:80] = np.ma.masked
+        flap_angle[100:120] = np.ma.masked
+        flap_angle[140:160] = np.ma.masked
+        flap_angle[180:200] = np.ma.masked
+        flap_angle[220:240] = np.ma.masked
+        flap_angle[260:280] = np.ma.masked
+        
+        flap_angle[320:340] = np.ma.masked
+        flap_angle[360:380] = np.ma.masked
+        flap_angle[400:420] = np.ma.masked
+        flap_angle[440:460] = np.ma.masked
+        flap_angle[480:500] = np.ma.masked
+        flap_angle[520:540] = np.ma.masked
+        flap_angle[560:580] = np.ma.masked
+        
+        #flap_angle = np.ma.array([0.004763]*3 + [0.0]*10 + [0.99]*4)
+        #flap_angle[3:13] = np.ma.masked
+        res = step_values(flap_angle, (0, 1, 5, 15, 20, 25, 30), hz=1,
+                          step_at='move_start')
+        self.assertEqual(find_edges(res), [4.5, 16.5, 96.5, 173.5, 216.5, 256.5])
+
+
 class TestCompressIterRepr(unittest.TestCase):
     def test_compress_iter_repr(self):
         self.assertEqual(compress_iter_repr([0,0,1,0,2,2,2], join=' + '),
@@ -5206,7 +5292,7 @@ class TestCompressIterRepr(unittest.TestCase):
         # interesting side effect - int(5.4) == int('5')
         self.assertEqual(compress_iter_repr([4.0, 5.4, '5'], int),
                          "[4]+[5]*2")
-                         
+
 
 class TestStraightenAltitudes(unittest.TestCase):
     def test_alt_basic(self):

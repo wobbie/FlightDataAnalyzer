@@ -258,6 +258,7 @@ from analysis_engine.key_point_values import (
     FlapAt1000Ft,
     FlapAt500Ft,
     FlapAtGearDownSelection,
+    FlapAtGearUpSelectionDuringGoAround,
     FlapAtLiftoff,
     FlapAtTouchdown,
     FlapOrConfigurationMaxOrMin,
@@ -6937,6 +6938,43 @@ class TestFlapAtGearDownSelection(unittest.TestCase, NodeTest):
             KeyPointValue(index=30.25, value=30, name=name),
         ]))
 
+
+
+class TestFlapAtGearUpSelectionDuringGoAround(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = FlapAtGearUpSelectionDuringGoAround
+        self.operational_combinations = [('Flap', 'Gear Up Selection During Go Around')]
+
+    def test_derive(self):
+        array = np.ma.repeat((0, 1, 5, 15, 20, 25, 30), 5)
+        mapping = {int(f): str(f) for f in np.ma.unique(array)}
+        flap = M(name='Flap', array=array, values_mapping=mapping)
+        flap.array[29] = np.ma.masked
+        gear = KTI(name='Gear Up Selection During Go Around', items=[
+            KeyTimeInstance(index=19.25, name='Gear Up Selection During Go Around'),
+            KeyTimeInstance(index=19.75, name='Gear Up Selection During Go Around'),
+            KeyTimeInstance(index=20.00, name='Gear Up Selection During Go Around'),
+            KeyTimeInstance(index=20.25, name='Gear Up Selection During Go Around'),
+            KeyTimeInstance(index=29.25, name='Gear Up Selection During Go Around'),
+            KeyTimeInstance(index=29.75, name='Gear Up Selection During Go Around'),
+            KeyTimeInstance(index=30.00, name='Gear Up Selection During Go Around'),
+            KeyTimeInstance(index=30.25, name='Gear Up Selection During Go Around'),
+        ])
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(flap, gear)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=19.25, value=15, name=name),
+            KeyPointValue(index=19.75, value=20, name=name),
+            KeyPointValue(index=20.00, value=20, name=name),
+            KeyPointValue(index=20.25, value=20, name=name),
+            # Note: Index 29 is masked so we get a value of 30, not 25!
+            KeyPointValue(index=29.25, value=30, name=name),
+            KeyPointValue(index=29.75, value=30, name=name),
+            KeyPointValue(index=30.00, value=30, name=name),
+            KeyPointValue(index=30.25, value=30, name=name),
+        ]))
 
 class TestFlapOrConfigurationMaxOrMin(unittest.TestCase):
     

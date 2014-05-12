@@ -373,6 +373,7 @@ def split_segments(hdf):
 
     segments = []
     start = 0
+    last_fast_index = None
     for slow_slice in slow_slices:
         if slow_slice.start == 0:
             # Do not split if slow_slice is at the beginning of the data.
@@ -382,6 +383,13 @@ def split_segments(hdf):
         if slow_slice.stop == len(airspeed_array):
             # After the loop we will add the remaining data to a segment.
             break
+        
+        if last_fast_index is not None:
+            fast_duration = (slow_slice.start - last_fast_index) / airspeed.frequency
+            if fast_duration < settings.MINIMUM_FAST_DURATION:
+                logger.info("Disregarding short period of fast airspeed %s",
+                            fast_duration)
+                continue
 
         # Get start and stop at 1Hz.
         slice_start_secs = slow_slice.start / airspeed.frequency
@@ -394,6 +402,8 @@ def split_segments(hdf):
                         "('%s').", settings.AIRSPEED_THRESHOLD, slow_duration,
                         settings.MINIMUM_SPLIT_DURATION)
             continue
+        
+        last_fast_index = slow_slice.stop
 
         # Find split based on minimum of engine parameters.
         if split_params_min is not None:
@@ -544,7 +554,7 @@ def _calculate_start_datetime(hdf, fallback_dt=None):
         else:
             raise TimebaseError("Required parameter '%s' not available" % name)
 
-    length = max([len(array) for array in dt_arrays])
+    length = max([len(a) for a in dt_arrays])
     if length > 1:
         # ensure all arrays are the same length
         for n, arr in enumerate(dt_arrays):
@@ -620,7 +630,7 @@ def append_segment_info(hdf_segment_path, segment_type, segment_slice, part,
     """
     # build information about a slice
     with hdf_file(hdf_segment_path) as hdf:
-        airspeed = hdf['Airspeed'].array
+        airspeed = hdf['Airspeed']
         duration = hdf.duration
         # For now, raise TimebaseError up rather than using EPOCH
         # TODO: Review whether to revert to epoch again.
@@ -636,13 +646,14 @@ def append_segment_info(hdf_segment_path, segment_type, segment_slice, part,
     if segment_type in ('START_AND_STOP', 'START_ONLY', 'STOP_ONLY'):
         # we went fast, so get the index
         spd_above_threshold = \
-            np.ma.where(airspeed > settings.AIRSPEED_THRESHOLD)
-        go_fast_index = spd_above_threshold[0][0]
+            np.ma.where(airspeed.array > settings.AIRSPEED_THRESHOLD)
+        go_fast_index = spd_above_threshold[0][0] / airspeed.frequency
         go_fast_datetime = \
             start_datetime + timedelta(seconds=int(go_fast_index))
         # Identification of raw data airspeed hash
-        airspeed_hash_sections = runs_of_ones(airspeed.data > settings.AIRSPEED_THRESHOLD)
-        airspeed_hash = hash_array(airspeed.data,airspeed_hash_sections,
+        airspeed_hash_sections = runs_of_ones(airspeed.array.data >
+                                              settings.AIRSPEED_THRESHOLD)
+        airspeed_hash = hash_array(airspeed.array.data, airspeed_hash_sections,
                                    settings.AIRSPEED_HASH_MIN_SAMPLES)
     #elif segment_type == 'GROUND_ONLY':
         ##Q: Create a groundspeed hash?
