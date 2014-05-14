@@ -1212,6 +1212,8 @@ def positive_index(container, index):
     
     if index < 0:
         index += len(container)
+    elif index >= len(container):
+        index = len(container) - 1
     
     return index
 
@@ -1289,6 +1291,11 @@ def closest_unmasked_value(array, index, start_index=None, stop_index=None):
     
     if not array.mask[index]:
         return Value(floor(index), array[index])
+    
+    if start_index and stop_index:
+        # Fix invalid index ranges, I assume slice.step was -1.
+        start_index = min(start_index, stop_index)
+        stop_index = max(start_index, stop_index)
     
     # Normalise indices.
     start_index = positive_index(array, start_index)
@@ -6474,9 +6481,15 @@ def index_at_value(array, threshold, _slice=slice(None), endpoint='exact'):
             # Rescan the data to find the last point where the array data is
             # closing.
             diff = np.ma.ediff1d(array[_slice])
+            if _slice.step >= 0:
+                start_index = _slice.start
+                stop_index = _slice.stop
+            else:
+                start_index = _slice.stop
+                stop_index = _slice.start
             value = closest_unmasked_value(array, _slice.start or 0,
-                                           start_index=_slice.start,
-                                           stop_index=_slice.stop)
+                                           start_index=start_index,
+                                           stop_index=stop_index)
             if value:
                 value = value.value
             else:

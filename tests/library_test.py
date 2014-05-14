@@ -1307,6 +1307,8 @@ class TestClosestUnmaskedValue(unittest.TestCase):
         self.assertEqual(closest_unmasked_value(array, 3, start_index=2,
                                                 stop_index=5),
                          Value(3, 3))
+        # Handles index out of range
+        self.assertEqual(closest_unmasked_value(array, 10), Value(9, 9))
         
     def test_closest_unmasked_value_negative_index(self):
         values = [
