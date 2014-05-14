@@ -649,14 +649,14 @@ def append_segment_info(hdf_segment_path, segment_type, segment_slice, part,
     with hdf_file(hdf_segment_path) as hdf:
         airspeed = hdf['Airspeed']
         duration = hdf.duration
-        # For now, raise TimebaseError up rather than using EPOCH
-        # TODO: Review whether to revert to epoch again.
-        ##try:
-        start_datetime = _calculate_start_datetime(hdf, fallback_dt)
-        ##except TimebaseError:
-            ##logger.warning("Unable to calculate timebase, using epoch "
-                           ##"1.1.1970!")
-            ##start_datetime = datetime.fromtimestamp(0)
+        try:
+            start_datetime = _calculate_start_datetime(hdf, fallback_dt)
+        except TimebaseError:
+            # Warn the user and store the fake datetime. The code on the other
+            # side should check the datetime and avoid processing this file
+            logger.warning('Unable to calculate timebase, using '
+                           '1970-01-01 00:00:00+0000!')
+            start_datetime = datetime.utcfromtimestamp(0)
         stop_datetime = start_datetime + timedelta(seconds=duration)
         hdf.start_datetime = start_datetime
 
