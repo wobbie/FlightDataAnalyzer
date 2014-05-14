@@ -653,7 +653,7 @@ class Eng_Fire(MultistateDerivedParameterNode):
 
 class Eng_Oil_Press_Warning(MultistateDerivedParameterNode):
     '''
-    Combine all oil pressure warning indications.
+    Combine all oil pressure (low) warning indications.
     '''
 
     name = 'Eng (*) Oil Press Warning'
@@ -1098,7 +1098,7 @@ class Flaperon(MultistateDerivedParameterNode):
         try:
             at.get_aileron_map(model.value, series.value, family.value)
         except KeyError:
-            cls.debug("No aileron mapping available for '%s', '%s', '%s'.",
+            cls.debug("No aileron/flaperon mapping available for '%s', '%s', '%s'.",
                       model.value, series.value, family.value)
             return False
 
