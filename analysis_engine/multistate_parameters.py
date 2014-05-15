@@ -1899,26 +1899,6 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
             raise ValueError("Can't work without either Speedbrake or Handle")
         return array
 
-    @staticmethod
-    def b757_767_speedbrake(handle):
-        '''
-        Speedbrake Handle Positions for 757 & 767:
-
-            ========    ============
-              %           Notes
-            ========    ============
-               0.0        Full Forward
-              15.0        Armed
-             100.0        Full Up
-            ========    ============
-        '''
-        # Speedbrake Handle only
-        armed = np.ma.where((12.0 < handle.array) & (handle.array < 25.0),
-                            'Armed/Cmd Dn', 'Stowed')
-        array = np.ma.where(handle.array >= 25.0,
-                            'Deployed/Cmd Up', armed)
-        return array
-
     @classmethod
     def bd100_speedbrake(cls, handle_array, spoiler_gnd_armed_array):
         '''
@@ -1996,8 +1976,13 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         elif 'B737' in family_name:
             self.array = self.b737_speedbrake(spdbrk, handle)
 
-        elif family_name in ['B757', 'B767']:
-            self.array = self.b757_767_speedbrake(handle)
+        elif family_name == 'B757':
+            self.array = self.derive_from_handle(handle.array, deployed=25,
+                                                 armed=12)
+        
+        elif family_name == 'B767':
+            self.array = self.derive_from_handle(handle.array, deployed=45,
+                                                 armed=12)
         
         elif family_name == 'B777':
             self.array = self.derive_from_handle(handle.array, deployed=10,
