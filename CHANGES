@@ -7,6 +7,11 @@ release will have included many additional new features and improvements.
 You can view the differences in tagged versions as follows:
 
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
+  
+V0.11.3
+-------
+ - Fix to closest_unmasked_index to resolve problems with low frequency and 
+   high offset parameters creating KPV's ouside of segment slice.
 
 v0.11.2
 -------
