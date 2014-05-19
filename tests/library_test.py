@@ -4742,6 +4742,247 @@ class TestSlicesFromTo(unittest.TestCase):
         self.assertEqual(slices, [])
         _, slices = slices_from_to(array, 6, 4)
         self.assertEqual(slices, [])
+    
+    def test_slices_from_to_single_sample(self):
+        '''
+        Single samples will only be detected if there is an unmasked sample
+        before and an unmasked sample after.
+        '''
+        array = np.ma.array([7,5,3,1], mask=[False] * 4)
+        # Start of array.
+        _, slices = slices_from_to(array, 8, 6)
+        self.assertEqual(slices, [])
+        # End of array.
+        _, slices = slices_from_to(array, 2, 0)
+        self.assertEqual(slices, [])
+        # Within array.
+        _, slices = slices_from_to(array, 4, 2)
+        self.assertEqual(slices, [slice(2,3)])
+        # Masked before.
+        array.mask[0:2] = True
+        _, slices = slices_from_to(array, 4, 2)
+        self.assertEqual(slices, [])
+        # Masked after.
+        array.mask[0:2] = False
+        array.mask[3] = True
+        _, slices = slices_from_to(array, 4, 2)
+        self.assertEqual(slices, [])
+        # Masked before and after.
+        array.mask[0:2] = True
+        array.mask[3] = True
+        _, slices = slices_from_to(array, 4, 2)
+        self.assertEqual(slices, [])
+    
+    def test_slices_from_to_two_samples(self):
+        '''
+        #Single samples will only be detected if there is an unmasked sample
+        #before and an unmasked sample after.
+        '''
+        array = np.ma.array([9, 7, 5, 3, 1], mask=[False] * 5)
+        # Start of array.
+        _, slices = slices_from_to(array, 10, 6)
+        self.assertEqual(slices, [slice(0, 2)])
+        # End of array.
+        _, slices = slices_from_to(array, 4, 0)
+        self.assertEqual(slices, [slice(3, 5)])
+        # Within array.
+        _, slices = slices_from_to(array, 6, 2)
+        self.assertEqual(slices, [slice(2, 4)])
+        # Masked before.
+        array.mask[0:2] = True
+        _, slices = slices_from_to(array, 6, 2)
+        self.assertEqual(slices, [slice(2, 4)])
+        # Masked after.
+        array.mask[0:2] = False
+        array.mask[4] = True
+        _, slices = slices_from_to(array, 6, 2)
+        self.assertEqual(slices, [slice(2, 4)])
+        # Masked before and after.
+        array.mask[0:2] = True
+        array.mask[4] = True
+        _, slices = slices_from_to(array, 6, 2)
+        self.assertEqual(slices, [slice(2, 4)])
+    
+    def test_slices_from_to_dip(self):
+        array = np.ma.array([10, 8, 6, 4, 2, 4, 6, 8, 10])
+        _, slices = slices_from_to(array, 9, 3)
+        self.assertEqual(slices, [slice(1, 4)])
+        _, slices = slices_from_to(array, 9, 0)
+        self.assertEqual(slices, [slice(1, 4)])
+        _, slices = slices_from_to(array, 3, 9)
+        self.assertEqual(slices, [slice(5, 8)])
+        _, slices = slices_from_to(array, 0, 9)
+        self.assertEqual(slices, [slice(4, 8)])
+        # Multiple curves.
+        array = np.ma.array([10, 8, 6, 4, 5, 6, 7, 8, 6, 4, 2, 4, 6, 8, 10])
+        _, slices = slices_from_to(array, 9, 1)
+        self.assertEqual(slices, [slice(1, 10)])
+        _, slices = slices_from_to(array, 1, 9)
+        self.assertEqual(slices, [slice(10, 14)])
+        array = np.ma.array([10, 8, 6, 4, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 6, 8,
+                             10])
+        _, slices = slices_from_to(array, 9, 1)
+        self.assertEqual(slices, [slice(1, 4)])
+        _, slices = slices_from_to(array, 1, 9)
+        self.assertEqual(slices, [slice(4, 17)])
+    
+    def test_slices_from_to_peak(self):
+        array = np.ma.array([2, 4, 6, 8, 10, 8, 6, 4, 2])
+        #_, slices = slices_from_to(array, 9, 3)
+        #self.assertEqual(slices, [slice(5, 8)])
+        _, slices = slices_from_to(array, 9, 0)
+        self.assertEqual(slices, [slice(5, 9)])
+        _, slices = slices_from_to(array, 3, 9)
+        self.assertEqual(slices, [slice(1, 4)])
+        _, slices = slices_from_to(array, 0, 9)
+        self.assertEqual(slices, [slice(0, 4)])
+    
+    def test_slices_from_to_only_within_range(self):
+        array = np.ma.array([5, 5, 5, 5, 5, 5, 5, 5, 5])
+        # level data should not be considered as changing from one value
+        # to another
+        _, slices = slices_from_to(array, 9, 3)
+        self.assertEqual(slices, [])
+        _, slices = slices_from_to(array, 3, 9)
+        self.assertEqual(slices, [])
+        array[:2] = np.ma.masked
+        _, slices = slices_from_to(array, 3, 9)
+        self.assertEqual(slices, [])
+        array[-3:] = np.ma.masked
+        _, slices = slices_from_to(array, 9, 0)
+        self.assertEqual(slices, [])
+        # data does not cross through midpoint
+        array = np.ma.array([5, 6, 5, 6, 5, 6, 5, 6, 5])
+        _, slices = slices_from_to(array, 3, 9)
+        self.assertEqual(slices, [])
+        # data crosses through midpoint, but has indeterminate direction
+        # XXX: could dissect data, but this would complicate the algorithm
+        # further.
+        array = np.ma.array([5, 6, 7, 8, 7, 6, 5, 4, 5])
+        _, slices = slices_from_to(array, 3, 9)
+        self.assertEqual(slices, [])
+        # data crosses through midpoint and appears to be linear.
+        # linear climbing
+        array = np.ma.array([2, 3, 4, 5, 6, 7, 8])
+        _, slices = slices_from_to(array, 1, 9)
+        self.assertEqual(slices, [slice(0, 7)])
+        array[:2] = np.ma.masked
+        _, slices = slices_from_to(array, 1, 9)
+        self.assertEqual(slices, [slice(2, 7)])
+        array[-1:] = np.ma.masked
+        _, slices = slices_from_to(array, 1, 9)
+        self.assertEqual(slices, [slice(2, 6)])
+        # linear descending
+        array = np.ma.array([8, 7, 6, 5, 4, 3, 2])
+        _, slices = slices_from_to(array, 9, 1)
+        self.assertEqual(slices, [slice(0, 7)])
+        array[:2] = np.ma.masked
+        _, slices = slices_from_to(array, 9, 1)
+        self.assertEqual(slices, [slice(2, 7)])
+        array[-1:] = np.ma.masked
+        _, slices = slices_from_to(array, 9, 1)
+        self.assertEqual(slices, [slice(2, 6)])
+    
+    def test_slices_from_to_starts_within_range(self):
+        # stops outside of range
+        # linear climbing
+        array = np.ma.array([5, 6, 7, 8, 9, 10])
+        # wrong direction
+        _, slices = slices_from_to(array, 9, 2)
+        self.assertEqual(slices, [])
+        # right direction
+        _, slices = slices_from_to(array, 2, 9)
+        self.assertEqual(slices, [slice(0, 4)])
+        array[:2] = np.ma.masked
+        _, slices = slices_from_to(array, 2, 9)
+        self.assertEqual(slices, [slice(2, 4)])
+        # linear descending
+        array = np.ma.array([10, 9, 8, 7, 6, 5])
+        # wrong direction
+        _, slices = slices_from_to(array, 6, 12)
+        self.assertEqual(slices, [])
+        # right direction
+        _, slices = slices_from_to(array, 12, 6)
+        self.assertEqual(slices, [slice(0, 4)])
+        array[:2] = np.ma.masked
+        _, slices = slices_from_to(array, 12, 6)
+        self.assertEqual(slices, [slice(2, 4)])
+        # dip curve
+        array = np.ma.array([10, 9, 8, 7, 6, 5, 6, 7, 8, 9, 10, 11, 12])
+        _, slices = slices_from_to(array, 11, 2)
+        self.assertEqual(slices, [slice(0, 5)])
+        _, slices = slices_from_to(array, 2, 11)
+        self.assertEqual(slices, [slice(5, 11)])
+        # peak curve
+        array = np.ma.array([10, 11, 12, 13, 14, 15, 14, 13, 12, 11, 10, 9, 8])
+        _, slices = slices_from_to(array, 17, 9)
+        self.assertEqual(slices, [slice(5, 11)])
+        _, slices = slices_from_to(array, 9, 17)
+        self.assertEqual(slices, [slice(0, 5)])
+    
+    def test_slices_from_to_stops_within_range(self):
+        # stops outside of range
+        # linear climbing
+        array = np.ma.array([5, 6, 7, 8, 9, 10])
+        # wrong direction
+        _, slices = slices_from_to(array, 12, 6)
+        self.assertEqual(slices, [])
+        # right direction
+        _, slices = slices_from_to(array, 6, 12)
+        self.assertEqual(slices, [slice(2, 6)])
+        array[:2] = np.ma.masked
+        _, slices = slices_from_to(array, 6, 12)
+        self.assertEqual(slices, [slice(2, 6)])
+        # linear descending
+        array = np.ma.array([10, 9, 8, 7, 6, 5])
+        # wrong direction
+        _, slices = slices_from_to(array, 2, 9)
+        self.assertEqual(slices, [])
+        # right direction
+        _, slices = slices_from_to(array, 9, 2)
+        self.assertEqual(slices, [slice(2, 6)])
+        array[:3] = np.ma.masked
+        _, slices = slices_from_to(array, 9, 2)
+        self.assertEqual(slices, [slice(3, 6)])
+        # dip curve
+        array = np.ma.array([12, 11, 10, 9, 8, 7, 6, 5, 6, 7, 8, 9, 10])
+        _, slices = slices_from_to(array, 11, 2)
+        self.assertEqual(slices, [slice(2, 7)])
+        _, slices = slices_from_to(array, 2, 11)
+        self.assertEqual(slices, [slice(7, 13)])
+        # peak curve
+        array = np.ma.array([8, 9, 10, 11, 12, 13, 14, 15, 14, 13, 12, 11, 10])
+        _, slices = slices_from_to(array, 17, 9)
+        self.assertEqual(slices, [slice(7, 13)])
+        _, slices = slices_from_to(array, 9, 17)
+        self.assertEqual(slices, [slice(2, 7)])
+    
+    def test_slices_from_to_only_outside_of_range(self):
+        array = np.ma.array([5, 5, 5, 5, 5, 5, 5, 5, 5])
+        _, slices = slices_from_to(array, 2, 4)
+        self.assertEqual(slices, [])
+        _, slices = slices_from_to(array, 4, 0)
+        self.assertEqual(slices, [])
+        _, slices = slices_from_to(array, 6, 20)
+        self.assertEqual(slices, [])
+        _, slices = slices_from_to(array, 15, 7)
+        self.assertEqual(slices, [])
+    
+    def test_slices_from_to_invalid_range(self):
+        array = np.ma.arange(10)
+        self.assertRaises(ValueError, slices_from_to, array, 2, 2)
+        self.assertRaises(ValueError, slices_from_to, array, -2, -2)
+    
+    def test_slices_from_to_alt_aal(self):
+        '''
+        Altitude AAL features a Go Around which provides an example of a dip
+        in real data.
+        '''
+        alt_aal = load(os.path.join(test_data_path,
+                                    'slices_from_to_alt_aal.nod'))
+        _, slices = slices_from_to(alt_aal.array, 1000, 20)
+        self.assertEqual(slices, [slice(9340, 9448),
+                                  slice(10625, 10774)])
 
 
 class TestSlicesFromKtis(unittest.TestCase):

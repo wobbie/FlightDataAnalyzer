@@ -5691,11 +5691,8 @@ def slices_from_to(array, from_, to):
     '''
     Get slices of the array where values are between from_ and to, and either
     ascending or descending depending on whether from_ is greater than or less
-    than to. For instance, slices_from_to(array, 1000, 1500) is ascending and
-    requires will only return slices where values are between 1000 and 1500 if
-    the value in the array at the start of the slice is less than the value at
-    the stop. The opposite condition would be applied if the arguments are
-    descending, e.g. slices_from_to(array, 1500, 1000).
+    than to. Dips and peaks into the range will create slices where the
+    direction of the array matches from_ and to.
 
     :param array:
     :type array: np.ma.masked_array
@@ -5706,33 +5703,91 @@ def slices_from_to(array, from_, to):
     :returns: Slices of the array where values are between from_ and to and either ascending or descending depending on comparing from_ and to.
     :rtype: list of slice
     '''
-
+    
     if from_ == to:
         raise ValueError('From and to values should not be equal.')
-
-    def condition(s):
-        start_v = rep_array[s.start]
-        mid_v = rep_array[(s.start+s.stop)/2]
-        end_v = array[s.stop - 1]
-
-        if len(array[s]) == 1:
-            if s.start:
-                start_v = array[s.start - 1]
-            if s.stop and s.stop < len(array):
-                end_v = array[s.stop]
-
-        if from_ > to:
-            return start_v >= mid_v >= end_v
-        else:
-            return start_v <= mid_v <= end_v
-
-    if len(array) == 0:
+    elif len(array) == 0:
         return array, []
+    
+    # Find the minimum and maximum of the range without knowing direction.
+    range_min = min(from_, to)
+    range_max = max(from_, to)
+    
     rep_array, slices = slices_between(array, from_, to)
-    # Midpoint conditions added to lambda to prevent data that just dips into
-    # a band triggering.
+    rep_array.mask = np.ma.getmaskarray(rep_array)
+    
+    filtered_slices = []
+    for _slice in slices:
+        
+        if len(array[_slice]) == 1:
+            # If only a single sample matches, we must compare the sample
+            # before and after to ascertain direction.
+            test_slice = slice(_slice.start - 1, _slice.stop + 1)
+            if sum(np.invert(rep_array.mask[test_slice])) != 3:
+                # Skip slice without 3 unmasked samples.
+                continue
+        else:
+            test_slice = _slice
+        
+        # Calculate the following variables to work out if _slice is linear,
+        # dip or peak.
+        # Check if the start and stop of the slice are either masked or
+        # at an array boundary.
+        starts_within_range = (test_slice.start == 0 or
+                               rep_array.mask[test_slice.start - 1])
+        stops_within_range = (test_slice.stop == len(array) or
+                              rep_array.mask[test_slice.stop])
+        start_value = array[test_slice.start]
+        stop_value = array[test_slice.stop - 1]
+        # Check if the start and stop are in the upper or lower half of the
+        # range to attempt to discern direction.
+        start_max = abs(start_value - range_max) < abs(start_value - range_min)
+        stop_max = abs(stop_value - range_max) < abs(stop_value - range_min)
+        # The section is considered to be linear if it transitions from one
+        # half of the range to the other between the start and stop. Sections
+        # not matching this condition are considered to have no clear direction.
+        linear = sum([start_max, stop_max]) == 1
+        
+        slice_start = _slice.start
+        slice_stop = _slice.stop
+        
+        if starts_within_range and stops_within_range and not linear:
+            # data is curved but does not enter range at start or stop.
+            # we could dissect further, but it's already complicated.
+            continue
+        elif linear:
+            # linear
+            if from_ > to and not start_max:
+                # descending wrong direction
+                continue
+            elif from_ < to and not stop_max:
+                # climbing wrong direction
+                continue
+        elif ((starts_within_range and stop_max) or 
+              (stops_within_range and start_max) or 
+              (start_max and stop_max)):
+            # treat as dip
+            min_index = min_value(rep_array, _slice=test_slice).index
+            if from_ > to:
+                # descending
+                slice_stop = min_index
+            else:
+                # climbing
+                slice_start = min_index
+        elif ((starts_within_range and not stop_max) or
+              (stops_within_range and not start_max) or
+              (not start_max and not stop_max)):
+            # treat as peak
+            max_index = max_value(rep_array, _slice=test_slice).index
+            if from_ > to:
+                # descending
+                slice_start = max_index
+            else:
+                # climbing
+                slice_stop = max_index
 
-    filtered_slices = filter(condition, slices)
+        filtered_slices.append(slice(slice_start, slice_stop))
+    
     return rep_array, filtered_slices
 
 
