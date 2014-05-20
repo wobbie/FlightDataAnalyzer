@@ -5523,7 +5523,16 @@ class TestStepValues(unittest.TestCase):
         #flap_angle[3:13] = np.ma.masked
         res = step_values(flap_angle, (0, 1, 5, 15, 20, 25, 30), hz=1,
                           step_at='move_start')
-        self.assertEqual(find_edges(res), [4.5, 16.5, 96.5, 173.5, 216.5, 256.5])
+        self.assertEqual(find_edges(res), [4.5, 38.5, 119.5, 173.5, 238.5, 278.5])
+    
+    def test_step_values_masked_end(self):
+        array = np.ma.load(os.path.join(test_data_path,
+                                        'step_values_flap_masked_end.npy'))
+        # unsorted steps matches original input during process flight.
+        steps = [0, 1, 2, 5, 40, 10, 15, 25, 30]
+        res = step_values(array, steps, step_at='move_start')
+        self.assertEqual(res[11000:11087].tolist(), [30] * 7 + [0] * 80)
+        self.assertTrue(res.mask[11087:].all())
 
 
 class TestCompressIterRepr(unittest.TestCase):

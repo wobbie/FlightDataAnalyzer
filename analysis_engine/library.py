@@ -6087,12 +6087,17 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
     for prev_midpoint, (flap_midpoint, direction), next_midpoint in izip_longest(
         [0] + flap_changes[0:-1], sorted_transitions, flap_changes[1:]):
         prev_flap = prev_unmasked_value(stepped_array, floor(flap_midpoint),
-                                        start_index=floor(prev_midpoint)).value
+                                        start_index=floor(prev_midpoint))
         stop_index = ceil(next_midpoint) if next_midpoint else None
         next_flap = next_unmasked_value(stepped_array, ceil(flap_midpoint),
                                         stop_index=stop_index).value
         is_masked = (array[floor(flap_midpoint)] is np.ma.masked or
                      array[ceil(flap_midpoint)] is np.ma.masked)
+        
+        if is_masked:
+            new_array[prev_midpoint:prev_flap.index] = prev_flap.value
+            prev_midpoint = prev_flap.index
+        
         if direction == 'increase':
             # looking for where positive change reduces to this value
             roc_to_seek_for = 0.1
@@ -6101,7 +6106,7 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
             roc_to_seek_for = -0.1
 
         # allow a change to be 5% before the flap is reached
-        flap_tolerance = (abs(prev_flap - next_flap) * 0.05)
+        flap_tolerance = (abs(prev_flap.value - next_flap) * 0.05)
 
         if (is_masked and direction == 'decrease'
             or step_at == 'move_start'
@@ -6117,7 +6122,7 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
                 flap_tolerance *= -1
 
             roc_idx = index_at_value(roc, roc_to_seek_for, scan_rev, endpoint='closest')
-            val_idx = index_at_value(array, prev_flap + flap_tolerance, scan_rev, endpoint='closest') #???
+            val_idx = index_at_value(array, prev_flap.value + flap_tolerance, scan_rev, endpoint='closest') #???
             idx = max(val_idx, roc_idx) or flap_midpoint
 
         elif (is_masked and direction == 'increase'
