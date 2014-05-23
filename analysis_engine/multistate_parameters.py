@@ -1013,14 +1013,13 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
         try:
             angles = at.get_conf_angles(model.value, series.value, family.value)
         except KeyError:
-            pass  # try lever map
-
-        try:
-            angles = at.get_lever_angles(model.value, series.value, family.value)
-        except KeyError:
-            cls.warning("No lever angles available for '%s', '%s', '%s'.",
-                        model.value, series.value, family.value)
-            return False
+            # try lever map if no conf
+            try:
+                angles = at.get_lever_angles(model.value, series.value, family.value)
+            except KeyError:
+                cls.warning("No lever angles available for '%s', '%s', '%s'.",
+                            model.value, series.value, family.value)
+                return False
         
         can_operate = True
         
