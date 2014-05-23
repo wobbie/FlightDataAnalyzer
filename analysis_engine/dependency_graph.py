@@ -127,14 +127,16 @@ def dependencies3(di_graph, root, node_mgr):
     :param node_mgr: Node manager which can assess whether nodes are operational with the available dependencies at each layer of the tree.
     :type node_mgr: analysis_engine.node.NodeManager
     '''
+    log_stuff = logger.getEffectiveLevel() >= logging.INFO
     def traverse_tree(node):
         "Begin the recursion at this node's position in the dependency tree"
         if node in path:
             # add node for it to be removed (pop'd) in a moment
             path.append(node)
             # we've met this node before; start of circular dependency?
-            logger.info("Circular dependency avoided at node '%s'. "
-                        "Branch path: %s", node, path)
+            if log_stuff:
+                logger.info("Circular dependency avoided at node '%s'. "
+                            "Branch path: %s", node, path)
             return False  # establishing if available; cannot yet be available
         # we're recursing down
         path.append(node)
