@@ -494,6 +494,7 @@ def process_flight(hdf_path, tail_number, aircraft_info={},
 
     # open HDF for reading
     with hdf_file(hdf_path) as hdf:
+        hdf.start_datetime = start_datetime
         if hooks.PRE_FLIGHT_ANALYSIS:
             logger.info("Performing PRE_FLIGHT_ANALYSIS actions: %s",
                         hooks.PRE_FLIGHT_ANALYSIS.func_name)
