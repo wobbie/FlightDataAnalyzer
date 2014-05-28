@@ -262,12 +262,12 @@ class APVerticalMode(MultistateDerivedParameterNode):
     
     @classmethod
     def can_operate(cls, available):
-        return any_of(('Climb Active',
+        return any_of(('AT Active',
+                       'Climb Mode Active',
                        'Longitudinal Mode Selected',
                        'ILS Glideslope Capture Active',
                        'ILS Glideslope Active',
                        'Flare Mode',
-                       'AT Active',
                        'Open Climb Mode',
                        'Open Descent Mode',
                        'Altitude Capture Mode',
@@ -276,19 +276,19 @@ class APVerticalMode(MultistateDerivedParameterNode):
                        'Expedite Descent Mode'), available)
     
     def derive(self,
-               climb_active=M('Climb Active'),
+               at_active=M('AT Active'),
+               climb_mode_active=M('Climb Mode Active'),
                longitudinal_mode_selected=M('Longitudinal Mode Selected'),
                ils_glideslope_capture_active=M('ILS Glideslope Capture Active'),
                ils_glideslope_active=M('ILS Glideslope Active'),
                flare_mode=M('Flare Mode'),
-               at_active=M('AT Active'),
                open_climb_mode=M('Open Climb Mode'),
                open_descent_mode=M('Open Descent Mode'),
                altitude_capture_mode=M('Altitude Capture Mode'),
                altitude_mode=M('Altitude Mode'),
                expedite_climb_mode=M('Expedite Climb Mode'),
                expedite_descent_mode=M('Expedite Descent Mode')):
-        parameter = next(p for p in (climb_active,
+        parameter = next(p for p in (climb_mode_active,
                                      longitudinal_mode_selected,
                                      ils_glideslope_capture_active,
                                      ils_glideslope_active,
@@ -302,8 +302,10 @@ class APVerticalMode(MultistateDerivedParameterNode):
                                      expedite_descent_mode) if p)
         self.array = np_ma_zeros_like(parameter.array)
         
-        if climb_active:
-            self.array[climb_active.array == 'Activated'] = 'CLB'
+        if at_active:
+            self.array[at_active.array == 'Activated'] = 'DES'
+        if climb_mode_active:
+            self.array[climb_mode_active.array == 'Activated'] = 'CLB'
         if longitudinal_mode_selected:
             self.array[longitudinal_mode_selected.array == 'Altitude'] = 'ALT CSTR'
             self.array[longitudinal_mode_selected.array == 'Final Descent Mode'] = 'FINAL'
@@ -316,8 +318,6 @@ class APVerticalMode(MultistateDerivedParameterNode):
             self.array[ils_glideslope_active.array == 'Activated'] = 'GS'
         if flare_mode:
             self.array[flare_mode.array == 'Engaged'] = 'FLARE'
-        if at_active:
-            self.array[at_active.array == 'Activated'] = 'DES'
         if open_climb_mode:
             self.array[open_climb_mode.array == 'Activated'] = 'OP CLB'
         if open_descent_mode:
