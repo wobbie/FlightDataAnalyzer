@@ -21,6 +21,7 @@ from analysis_engine.settings import (ACCEL_LAT_OFFSET_LIMIT,
                                       NAME_VALUES_CONF,
                                       NAME_VALUES_ENGINE,
                                       NAME_VALUES_LEVER,
+                                      RATE_OF_TURN_FOR_TAXI_TURNS,
                                       REVERSE_THRUST_EFFECTIVE_EPR,
                                       REVERSE_THRUST_EFFECTIVE_N1,
                                       SPOILER_DEPLOYED,
@@ -8012,7 +8013,9 @@ class GroundspeedWhileTaxiingStraightMax(KeyPointValueNode):
 
 class GroundspeedWhileTaxiingTurnMax(KeyPointValueNode):
     '''
-    '''
+    The rate of change of heading used to detect a turn during taxi is %.2f
+    degrees per second.
+    ''' % RATE_OF_TURN_FOR_TAXI_TURNS
 
     units = ut.KT
 
