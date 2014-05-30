@@ -1271,7 +1271,8 @@ class V2VariationMax(KeyPointValueNode):
     def derive(self,
                v2_rec=P('V2'),
                v2_tbl=P('V2 Lookup')):
-
+        
+        # Q: Use Airspeed Selected?
         self.create_kpv_from_slices(
             v2_rec.array - v2_tbl.array,
             [slice(0, len(v2_rec.array))],

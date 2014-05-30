@@ -7134,15 +7134,13 @@ class AirspeedMinusV2(DerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
 
-        return all_of((
-            'Airspeed',
-            'Liftoff',
-            'Climb Start',
-        ), available) and any_of(('V2', 'V2 Lookup'), available)
+        return (all_of(('Airspeed', 'Liftoff', 'Climb Start', ), available) and
+                any_of(('V2', 'Airspeed Selected', 'V2 Lookup'), available))
 
     def derive(self,
                airspeed=P('Airspeed'),
                v2_recorded=P('V2'),
+               airspeed_selected=P('Airspeed Selected'),
                v2_lookup=P('V2 Lookup'),
                liftoffs=KTI('Liftoff'),
                climb_starts=KTI('Climb Start')):
@@ -7157,8 +7155,9 @@ class AirspeedMinusV2(DerivedParameterNode):
         for start in starts:
             start.index = max(start.index - 5 * 64 * self.hz, 0)
         phases = slices_from_ktis(starts, climb_starts)
-
-        v2 = first_valid_parameter(v2_recorded, v2_lookup, phases=phases)
+        
+        v2 = first_valid_parameter(v2_recorded, airspeed_selected, v2_lookup,
+                                   phases=phases)
 
         if v2 is None:
             return
