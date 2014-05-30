@@ -4454,7 +4454,7 @@ def most_points_cost(coefs, x, y):
     return np.ma.sum(e)
 
 
-def moving_average(array, window=9, weightings=None, pad=True):
+def moving_average(array, window=9, weightings=None, pad=True, copy=False):
     """
     Moving average over an array with window of n samples. Weightings allows
     customisation of the importance of each position's value in the average.
@@ -4473,6 +4473,9 @@ def moving_average(array, window=9, weightings=None, pad=True):
 
     Ref: http://argandgahandapandpa.wordpress.com/2011/02/24/python-numpy-moving-average-for-data/
     """
+    if copy:
+        array = np.ma.copy(array)
+
     if len(array)==0:
         return None
 
