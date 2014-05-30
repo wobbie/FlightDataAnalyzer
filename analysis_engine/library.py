@@ -1222,7 +1222,7 @@ def power_floor(x):
     '''
     :returns: The closest power of 2 less than or equal to x.
     '''
-    return 2**(floor(log(x, 2)))
+    return int(2**(floor(log(x, 2))))
 
 
 def next_unmasked_value(array, index, stop_index=None):
@@ -5277,12 +5277,11 @@ def repair_mask(array, frequency=1, repair_duration=REPAIR_DURATION,
             if method == 'interpolate':
                 if (repair_above is None or 
                     (start_value > repair_above and stop_value > repair_above)):
-                    # XXX: Switch to linspace or
-                    # scipy.interpolate.InterpolatedUnivariateSpline as
+                    # XXX: Find neater solution, potentially
+                    # scipy.interpolate.InterpolatedUnivariateSpline, as
                     # optimisation.
-                    array.data[section] = np.interp(np.arange(length) + 1,
-                                                    [0, length + 1],
-                                                    [start_value, stop_value])
+                    array.data[section] = np.linspace(start_value, stop_value,
+                                                      length+2)[1:-1]
                     array.mask[section] = False
             elif method == 'fill_start':
                 array[section] = start_value

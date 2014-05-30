@@ -3959,7 +3959,7 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
         node = self.node_class()
         node.derive(flap_angle_l, flap_angle_r, None, None, None, None, slat_angle, None, family)
         # Include transitions:
-        self.assertEqual(node.array[18635], 0.70000000000000007)
+        self.assertAlmostEqual(node.array[18635], 0.7, places=1)
         self.assertEqual(node.array[18650], 1.0)
         self.assertEqual(node.array[18900], 5.0)
         # The original flap data does not always record exact flap settings:

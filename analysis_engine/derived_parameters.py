@@ -5,7 +5,7 @@ import geomag
 
 from copy import deepcopy
 from math import radians
-from scipy.interpolate import interp1d
+from scipy.interpolate import InterpolatedUnivariateSpline
 
 from flightdatautilities import aircrafttables as at, units as ut
 
@@ -3492,8 +3492,10 @@ class FlapAngle(DerivedParameterNode):
                                      + state_difference)
                 previous_flap = current_flap
             previous_value = current_value
-        slat_interp = interp1d(slat_interp_x, slat_interp_y)
-        flap_interp = interp1d(flap_interp_x, flap_interp_y)
+        slat_interp = InterpolatedUnivariateSpline(slat_interp_x, slat_interp_y,
+                                                   k=1)
+        flap_interp = InterpolatedUnivariateSpline(flap_interp_x, flap_interp_y,
+                                                   k=1)
         # Exclude masked values which may be outside of the interpolation range.
         slat_unmasked = np.invert(np.ma.getmaskarray(slat_array))
         flap_unmasked = np.invert(np.ma.getmaskarray(flap_array))
@@ -4472,7 +4474,7 @@ class MagneticVariation(DerivedParameterNode):
 
         # Repair mask to avoid interpolating between masked values.
         mag_vars = repair_mask(np.ma.array(mag_vars), extrapolate=True)
-        interpolator = interp1d(
+        interpolator = InterpolatedUnivariateSpline(
             np.arange(0, len(lat.array), mag_var_frequency), mag_vars)
         interpolation_length = (len(mag_vars) - 1) * mag_var_frequency
         array = np_ma_masked_zeros_like(lat.array)
