@@ -5,7 +5,7 @@ from collections import OrderedDict, namedtuple
 from datetime import datetime, timedelta
 from hashlib import sha256
 from itertools import izip, izip_longest
-from math import asin, atan2, ceil, cos, degrees, floor, radians, sin, sqrt
+from math import asin, atan2, ceil, cos, degrees, floor, log, radians, sin, sqrt
 from scipy import interpolate as scipy_interpolate, optimize
 
 from hdfaccess.parameter import MappedArray
@@ -1216,6 +1216,13 @@ def positive_index(container, index):
         index = len(container) - 1
     
     return index
+
+
+def power_floor(x):
+    '''
+    :returns: The closest power of 2 less than or equal to x.
+    '''
+    return 2**(floor(log(x, 2)))
 
 
 def next_unmasked_value(array, index, stop_index=None):
@@ -5267,6 +5274,9 @@ def repair_mask(array, frequency=1, repair_duration=REPAIR_DURATION,
             if method == 'interpolate':
                 if (repair_above is None or 
                     (start_value > repair_above and stop_value > repair_above)):
+                    # XXX: Switch to linspace or
+                    # scipy.interpolate.InterpolatedUnivariateSpline as
+                    # optimisation.
                     array.data[section] = np.interp(np.arange(length) + 1,
                                                     [0, length + 1],
                                                     [start_value, stop_value])
