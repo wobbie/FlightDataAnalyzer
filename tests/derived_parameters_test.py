@@ -54,6 +54,7 @@ from analysis_engine.derived_parameters import (
     Aileron,
     AimingPointRange,
     AirspeedForFlightPhases,
+    AirspeedSelected,
     AirspeedTrue,
     AltitudeAAL,
     AltitudeAALForFlightPhases,
@@ -561,6 +562,18 @@ class TestAirspeedForFlightPhases(unittest.TestCase):
         expected = [('Airspeed',)]
         opts = AirspeedForFlightPhases.get_operational_combinations()
         self.assertEqual(opts, expected)
+
+
+class TestAirspeedSelected(unittest.TestCase):
+    def test_can_operate(self):
+        opts = AirspeedSelected.get_operational_combinations()
+        self.assertIn(('Airspeed Selected (1)', 'Airspeed Selected (2)', 'Airspeed Selected (3)', 'Airspeed Selected (4)'), opts)
+        self.assertIn(('Airspeed Selected (L)', 'Airspeed Selected (R)'), opts)
+        self.assertIn(('Airspeed Selected (L)', 'Airspeed Selected (R)', 'Airspeed Selected (MCP)'), opts)
+         
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        pass
 
 
 class TestAirspeedTrue(unittest.TestCase):

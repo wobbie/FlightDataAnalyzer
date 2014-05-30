@@ -63,6 +63,7 @@ from analysis_engine.library import (actuator_mismatch,
                                      overflow_correction,
                                      peak_curvature,
                                      press2alt,
+                                     power_floor,
                                      rate_of_change,
                                      rate_of_change_array,
                                      repair_mask,
@@ -6100,6 +6101,43 @@ class WheelSpeedRight(DerivedParameterNode):
         sources = [ws_1, ws_2, ws_3, ws_4]
         self.offset = 0.0
         self.frequency = 4.0
+        self.array = blend_parameters(sources, self.offset, self.frequency)
+
+
+class AirspeedSelected(DerivedParameterNode):
+    '''
+    Merge the various recorded Airspeed Selected signals.
+    '''
+
+    name = 'Airspeed Selected'
+    align = False
+    units = ut.KT
+    
+    @classmethod
+    def can_operate(cls, available):
+        sources = ('Airspeed Selected (L)',
+                   'Airspeed Selected (R)',
+                   'Airspeed Selected (MCP)',
+                   'Airspeed Selected (1)',
+                   'Airspeed Selected (2)',
+                   'Airspeed Selected (3)',
+                   'Airspeed Selected (4)')
+        return any_of(sources, available)
+
+    def derive(self, as_l=P('Airspeed Selected (L)'),
+               as_r=P('Airspeed Selected (R)'),
+               as_mcp=P('Airspeed Selected (MCP)'), 
+               as_1=P('Airspeed Selected (1)'),
+               as_2=P('Airspeed Selected (2)'),
+               as_3=P('Airspeed Selected (3)'),
+               as_4=P('Airspeed Selected (4)')):
+        sources = [as_l, as_r, as_mcp, as_1, as_2, as_3, as_4]
+        sources = [s for s in sources if s is not None]
+        # Constrict number of sources to be a power of 2 for an even alignable
+        # frequency.
+        sources = sources[:power_floor(len(sources))]
+        self.offset = 0.0
+        self.frequency = len(sources) * sources[0].frequency
         self.array = blend_parameters(sources, self.offset, self.frequency)
 
 
