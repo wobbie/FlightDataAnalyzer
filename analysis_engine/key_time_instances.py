@@ -4,6 +4,7 @@ from math import ceil, floor
 from analysis_engine.library import (all_of,
                                      any_of,
                                      coreg,
+                                     find_edges,
                                      find_edges_on_state_change,
                                      find_toc_tod,
                                      hysteresis,
@@ -230,6 +231,19 @@ class ClimbStart(KeyTimeInstanceNode):
             index = index_at_value(alt_aal.array, CLIMB_THRESHOLD, climb_slice)
             if index:
                 self.create_kti(index)
+
+
+class ClimbAccelerationStart(KeyTimeInstanceNode):
+    '''
+    Creates KTI on first change in Airspeed selected during initial climb to
+    indicate the start of the acceleration phase of climb
+    '''
+    
+    def derive(self, spd_sel=P('Airspeed Selected'),
+               initial_climb=S('Initial Climb')):
+        edges = find_edges(spd_sel.array, _slice=initial_climb.get_first().slice)
+        if edges:
+            self.create_kti(edges[0])
 
 
 class ClimbThrustDerateDeselected(KeyTimeInstanceNode):
