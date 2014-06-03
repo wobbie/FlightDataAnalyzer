@@ -1267,6 +1267,21 @@ class TestPositiveValue(unittest.TestCase):
         self.assertEqual(positive_index(array, -3), 7)
 
 
+class TestPowerFloor(unittest.TestCase):
+    def test_power_floor(self):
+        results = []
+        for x in range(1, 128):
+            results.append(power_floor(x))
+        expected = ([1] +
+                    [2] * 2 +
+                    [4] * 4 +
+                    [8] * 8 +
+                    [16] * 16 +
+                    [32] * 32 +
+                    [64] * 64)
+        self.assertEqual(results, expected)
+
+
 class TestNextUnmaskedValue(unittest.TestCase):
     def test_next_unmasked_value(self):
         # Entirely unmasked

@@ -1179,26 +1179,33 @@ class RejectedTakeoff(FlightPhaseNode):
     
     def derive(self, accel_lon=P('Acceleration Longitudinal Offset Removed'),
                groundeds=S('Grounded')):
-        accel_lon_smoothed = moving_average(accel_lon.array)
-        
-        accel_lon_masked = np.ma.copy(accel_lon_smoothed)
-        accel_lon_masked.mask |= accel_lon_masked <= TAKEOFF_ACCELERATION_THRESHOLD
-        
+        accel_lon_masked = moving_average(accel_lon.array, copy=True)
+        accel_lon_masked.mask = accel_lon.array.mask
+        accel_lon_masked.mask |= \
+            accel_lon_masked <= TAKEOFF_ACCELERATION_THRESHOLD
+
         accel_lon_slices = np.ma.clump_unmasked(accel_lon_masked)
-        
+
         potential_rtos = []
         for grounded in groundeds:
             for accel_lon_slice in accel_lon_slices:
-                if is_index_within_slice(accel_lon_slice.start, grounded.slice) and \
-                   is_index_within_slice(accel_lon_slice.stop, grounded.slice):
+                is_in = (
+                    is_index_within_slice(
+                        accel_lon_slice.start, grounded.slice)
+                    and is_index_within_slice(
+                        accel_lon_slice.stop, grounded.slice)
+                )
+                if is_in:
                     potential_rtos.append(accel_lon_slice)
             
         for next_index, potential_rto in enumerate(potential_rtos, start=1):
             # we get the min of the potential rto stop and the end of the
             # data for cases where the potential rto is detected close to the
             # end of the data
-            check_grounded_idx = min(potential_rto.stop + (60 * self.frequency),
-                                     len(accel_lon.array) - 1)
+            check_grounded_idx = min(
+                potential_rto.stop + (60 * self.frequency),
+                len(accel_lon.array) - 1
+            )
             if is_index_within_slices(check_grounded_idx,
                                       groundeds.get_slices()):
                 # if soon after potential rto and still grounded we have a

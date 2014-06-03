@@ -5,7 +5,7 @@ import geomag
 
 from copy import deepcopy
 from math import radians
-from scipy.interpolate import interp1d
+from scipy.interpolate import InterpolatedUnivariateSpline
 
 from flightdatautilities import aircrafttables as at, units as ut
 
@@ -63,6 +63,7 @@ from analysis_engine.library import (actuator_mismatch,
                                      overflow_correction,
                                      peak_curvature,
                                      press2alt,
+                                     power_floor,
                                      rate_of_change,
                                      rate_of_change_array,
                                      repair_mask,
@@ -3491,8 +3492,10 @@ class FlapAngle(DerivedParameterNode):
                                      + state_difference)
                 previous_flap = current_flap
             previous_value = current_value
-        slat_interp = interp1d(slat_interp_x, slat_interp_y)
-        flap_interp = interp1d(flap_interp_x, flap_interp_y)
+        slat_interp = InterpolatedUnivariateSpline(slat_interp_x, slat_interp_y,
+                                                   k=1)
+        flap_interp = InterpolatedUnivariateSpline(flap_interp_x, flap_interp_y,
+                                                   k=1)
         # Exclude masked values which may be outside of the interpolation range.
         slat_unmasked = np.invert(np.ma.getmaskarray(slat_array))
         flap_unmasked = np.invert(np.ma.getmaskarray(flap_array))
@@ -4471,7 +4474,7 @@ class MagneticVariation(DerivedParameterNode):
 
         # Repair mask to avoid interpolating between masked values.
         mag_vars = repair_mask(np.ma.array(mag_vars), extrapolate=True)
-        interpolator = interp1d(
+        interpolator = InterpolatedUnivariateSpline(
             np.arange(0, len(lat.array), mag_var_frequency), mag_vars)
         interpolation_length = (len(mag_vars) - 1) * mag_var_frequency
         array = np_ma_masked_zeros_like(lat.array)
@@ -6103,6 +6106,43 @@ class WheelSpeedRight(DerivedParameterNode):
         self.array = blend_parameters(sources, self.offset, self.frequency)
 
 
+class AirspeedSelected(DerivedParameterNode):
+    '''
+    Merge the various recorded Airspeed Selected signals.
+    '''
+
+    name = 'Airspeed Selected'
+    align = False
+    units = ut.KT
+    
+    @classmethod
+    def can_operate(cls, available):
+        sources = ('Airspeed Selected (L)',
+                   'Airspeed Selected (R)',
+                   'Airspeed Selected (MCP)',
+                   'Airspeed Selected (1)',
+                   'Airspeed Selected (2)',
+                   'Airspeed Selected (3)',
+                   'Airspeed Selected (4)')
+        return any_of(sources, available)
+
+    def derive(self, as_l=P('Airspeed Selected (L)'),
+               as_r=P('Airspeed Selected (R)'),
+               as_mcp=P('Airspeed Selected (MCP)'), 
+               as_1=P('Airspeed Selected (1)'),
+               as_2=P('Airspeed Selected (2)'),
+               as_3=P('Airspeed Selected (3)'),
+               as_4=P('Airspeed Selected (4)')):
+        sources = [as_l, as_r, as_mcp, as_1, as_2, as_3, as_4]
+        sources = [s for s in sources if s is not None]
+        # Constrict number of sources to be a power of 2 for an even alignable
+        # frequency.
+        sources = sources[:power_floor(len(sources))]
+        self.offset = 0.0
+        self.frequency = len(sources) * sources[0].frequency
+        self.array = blend_parameters(sources, self.offset, self.frequency)
+
+
 class WheelSpeed(DerivedParameterNode):
     '''
     Merge Left and Right wheel speeds.
@@ -7134,15 +7174,13 @@ class AirspeedMinusV2(DerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
 
-        return all_of((
-            'Airspeed',
-            'Liftoff',
-            'Climb Start',
-        ), available) and any_of(('V2', 'V2 Lookup'), available)
+        return (all_of(('Airspeed', 'Liftoff', 'Climb Start', ), available) and
+                any_of(('V2', 'Airspeed Selected', 'V2 Lookup'), available))
 
     def derive(self,
                airspeed=P('Airspeed'),
                v2_recorded=P('V2'),
+               airspeed_selected=P('Airspeed Selected'),
                v2_lookup=P('V2 Lookup'),
                liftoffs=KTI('Liftoff'),
                climb_starts=KTI('Climb Start')):
@@ -7157,8 +7195,9 @@ class AirspeedMinusV2(DerivedParameterNode):
         for start in starts:
             start.index = max(start.index - 5 * 64 * self.hz, 0)
         phases = slices_from_ktis(starts, climb_starts)
-
-        v2 = first_valid_parameter(v2_recorded, v2_lookup, phases=phases)
+        
+        v2 = first_valid_parameter(v2_recorded, airspeed_selected, v2_lookup,
+                                   phases=phases)
 
         if v2 is None:
             return
