@@ -19,6 +19,7 @@ from analysis_engine.key_time_instances import (
     ATEngagedSelection,
     Autoland,
     BottomOfDescent,
+    ClimbAccelerationStart,
     ClimbStart,
     ClimbThrustDerateDeselected,
     EngFireExtinguisher,
@@ -199,6 +200,43 @@ class TestClimbStart(unittest.TestCase):
         kti.derive(alt_aal, liftoffs, tocs)
         self.assertEqual(len(kti), 1)
         self.assertAlmostEqual(kti[0].index, 1384, 0)
+
+
+class TestClimbAccelerationStart(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = ClimbAccelerationStart
+
+    def test_can_operate(self):
+        expected = [('Airspeed Selected', 'Initial Climb')]
+        opts = self.node_class.get_operational_combinations()
+        self.assertEqual(opts, expected)
+
+    def test_derive_basic(self):
+        array = np.ma.concatenate(([155]*15, [180]*20))
+        spd_sel = Parameter('Airspeed Selected', array=array)
+        init_climbs = buildsection('Initial Climb', 5, 30)
+        node = self.node_class()
+        node.derive(spd_sel, init_climbs)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 14.5)
+
+    def test_derive_spd_unchanged(self):
+        array = np.ma.array([155]*35)
+        spd_sel = Parameter('Airspeed Selected', array=array)
+        init_climbs = buildsection('Initial Climb', 5, 30)
+        node = self.node_class()
+        node.derive(spd_sel, init_climbs)
+        self.assertEqual(len(node), 0)
+
+    def test_derive_spd_masked(self):
+        array = np.ma.concatenate(([155]*15, [180]*20))
+        array[5:30] = np.ma.masked
+        spd_sel = Parameter('Airspeed Selected', array=array)
+        init_climbs = buildsection('Initial Climb', 5, 30)
+        node = self.node_class()
+        node.derive(spd_sel, init_climbs)
+        self.assertEqual(len(node), 0)
 
 
 class TestClimbThrustDerateDeselected(unittest.TestCase):
