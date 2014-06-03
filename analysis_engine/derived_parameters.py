@@ -565,20 +565,21 @@ class AltitudeAAL(DerivedParameterNode):
         alt_rad_aal = np.ma.maximum(alt_rad, 0.0)
         ralt_sections = np.ma.clump_unmasked(np.ma.masked_outside(alt_rad_aal, 0.1, 100.0))
         if len(ralt_sections) == 0:
-            # No useful radio altitude signals, so just use pressure altitude and pitch data.
+            # No useful radio altitude signals, so just use pressure altitude
+            # and pitch data.
             return self.shift_alt_std(alt_std, land_pitch)
 
         if mode == 'land':
             # We refine our definition of the radio altimeter sections to
             # take account of bounced landings and altimeters which read
             # small positive values on the ground.
-            bounce_sections = [y for y in ralt_sections if np.ma.max(alt_rad[y]>BOUNCED_LANDING_THRESHOLD)]
+            bounce_sections = [y for y in ralt_sections if np.ma.max(alt_rad[y]) > BOUNCED_LANDING_THRESHOLD]
             bounce_end = bounce_sections[0].start
             hundred_feet = bounce_sections[-1].stop
         
             alt_result[bounce_end:hundred_feet] = alt_rad_aal[bounce_end:hundred_feet]
             alt_result[:bounce_end] = 0.0
-            ralt_sections = [slice(0,hundred_feet)]
+            ralt_sections = [slice(0, hundred_feet)]
 
         elif mode=='over_gnd':
 
