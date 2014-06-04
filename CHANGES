@@ -7,10 +7,32 @@ release will have included many additional new features and improvements.
 You can view the differences in tagged versions as follows:
 
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
-  
+
+
+V0.12.1
+-------
+
+ - Added ClimbAccelerationStart KTI
+ - Optimisation: Replaced interp1d
+ - Added Airspeed Selected blending parameter
+ - library: Added power_floor function
+ - Fixes for RejectedTakeoff
+ - `copy` option for moving_average
+ - Changed AirspeedMinusV2 to use Airspeed Selected
+ - APVerticalMode: AT Active & Climb Mode Active
+ - process_flight(): save the start_datetime to the HDF5
+ - step_values: Improved mask handling
+ - slices_from_to: trigger on dips and peaks
+ - SpeedbrakeSelected: 757+767 handle algo changed
+ - Don't break on time base errors, pass it back for the segments to be created
+   in a database
+ - Handle index == len(array) in closest_unmasked_val
+ - Floor closest_unmasked_index values
+ - Fix to takeoff following recent change
+
 V0.11.3
 -------
- - Fix to closest_unmasked_index to resolve problems with low frequency and 
+ - Fix to closest_unmasked_index to resolve problems with low frequency and
    high offset parameters creating KPV's ouside of segment slice.
 
 v0.11.1
