@@ -208,16 +208,16 @@ class TestClimbAccelerationStart(unittest.TestCase):
         self.node_class = ClimbAccelerationStart
 
     def test_can_operate(self):
-        expected = [('Airspeed Selected', 'Initial Climb')]
         opts = self.node_class.get_operational_combinations()
-        self.assertEqual(opts, expected)
+        self.assertTrue(('Airspeed Selected', 'Initial Climb') in opts)
+        self.assertTrue(('Altitude AAL', 'Engine Propulsion') in opts)
 
     def test_derive_basic(self):
         array = np.ma.concatenate(([155]*15, [180]*20))
         spd_sel = Parameter('Airspeed Selected', array=array)
         init_climbs = buildsection('Initial Climb', 5, 30)
         node = self.node_class()
-        node.derive(spd_sel, init_climbs)
+        node.derive(spd_sel, init_climbs, None, None)
         self.assertEqual(len(node), 1)
         self.assertEqual(node[0].index, 14.5)
 
@@ -226,7 +226,7 @@ class TestClimbAccelerationStart(unittest.TestCase):
         spd_sel = Parameter('Airspeed Selected', array=array)
         init_climbs = buildsection('Initial Climb', 5, 30)
         node = self.node_class()
-        node.derive(spd_sel, init_climbs)
+        node.derive(spd_sel, init_climbs, None, None)
         self.assertEqual(len(node), 0)
 
     def test_derive_spd_masked(self):
@@ -235,8 +235,21 @@ class TestClimbAccelerationStart(unittest.TestCase):
         spd_sel = Parameter('Airspeed Selected', array=array)
         init_climbs = buildsection('Initial Climb', 5, 30)
         node = self.node_class()
-        node.derive(spd_sel, init_climbs)
+        node.derive(spd_sel, init_climbs, None, None)
         self.assertEqual(len(node), 0)
+    
+    def test_derive_engine_propulsion(self):
+        jet = A('Engine Propulsion', value='JET')
+        alt_aal = P('Altitude AAL', array=np.ma.arange(1000))
+        node = self.node_class()
+        node.derive(None, None, alt_aal, jet)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 800)
+        prop = A('Engine Propulsion', value='PROP')
+        node = self.node_class()
+        node.derive(None, None, alt_aal, prop)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 400)
 
 
 class TestClimbThrustDerateDeselected(unittest.TestCase):

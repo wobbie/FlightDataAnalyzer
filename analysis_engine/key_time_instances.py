@@ -235,15 +235,32 @@ class ClimbStart(KeyTimeInstanceNode):
 
 class ClimbAccelerationStart(KeyTimeInstanceNode):
     '''
-    Creates KTI on first change in Airspeed selected during initial climb to
+    Creates KTI on first change in Airspeed Selected during initial climb to
     indicate the start of the acceleration phase of climb
     '''
+    @classmethod
+    def can_operate(cls, available):
+        return (all_of(('Airspeed Selected', 'Initial Climb'), available) or
+                all_of(('Engine Propulsion', 'Altitude AAL'), available))
     
     def derive(self, spd_sel=P('Airspeed Selected'),
-               initial_climb=S('Initial Climb')):
-        edges = find_edges(spd_sel.array, _slice=initial_climb.get_first().slice)
-        if edges:
-            self.create_kti(edges[0])
+               initial_climb=S('Initial Climb'),
+               alt_aal=P('Altitude AAL'),
+               eng_type=A('Engine Propulsion')):
+        if spd_sel:
+            edges = find_edges(spd_sel.array,
+                               _slice=initial_climb.get_first().slice)
+            if edges:
+                self.create_kti(edges[0])
+        elif eng_type:
+            if eng_type.value == 'JET':
+                alt = 800
+            elif eng_type.value == 'PROP':
+                alt = 400
+            else:
+                raise ValueError("Unknown 'Engine Propulsion' '%s'" %
+                                 eng_type.value)
+            self.create_kti(index_at_value(alt_aal.array, alt))
 
 
 class ClimbThrustDerateDeselected(KeyTimeInstanceNode):
