@@ -408,7 +408,11 @@ class LandingRunway(FlightAttributeNode):
             # The last approach is assumed to be the landing.
             # XXX: Last approach may not be landing for partial data?!
             if ils_freq_on_app:
-                ils_freq = ils_freq_on_app.get_last(within_slice=landing.slice)
+                if landing.start_edge:
+                    ils_app_slice = slice(landing.start_edge, landing.slice.stop)
+                else:
+                    ils_app_slice = landing.slice
+                ils_freq = ils_freq_on_app.get_last(within_slice=ils_app_slice)
                 if ils_freq:
                     kwargs.update(ils_freq=ils_freq.value)
 
