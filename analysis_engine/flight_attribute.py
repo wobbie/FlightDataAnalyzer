@@ -3,6 +3,7 @@
 
 
 import numpy as np
+import pytz
 
 from collections import Counter
 from datetime import datetime
@@ -169,7 +170,7 @@ class AnalysisDatetime(FlightAttributeNode):
         should always derive a flight attribute, 'Start Datetime' is its only
         dependency as it will always be present, though it is unused.
         '''
-        self.set_flight_attr(datetime.now())
+        self.set_flight_attr(datetime.utcnow().replace(tzinfo=pytz.utc))
 
 
 class DestinationAirport(FlightAttributeNode):
