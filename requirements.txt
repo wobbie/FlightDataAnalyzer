@@ -11,3 +11,4 @@ PyYAML
 pytz
 FlightDataUtilities
 HDFAccess
+python-dateutil
