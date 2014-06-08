@@ -1,4 +1,5 @@
 import logging
+import pytz
 import numpy as np
 
 from collections import OrderedDict, namedtuple
@@ -578,7 +579,7 @@ def calculate_timebase(years, months, days, hours, mins, secs):
     # Calculate current year here and pass into
     # convert_two_digit_to_four_digit_year to save calculating year for every
     # second of flight
-    current_year = str(datetime.now().year)
+    current_year = str(datetime.utcnow().year)
     # OrderedDict so if all values are the same, max will consistently take the
     # first val on repeated runs
     clock_variation = OrderedDict()
@@ -599,7 +600,7 @@ def calculate_timebase(years, months, days, hours, mins, secs):
             yr = convert_two_digit_to_four_digit_year(yr, current_year)
 
         try:
-            dt = datetime(int(yr), int(mth), int(day), int(hr), int(mn), int(sc))
+            dt = datetime(int(yr), int(mth), int(day), int(hr), int(mn), int(sc), tzinfo=pytz.utc)
         except (ValueError, TypeError, np.ma.core.MaskError):
             # ValueError is raised if values are out of range, e.g. 0..59.
             # Q: Should we validate these parameters and switch to fallback_dt

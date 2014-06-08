@@ -3,6 +3,7 @@
 
 import os
 import logging
+import pytz
 import numpy as np
 
 from datetime import datetime, timedelta
@@ -532,7 +533,7 @@ def _calculate_start_datetime(hdf, fallback_dt=None):
     If required parameters are not available and fallback_dt is not provided,
     a TimebaseError is raised
     """
-    now = datetime.now()
+    now = datetime.utcnow().replace(tzinfo=pytz.utc)
     if fallback_dt is not None:
         assert fallback_dt < now, (
             "Fallback time '%s' in the future is not allowed. Current time "
@@ -656,7 +657,7 @@ def append_segment_info(hdf_segment_path, segment_type, segment_slice, part,
             # side should check the datetime and avoid processing this file
             logger.warning('Unable to calculate timebase, using '
                            '1970-01-01 00:00:00+0000!')
-            start_datetime = datetime.utcfromtimestamp(0)
+            start_datetime = datetime.utcfromtimestamp(0).replace(tzinfo=pytz.utc)
         stop_datetime = start_datetime + timedelta(seconds=duration)
         hdf.start_datetime = start_datetime
 
@@ -824,9 +825,9 @@ def parse_cmdline():
 
     if args.fallback_datetime:
         args.fallback_datetime = datetime.strptime(
-            args.fallback_datetime, '%Y-%m-%d %H:%M')
+            args.fallback_datetime, '%Y-%m-%d %H:%M').replace(tzinfo=pytz.utc)
     else:
-        args.fallback_datetime = datetime.now()
+        args.fallback_datetime = datetime.utcnow().replace(tzinfo=pytz.utc)
 
     return args, parser
 
