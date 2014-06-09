@@ -215,7 +215,7 @@ class TestClimbAccelerationStart(unittest.TestCase):
     def test_derive_basic(self):
         array = np.ma.concatenate(([155]*15, [180]*20))
         spd_sel = Parameter('Airspeed Selected', array=array)
-        init_climbs = buildsection('Initial Climb', 5, 30)
+        init_climbs = buildsection('Initial Climb', 5, 29)
         node = self.node_class()
         node.derive(spd_sel, init_climbs, None, None)
         self.assertEqual(len(node), 1)
@@ -224,7 +224,7 @@ class TestClimbAccelerationStart(unittest.TestCase):
     def test_derive_spd_unchanged(self):
         array = np.ma.array([155]*35)
         spd_sel = Parameter('Airspeed Selected', array=array)
-        init_climbs = buildsection('Initial Climb', 5, 30)
+        init_climbs = buildsection('Initial Climb', 5, 29)
         node = self.node_class()
         node.derive(spd_sel, init_climbs, None, None)
         self.assertEqual(len(node), 0)
@@ -233,7 +233,7 @@ class TestClimbAccelerationStart(unittest.TestCase):
         array = np.ma.concatenate(([155]*15, [180]*20))
         array[5:30] = np.ma.masked
         spd_sel = Parameter('Airspeed Selected', array=array)
-        init_climbs = buildsection('Initial Climb', 5, 30)
+        init_climbs = buildsection('Initial Climb', 5, 29)
         node = self.node_class()
         node.derive(spd_sel, init_climbs, None, None)
         self.assertEqual(len(node), 0)
@@ -538,8 +538,8 @@ class TestLandingTurnOffRunway(unittest.TestCase):
     def test_landing_turn_off_runway_basic(self):
         instance = LandingTurnOffRunway()
         head = P('Heading Continuous', np.ma.array([0]*30))
-        fast = buildsection('Fast', 0, 20)
-        land = buildsection('Landing', 10, 26)
+        fast = buildsection('Fast', 0, 19)
+        land = buildsection('Landing', 10, 25)
         instance.derive(head, land, fast)
         expected = [KeyTimeInstance(index=26, name='Landing Turn Off Runway')]
         self.assertEqual(instance, expected)
@@ -547,8 +547,8 @@ class TestLandingTurnOffRunway(unittest.TestCase):
     def test_landing_turn_off_runway_curved(self):
         instance = LandingTurnOffRunway()
         head = P('Heading Continuous',np.ma.array([0]*70+range(20)))
-        fast = buildsection('Fast',0,65)
-        land = buildsection('Landing',60,87)
+        fast = buildsection('Fast',0,64)
+        land = buildsection('Landing',60,86)
         instance.derive(head, land, fast)
         expected = [KeyTimeInstance(index=73, name='Landing Turn Off Runway')]
         self.assertEqual(instance, expected)
@@ -556,8 +556,8 @@ class TestLandingTurnOffRunway(unittest.TestCase):
     def test_landing_turn_off_runway_curved_left(self):
         instance = LandingTurnOffRunway()
         head = P('Heading Continuous',np.ma.array([0]*70+range(20))*-1.0)
-        fast = buildsection('Fast',0,65)
-        land = buildsection('Landing',60,87)
+        fast = buildsection('Fast',0,64)
+        land = buildsection('Landing',60,86)
         instance.derive(head, land, fast)
         expected = [KeyTimeInstance(index=73, name='Landing Turn Off Runway')]
         self.assertEqual(instance, expected)
@@ -778,7 +778,7 @@ class TestTopOfDescent(unittest.TestCase):
         alt_data = np.ma.array(range(0,800,100)+[800]*5)
         alt = Parameter('Altitude STD', np.ma.array(alt_data))
         phase = TopOfDescent()
-        in_air = buildsection('Climb Cruise Descent',0,len(alt.array))
+        in_air = buildsection('Climb Cruise Descent',0,len(alt.array)-1)
         phase.derive(alt, in_air)
         expected = []
         self.assertEqual(phase, expected)
@@ -1361,7 +1361,7 @@ class TestFlapRetractionWhileAirborne(unittest.TestCase, NodeTest):
         self.flap_synth = M(name='Flap Lever (Synthetic)', array=array, values_mapping=mapping)
 
     def test_derive(self):
-        airborne = buildsection('Airborne', 2, 12)
+        airborne = buildsection('Airborne', 2, 11)
         name = self.node_class.get_name()
         node = self.node_class()
         node.derive(self.flap_lever, None, airborne)
@@ -1402,7 +1402,7 @@ class TestFlapRetractionDuringGoAround(unittest.TestCase, NodeTest):
         self.flap_synth = M(name='Flap Lever (Synthetic)', array=array, values_mapping=mapping)
 
     def test_derive(self):
-        airborne = buildsection('Go Around', 2, 12)
+        airborne = buildsection('Go Around', 2, 11)
         name = self.node_class.get_name()
         node = self.node_class()
         node.derive(self.flap_lever, None, airborne)
@@ -1514,7 +1514,7 @@ class TestLocalizerEstablishedEnd(unittest.TestCase):
             LocalizerEstablishedEnd.get_operational_combinations())
 
     def test_derive(self):
-        ils = buildsection('ILS Localizer Established', 10, 20)
+        ils = buildsection('ILS Localizer Established', 10, 19)
         expected = [
             KeyTimeInstance(index=20, name='Localizer Established End')]
         les = LocalizerEstablishedEnd()
