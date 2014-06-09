@@ -2,6 +2,7 @@ import csv
 import mock
 import numpy as np
 import os
+import pytz
 import types
 import unittest
 
@@ -1091,7 +1092,7 @@ class TestCalculateTimebase(unittest.TestCase):
 
         #>>> datetime(2020,12,25,00,01,19) - timedelta(seconds=25)
         #datetime.datetime(2020, 12, 25, 0, 0, 50)
-        self.assertEqual(start_dt, datetime(2000, 12, 25, 0, 0, 54))
+        self.assertEqual(start_dt, datetime(2000, 12, 25, 0, 0, 54, tzinfo=pytz.utc))
 
     def test_calculate_timebase_future_year(self):
         # a few valid years followed by many invalid
@@ -1105,7 +1106,7 @@ class TestCalculateTimebase(unittest.TestCase):
 
         #>>> datetime(2020,12,25,00,01,19) - timedelta(seconds=25)
         #datetime.datetime(2020, 12, 25, 0, 0, 50)
-        self.assertEqual(start_dt, datetime(last_year, 12, 24, 23, 58, 54))
+        self.assertEqual(start_dt, datetime(last_year, 12, 24, 23, 58, 54, tzinfo=pytz.utc))
         
     def test_calculate_timebase(self):
         # 6th second is the first valid datetime(2020,12,25,23,59,0)
@@ -1119,7 +1120,7 @@ class TestCalculateTimebase(unittest.TestCase):
 
         #>>> datetime(2020,12,25,00,01,19) - timedelta(seconds=25)
         #datetime.datetime(2020, 12, 25, 0, 0, 50)
-        self.assertEqual(start_dt, datetime(last_year, 12, 25, 0, 0, 54))
+        self.assertEqual(start_dt, datetime(last_year, 12, 25, 0, 0, 54, tzinfo=pytz.utc))
 
     def test_no_valid_datetimes_raises_valueerror(self):
         years = [None] * 25
@@ -1151,7 +1152,7 @@ class TestCalculateTimebase(unittest.TestCase):
         mins = np.ma.array([0] * 20)
         secs = np.ma.array([0] * 20) # 6th second in next hr
         start_dt = calculate_timebase(years, months, days, hours, mins, secs)
-        self.assertEqual(start_dt, datetime(last_year,12,25,23,0,0))
+        self.assertEqual(start_dt, datetime(last_year,12,25,23,0,0, tzinfo=pytz.utc))
 
     def test_real_data_params_2_digit_year(self):
         years = np.load(os.path.join(test_data_path, 'year.npy'))
@@ -1161,7 +1162,7 @@ class TestCalculateTimebase(unittest.TestCase):
         mins = np.load(os.path.join(test_data_path, 'minute.npy'))
         secs = np.load(os.path.join(test_data_path, 'second.npy'))
         start_dt = calculate_timebase(years, months, days, hours, mins, secs)
-        self.assertEqual(start_dt, datetime(2011, 12, 30, 8, 20, 36))
+        self.assertEqual(start_dt, datetime(2011, 12, 30, 8, 20, 36, tzinfo=pytz.utc))
 
     def test_real_data_params_no_year(self):
         months = np.load(os.path.join(test_data_path, 'month.npy'))
@@ -1171,7 +1172,7 @@ class TestCalculateTimebase(unittest.TestCase):
         secs = np.load(os.path.join(test_data_path, 'second.npy'))
         years = np.array([2012]*len(months)) # fixed year
         start_dt = calculate_timebase(years, months, days, hours, mins, secs)
-        self.assertEqual(start_dt, datetime(2012, 12, 30, 8, 20, 36))
+        self.assertEqual(start_dt, datetime(2012, 12, 30, 8, 20, 36, tzinfo=pytz.utc))
 
     @unittest.skip("Implement if this is a requirement, currently "
                    "all parameters are aligned before this is being used.")
@@ -1951,17 +1952,16 @@ class TestFindEdgesOnStateChange(unittest.TestCase):
         
         gear_down_indexes = find_edges_on_state_change(
             'Down', gear_down, change='entering', phase=[slice(0, touchdown.index)], min_samples=3)
-        self.assertEqual(len(gear_down_indexes), 1)
-        last_state_change = gear_down_indexes[-1]
-        self.assertEqual(last_state_change, 19.5)
-        
-        gear_down_indexes = find_edges_on_state_change(
-                    'Down', gear_down, change='entering', phase=[slice(0, touchdown.index)], min_samples=2)
+        self.assertEqual(len(gear_down_indexes), 2)
         self.assertEqual(gear_down_indexes, [11.5, 19.5])
         
         gear_down_indexes = find_edges_on_state_change(
+                    'Down', gear_down, change='entering', phase=[slice(0, touchdown.index)], min_samples=2)
+        self.assertEqual(gear_down_indexes, [6.5, 11.5, 19.5])
+        
+        gear_down_indexes = find_edges_on_state_change(
                     'Down', gear_down, change='entering', phase=[slice(0, touchdown.index)], min_samples=1)
-        self.assertEqual(gear_down_indexes, [6.5, 11.5, 19.5, 25.5])
+        self.assertEqual(gear_down_indexes, [3.5, 6.5, 11.5, 19.5, 25.5])
                 
         
         
