@@ -350,6 +350,8 @@ from analysis_engine.key_point_values import (
     Pitch1000To500FtMax,
     Pitch1000To500FtMin,
     Pitch20FtToTouchdownMin,
+    Pitch35ToClimbAccelerationStartMax,
+    Pitch35ToClimbAccelerationStartMin,
     Pitch35To400FtMax,
     Pitch35To400FtMin,
     Pitch400To1000FtMax,
@@ -377,6 +379,7 @@ from analysis_engine.key_point_values import (
     PitchRate35To1000FtMax,
     PitchTakeoffMax,
     RateOfClimb35To1000FtMin,
+    RateOfClimb35ToClimbAccelerationStartMin,
     RateOfClimbBelow10000FtMax,
     RateOfClimbDuringGoAroundMax,
     RateOfClimbMax,
@@ -7638,6 +7641,60 @@ class TestPitchAbove1000FtMax(unittest.TestCase):
         self.assertEqual(node[0].value, 14)
 
 
+class TestPitch35ToClimbAccelerationStartMax(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = Pitch35ToClimbAccelerationStartMax
+        self.operational_combinations = [('Pitch', 'Initial Climb', 'Climb Acceleration Start')]
+        self.function = max_value
+
+    def test_can_operate(self):
+        opts = self.node_class.get_operational_combinations()
+        self.assertEqual(opts, self.operational_combinations)
+
+    def test_derive_basic(self):
+        pitch = P(
+            name='Pitch',
+            array=np.ma.array([0, 2, 4, 7, 9, 8, 6, 3, -1]),
+        )
+        climb = buildsection('Initial Climb', 1.4, 8)
+        climb_accel_start = KTI('Climb Acceleration Start', items=[KeyTimeInstance(3, 'Climb Acceleration Start')])
+
+        node = self.node_class()
+        node.derive(pitch, climb, climb_accel_start)
+
+        self.assertEqual(node, KPV('Pitch 35 To Climb Acceleration Start Max', items=[
+            KeyPointValue(name='Pitch 35 To Climb Acceleration Start Max', index=3, value=7),
+        ]))
+
+
+class TestPitch35ToClimbAccelerationStartMin(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = Pitch35ToClimbAccelerationStartMin
+        self.operational_combinations = [('Pitch', 'Initial Climb', 'Climb Acceleration Start')]
+        self.function = min_value
+
+    def test_can_operate(self):
+        opts = self.node_class.get_operational_combinations()
+        self.assertEqual(opts, self.operational_combinations)
+
+    def test_derive(self):
+        pitch = P(
+            name='Pitch',
+            array=np.ma.array([0, 2, 4, 7, 9, 8, 6, 3, -1]),
+        )
+        climb = buildsection('Initial Climb', 1.4, 8)
+        climb_accel_start = KTI('Climb Acceleration Start', items=[KeyTimeInstance(3, 'Climb Acceleration Start')])
+
+        node = self.node_class()
+        node.derive(pitch, climb, climb_accel_start)
+
+        self.assertEqual(node, KPV('Pitch 35 To Climb Acceleration Start Min', items=[
+            KeyPointValue(name='Pitch 35 To Climb Acceleration Start Min', index=1.4, value=2.8),
+        ]))
+
+
 class TestPitch35To400FtMax(unittest.TestCase):
 
     def setUp(self):
@@ -7987,6 +8044,32 @@ class TestRateOfClimbMax(unittest.TestCase, NodeTest):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestRateOfClimb35ToClimbAccelerationStartMin(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = RateOfClimb35ToClimbAccelerationStartMin
+
+    def test_can_operate(self):
+        opts = self.node_class.get_operational_combinations()
+        self.assertEqual(opts, [('Vertical Speed', 'Initial Climb', 'Climb Acceleration Start')])
+
+    def test_derive_basic(self):
+        roc_array = np.ma.concatenate(([25]*19, [43, 62, 81, 100, 112, 24, 47, 50, 12, 37, 27, 0, 0, 0]))
+        roc_array = np.ma.concatenate((roc_array, -roc_array[::-1]))
+        vert_spd = P('Vertical Speed', roc_array)
+
+        climb = buildsection('Initial Climb', 1.4, 28)
+        climb_accel_start = KTI('Climb Acceleration Start', items=[KeyTimeInstance(25, 'Touchdown')])
+
+        node = self.node_class()
+        node.derive(vert_spd, climb, climb_accel_start)
+
+        expected = KPV('Rate Of Climb 35 To Climb Acceleration Start Min', items=[
+            KeyPointValue(name='Rate Of Climb 35 To Climb Acceleration Start Min', index=24, value=24),
+        ])
+        self.assertEqual(node, expected)
 
 
 class TestRateOfClimb35To1000FtMin(unittest.TestCase):
