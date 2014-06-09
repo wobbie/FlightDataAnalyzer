@@ -655,7 +655,11 @@ class CreateKPVsWhereTest(NodeTest):
         if not hasattr(self, 'expected'):
             self.expected = []
             if self.phases:
-                slices = [p.slice for p in self.phases]
+                # TODO: remove after intervals have been implemented
+                if hasattr(self, 'complex_where'):
+                    slices = self.phases.get_slices()
+                else:
+                    slices = [p.slice for p in self.phases]
             else:
                 slices = [slice(None)]
 
@@ -822,7 +826,7 @@ class ILSTest(NodeTest):
             array=np.ma.array([108.5] * 6 + [114.05] * 4),
         )
         ils_frequency.array[0:10:2] = np.ma.masked
-        ils_ests = buildsection('ILS Localizer Established', 2, 9)
+        ils_ests = buildsection('ILS Localizer Established', 2, 8)
         return ils_frequency, ils_ests
 
     def prepare__glideslope__basic(self):
@@ -835,7 +839,7 @@ class ILSTest(NodeTest):
             # Altitude from 1875 to 325 ft in 63 steps.
             array=np.ma.array((75 - np.arange(63)) * 25),
         )
-        ils_ests = buildsection('ILS Glideslope Established', 2, 63)
+        ils_ests = buildsection('ILS Glideslope Established', 2, 62)
         return ils_glideslope, alt_aal, ils_ests
 
     def prepare__glideslope__four_peaks(self):
@@ -848,7 +852,7 @@ class ILSTest(NodeTest):
             # Altitude from 1875 to 325 ft in 63 steps.
             array=np.ma.array((75 - np.arange(63)) * 25),
         )
-        ils_ests = buildsection('ILS Glideslope Established', 2, 56)
+        ils_ests = buildsection('ILS Glideslope Established', 2, 55)
         return ils_glideslope, alt_aal, ils_ests
 
     def prepare__localizer__basic(self):
@@ -2286,7 +2290,7 @@ class TestAirspeedWithFlapDuringClimbMax(unittest.TestCase, NodeTest):
         mapping = {int(f): str(f) for f in np.ma.unique(array)}
         flap_exc_trans = M('Flap Excluding Transition', array, values_mapping=mapping)
         airspeed = P('Airspeed', np.ma.arange(0, 100, 10))
-        climb = buildsection('Climbing', 2, 8)
+        climb = buildsection('Climbing', 2, 7)
         node = self.node_class()
         node.derive(None, None, flap_inc_trans, flap_exc_trans, airspeed, climb)
         self.assertEqual(node.get_ordered_by_index(), [
@@ -2333,7 +2337,7 @@ class TestAirspeedWithFlapDuringDescentMax(unittest.TestCase, NodeTest):
         mapping = {int(f): str(f) for f in np.ma.unique(array)}
         flap_exc_trans = M('Flap Excluding Transition', array, values_mapping=mapping)
         airspeed = P('Airspeed', np.ma.arange(100, 0, -10))
-        desc = buildsection('Descending', 2, 8)
+        desc = buildsection('Descending', 2, 7)
         node = self.node_class()
         node.derive(None, None, flap_inc_trans, flap_exc_trans, airspeed, desc)
         self.assertEqual(node.get_ordered_by_index(), [
@@ -2376,7 +2380,7 @@ class TestAirspeedMinusFlapManoeuvreSpeedWithFlapDuringDescentMin(unittest.TestC
         mapping = {int(f): str(f) for f in np.ma.unique(array)}
         flap = M('Flap Lever', array, values_mapping=mapping)
         airspeed = P('Airspeed', np.ma.arange(100, 0, -10))
-        descents = buildsection('Descent To Flare', 2, 8)
+        descents = buildsection('Descent To Flare', 2, 7)
         node = self.node_class()
         node.derive(flap, None, airspeed, descents)
         self.assertEqual(node.get_ordered_by_index(), [
@@ -6569,7 +6573,7 @@ class TestHeadingDuringTakeoff(unittest.TestCase, NodeTest):
 
     def test_derive_basic(self):
         head = P('Heading Continuous',np.ma.array([0,2,4,7,9,8,6,3]))
-        toff = buildsection('Takeoff', 2,6)
+        toff = buildsection('Takeoff', 2,5)
         kpv = HeadingDuringTakeoff()
         kpv.derive(head, toff)
         expected = [KeyPointValue(index=4, value=7.5,
@@ -6578,7 +6582,7 @@ class TestHeadingDuringTakeoff(unittest.TestCase, NodeTest):
 
     def test_derive_modulus(self):
         head = P('Heading Continuous',np.ma.array([0,2,4,7,9,8,6,3])*-1.0)
-        toff = buildsection('Takeoff', 2,6)
+        toff = buildsection('Takeoff', 2,5)
         kpv = HeadingDuringTakeoff()
         kpv.derive(head, toff)
         expected = [KeyPointValue(index=4, value=360-7.5,
@@ -6594,7 +6598,7 @@ class TestHeadingTrueDuringTakeoff(unittest.TestCase, NodeTest):
 
     def test_derive_basic(self):
         head = P('Heading True Continuous',np.ma.array([0,2,4,7,9,8,6,3]))
-        toff = buildsection('Takeoff', 2,6)
+        toff = buildsection('Takeoff', 2,5)
         kpv = self.node_class()
         kpv.derive(head, toff)
         expected = [KeyPointValue(index=4, value=7.5,
@@ -6603,7 +6607,7 @@ class TestHeadingTrueDuringTakeoff(unittest.TestCase, NodeTest):
 
     def test_derive_modulus(self):
         head = P('Heading True Continuous',np.ma.array([0,2,4,7,9,8,6,3])*-1.0)
-        toff = buildsection('Takeoff', 2,6)
+        toff = buildsection('Takeoff', 2,5)
         kpv = self.node_class()
         kpv.derive(head, toff)
         expected = [KeyPointValue(index=4, value=360-7.5,
@@ -6619,7 +6623,7 @@ class TestHeadingDuringLanding(unittest.TestCase, NodeTest):
     def test_derive_basic(self):
         head = P('Heading Continuous',np.ma.array([0,1,2,3,4,5,6,7,8,9,10,-1,-1,
                                                    7,-1,-1,-1,-1,-1,-1,-1,-10]))
-        landing = buildsection('Landing',5,15)
+        landing = buildsection('Landing',5,14)
         head.array[13] = np.ma.masked
         kpv = HeadingDuringLanding()
         kpv.derive(head, landing)
@@ -6639,7 +6643,7 @@ class TestHeadingTrueDuringLanding(unittest.TestCase, NodeTest):
         head = P('Heading True Continuous',
                  np.ma.array([0,1,2,3,4,5,6,7,8,9,10,-1,-1,
                               7,-1,-1,-1,-1,-1,-1,-1,-10]))
-        landing = buildsection('Landing', 5, 15)
+        landing = buildsection('Landing', 5, 14)
         head.array[13] = np.ma.masked
         kpv = HeadingDuringLanding()
         kpv.derive(head, landing)
@@ -8853,7 +8857,7 @@ class TestTaxiInDuration(unittest.TestCase):
         self.assertEqual(opts, [('Taxi In',)])
         
     def test_derive(self):
-        taxi_ins = buildsections('Taxi In', [5, 10], [20, 30])
+        taxi_ins = buildsections('Taxi In', [5, 9], [20, 29])
         node = TaxiInDuration()
         node.derive(taxi_ins)
         self.assertEqual(len(node), 2)
@@ -8871,7 +8875,7 @@ class TestTaxiOutDuration(unittest.TestCase):
         self.assertEqual(opts, [('Taxi Out',)])
         
     def test_derive(self):
-        taxi_outs = buildsections('Taxi Out', [35, 67])
+        taxi_outs = buildsections('Taxi Out', [35, 66])
         node = TaxiOutDuration()
         node.derive(taxi_outs)
         self.assertEqual(len(node), 1)
@@ -8966,14 +8970,14 @@ class TestTAWSTerrainWarningDuration(unittest.TestCase, NodeTest):
         self.assertEqual(node[0].index, 15)
         self.assertEqual(node[0].value, 10)
         self.assertEqual(node[1].index, 30)
-        self.assertEqual(node[1].value, 3)
+        self.assertEqual(node[1].value, 4)
         node = self.node_class()
         node.derive(taws_terrain, taws_terrain_warning, airborne)
         self.assertEqual(len(node), 2)
         self.assertEqual(node[0].index, 12)
         self.assertEqual(node[0].value, 13)
         self.assertEqual(node[1].index, 30)
-        self.assertEqual(node[1].value, 3)
+        self.assertEqual(node[1].value, 4)
 
 
 class TestTAWSTerrainPullUpWarningDuration(unittest.TestCase, NodeTest):
@@ -9148,6 +9152,8 @@ class TestTAWSTerrainAheadPullUpDuration(unittest.TestCase,
 class TestTAWSWindshearCautionBelow1500FtDuration(unittest.TestCase,
                                                   CreateKPVsWhereTest):
     def setUp(self):
+        # TODO: remove after intervals have been implemented 
+        self.complex_where = True
         self.param_name = 'TAWS Windshear Caution'
         self.phase_name = 'Fast'
         self.node_class = TAWSWindshearCautionBelow1500FtDuration
@@ -9169,6 +9175,8 @@ class TestTAWSWindshearCautionBelow1500FtDuration(unittest.TestCase,
 class TestTAWSWindshearSirenBelow1500FtDuration(unittest.TestCase,
                                                 CreateKPVsWhereTest):
     def setUp(self):
+        # TODO: remove after intervals have been implemented 
+        self.complex_where = True
         self.param_name = 'TAWS Windshear Siren'
         self.phase_name = 'Fast'
         self.node_class = TAWSWindshearSirenBelow1500FtDuration
@@ -9234,7 +9242,7 @@ class TestTCASTAWarningDuration(unittest.TestCase, NodeTest):
         tcas = M(
             'TCAS Combined Control', array=np.ma.array([0,1,2,3,4,6,6,6,4,5]),
             values_mapping=values_mapping)
-        airborne = buildsection('Airborne', 2, 7)
+        airborne = buildsection('Airborne', 2, 6)
         node = self.node_class()
         node.derive(None, tcas, airborne)
         self.assertEqual([KeyPointValue(5.0, 2.0, 'TCAS TA Warning Duration')],
@@ -9280,7 +9288,7 @@ class TestTCASRAWarningDuration(unittest.TestCase, NodeTest):
         tcas = M(
             'TCAS Combined Control', array=np.ma.array([0,1,2,3,4,5,4,5,6]),
             values_mapping=values_mapping)
-        airborne = buildsection('Airborne', 2, 7)
+        airborne = buildsection('Airborne', 2, 6)
         node = self.node_class()
         node.derive(None, tcas, airborne)
         self.assertEqual([KeyPointValue(2, 5.0, 'TCAS RA Warning Duration')],

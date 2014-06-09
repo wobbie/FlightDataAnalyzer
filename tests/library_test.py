@@ -1951,17 +1951,16 @@ class TestFindEdgesOnStateChange(unittest.TestCase):
         
         gear_down_indexes = find_edges_on_state_change(
             'Down', gear_down, change='entering', phase=[slice(0, touchdown.index)], min_samples=3)
-        self.assertEqual(len(gear_down_indexes), 1)
-        last_state_change = gear_down_indexes[-1]
-        self.assertEqual(last_state_change, 19.5)
-        
-        gear_down_indexes = find_edges_on_state_change(
-                    'Down', gear_down, change='entering', phase=[slice(0, touchdown.index)], min_samples=2)
+        self.assertEqual(len(gear_down_indexes), 2)
         self.assertEqual(gear_down_indexes, [11.5, 19.5])
         
         gear_down_indexes = find_edges_on_state_change(
+                    'Down', gear_down, change='entering', phase=[slice(0, touchdown.index)], min_samples=2)
+        self.assertEqual(gear_down_indexes, [6.5, 11.5, 19.5])
+        
+        gear_down_indexes = find_edges_on_state_change(
                     'Down', gear_down, change='entering', phase=[slice(0, touchdown.index)], min_samples=1)
-        self.assertEqual(gear_down_indexes, [6.5, 11.5, 19.5, 25.5])
+        self.assertEqual(gear_down_indexes, [3.5, 6.5, 11.5, 19.5, 25.5])
                 
         
         
