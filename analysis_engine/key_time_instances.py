@@ -249,9 +249,9 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
         alt = all_of(('Engine Propulsion', 'Altitude AAL'), available)
         return spd_sel or jet or prop or alt
     
-    def derive(self, spd_sel=P('Airspeed Selected'),
+    def derive(self, alt_aal=P('Altitude AAL'),
                initial_climbs=S('Initial Climb'),
-               alt_aal=P('Altitude AAL'),
+               spd_sel=P('Airspeed Selected'),
                eng_type=A('Engine Propulsion'),
                eng_np=P('Eng (*) Np Max'),
                throttle=P('Throttle Levers')):

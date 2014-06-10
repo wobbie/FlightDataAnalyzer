@@ -225,7 +225,7 @@ class TestClimbAccelerationStart(unittest.TestCase):
         spd_sel = Parameter('Airspeed Selected', array=array)
         init_climbs = buildsection('Initial Climb', 5, 30)
         node = self.node_class()
-        node.derive(spd_sel, init_climbs, None, None, None, None)
+        node.derive(None, init_climbs, spd_sel, None, None, None)
         self.assertEqual(len(node), 1)
         self.assertEqual(node[0].index, 14.5)
 
@@ -234,7 +234,7 @@ class TestClimbAccelerationStart(unittest.TestCase):
         spd_sel = Parameter('Airspeed Selected', array=array)
         init_climbs = buildsection('Initial Climb', 5, 30)
         node = self.node_class()
-        node.derive(spd_sel, init_climbs, None, None, None, None)
+        node.derive(None, init_climbs, spd_sel, None, None, None)
         self.assertEqual(len(node), 0)
 
     def test_derive_spd_masked(self):
@@ -243,19 +243,19 @@ class TestClimbAccelerationStart(unittest.TestCase):
         spd_sel = Parameter('Airspeed Selected', array=array)
         init_climbs = buildsection('Initial Climb', 5, 30)
         node = self.node_class()
-        node.derive(spd_sel, init_climbs, None, None, None, None)
+        node.derive(None, init_climbs, spd_sel, None, None, None)
         self.assertEqual(len(node), 0)
     
     def test_derive_engine_propulsion(self):
         jet = A('Engine Propulsion', value='JET')
         alt_aal = P('Altitude AAL', array=np.ma.arange(1000))
         node = self.node_class()
-        node.derive(None, None, alt_aal, jet)
+        node.derive(alt_aal, None, None, jet, None, None)
         self.assertEqual(len(node), 1)
         self.assertEqual(node[0].index, 800)
         prop = A('Engine Propulsion', value='PROP')
         node = self.node_class()
-        node.derive(None, None, alt_aal, prop, None, None)
+        node.derive(alt_aal, None, None, prop, None, None)
         self.assertEqual(len(node), 1)
         self.assertEqual(node[0].index, 400)
     
@@ -277,7 +277,7 @@ class TestClimbAccelerationStart(unittest.TestCase):
         throttle_levers = load(os.path.join(
             test_data_path, 'climb_acceleration_start_throttle_levers_fallback.nod'))
         node = self.node_class()
-        node.derive(None, initial_climbs, alt_aal, jet, None, throttle_levers)
+        node.derive(alt_aal, initial_climbs, None, jet, None, throttle_levers)
         self.assertEqual(len(node), 1)
         # Falls back to 800 Ft
         self.assertAlmostEqual(node[0].index, 527, places=0)
