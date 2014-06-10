@@ -9,6 +9,13 @@ You can view the differences in tagged versions as follows:
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
 
+V0.12.3
+-------
+
+ - ClimbAccelerationStart falls back to Throttle Levers or Np and aligns to
+   Altitude AAL.
+
+
 V0.12.2
 -------
 
