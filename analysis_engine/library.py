@@ -6640,31 +6640,28 @@ def _value(array, _slice, operator, start_edge=None, stop_edge=None):
         stop_edge = slice_stop
         slice_stop = floor(slice_stop)
 
-    # get start_edge and stop_edge values if required
-    if start_edge:
-        start_result = value_at_index(array, start_edge)
-        start_result = start_result if start_result is not None and start_result is not np.ma.masked else np.nan
-        start_idx = start_edge
-    if stop_edge:
-        stop_result = value_at_index(array, stop_edge)
-        stop_result = stop_result if stop_result is not None and stop_result is not np.ma.masked else np.nan
-        stop_idx = stop_edge
+    values = []
 
     search_slice = slice(slice_start, slice_stop, _slice.step)
 
     if _slice.step and _slice.step < 0:
         raise ValueError("Negative step not supported")
     if np.ma.count(array[search_slice]):
+        # get start_edge and stop_edge values if required
+        if start_edge:
+            start_result = value_at_index(array, start_edge)
+            if start_result is not None and start_result is not np.ma.masked:
+                values.append((start_result, start_edge))
         # floor the start position as it will have been floored during the slice
         value_index = operator(array[search_slice]) + floor(search_slice.start or 0) * (search_slice.step or 1)
         value = array[value_index]
-        indexes = (start_idx, value_index, stop_idx)
-        values = (start_result, value, stop_result)
-        values_mask = [True if x is np.nan else False for x in values]
-        # test start / stop edgge
-        index = operator(np.ma.array(data=values, mask=values_mask))
-
-        return Value(indexes[index], values[index])
+        values.append((value, value_index))
+        if stop_edge:
+            stop_result = value_at_index(array, stop_edge)
+            if stop_result is not None and stop_result is not np.ma.masked:
+                values.append((stop_result, stop_edge))
+        result_idx = operator(np.ma.array(values)[:,0])
+        return Value(values[result_idx][1], values[result_idx][0])
     
     else:
         return Value(None, None)
