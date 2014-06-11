@@ -13,6 +13,7 @@ from analysis_engine.library import (all_of,
                                      minimum_unmasked,
                                      np_ma_masked_zeros_like,
                                      peak_curvature,
+                                     rate_of_change,
                                      repair_mask,
                                      runs_of_ones,
                                      slices_and,
@@ -239,27 +240,57 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
     indicate the start of the acceleration phase of climb
     '''
     @classmethod
-    def can_operate(cls, available):
-        return (all_of(('Airspeed Selected', 'Initial Climb'), available) or
-                all_of(('Engine Propulsion', 'Altitude AAL'), available))
+    def can_operate(cls, available, eng_type=A('Engine Propulsion')):
+        spd_sel = all_of(('Airspeed Selected', 'Initial Climb'), available)
+        jet = (eng_type and eng_type.value == 'JET' and
+               'Throttle Levers' in available)
+        prop = (eng_type and eng_type.value == 'PROP' and
+               'Eng (*) Np Max' in available)
+        alt = all_of(('Engine Propulsion', 'Altitude AAL'), available)
+        return spd_sel or jet or prop or alt
     
-    def derive(self, spd_sel=P('Airspeed Selected'),
-               initial_climb=S('Initial Climb'),
-               alt_aal=P('Altitude AAL'),
-               eng_type=A('Engine Propulsion')):
-        if spd_sel:
-            edges = find_edges(spd_sel.array,
-                               _slice=initial_climb.get_first().slice)
+    def derive(self, alt_aal=P('Altitude AAL'),
+               initial_climbs=S('Initial Climb'),
+               spd_sel=P('Airspeed Selected'),
+               eng_type=A('Engine Propulsion'),
+               eng_np=P('Eng (*) Np Max'),
+               throttle=P('Throttle Levers')):
+        _slice = initial_climbs.get_first().slice if initial_climbs else None
+        if spd_sel and _slice:
+            # Use first Airspeed Selected change in Initial Climb.
+            edges = find_edges(spd_sel.array, _slice=_slice)
             if edges:
                 self.create_kti(edges[0])
         elif eng_type:
             if eng_type.value == 'JET':
+                if throttle and _slice:
+                    # Base on first engine throttle change after liftoff.
+                    # XXX: Width is too small for low frequency params.
+                    throttle.array = throttle.array[_slice]
+                    throttle_threshold = 2 / throttle.frequency
+                    throttle_roc = np.ma.abs(np.ma.ediff1d(throttle, 4))
+                    index = index_at_value(throttle_roc, throttle_threshold)
+                    if index:
+                        self.create_kti(index + (_slice.start or 0))
+                        return
+                
                 alt = 800
+                
             elif eng_type.value == 'PROP':
+                if eng_np and _slice:
+                    # Base on first Np drop after liftoff.
+                    # XXX: Width is too small for low frequency params.
+                    eng_np.array = eng_np.array[_slice]
+                    eng_np_threshold = -0.5 / eng_np.frequency
+                    eng_np_roc = rate_of_change(eng_np, 4)
+                    index = index_at_value(eng_np_roc, eng_np_threshold)
+                    if index:
+                        self.create_kti(index + (_slice.start or 0))
+                        return
+                
                 alt = 400
-            else:
-                raise ValueError("Unknown 'Engine Propulsion' '%s'" %
-                                 eng_type.value)
+            
+            # Base on crossing altitude threshold.
             self.create_kti(index_at_value(alt_aal.array, alt))
 
 

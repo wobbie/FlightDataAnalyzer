@@ -9,6 +9,18 @@ You can view the differences in tagged versions as follows:
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
 
+V0.12.3
+-------
+
+ - ClimbAccelerationStart Throttle Lever and Np fallback, align to Altitude
+   AAL.
+
+
+V0.12.2
+-------
+
+ - ClimbAccelerationStart jet and prop alt fallbacks
+
 V0.12.1
 -------
 

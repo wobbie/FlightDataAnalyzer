@@ -209,15 +209,23 @@ class TestClimbAccelerationStart(unittest.TestCase):
 
     def test_can_operate(self):
         opts = self.node_class.get_operational_combinations()
-        self.assertTrue(('Airspeed Selected', 'Initial Climb') in opts)
-        self.assertTrue(('Altitude AAL', 'Engine Propulsion') in opts)
+        self.assertTrue(self.node_class.can_operate(('Airspeed Selected',
+                                                     'Initial Climb')))
+        self.assertTrue(self.node_class.can_operate(('Altitude AAL',
+                                                     'Engine Propulsion')))
+        jet = A('Engine Propulsion', 'JET')
+        self.assertTrue(self.node_class.can_operate(('Throttle Levers',),
+                                                    eng_type=jet))
+        prop = A('Engine Propulsion', 'PROP')
+        self.assertTrue(self.node_class.can_operate(('Eng (*) Np Max',),
+                                                    eng_type=prop))
 
     def test_derive_basic(self):
         array = np.ma.concatenate(([155]*15, [180]*20))
         spd_sel = Parameter('Airspeed Selected', array=array)
         init_climbs = buildsection('Initial Climb', 5, 29)
         node = self.node_class()
-        node.derive(spd_sel, init_climbs, None, None)
+        node.derive(None, init_climbs, spd_sel, None, None, None)
         self.assertEqual(len(node), 1)
         self.assertEqual(node[0].index, 14.5)
 
@@ -226,7 +234,7 @@ class TestClimbAccelerationStart(unittest.TestCase):
         spd_sel = Parameter('Airspeed Selected', array=array)
         init_climbs = buildsection('Initial Climb', 5, 29)
         node = self.node_class()
-        node.derive(spd_sel, init_climbs, None, None)
+        node.derive(None, init_climbs, spd_sel, None, None, None)
         self.assertEqual(len(node), 0)
 
     def test_derive_spd_masked(self):
@@ -235,21 +243,44 @@ class TestClimbAccelerationStart(unittest.TestCase):
         spd_sel = Parameter('Airspeed Selected', array=array)
         init_climbs = buildsection('Initial Climb', 5, 29)
         node = self.node_class()
-        node.derive(spd_sel, init_climbs, None, None)
+        node.derive(None, init_climbs, spd_sel, None, None, None)
         self.assertEqual(len(node), 0)
     
     def test_derive_engine_propulsion(self):
         jet = A('Engine Propulsion', value='JET')
         alt_aal = P('Altitude AAL', array=np.ma.arange(1000))
         node = self.node_class()
-        node.derive(None, None, alt_aal, jet)
+        node.derive(alt_aal, None, None, jet, None, None)
         self.assertEqual(len(node), 1)
         self.assertEqual(node[0].index, 800)
         prop = A('Engine Propulsion', value='PROP')
         node = self.node_class()
-        node.derive(None, None, alt_aal, prop)
+        node.derive(alt_aal, None, None, prop, None, None)
         self.assertEqual(len(node), 1)
         self.assertEqual(node[0].index, 400)
+    
+    def test_derive_eng_np(self):
+        initial_climbs = buildsection('Initial Climb', 887, 926)
+        prop = A('Engine Propulsion', value='PROP')
+        eng_np = load(os.path.join(
+            test_data_path, 'climb_acceleration_start_eng_np.nod'))
+        node = self.node_class()
+        node.derive(None, initial_climbs, None, prop, eng_np, None)
+        self.assertEqual(len(node), 1)
+        self.assertAlmostEqual(node[0].index, 917, places=0)
+    
+    def test_derive_throttle_levers_fallback(self):
+        initial_climbs = buildsection('Initial Climb', 511, 531)
+        jet = A('Engine Propulsion', value='JET')
+        alt_aal = load(os.path.join(
+            test_data_path, 'climb_acceleration_start_alt_aal_fallback.nod'))
+        throttle_levers = load(os.path.join(
+            test_data_path, 'climb_acceleration_start_throttle_levers_fallback.nod'))
+        node = self.node_class()
+        node.derive(alt_aal, initial_climbs, None, jet, None, throttle_levers)
+        self.assertEqual(len(node), 1)
+        # Falls back to 800 Ft
+        self.assertAlmostEqual(node[0].index, 527, places=0)
 
 
 class TestClimbThrustDerateDeselected(unittest.TestCase):
