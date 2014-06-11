@@ -8449,6 +8449,52 @@ class PitchTakeoffMax(KeyPointValueNode):
         self.create_kpvs_within_slices(pitch.array, takeoffs, max_value)
 
 
+class Pitch35ToClimbAccelerationStartMin(KeyPointValueNode):
+    '''
+    Will use Climb Acceleration Start if we can calculate it, otherwise we
+    fallback to 1000ft (end of initial climb)
+    '''
+
+    units = ut.FPM
+
+
+    def derive(self,
+               pitch=P('Pitch'),
+               climbs=S('Initial Climb'),
+               climb_accel_start=KTI('Climb Acceleration Start')):
+        init_climb = climbs.get_first()
+        if len(climb_accel_start):
+            _slice = slice(init_climb.slice.start,
+                           climb_accel_start.get_first().index+1)
+        else:
+            _slice = init_climb.slice
+
+        self.create_kpvs_within_slices(pitch.array, (_slice,), min_value)
+
+
+class Pitch35ToClimbAccelerationStartMax(KeyPointValueNode):
+    '''
+    Will use Climb Acceleration Start if we can calculate it, otherwise we
+    fallback to 1000ft (end of initial climb)
+    '''
+
+    units = ut.FPM
+
+
+    def derive(self,
+               pitch=P('Pitch'),
+               climbs=S('Initial Climb'),
+               climb_accel_start=KTI('Climb Acceleration Start')):
+        init_climb = climbs.get_first()
+        if len(climb_accel_start):
+            _slice = slice(init_climb.slice.start,
+                           climb_accel_start.get_first().index+1)
+        else:
+            _slice = init_climb.slice
+
+        self.create_kpvs_within_slices(pitch.array, (_slice,), max_value)
+
+
 class Pitch35To400FtMax(KeyPointValueNode):
     '''
     '''
@@ -8908,6 +8954,29 @@ class RateOfClimbMax(KeyPointValueNode):
                climbing=S('Climbing')):
         vrt_spd.array[vrt_spd.array < 0] = np.ma.masked
         vert_spd_phase_max_or_min(self, vrt_spd, climbing, max_value)
+
+
+class RateOfClimb35ToClimbAccelerationStartMin(KeyPointValueNode):
+    '''
+    Will use Climb Acceleration Start if we can calculate it, otherwise we
+    fallback to 1000ft
+    Note: The minimum Rate of Climb could be negative in this phase.
+    '''
+
+    units = ut.FPM
+
+    def derive(self,
+               vrt_spd=P('Vertical Speed'),
+               climbs=S('Initial Climb'),
+               climb_accel_start=KTI('Climb Acceleration Start')):
+        init_climb = climbs.get_first()
+        if len(climb_accel_start):
+            _slice = slice(init_climb.slice.start,
+                           climb_accel_start.get_first().index+1)
+        else:
+            _slice = init_climb.slice
+
+        self.create_kpvs_within_slices(vrt_spd.array, (_slice,), min_value)
 
 
 class RateOfClimb35To1000FtMin(KeyPointValueNode):

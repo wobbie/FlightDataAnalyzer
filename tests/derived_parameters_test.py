@@ -5249,7 +5249,7 @@ class TestVref(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = Vref
         self.airspeed = P('Airspeed', np.ma.repeat(200, 128))
-        self.approaches = buildsections('Approach And Landing', (2, 42), (66, 106))
+        self.approaches = buildsections('Approach And Landing', (2, 41), (66, 105))
 
     def test_can_operate(self):
         # AFR:
@@ -5342,7 +5342,7 @@ class TestVrefLookup(unittest.TestCase, NodeTest):
             KeyTimeInstance(name='Touchdown', index=7),
             KeyTimeInstance(name='Touchdown', index=71),
         ])
-        self.approaches = buildsections('Approach And Landing', (2, 42), (66, 106))
+        self.approaches = buildsections('Approach And Landing', (2, 41.1), (66, 105.1))
 
     @patch('analysis_engine.library.at')
     def test_can_operate(self, at):
@@ -5454,7 +5454,7 @@ class TestVapp(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = Vapp
         self.airspeed = P('Airspeed', np.ma.repeat(200, 128))
-        self.approaches = buildsections('Approach And Landing', (2, 42), (66, 106))
+        self.approaches = buildsections('Approach And Landing', (2, 41), (66, 105))
 
     def test_can_operate(self):
         # AFR:
@@ -5547,7 +5547,7 @@ class TestVappLookup(unittest.TestCase, NodeTest):
             KeyTimeInstance(name='Touchdown', index=7),
             KeyTimeInstance(name='Touchdown', index=71),
         ])
-        self.approaches = buildsections('Approach And Landing', (2, 42), (66, 106))
+        self.approaches = buildsections('Approach And Landing', (2, 41), (66, 105))
 
     @patch('analysis_engine.library.at')
     def test_can_operate(self, at):
@@ -6274,7 +6274,7 @@ class TestAirspeedMinusVref(unittest.TestCase, NodeTest):
         self.airspeed = P('Airspeed', np.ma.repeat(102, 2000))
         self.vref_record = P('Vref', np.ma.repeat((90, 120), 1000))
         self.vref_lookup = P('Vref Lookup', np.ma.repeat((95, 125), 1000))
-        self.approaches = buildsection('Approach And Landing', 500, 1000)
+        self.approaches = buildsection('Approach And Landing', 500, 999)
 
     def test_derive__record_only(self):
         node = self.node_class()
@@ -6378,7 +6378,7 @@ class TestAirspeedMinusVapp(unittest.TestCase, NodeTest):
         self.airspeed = P('Airspeed', np.ma.repeat(102, 2000))
         self.vapp_record = P('Vapp', np.ma.repeat((90, 120), 1000))
         self.vapp_lookup = P('Vapp Lookup', np.ma.repeat((95, 125), 1000))
-        self.approaches = buildsection('Approach And Landing', 500, 1000)
+        self.approaches = buildsection('Approach And Landing', 500, 999)
 
     def test_derive__record_only(self):
         node = self.node_class()
