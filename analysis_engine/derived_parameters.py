@@ -1404,7 +1404,8 @@ class DescendForFlightPhases(DerivedParameterNode):
 
 class AOA(DerivedParameterNode):
     '''
-    Angle of Attack - averages Left and Right signals.
+    Angle of Attack - averages Left and Right signals. See Bombardier AOM-1281
+    document.
     '''
 
     name = 'AOA'
@@ -1429,7 +1430,8 @@ class AOA(DerivedParameterNode):
         if family and family.value == 'CL-600':
             # The Angle of Attack recorded in the FDR is "filtered" Body AoA
             # and is not compensated for sideslip, it must be converted back to
-            # Vane before it can be used.
+            # Vane before it can be used. See Bombardier AOM-1281
+            # document.
             self.array = self.array * 1.661 - 1.404
 
 
