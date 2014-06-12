@@ -1404,12 +1404,11 @@ class DescendForFlightPhases(DerivedParameterNode):
 
 class AOA(DerivedParameterNode):
     '''
-    Angle of Attack - merges Left and Right signals and increases the
-    frequency to twice that of the highest frequency of the dependancies.
+    Angle of Attack - averages Left and Right signals. See Bombardier AOM-1281
+    document.
     '''
 
     name = 'AOA'
-    align = False
     units = ut.DEGREE
     
     @classmethod
@@ -1417,21 +1416,23 @@ class AOA(DerivedParameterNode):
 
         return any_of(('AOA (L)', 'AOA (R)'), available)
 
-    def derive(self, aoa_l=P('AOA (L)'), aoa_r=P('AOA (R)')):
+    def derive(self, aoa_l=P('AOA (L)'), aoa_r=P('AOA (R)'),
+               family=A('Family')):
 
         if aoa_l and aoa_r:
-            # double the max freq
-            self.frequency = max((aoa_l.frequency, aoa_r.frequency)) * 2
-            self.offset = 0.0
-            self.array = blend_parameters([aoa_l, aoa_r],
-                                          frequency=self.frequency, 
-                                          offset=self.offset)
+            # Average angle of attack to compensate for sideslip.
+            self.array = (aoa_l.array + aoa_r.array) / 2
         else:
             # only one available
             aoa = aoa_l or aoa_r
-            self.frequency = aoa.frequency
-            self.offset = aoa.offset
             self.array = aoa.array
+        
+        if family and family.value == 'CL-600':
+            # The Angle of Attack recorded in the FDR is "filtered" Body AoA
+            # and is not compensated for sideslip, it must be converted back to
+            # Vane before it can be used. See Bombardier AOM-1281
+            # document.
+            self.array = self.array * 1.661 - 1.404
 
 
 class ControlColumn(DerivedParameterNode):

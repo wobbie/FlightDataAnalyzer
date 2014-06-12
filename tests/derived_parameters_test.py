@@ -3216,9 +3216,9 @@ class TestAOA(unittest.TestCase):
         aoa_r = P('AOA (R)', [4.881875, 4.5703125, 4.5712125, 4.544125],
                           frequency=0.5, offset=0.6484375)
         aoa = AOA()
-        res = aoa.derive(aoa_l, aoa_r)
-        self.assertEqual(aoa.hz, 2)
-        self.assertEqual(aoa.offset, 0)
+        res = aoa.get_derived((aoa_l, aoa_r))
+        self.assertEqual(aoa.hz, 1)
+        self.assertEqual(aoa.offset, 0.1484375)
         
     def test_Derive_only_left(self):
         aoa_l = P('AOA (L)', [4.921875, 4.5703125, 4.5703125, 4.5703125,
@@ -3226,7 +3226,7 @@ class TestAOA(unittest.TestCase):
                   frequency=1.0, offset=0.1484375)
         
         aoa = AOA()
-        res = aoa.derive(aoa_l, None)
+        res = aoa.get_derived((aoa_l, None))
         self.assertEqual(aoa.hz, 1)
         self.assertEqual(aoa.offset, 0.1484375)
         

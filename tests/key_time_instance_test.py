@@ -261,13 +261,14 @@ class TestClimbAccelerationStart(unittest.TestCase):
     
     def test_derive_eng_np(self):
         initial_climbs = buildsection('Initial Climb', 887, 926)
+        initial_climbs.frequency = 0.5
         prop = A('Engine Propulsion', value='PROP')
         eng_np = load(os.path.join(
             test_data_path, 'climb_acceleration_start_eng_np.nod'))
         node = self.node_class()
         node.derive(None, initial_climbs, None, prop, eng_np, None)
         self.assertEqual(len(node), 1)
-        self.assertAlmostEqual(node[0].index, 917, places=0)
+        self.assertAlmostEqual(node[0].index, 1833, places=0)
     
     def test_derive_throttle_levers_fallback(self):
         initial_climbs = buildsection('Initial Climb', 511, 531)
