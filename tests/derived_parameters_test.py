@@ -3206,7 +3206,11 @@ class TestAOA(unittest.TestCase):
         self.assertEqual(opts, [
             ('AOA (L)',),
             ('AOA (R)',),
-            ('AOA (L)', 'AOA (R)')])
+            ('AOA (L)', 'AOA (R)'),
+            ('AOA (L)', 'Family'),
+            ('AOA (R)', 'Family'),
+            ('AOA (L)', 'AOA (R)', 'Family'),
+        ])
         
     def test_derive(self):
         aoa_l = P('AOA (L)', [4.921875, 4.5703125, 4.5703125, 4.5703125,
