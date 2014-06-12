@@ -1320,6 +1320,106 @@ class AirspeedMinusV2At35FtDuringTakeoff(KeyPointValueNode):
             self.create_kpv(index, value)
 
 
+class AirspeedMinusV235ToClimbAccelerationStartMin(KeyPointValueNode):
+    '''
+    Minimum airspeed difference from V2 from 35ft to Climb Acceleration Start
+    if we can calculate it, otherwise we fallback to 1000ft (end of initial
+    climb)
+    '''
+
+    name = 'Airspeed Minus V2 35 To Climb Acceleration Start Min'
+    units = ut.FPM
+
+
+    def derive(self,
+               spd_v2=P('Airspeed Minus V2'),
+               climbs=S('Initial Climb'),
+               climb_accel_start=KTI('Climb Acceleration Start')):
+        init_climb = climbs.get_first()
+        if len(climb_accel_start):
+            _slice = slice(init_climb.start_edge,
+                           climb_accel_start.get_first().index+1)
+        else:
+            _slice = init_climb.slice
+
+        self.create_kpvs_within_slices(spd_v2.array, (_slice,), min_value)
+
+
+class AirspeedMinusV235ToClimbAccelerationStartMax(KeyPointValueNode):
+    '''
+    Maximum airspeed difference from V2 from 35ft to Climb Acceleration Start
+    if we can calculate it, otherwise we fallback to 1000ft (end of initial
+    climb)
+    '''
+
+    name = 'Airspeed Minus V2 35 To Climb Acceleration Start Max'
+    units = ut.FPM
+
+
+    def derive(self,
+               spd_v2=P('Airspeed Minus V2'),
+               climbs=S('Initial Climb'),
+               climb_accel_start=KTI('Climb Acceleration Start')):
+        init_climb = climbs.get_first()
+        if len(climb_accel_start):
+            _slice = slice(init_climb.start_edge,
+                           climb_accel_start.get_first().index+1)
+        else:
+            _slice = init_climb.slice
+
+        self.create_kpvs_within_slices(spd_v2.array, (_slice,), max_value)
+
+
+class AirspeedMinusV2For3Sec35ToClimbAccelerationStartMin(KeyPointValueNode):
+    '''
+    Minimum airspeed difference from V2 from 35ft to Climb Acceleration Start
+    if we can calculate it, otherwise we fallback to 1000ft (end of initial
+    climb)
+    '''
+
+    name = 'Airspeed Minus V2 For 3 Sec 35 To Climb Acceleration Start Min'
+    units = ut.FPM
+
+
+    def derive(self,
+               spd_v2=P('Airspeed Minus V2 For 3 Sec'),
+               climbs=S('Initial Climb'),
+               climb_accel_start=KTI('Climb Acceleration Start')):
+        init_climb = climbs.get_first()
+        if len(climb_accel_start):
+            _slice = slice(init_climb.slice.start,
+                           climb_accel_start.get_first().index+1)
+        else:
+            _slice = init_climb.slice
+
+        self.create_kpvs_within_slices(spd_v2.array, (_slice,), min_value)
+
+
+class AirspeedMinusV2For3Sec35ToClimbAccelerationStartMax(KeyPointValueNode):
+    '''
+    Maximum airspeed difference from V2 from 35ft to Climb Acceleration Start
+    if we can calculate it, otherwise we fallback to 1000ft (end of initial
+    climb)
+    '''
+
+    name = 'Airspeed Minus V2 For 3 Sec 35 To Climb Acceleration Start Max'
+    units = ut.FPM
+
+
+    def derive(self,
+               spd_v2=P('Airspeed Minus V2 For 3 Sec'),
+               climbs=S('Initial Climb'),
+               climb_accel_start=KTI('Climb Acceleration Start')):
+        init_climb = climbs.get_first()
+        if len(climb_accel_start):
+            _slice = slice(init_climb.slice.start,
+                           climb_accel_start.get_first().index+1)
+        else:
+            _slice = init_climb.slice
+
+        self.create_kpvs_within_slices(spd_v2.array, (_slice,), max_value)
+
+
 class AirspeedMinusV235To1000FtMax(KeyPointValueNode):
     '''
     Maximum airspeed difference from V2 from 35ft to 1,000ft.
