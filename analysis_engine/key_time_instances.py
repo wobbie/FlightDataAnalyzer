@@ -238,7 +238,13 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
     '''
     Creates KTI on first change in Airspeed Selected during initial climb to
     indicate the start of the acceleration phase of climb
+    
+    Alignment is performed manually because Airspeed Selected can be recorded at
+    a very low frequency and interpolation will render the find_edges algorithm
+    useless.
     '''
+    align = False
+    
     @classmethod
     def can_operate(cls, available, eng_type=A('Engine Propulsion')):
         spd_sel = all_of(('Airspeed Selected', 'Initial Climb'), available)
@@ -255,15 +261,22 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
                eng_type=A('Engine Propulsion'),
                eng_np=P('Eng (*) Np Max'),
                throttle=P('Throttle Levers')):
-        _slice = initial_climbs.get_first().slice if initial_climbs else None
-        if spd_sel and _slice:
+        #_slice = initial_climbs.get_first().slice if initial_climbs else None
+        if spd_sel and spd_sel.frequency >= 0.125 and initial_climbs:
             # Use first Airspeed Selected change in Initial Climb.
+            _slice = initial_climbs.get_aligned(spd_sel).get_first().slice
             edges = find_edges(spd_sel.array, _slice=_slice)
             if edges:
-                self.create_kti(edges[0])
-        elif eng_type:
+                self.frequency = spd_sel.frequency
+                self.offset = spd_sel.offset
+                self.create_kti(edges[0] / spd_sel.frequency)
+                return
+        
+        if eng_type:
             if eng_type.value == 'JET':
-                if throttle and _slice:
+                if throttle and initial_climbs:
+                    # Align to throttle.
+                    _slice = initial_climbs.get_aligned(throttle).get_first().slice
                     # Base on first engine throttle change after liftoff.
                     # XXX: Width is too small for low frequency params.
                     throttle.array = throttle.array[_slice]
@@ -271,13 +284,18 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
                     throttle_roc = np.ma.abs(np.ma.ediff1d(throttle, 4))
                     index = index_at_value(throttle_roc, throttle_threshold)
                     if index:
-                        self.create_kti(index + (_slice.start or 0))
+                        self.frequency = throttle.frequency
+                        self.offset = throttle.offset
+                        self.create_kti((index + (_slice.start or 0)) /
+                                        throttle.frequency)
                         return
                 
                 alt = 800
                 
             elif eng_type.value == 'PROP':
-                if eng_np and _slice:
+                if eng_np and initial_climbs:
+                    # Align to Np.
+                    _slice = initial_climbs.get_aligned(eng_np).get_first().slice
                     # Base on first Np drop after liftoff.
                     # XXX: Width is too small for low frequency params.
                     eng_np.array = eng_np.array[_slice]
@@ -285,13 +303,19 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
                     eng_np_roc = rate_of_change(eng_np, 4)
                     index = index_at_value(eng_np_roc, eng_np_threshold)
                     if index:
-                        self.create_kti(index + (_slice.start or 0))
+                        self.frequency = eng_np.frequency
+                        self.offset = eng_np.offset
+                        self.create_kti((index + (_slice.start or 0)) /
+                                        eng_np.frequency)
                         return
                 
                 alt = 400
             
             # Base on crossing altitude threshold.
-            self.create_kti(index_at_value(alt_aal.array, alt))
+            if alt_aal:
+                self.frequency = alt_aal.frequency
+                self.offset = alt_aal.offset
+                self.create_kti(index_at_value(alt_aal.array, alt) / alt_aal.frequency)
 
 
 class ClimbThrustDerateDeselected(KeyTimeInstanceNode):
