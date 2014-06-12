@@ -1808,9 +1808,11 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         x = available
         if family and family.value == 'BD-100':
             return 'Speedbrake Handle' in x and 'Spoiler Ground Armed' in x
-        elif family and family.value in ['Global', 'CRJ 100/200', 'ERJ-135/145',
-                                         'B777']:
+        elif family and family.value in ('Global', 'CRJ 100/200',
+                                         'ERJ-135/145', 'B777'):
             return 'Speedbrake Handle' in x
+        elif family and family.value in ('A319', 'A320', 'A321'):
+            return 'Speedbrake' in x and 'Speedbrake Armed' in x
         else:
             return ('Speedbrake Deployed' in x or
                     ('Family' in x and 'Speedbrake Switch' in x) or
