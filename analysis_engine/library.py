@@ -4988,6 +4988,7 @@ def peak_curvature(array, _slice=slice(None), curve_sense='Concave',
         # did not find curve in valid data
         return None
 
+
 def peak_index(a):
     '''
     Scans an array and returns the peak, where possible computing the local
@@ -5073,7 +5074,7 @@ def rate_of_change_array(to_diff, hz, width=None, method='two_points'):
         # the preceding technique.
 
         # The fit will be for equi-spaced samples around the midpoint.
-        x = np.arange(-hw,hw+1)
+        x = np.arange(-hw, hw+1)
         # Scaling is given by:
         sx2_hz = np.sum(x*x)/hz
         # We extended data array to allow for convolution overruns.
@@ -5084,6 +5085,7 @@ def rate_of_change_array(to_diff, hz, width=None, method='two_points'):
 
     else:
         raise ValueError('Rate of change called with unrecognised method')
+
 
 def rate_of_change(diff_param, width, method='two_points'):
     '''
