@@ -266,7 +266,7 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
             _slice = initial_climbs.get_aligned(spd_sel).get_first().slice
             spd_sel.array = spd_sel.array[_slice]
             spd_sel_threshold = 5 / spd_sel.frequency
-            spd_sel_roc = rate_of_change(spd_sel, 4)
+            spd_sel_roc = rate_of_change(spd_sel, 2 * (1 / spd_sel.frequency))
             index = index_at_value(spd_sel_roc, spd_sel_threshold)
             if index:
                 self.frequency = spd_sel.frequency
@@ -283,7 +283,7 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
                     # XXX: Width is too small for low frequency params.
                     throttle.array = throttle.array[_slice]
                     throttle_threshold = 2 / throttle.frequency
-                    throttle_roc = np.ma.abs(np.ma.ediff1d(throttle, 4))
+                    throttle_roc = np.ma.abs(rate_of_change(throttle, 2 * (1 / throttle.frequency)))
                     index = index_at_value(throttle_roc, throttle_threshold)
                     if index:
                         self.frequency = throttle.frequency
@@ -301,7 +301,7 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
                     # XXX: Width is too small for low frequency params.
                     eng_np.array = eng_np.array[_slice]
                     eng_np_threshold = -0.5 / eng_np.frequency
-                    eng_np_roc = rate_of_change(eng_np, 4)
+                    eng_np_roc = rate_of_change(eng_np, 2 * (1 / eng_np.frequency))
                     index = index_at_value(eng_np_roc, eng_np_threshold)
                     if index:
                         self.frequency = eng_np.frequency
