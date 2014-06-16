@@ -241,6 +241,9 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
     Alignment is performed manually because Airspeed Selected can be recorded at
     a very low frequency and interpolation will render the find_edges algorithm
     useless.
+    
+    Dynamically create rate_of_change width from the parameter's frequency to 
+    avoid errors. Larger widths flatten the rate of change result.
     '''
     align = False
     
