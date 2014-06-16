@@ -227,7 +227,16 @@ class TestClimbAccelerationStart(unittest.TestCase):
         node = self.node_class()
         node.derive(None, init_climbs, spd_sel, None, None, None)
         self.assertEqual(len(node), 1)
-        self.assertEqual(node[0].index, 14.5)
+        self.assertAlmostEqual(node[0].index, 12.8, places=1)
+    
+    def test_derive_spd_analog(self):
+        spd_sel = load(os.path.join(test_data_path, 'climb_acceleration_start_spd_sel_analog.nod'))
+        init_climbs = buildsection('Initial Climb', 714, 761)
+        node = self.node_class()
+        node.derive(None, init_climbs, spd_sel, None, None, None)
+        self.assertEqual(len(node), 1)
+        self.assertAlmostEqual(node[0].index, 1458, places=0)
+
 
     def test_derive_spd_unchanged(self):
         array = np.ma.array([155]*35)
