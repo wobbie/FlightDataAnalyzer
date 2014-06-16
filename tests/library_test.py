@@ -5823,7 +5823,12 @@ class TestMostCommonValue(unittest.TestCase):
         res = most_common_value(np.ma.array([0,1,1,1,4,4,7,1,1],
                                    mask=[1,0,0,0,0,0,0,0,1]))
         self.assertEqual(res, 1)
-        
+    
+    def test_most_common_value_negative_values_excluded(self):
+        res = most_common_value(np.ma.array([0,-1,-1,-1,4,4,7,1,1],
+                                            mask=[1,0,0,0,0,0,0,0,1]))
+        self.assertEqual(res, 4)
+    
     def test_unique_with_multistate(self):
         array = MappedArray(np.ma.array([0, 3, 0, 0, 0, 3, 3],
                                    mask=[1, 0, 0, 0, 0, 0, 1]),
