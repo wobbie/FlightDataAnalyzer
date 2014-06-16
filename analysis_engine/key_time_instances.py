@@ -269,7 +269,7 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
             if edges:
                 self.frequency = spd_sel.frequency
                 self.offset = spd_sel.offset
-                self.create_kti(edges[0] / spd_sel.frequency)
+                self.create_kti(edges[0])
                 return
         
         if eng_type:
