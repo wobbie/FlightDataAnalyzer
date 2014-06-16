@@ -286,8 +286,7 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
                     if index:
                         self.frequency = throttle.frequency
                         self.offset = throttle.offset
-                        self.create_kti((index + (_slice.start or 0)) /
-                                        throttle.frequency)
+                        self.create_kti(index + (_slice.start or 0))
                         return
                 
                 alt = 800
@@ -305,8 +304,7 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
                     if index:
                         self.frequency = eng_np.frequency
                         self.offset = eng_np.offset
-                        self.create_kti((index + (_slice.start or 0)) /
-                                        eng_np.frequency)
+                        self.create_kti(index + (_slice.start or 0))
                         return
                 
                 alt = 400
@@ -315,7 +313,7 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
             if alt_aal:
                 self.frequency = alt_aal.frequency
                 self.offset = alt_aal.offset
-                self.create_kti(index_at_value(alt_aal.array, alt) / alt_aal.frequency)
+                self.create_kti(index_at_value(alt_aal.array, alt))
 
 
 class ClimbThrustDerateDeselected(KeyTimeInstanceNode):

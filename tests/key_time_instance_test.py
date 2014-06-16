@@ -268,7 +268,7 @@ class TestClimbAccelerationStart(unittest.TestCase):
         node = self.node_class()
         node.derive(None, initial_climbs, None, prop, eng_np, None)
         self.assertEqual(len(node), 1)
-        self.assertAlmostEqual(node[0].index, 1833, places=0)
+        self.assertAlmostEqual(node[0].index, 917, places=0)
     
     def test_derive_throttle_levers_fallback(self):
         initial_climbs = buildsection('Initial Climb', 511, 531)
