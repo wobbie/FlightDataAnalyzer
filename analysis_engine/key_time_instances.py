@@ -4,7 +4,6 @@ from math import ceil, floor
 from analysis_engine.library import (all_of,
                                      any_of,
                                      coreg,
-                                     find_edges,
                                      find_edges_on_state_change,
                                      find_toc_tod,
                                      hysteresis,
@@ -265,11 +264,14 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
         if spd_sel and spd_sel.frequency >= 0.125 and initial_climbs:
             # Use first Airspeed Selected change in Initial Climb.
             _slice = initial_climbs.get_aligned(spd_sel).get_first().slice
-            edges = find_edges(spd_sel.array, _slice=_slice)
-            if edges:
+            spd_sel.array = spd_sel.array[_slice]
+            spd_sel_threshold = 5 / spd_sel.frequency
+            spd_sel_roc = rate_of_change(spd_sel, 4)
+            index = index_at_value(spd_sel_roc, spd_sel_threshold)
+            if index:
                 self.frequency = spd_sel.frequency
                 self.offset = spd_sel.offset
-                self.create_kti(edges[0])
+                self.create_kti(index + (_slice.start or 0))
                 return
         
         if eng_type:
