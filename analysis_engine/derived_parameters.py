@@ -7200,12 +7200,15 @@ class AirspeedMinusV2(DerivedParameterNode):
         
         v2 = first_valid_parameter(v2_recorded, airspeed_selected, v2_lookup,
                                    phases=phases)
-
         if v2 is None:
             return
 
         for phase in phases:
-            value = most_common_value(v2.array[phase].astype(np.int))
+            if v2.name == 'Airspeed Selected':
+                index = liftoffs.get_last(within_slice=phase).index
+                value = value_at_index(v2.array, index).astype(np.int)
+            else:
+                value = most_common_value(v2.array[phase].astype(np.int))
             if value is not None:
                 self.array[phase] = airspeed.array[phase] - value
 
