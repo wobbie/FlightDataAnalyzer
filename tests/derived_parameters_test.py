@@ -6203,6 +6203,20 @@ class TestAirspeedMinusV2(unittest.TestCase, NodeTest):
         expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
+    def test_derive__airspeed_selected(self):
+        '''
+        Test reflecting data we have seen where airspeed selected starts as
+        previous flights landing speed before being changed before takeoff,
+        this data at the start of the flight was causing landing speed to be
+        used when looking back through the last 5 superframes
+        '''
+        node = self.node_class()
+        airspeed_selected = P('Airspeed Selected', np.ma.concatenate(([138]*400, [110]*250, [140]*1350)))
+        node.derive(self.airspeed, None, airspeed_selected, None, self.liftoffs, self.climbs)
+        expected = np.ma.repeat((0, -8, 0), (180, 820, 1000))
+        expected[expected == 0] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
+
     def test_derive__recorded_masked(self):
         self.v2_record.array.mask = True
         node = self.node_class()
