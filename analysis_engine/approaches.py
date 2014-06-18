@@ -119,7 +119,7 @@ class ApproachInformation(ApproachNode):
 
         airport_id = int(airport['id'])
 
-        if lowest_hdg:
+        if lowest_hdg is not None:
         #if heading is None:
             #self.warning('Invalid heading... Fallback to AFR.')
             #fallback = True
