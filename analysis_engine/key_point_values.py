@@ -8555,7 +8555,7 @@ class Pitch35ToClimbAccelerationStartMin(KeyPointValueNode):
     fallback to 1000ft (end of initial climb)
     '''
 
-    units = ut.FPM
+    units = ut.DEGREE
 
 
     def derive(self,
@@ -8578,7 +8578,7 @@ class Pitch35ToClimbAccelerationStartMax(KeyPointValueNode):
     fallback to 1000ft (end of initial climb)
     '''
 
-    units = ut.FPM
+    units = ut.DEGREE
 
 
     def derive(self,
