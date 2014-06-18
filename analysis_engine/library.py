@@ -1388,8 +1388,8 @@ def unique_values(array):
 
 def most_common_value(array):
     '''
-    Find the most repeating valid value within an array. Works with mapped
-    arrays too.
+    Find the most repeating non-negative valid value within an array. Works
+    with mapped arrays too.
 
     Hint: If you get "TypeError: array cannot be safely cast to required type"
     and your data is integer type, try casting it to int type:
@@ -1397,13 +1397,14 @@ def most_common_value(array):
     most_common_value(array.astype(int))
 
     :param array: Array to count occurrences of values within
-    :type array: np.array
+    :type array: np.ma.array
     :returns: [(val, count), (val2, count2)]
     :rtype: List of tuples
     '''
     if not np.ma.count(array):
         # no valid data
         return None
+    array[array < 0] = np.ma.masked
     counts = np.bincount(array.compressed())
     key = counts.argmax()
     if hasattr(array, 'values_mapping'):

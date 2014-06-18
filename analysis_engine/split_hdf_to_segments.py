@@ -534,7 +534,12 @@ def _calculate_start_datetime(hdf, fallback_dt=None):
     a TimebaseError is raised
     """
     now = datetime.utcnow().replace(tzinfo=pytz.utc)
+    
     if fallback_dt is not None:
+        if (fallback_dt.tzinfo is None or
+            fallback_dt.tzinfo.utcoffset(fallback_dt) is None):
+            # Assume fallback_dt is UTC.
+            fallback_dt = fallback_dt.replace(tzinfo=pytz.utc)
         assert fallback_dt < now, (
             "Fallback time '%s' in the future is not allowed. Current time "
             "is '%s'." % (fallback_dt, now))

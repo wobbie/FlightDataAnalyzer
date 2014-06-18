@@ -221,13 +221,22 @@ class TestClimbAccelerationStart(unittest.TestCase):
                                                     eng_type=prop))
 
     def test_derive_basic(self):
-        array = np.ma.concatenate(([155]*15, [180]*20))
+        array = np.ma.concatenate(([110]*15, [180]*20))
         spd_sel = Parameter('Airspeed Selected', array=array)
         init_climbs = buildsection('Initial Climb', 5, 29)
         node = self.node_class()
         node.derive(None, init_climbs, spd_sel, None, None, None)
         self.assertEqual(len(node), 1)
-        self.assertEqual(node[0].index, 14.5)
+        self.assertAlmostEqual(node[0].index, 13.1, places=1)
+    
+    def test_derive_spd_analog(self):
+        spd_sel = load(os.path.join(test_data_path, 'climb_acceleration_start_spd_sel_analog.nod'))
+        init_climbs = buildsection('Initial Climb', 714, 761)
+        node = self.node_class()
+        node.derive(None, init_climbs, spd_sel, None, None, None)
+        self.assertEqual(len(node), 1)
+        self.assertAlmostEqual(node[0].index, 1459, places=0)
+
 
     def test_derive_spd_unchanged(self):
         array = np.ma.array([155]*35)
@@ -268,7 +277,7 @@ class TestClimbAccelerationStart(unittest.TestCase):
         node = self.node_class()
         node.derive(None, initial_climbs, None, prop, eng_np, None)
         self.assertEqual(len(node), 1)
-        self.assertAlmostEqual(node[0].index, 1833, places=0)
+        self.assertAlmostEqual(node[0].index, 917, places=0)
     
     def test_derive_throttle_levers_fallback(self):
         initial_climbs = buildsection('Initial Climb', 511, 531)
