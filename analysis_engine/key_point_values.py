@@ -10795,6 +10795,17 @@ class ThrottleCyclesDuringFinalApproach(KeyPointValueNode):
             ))
 
 
+class ThrottleLeverAtLiftoff(KeyPointValueNode):
+    '''
+    Angle of the Throttle Levers at liftoff
+    '''
+
+    units = ut.DEGREE
+
+    def derive(self, levers=P('Throttle Levers'), liftoffs=KTI('Liftoff')):
+        self.create_kpvs_at_ktis(levers.array, liftoffs)
+
+
 ##############################################################################
 # Thrust Asymmetry
 

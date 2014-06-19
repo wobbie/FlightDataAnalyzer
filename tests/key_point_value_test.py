@@ -469,6 +469,7 @@ from analysis_engine.key_point_values import (
     TaxiOutDuration,
     TerrainClearanceAbove3000FtMin,
     ThrottleCyclesDuringFinalApproach,
+    ThrottleLeverAtLiftoff,
     ThrottleReductionToTouchdownDuration,
     ThrustAsymmetryDuringApproachDuration,
     ThrustAsymmetryDuringApproachMax,
@@ -9652,6 +9653,17 @@ class TestThrottleCyclesDuringFinalApproach(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = ThrottleCyclesDuringFinalApproach
         self.operational_combinations = [('Throttle Levers', 'Final Approach')]
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestThrottleLeverAtLiftoff(unittest.TestCase, CreateKPVsAtKTIsTest):
+
+    def setUp(self):
+        self.node_class = ThrottleLeverAtLiftoff
+        self.operational_combinations = [('Throttle Levers', 'Liftoff')]
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
