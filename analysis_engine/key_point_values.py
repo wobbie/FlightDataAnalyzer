@@ -1517,7 +1517,7 @@ class AirspeedMinusMinimumAirspeedAbove10000FtMin(KeyPointValueNode):
 
     def derive(self,
                air_spd=P('Airspeed Minus Minimum Airspeed'),
-               alt_std=P('Altitude STD')):
+               alt_std=P('Altitude STD Smoothed')):
 
         self.create_kpvs_within_slices(air_spd.array,
                                        alt_std.slices_above(10000),
@@ -3261,7 +3261,7 @@ class AltitudeDuringCabinAltitudeWarningMax(KeyPointValueNode):
     def derive(self,
                cab_warn=M('Cabin Altitude Warning'),
                airborne=S('Airborne'),
-               alt=P('Altitude STD')):
+               alt=P('Altitude STD Smoothed')):
 
         # XXX: Grr... no test case and use of incorrect state
         # TODO: warns = runs_of_ones(cab_warn.array == 'Warning')
@@ -3741,7 +3741,7 @@ class AltitudeSTDWithGearDownMax(KeyPointValueNode):
     units = ut.FT
 
     def derive(self,
-               alt_std=P('Altitude STD'),
+               alt_std=P('Altitude STD Smoothed'),
                gear=M('Gear Down'),
                airs=S('Airborne')):
 

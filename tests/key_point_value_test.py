@@ -1943,13 +1943,13 @@ class TestAirspeedMinusMinimumAirspeedAbove10000FtMin(unittest.TestCase, CreateK
 
     def setUp(self):
         self.node_class = AirspeedMinusMinimumAirspeedAbove10000FtMin
-        self.operational_combinations = [('Airspeed Minus Minimum Airspeed', 'Altitude STD')]
+        self.operational_combinations = [('Airspeed Minus Minimum Airspeed', 'Altitude STD Smoothed')]
         self.function = min_value
         self.second_param_method_calls = [('slices_above', (10000,), {})]
 
     def test_derive(self):
         air_spd = P('Airspeed Minus Minimum Airspeed', np.ma.arange(200, 241))
-        alt_std = P('Altitude STD', np.ma.array(range(20) + range(20, -1, -1)) * 1000)
+        alt_std = P('Altitude STD Smoothed', np.ma.array(range(20) + range(20, -1, -1)) * 1000)
         name = self.node_class.get_name()
         node = self.node_class()
         node.derive(air_spd, alt_std)
@@ -3286,7 +3286,7 @@ class TestAltitudeWithFlapMax(unittest.TestCase, NodeTest):
 
     def test_derive(self):
         alt_std = P(
-            name='Altitude STD',
+            name='Altitude STD Smoothed',
             array=np.ma.arange(0, 3000, 100),
         )
         airborne = buildsection('Airborne', 2, 28)
@@ -3856,11 +3856,11 @@ class TestAltitudeSTDWithGearDownMax(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = AltitudeSTDWithGearDownMax
         self.operational_combinations = [
-            ('Altitude STD', 'Gear Down', 'Airborne')]
+            ('Altitude STD Smoothed', 'Gear Down', 'Airborne')]
 
     def test_derive_basic(self):
         alt_aal = P(
-            name='Altitude STD',
+            name='Altitude STD Smoothed',
             array=np.ma.arange(10),
         )
         gear = M(

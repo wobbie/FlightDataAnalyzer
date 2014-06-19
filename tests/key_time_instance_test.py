@@ -760,7 +760,7 @@ class TestTopOfClimb(unittest.TestCase):
 
     def test_top_of_climb_basic(self):
         alt_data = np.ma.array(range(0,800,100)+[800]*5+range(800,0,-100))
-        alt = Parameter('Altitude STD', np.ma.array(alt_data))
+        alt = Parameter('Altitude STD Smoothed', np.ma.array(alt_data))
         phase = TopOfClimb()
         in_air = buildsection('Climb Cruise Descent',0,len(alt.array))
         phase.derive(alt, in_air)
@@ -769,7 +769,7 @@ class TestTopOfClimb(unittest.TestCase):
 
     def test_top_of_climb_truncated_start(self):
         alt_data = np.ma.array([800]*5+range(800,0,-100))
-        alt = Parameter('Altitude STD', np.ma.array(alt_data))
+        alt = Parameter('Altitude STD Smoothed', np.ma.array(alt_data))
         phase = TopOfClimb()
         in_air = buildsection('Climb Cruise Descent',0,len(alt.array))
         phase.derive(alt, in_air)
@@ -779,7 +779,7 @@ class TestTopOfClimb(unittest.TestCase):
 
     def test_top_of_climb_truncated_end(self):
         alt_data = np.ma.array(range(0,800,100)+[800]*5)
-        alt = Parameter('Altitude STD', np.ma.array(alt_data))
+        alt = Parameter('Altitude STD Smoothed', np.ma.array(alt_data))
         phase = TopOfClimb()
         in_air = buildsection('Climb Cruise Descent',0,len(alt.array))
         phase.derive(alt, in_air)
@@ -798,7 +798,7 @@ class TestTopOfDescent(unittest.TestCase):
 
     def test_top_of_descent_basic(self):
         alt_data = np.ma.array(range(0,800,100)+[800]*5+range(800,0,-100))
-        alt = Parameter('Altitude STD', np.ma.array(alt_data))
+        alt = Parameter('Altitude STD Smoothed', np.ma.array(alt_data))
         phase = TopOfDescent()
         in_air = buildsection('Climb Cruise Descent',0,len(alt.array))
         phase.derive(alt, in_air)
@@ -807,7 +807,7 @@ class TestTopOfDescent(unittest.TestCase):
 
     def test_top_of_descent_truncated_start(self):
         alt_data = np.ma.array([800]*5+range(800,0,-100))
-        alt = Parameter('Altitude STD', np.ma.array(alt_data))
+        alt = Parameter('Altitude STD Smoothed', np.ma.array(alt_data))
         phase = TopOfDescent()
         in_air = buildsection('Climb Cruise Descent',0,len(alt.array))
         phase.derive(alt, in_air)
@@ -817,7 +817,7 @@ class TestTopOfDescent(unittest.TestCase):
 
     def test_top_of_descent_truncated_end(self):
         alt_data = np.ma.array(range(0,800,100)+[800]*5)
-        alt = Parameter('Altitude STD', np.ma.array(alt_data))
+        alt = Parameter('Altitude STD Smoothed', np.ma.array(alt_data))
         phase = TopOfDescent()
         in_air = buildsection('Climb Cruise Descent',0,len(alt.array)-1)
         phase.derive(alt, in_air)
