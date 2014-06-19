@@ -9,6 +9,24 @@ You can view the differences in tagged versions as follows:
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
 
+V0.12.4
+-------
+
+ - Added (KPV): Pitch35ToClimbAccelerationStartMax/Min
+ - Added (KPV): airspeed minus V2 35 ft to climb acceleration start KVPs
+ - Improvement: _value min/max/max abs values to better handle start and stop edges
+ - Improvement: Speedbrake Selected - Check if Speedbrake Armed is available for Airbuses
+ - Improvement: ClimbAccelerationStart multiple
+   - AAL first dep for freq
+   - Manually aligns parameters 
+   - Fixed last freq divide
+   - Support for analog spd_sel
+   - Fix for low hz parameters
+ - Fixed: AltitudeAAL bounced_sections alt comparison
+ - Fixed: landing runway for parallel runways when ils established at start of approach
+ - Fixed: most_common_value ignore negative values
+
+
 V0.12.3
 -------
 
