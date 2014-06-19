@@ -164,6 +164,7 @@ from analysis_engine.key_point_values import (
     AltitudeWithGearDownMax,
     AutobrakeRejectedTakeoffNotSetDuringTakeoff,
     BrakePressureInTakeoffRollMax,
+    BrakeTempDuringTaxiInMax,
     ControlColumnForceMax,
     ControlColumnStiffness,
     ControlWheelForceMax,
@@ -2990,6 +2991,18 @@ class TestMainGearOnGroundToNoseGearOnGroundDuration(unittest.TestCase,
 
 ##################################
 # Braking
+
+
+class TestBrakeTempDuringTaxiInMax(unittest.TestCase,
+                                        CreateKPVsWithinSlicesTest):
+    def setUp(self):
+        self.node_class = BrakeTempDuringTaxiInMax
+        self.operational_combinations = [('Brake (*) Temp Max', 'Taxi In',)]
+        self.function = max_value
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
 
 
 class TestBrakePressureInTakeoffRollMax(unittest.TestCase,

@@ -1743,6 +1743,101 @@ class BrakePressure(DerivedParameterNode):
                                           frequency=self.frequency)
 
 
+class Brake_TempAvg(DerivedParameterNode):
+    '''
+    The Average recorded Brake Temperature across all Brake sources.
+
+    offset used is the mean of all parameters used
+    '''
+
+    name = 'Brake (*) Temp Avg'
+    align = False
+    units = ut.CELSIUS
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               brake1=P('Brake (1) Temp'),
+               brake2=P('Brake (2) Temp'),
+               brake3=P('Brake (3) Temp'),
+               brake4=P('Brake (4) Temp'),
+               brake5=P('Brake (5) Temp'),
+               brake6=P('Brake (6) Temp'),
+               brake7=P('Brake (7) Temp'),
+               brake8=P('Brake (8) Temp')):
+
+        brake_params = (brake1, brake2, brake3, brake4, brake5, brake6, brake7, brake8)
+        brakes = vstack_params(*brake_params)
+        self.array = np.ma.average(brakes, axis=0)
+        self.offset = offset_select('mean', brake_params)
+
+
+class Brake_TempMax(DerivedParameterNode):
+    '''
+    The Maximum recorded Brake Temperature across all Brake sources.
+
+    offset used is the mean of all parameters used
+    '''
+
+    name = 'Brake (*) Temp Max'
+    align = False
+    units = ut.CELSIUS
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               brake1=P('Brake (1) Temp'),
+               brake2=P('Brake (2) Temp'),
+               brake3=P('Brake (3) Temp'),
+               brake4=P('Brake (4) Temp'),
+               brake5=P('Brake (5) Temp'),
+               brake6=P('Brake (6) Temp'),
+               brake7=P('Brake (7) Temp'),
+               brake8=P('Brake (8) Temp')):
+
+        brake_params = (brake1, brake2, brake3, brake4, brake5, brake6, brake7, brake8)
+        brakes = vstack_params(*brake_params)
+        self.array = np.ma.max(brakes, axis=0)
+        self.offset = offset_select('mean', brake_params)
+
+
+class Brake_TempMin(DerivedParameterNode):
+    '''
+    The Minimum recorded Brake Temperature across all Brake sources.
+
+    offset used is the mean of all parameters used
+    '''
+
+    name = 'Brake (*) Temp Min'
+    align = False
+    units = ut.CELSIUS
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               brake1=P('Brake (1) Temp'),
+               brake2=P('Brake (2) Temp'),
+               brake3=P('Brake (3) Temp'),
+               brake4=P('Brake (4) Temp'),
+               brake5=P('Brake (5) Temp'),
+               brake6=P('Brake (6) Temp'),
+               brake7=P('Brake (7) Temp'),
+               brake8=P('Brake (8) Temp')):
+
+        brake_params = (brake1, brake2, brake3, brake4, brake5, brake6, brake7, brake8)
+        brakes = vstack_params(*brake_params)
+        self.array = np.ma.min(brakes, axis=0)
+        self.offset = offset_select('mean', brake_params)
+
 ##############################################################################
 # Engine EPR
 

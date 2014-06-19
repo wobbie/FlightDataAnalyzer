@@ -3041,6 +3041,17 @@ class LiftoffToClimbPitchDuration(KeyPointValueNode):
 # Braking
 
 
+class BrakeTempDuringTaxiInMax(KeyPointValueNode):
+    '''
+    Maximum temperature of any brake during taxi in.
+    '''
+
+    units = ut.CELSIUS
+
+    def derive(self, brakes=P('Brake (*) Temp Max'), taxiin=S('Taxi In')):
+        self.create_kpvs_within_slices(brakes.array, taxiin, max_value)
+
+
 class BrakePressureInTakeoffRollMax(KeyPointValueNode):
     '''
     FDS developed this KPV to support the UK CAA Significant Seven programme.
