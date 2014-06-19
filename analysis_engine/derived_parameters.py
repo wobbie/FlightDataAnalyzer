@@ -327,9 +327,9 @@ class AirspeedTrue(DerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available):
-        return 'Airspeed' in available and 'Altitude STD' in available
+        return 'Airspeed' in available and 'Altitude STD Smoothed' in available
 
-    def derive(self, cas_p=P('Airspeed'), alt_std_p=P('Altitude STD'),
+    def derive(self, cas_p=P('Airspeed'), alt_std_p=P('Altitude STD Smoothed'),
                sat_p=P('SAT'), toffs=S('Takeoff'), lands=S('Landing'),
                rtos=S('Rejected Takeoff'),
                gspd=P('Groundspeed'), acc_fwd=P('Acceleration Forwards')):
@@ -1060,7 +1060,7 @@ class AltitudeQNH(DerivedParameterNode):
 
         return 'Altitude AAL' in available and 'Altitude Peak' in available
 
-    def derive(self, alt_aal=P('Altitude AAL'), alt_std=P('Altitude STD'),
+    def derive(self, alt_aal=P('Altitude AAL'), alt_std=P('Altitude STD Smoothed'),
                alt_peak=KTI('Altitude Peak'),
                l_apt=A('FDR Landing Airport'), l_rwy=A('FDR Landing Runway'),
                t_apt=A('FDR Takeoff Airport'), t_rwy=A('FDR Takeoff Runway'),
@@ -4414,7 +4414,7 @@ class Mach(DerivedParameterNode):
 
     units = ut.MACH
 
-    def derive(self, cas = P('Airspeed'), alt = P('Altitude STD')):
+    def derive(self, cas = P('Airspeed'), alt = P('Altitude STD Smoothed')):
         dp = cas2dp(cas.array)
         p = alt2press(alt.array)
         self.array = dp_over_p2mach(dp/p)
@@ -5331,9 +5331,9 @@ class SAT(DerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
 
-        return 'Altitude STD' in available
+        return 'Altitude STD Smoothed' in available
 
-    def derive(self, tat=P('TAT'), mach=P('Mach'), alt=P('Altitude STD')):
+    def derive(self, tat=P('TAT'), mach=P('Mach'), alt=P('Altitude STD Smoothed')):
 
         if tat and mach:
             self.array = machtat2sat(mach.array, tat.array)
@@ -6898,7 +6898,7 @@ class VMOLookup(DerivedParameterNode):
                     engine_type=A('Engine Type'), engine_series=A('Engine Series')):
 
         core = all_of((
-            'Altitude STD',
+            'Altitude STD Smoothed',
             'Model',
             'Series',
             'Family',
@@ -6910,7 +6910,7 @@ class VMOLookup(DerivedParameterNode):
         return core and lookup_table(cls, 'vmo', *attrs)
 
     def derive(self,
-               alt_std=P('Altitude STD'),
+               alt_std=P('Altitude STD Smoothed'),
                model=A('Model'),
                series=A('Series'),
                family=A('Family'),
@@ -6947,7 +6947,7 @@ class MMOLookup(DerivedParameterNode):
                     engine_type=A('Engine Type'), engine_series=A('Engine Series')):
 
         core = all_of((
-            'Altitude STD',
+            'Altitude STD Smoothed',
             'Model',
             'Series',
             'Family',
@@ -6959,7 +6959,7 @@ class MMOLookup(DerivedParameterNode):
         return core and lookup_table(cls, 'mmo', *attrs)
 
     def derive(self,
-               alt_std=P('Altitude STD'),
+               alt_std=P('Altitude STD Smoothed'),
                model=A('Model'),
                series=A('Series'),
                family=A('Family'),
@@ -7072,7 +7072,7 @@ class FlapManoeuvreSpeed(DerivedParameterNode):
             return False
 
         core = all_of((
-            'Airspeed', 'Altitude STD', 'Descent To Flare',
+            'Airspeed', 'Altitude STD Smoothed', 'Descent To Flare',
             'Gross Weight Smoothed', 'Model', 'Series', 'Family',
             'Engine Type', 'Engine Series',
         ), available)
@@ -7092,7 +7092,7 @@ class FlapManoeuvreSpeed(DerivedParameterNode):
                gw=P('Gross Weight Smoothed'),
                vref_25=P('Vref (25)'),
                vref_30=P('Vref (30)'),
-               alt_std=P('Altitude STD'),
+               alt_std=P('Altitude STD Smoothed'),
                descents=S('Descent To Flare'),
                model=A('Model'),
                series=A('Series'),
