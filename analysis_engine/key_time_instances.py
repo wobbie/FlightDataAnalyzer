@@ -1257,7 +1257,8 @@ class Touchdown(KeyTimeInstanceNode):
                 for i in range(1, len(bump)-1):
                     bump[i-1]=lift[i]*lift[i+1]
                 peak_az = np.max(bump)
-                index_az = np.argmax(bump)+index_ref-dt_pre*hz
+                if peak_az > 0.01:
+                    index_az = np.argmax(bump)+index_ref-dt_pre*hz
             
                 # The first real contact is indicated by an increase in g of
                 # more than 0.075, but this must be positive (hence the
@@ -1298,6 +1299,7 @@ class Touchdown(KeyTimeInstanceNode):
             '''
             # Plotting process to view the results in an easy manner.
             import matplotlib.pyplot as plt
+            import os
             name = 'Touchdown with values Ax=%.4f, Az=%.4f and dAz=%.4f' %(peak_ax, peak_az, delta)
             self.info(name)
             timebase=np.linspace(-dt_pre*hz, dt_pre*hz, 2*dt_pre*hz+1)
@@ -1306,29 +1308,30 @@ class Touchdown(KeyTimeInstanceNode):
             if alt:
                 plt.plot(timebase, alt.array[plot_period], 'o-r')
             if acc_long:
-                plt.plot(timebase, acc_long.array[plot_period]*200, 'o-m')
+                plt.plot(timebase, acc_long.array[plot_period]*20, 'o-m')
             if acc_norm:
-                plt.plot(timebase, acc_norm.array[plot_period]*100, 'o-g')
+                plt.plot(timebase, acc_norm.array[plot_period]*10, 'o-g')
             if gog:
-                plt.plot(timebase, gog.array[plot_period]*100, 'o-k')
+                plt.plot(timebase, gog.array[plot_period]*10, 'o-k')
             if index_gog:
-                plt.plot(index_gog-index_ref, 20.0,'ok', markersize=8)
+                plt.plot(index_gog-index_ref, 2.0,'ok', markersize=8)
             if index_ax:
-                plt.plot(index_ax-index_ref, 30.0,'om', markersize=8)
+                plt.plot(index_ax-index_ref, 3.0,'om', markersize=8)
             if index_az:
-                plt.plot(index_az-index_ref, 40.0,'og', markersize=8)
+                plt.plot(index_az-index_ref, 4.0,'og', markersize=8)
             if index_dax:
-                plt.plot(index_dax-index_ref, 55.0,'dm', markersize=8)
+                plt.plot(index_dax-index_ref, 5.5,'dm', markersize=8)
             if index_daz:
-                plt.plot(index_daz-index_ref, 50.0,'dg', markersize=8)
+                plt.plot(index_daz-index_ref, 5.0,'dg', markersize=8)
             if index_alt:
-                plt.plot(index_alt-index_ref, 10.0,'or', markersize=8)
+                plt.plot(index_alt-index_ref, 1.0,'or', markersize=8)
             if index_tdn:
-                plt.plot(index_tdn-index_ref, -20.0,'db', markersize=10)
+                plt.plot(index_tdn-index_ref, -2.0,'db', markersize=10)
             plt.title(name)
             plt.grid()
             filename = name
             print name
+            WORKING_DIR = "C:\Temp"
             output_dir = os.path.join(WORKING_DIR, 'Touchdown_graphs')
             if not os.path.exists(output_dir):
                 os.mkdir(output_dir)
