@@ -8,5 +8,7 @@ simplekml
 simplejson
 geomag>=0.9
 PyYAML
+pytz
 FlightDataUtilities
 HDFAccess
+python-dateutil

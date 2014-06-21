@@ -327,9 +327,9 @@ class AirspeedTrue(DerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available):
-        return 'Airspeed' in available and 'Altitude STD' in available
+        return 'Airspeed' in available and 'Altitude STD Smoothed' in available
 
-    def derive(self, cas_p=P('Airspeed'), alt_std_p=P('Altitude STD'),
+    def derive(self, cas_p=P('Airspeed'), alt_std_p=P('Altitude STD Smoothed'),
                sat_p=P('SAT'), toffs=S('Takeoff'), lands=S('Landing'),
                rtos=S('Rejected Takeoff'),
                gspd=P('Groundspeed'), acc_fwd=P('Acceleration Forwards')):
@@ -565,20 +565,21 @@ class AltitudeAAL(DerivedParameterNode):
         alt_rad_aal = np.ma.maximum(alt_rad, 0.0)
         ralt_sections = np.ma.clump_unmasked(np.ma.masked_outside(alt_rad_aal, 0.1, 100.0))
         if len(ralt_sections) == 0:
-            # No useful radio altitude signals, so just use pressure altitude and pitch data.
+            # No useful radio altitude signals, so just use pressure altitude
+            # and pitch data.
             return self.shift_alt_std(alt_std, land_pitch)
 
         if mode == 'land':
             # We refine our definition of the radio altimeter sections to
             # take account of bounced landings and altimeters which read
             # small positive values on the ground.
-            bounce_sections = [y for y in ralt_sections if np.ma.max(alt_rad[y]>BOUNCED_LANDING_THRESHOLD)]
+            bounce_sections = [y for y in ralt_sections if np.ma.max(alt_rad[y]) > BOUNCED_LANDING_THRESHOLD]
             bounce_end = bounce_sections[0].start
             hundred_feet = bounce_sections[-1].stop
         
             alt_result[bounce_end:hundred_feet] = alt_rad_aal[bounce_end:hundred_feet]
             alt_result[:bounce_end] = 0.0
-            ralt_sections = [slice(0,hundred_feet)]
+            ralt_sections = [slice(0, hundred_feet)]
 
         elif mode=='over_gnd':
 
@@ -1059,7 +1060,7 @@ class AltitudeQNH(DerivedParameterNode):
 
         return 'Altitude AAL' in available and 'Altitude Peak' in available
 
-    def derive(self, alt_aal=P('Altitude AAL'), alt_std=P('Altitude STD'),
+    def derive(self, alt_aal=P('Altitude AAL'), alt_std=P('Altitude STD Smoothed'),
                alt_peak=KTI('Altitude Peak'),
                l_apt=A('FDR Landing Airport'), l_rwy=A('FDR Landing Runway'),
                t_apt=A('FDR Takeoff Airport'), t_rwy=A('FDR Takeoff Runway'),
@@ -1403,12 +1404,11 @@ class DescendForFlightPhases(DerivedParameterNode):
 
 class AOA(DerivedParameterNode):
     '''
-    Angle of Attack - merges Left and Right signals and increases the
-    frequency to twice that of the highest frequency of the dependancies.
+    Angle of Attack - averages Left and Right signals. See Bombardier AOM-1281
+    document.
     '''
 
     name = 'AOA'
-    align = False
     units = ut.DEGREE
     
     @classmethod
@@ -1416,21 +1416,23 @@ class AOA(DerivedParameterNode):
 
         return any_of(('AOA (L)', 'AOA (R)'), available)
 
-    def derive(self, aoa_l=P('AOA (L)'), aoa_r=P('AOA (R)')):
+    def derive(self, aoa_l=P('AOA (L)'), aoa_r=P('AOA (R)'),
+               family=A('Family')):
 
         if aoa_l and aoa_r:
-            # double the max freq
-            self.frequency = max((aoa_l.frequency, aoa_r.frequency)) * 2
-            self.offset = 0.0
-            self.array = blend_parameters([aoa_l, aoa_r],
-                                          frequency=self.frequency, 
-                                          offset=self.offset)
+            # Average angle of attack to compensate for sideslip.
+            self.array = (aoa_l.array + aoa_r.array) / 2
         else:
             # only one available
             aoa = aoa_l or aoa_r
-            self.frequency = aoa.frequency
-            self.offset = aoa.offset
             self.array = aoa.array
+        
+        if family and family.value == 'CL-600':
+            # The Angle of Attack recorded in the FDR is "filtered" Body AoA
+            # and is not compensated for sideslip, it must be converted back to
+            # Vane before it can be used. See Bombardier AOM-1281
+            # document.
+            self.array = self.array * 1.661 - 1.404
 
 
 class ControlColumn(DerivedParameterNode):
@@ -1740,6 +1742,101 @@ class BrakePressure(DerivedParameterNode):
             self.array = blend_parameters(sources, offset=self.offset, 
                                           frequency=self.frequency)
 
+
+class Brake_TempAvg(DerivedParameterNode):
+    '''
+    The Average recorded Brake Temperature across all Brake sources.
+
+    offset used is the mean of all parameters used
+    '''
+
+    name = 'Brake (*) Temp Avg'
+    align = False
+    units = ut.CELSIUS
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               brake1=P('Brake (1) Temp'),
+               brake2=P('Brake (2) Temp'),
+               brake3=P('Brake (3) Temp'),
+               brake4=P('Brake (4) Temp'),
+               brake5=P('Brake (5) Temp'),
+               brake6=P('Brake (6) Temp'),
+               brake7=P('Brake (7) Temp'),
+               brake8=P('Brake (8) Temp')):
+
+        brake_params = (brake1, brake2, brake3, brake4, brake5, brake6, brake7, brake8)
+        brakes = vstack_params(*brake_params)
+        self.array = np.ma.average(brakes, axis=0)
+        self.offset = offset_select('mean', brake_params)
+
+
+class Brake_TempMax(DerivedParameterNode):
+    '''
+    The Maximum recorded Brake Temperature across all Brake sources.
+
+    offset used is the mean of all parameters used
+    '''
+
+    name = 'Brake (*) Temp Max'
+    align = False
+    units = ut.CELSIUS
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               brake1=P('Brake (1) Temp'),
+               brake2=P('Brake (2) Temp'),
+               brake3=P('Brake (3) Temp'),
+               brake4=P('Brake (4) Temp'),
+               brake5=P('Brake (5) Temp'),
+               brake6=P('Brake (6) Temp'),
+               brake7=P('Brake (7) Temp'),
+               brake8=P('Brake (8) Temp')):
+
+        brake_params = (brake1, brake2, brake3, brake4, brake5, brake6, brake7, brake8)
+        brakes = vstack_params(*brake_params)
+        self.array = np.ma.max(brakes, axis=0)
+        self.offset = offset_select('mean', brake_params)
+
+
+class Brake_TempMin(DerivedParameterNode):
+    '''
+    The Minimum recorded Brake Temperature across all Brake sources.
+
+    offset used is the mean of all parameters used
+    '''
+
+    name = 'Brake (*) Temp Min'
+    align = False
+    units = ut.CELSIUS
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               brake1=P('Brake (1) Temp'),
+               brake2=P('Brake (2) Temp'),
+               brake3=P('Brake (3) Temp'),
+               brake4=P('Brake (4) Temp'),
+               brake5=P('Brake (5) Temp'),
+               brake6=P('Brake (6) Temp'),
+               brake7=P('Brake (7) Temp'),
+               brake8=P('Brake (8) Temp')):
+
+        brake_params = (brake1, brake2, brake3, brake4, brake5, brake6, brake7, brake8)
+        brakes = vstack_params(*brake_params)
+        self.array = np.ma.min(brakes, axis=0)
+        self.offset = offset_select('mean', brake_params)
 
 ##############################################################################
 # Engine EPR
@@ -4412,7 +4509,7 @@ class Mach(DerivedParameterNode):
 
     units = ut.MACH
 
-    def derive(self, cas = P('Airspeed'), alt = P('Altitude STD')):
+    def derive(self, cas = P('Airspeed'), alt = P('Altitude STD Smoothed')):
         dp = cas2dp(cas.array)
         p = alt2press(alt.array)
         self.array = dp_over_p2mach(dp/p)
@@ -5329,9 +5426,9 @@ class SAT(DerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
 
-        return 'Altitude STD' in available
+        return 'Altitude STD Smoothed' in available
 
-    def derive(self, tat=P('TAT'), mach=P('Mach'), alt=P('Altitude STD')):
+    def derive(self, tat=P('TAT'), mach=P('Mach'), alt=P('Altitude STD Smoothed')):
 
         if tat and mach:
             self.array = machtat2sat(mach.array, tat.array)
@@ -6896,7 +6993,7 @@ class VMOLookup(DerivedParameterNode):
                     engine_type=A('Engine Type'), engine_series=A('Engine Series')):
 
         core = all_of((
-            'Altitude STD',
+            'Altitude STD Smoothed',
             'Model',
             'Series',
             'Family',
@@ -6908,7 +7005,7 @@ class VMOLookup(DerivedParameterNode):
         return core and lookup_table(cls, 'vmo', *attrs)
 
     def derive(self,
-               alt_std=P('Altitude STD'),
+               alt_std=P('Altitude STD Smoothed'),
                model=A('Model'),
                series=A('Series'),
                family=A('Family'),
@@ -6945,7 +7042,7 @@ class MMOLookup(DerivedParameterNode):
                     engine_type=A('Engine Type'), engine_series=A('Engine Series')):
 
         core = all_of((
-            'Altitude STD',
+            'Altitude STD Smoothed',
             'Model',
             'Series',
             'Family',
@@ -6957,7 +7054,7 @@ class MMOLookup(DerivedParameterNode):
         return core and lookup_table(cls, 'mmo', *attrs)
 
     def derive(self,
-               alt_std=P('Altitude STD'),
+               alt_std=P('Altitude STD Smoothed'),
                model=A('Model'),
                series=A('Series'),
                family=A('Family'),
@@ -7070,7 +7167,7 @@ class FlapManoeuvreSpeed(DerivedParameterNode):
             return False
 
         core = all_of((
-            'Airspeed', 'Altitude STD', 'Descent To Flare',
+            'Airspeed', 'Altitude STD Smoothed', 'Descent To Flare',
             'Gross Weight Smoothed', 'Model', 'Series', 'Family',
             'Engine Type', 'Engine Series',
         ), available)
@@ -7090,7 +7187,7 @@ class FlapManoeuvreSpeed(DerivedParameterNode):
                gw=P('Gross Weight Smoothed'),
                vref_25=P('Vref (25)'),
                vref_30=P('Vref (30)'),
-               alt_std=P('Altitude STD'),
+               alt_std=P('Altitude STD Smoothed'),
                descents=S('Descent To Flare'),
                model=A('Model'),
                series=A('Series'),
@@ -7198,12 +7295,15 @@ class AirspeedMinusV2(DerivedParameterNode):
         
         v2 = first_valid_parameter(v2_recorded, airspeed_selected, v2_lookup,
                                    phases=phases)
-
         if v2 is None:
             return
 
         for phase in phases:
-            value = most_common_value(v2.array[phase].astype(np.int))
+            if v2.name == 'Airspeed Selected':
+                index = liftoffs.get_last(within_slice=phase).index
+                value = value_at_index(v2.array, index).astype(np.int)
+            else:
+                value = most_common_value(v2.array[phase].astype(np.int))
             if value is not None:
                 self.array[phase] = airspeed.array[phase] - value
 

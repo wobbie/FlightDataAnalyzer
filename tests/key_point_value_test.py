@@ -84,10 +84,14 @@ from analysis_engine.key_point_values import (
     AirspeedMinusMinimumAirspeedDuringGoAroundMin,
     AirspeedMinusV235To1000FtMax,
     AirspeedMinusV235To1000FtMin,
+    AirspeedMinusV235ToClimbAccelerationStartMax,
+    AirspeedMinusV235ToClimbAccelerationStartMin,
     AirspeedMinusV2At35FtDuringTakeoff,
     AirspeedMinusV2AtLiftoff,
     AirspeedMinusV2For3Sec35To1000FtMax,
     AirspeedMinusV2For3Sec35To1000FtMin,
+    AirspeedMinusV2For3Sec35ToClimbAccelerationStartMax,
+    AirspeedMinusV2For3Sec35ToClimbAccelerationStartMin,
     AirspeedMinusVMOMax,
     AirspeedRelative1000To500FtMax,
     AirspeedRelative1000To500FtMin,
@@ -160,6 +164,7 @@ from analysis_engine.key_point_values import (
     AltitudeWithGearDownMax,
     AutobrakeRejectedTakeoffNotSetDuringTakeoff,
     BrakePressureInTakeoffRollMax,
+    BrakeTempDuringTaxiInMax,
     ControlColumnForceMax,
     ControlColumnStiffness,
     ControlWheelForceMax,
@@ -350,6 +355,8 @@ from analysis_engine.key_point_values import (
     Pitch1000To500FtMax,
     Pitch1000To500FtMin,
     Pitch20FtToTouchdownMin,
+    Pitch35ToClimbAccelerationStartMax,
+    Pitch35ToClimbAccelerationStartMin,
     Pitch35To400FtMax,
     Pitch35To400FtMin,
     Pitch400To1000FtMax,
@@ -377,6 +384,7 @@ from analysis_engine.key_point_values import (
     PitchRate35To1000FtMax,
     PitchTakeoffMax,
     RateOfClimb35To1000FtMin,
+    RateOfClimb35ToClimbAccelerationStartMin,
     RateOfClimbBelow10000FtMax,
     RateOfClimbDuringGoAroundMax,
     RateOfClimbMax,
@@ -462,6 +470,7 @@ from analysis_engine.key_point_values import (
     TaxiOutDuration,
     TerrainClearanceAbove3000FtMin,
     ThrottleCyclesDuringFinalApproach,
+    ThrottleLeverAtLiftoff,
     ThrottleReductionToTouchdownDuration,
     ThrustAsymmetryDuringApproachDuration,
     ThrustAsymmetryDuringApproachMax,
@@ -655,7 +664,11 @@ class CreateKPVsWhereTest(NodeTest):
         if not hasattr(self, 'expected'):
             self.expected = []
             if self.phases:
-                slices = [p.slice for p in self.phases]
+                # TODO: remove after intervals have been implemented
+                if hasattr(self, 'complex_where'):
+                    slices = self.phases.get_slices()
+                else:
+                    slices = [p.slice for p in self.phases]
             else:
                 slices = [slice(None)]
 
@@ -822,7 +835,7 @@ class ILSTest(NodeTest):
             array=np.ma.array([108.5] * 6 + [114.05] * 4),
         )
         ils_frequency.array[0:10:2] = np.ma.masked
-        ils_ests = buildsection('ILS Localizer Established', 2, 9)
+        ils_ests = buildsection('ILS Localizer Established', 2, 8)
         return ils_frequency, ils_ests
 
     def prepare__glideslope__basic(self):
@@ -835,7 +848,7 @@ class ILSTest(NodeTest):
             # Altitude from 1875 to 325 ft in 63 steps.
             array=np.ma.array((75 - np.arange(63)) * 25),
         )
-        ils_ests = buildsection('ILS Glideslope Established', 2, 63)
+        ils_ests = buildsection('ILS Glideslope Established', 2, 62)
         return ils_glideslope, alt_aal, ils_ests
 
     def prepare__glideslope__four_peaks(self):
@@ -848,7 +861,7 @@ class ILSTest(NodeTest):
             # Altitude from 1875 to 325 ft in 63 steps.
             array=np.ma.array((75 - np.arange(63)) * 25),
         )
-        ils_ests = buildsection('ILS Glideslope Established', 2, 56)
+        ils_ests = buildsection('ILS Glideslope Established', 2, 55)
         return ils_glideslope, alt_aal, ils_ests
 
     def prepare__localizer__basic(self):
@@ -1815,6 +1828,115 @@ class TestAirspeedMinusV2For3Sec35To1000FtMin(unittest.TestCase, NodeTest):
         self.assertTrue(False, msg='Test Not Implemented')
 
 
+class TestAirspeedMinusV235ToClimbAccelerationStartMax(unittest.TestCase):
+
+
+    def setUp(self):
+        self.node_class = AirspeedMinusV235ToClimbAccelerationStartMax
+        self.operational_combinations = [('Airspeed Minus V2', 'Initial Climb', 'Climb Acceleration Start')]
+        self.function = max_value
+
+    def test_can_operate(self):
+        opts = self.node_class.get_operational_combinations()
+        self.assertEqual(opts, self.operational_combinations)
+
+    def test_derive_basic(self):
+        pitch = P(
+            name='Airspeed Minus V2',
+            array=np.ma.array([0, 2, 4, 7, 9, 8, 6, 3, -1]),
+        )
+        climb = buildsection('Initial Climb', 1.4, 8)
+        climb_accel_start = KTI('Climb Acceleration Start', items=[KeyTimeInstance(3, 'Climb Acceleration Start')])
+
+        node = self.node_class()
+        node.derive(pitch, climb, climb_accel_start)
+
+        self.assertEqual(node, KPV('Airspeed Minus V2 35 To Climb Acceleration Start Max', items=[
+            KeyPointValue(name='Airspeed Minus V2 35 To Climb Acceleration Start Max', index=3, value=7),
+        ]))
+
+
+class TestAirspeedMinusV235ToClimbAccelerationStartMin(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = AirspeedMinusV235ToClimbAccelerationStartMin
+        self.operational_combinations = [('Airspeed Minus V2', 'Initial Climb', 'Climb Acceleration Start')]
+        self.function = max_value
+
+    def test_can_operate(self):
+        opts = self.node_class.get_operational_combinations()
+        self.assertEqual(opts, self.operational_combinations)
+
+    def test_derive_basic(self):
+        pitch = P(
+            name='Airspeed Minus V2',
+            array=np.ma.array([0, 2, 4, 7, 9, 8, 6, 3, -1]),
+        )
+        climb = buildsection('Initial Climb', 1.4, 8)
+        climb_accel_start = KTI('Climb Acceleration Start', items=[KeyTimeInstance(3, 'Climb Acceleration Start')])
+
+        node = self.node_class()
+        node.derive(pitch, climb, climb_accel_start)
+
+        self.assertEqual(node, KPV('Airspeed Minus V2 35 To Climb Acceleration Start Min', items=[
+            KeyPointValue(name='Airspeed Minus V2 35 To Climb Acceleration Start Min', index=1.4, value=2.8),
+        ]))
+
+
+class TestAirspeedMinusV2For3Sec35ToClimbAccelerationStartMax(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = AirspeedMinusV2For3Sec35ToClimbAccelerationStartMax
+        self.operational_combinations = [('Airspeed Minus V2 For 3 Sec', 'Initial Climb', 'Climb Acceleration Start')]
+        self.function = max_value
+
+    def test_can_operate(self):
+        opts = self.node_class.get_operational_combinations()
+        self.assertEqual(opts, self.operational_combinations)
+
+    def test_derive_basic(self):
+        pitch = P(
+            name='Airspeed Minus V2 For 3 Sec',
+            array=np.ma.array([0, 2, 4, 7, 9, 8, 6, 3, -1]),
+        )
+        climb = buildsection('Initial Climb', 1.4, 8)
+        climb_accel_start = KTI('Climb Acceleration Start', items=[KeyTimeInstance(3, 'Climb Acceleration Start')])
+
+        node = self.node_class()
+        node.derive(pitch, climb, climb_accel_start)
+
+        self.assertEqual(node, KPV('Airspeed Minus V2 For 3 Sec 35 To Climb Acceleration Start Max', items=[
+            KeyPointValue(name='Airspeed Minus V2 For 3 Sec 35 To Climb Acceleration Start Max', index=3, value=7),
+        ]))
+
+
+class TestAirspeedMinusV2For3Sec35ToClimbAccelerationStartMin(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = AirspeedMinusV2For3Sec35ToClimbAccelerationStartMin
+        self.operational_combinations = [('Airspeed Minus V2 For 3 Sec', 'Initial Climb', 'Climb Acceleration Start')]
+        self.function = max_value
+
+    def test_can_operate(self):
+        opts = self.node_class.get_operational_combinations()
+        self.assertEqual(opts, self.operational_combinations)
+
+    def test_derive_basic(self):
+        pitch = P(
+            name='Airspeed Minus V2 For 3 Sec',
+            array=np.ma.array([0, 2, 4, 7, 9, 8, 6, 3, -1]),
+        )
+        climb = buildsection('Initial Climb', 1.4, 8)
+        climb_accel_start = KTI('Climb Acceleration Start', items=[KeyTimeInstance(3, 'Climb Acceleration Start')])
+
+        node = self.node_class()
+        node.derive(pitch, climb, climb_accel_start)
+
+        self.assertEqual(node, KPV('Airspeed Minus V2 For 3 Sec 35 To Climb Acceleration Start Min', items=[
+            KeyPointValue(name='Airspeed Minus V2 For 3 Sec 35 To Climb Acceleration Start Min', index=1.4, value=2.8),
+        ]))
+
+
 ########################################
 # Airspeed: Minus Minimum Airspeed
 
@@ -1823,13 +1945,13 @@ class TestAirspeedMinusMinimumAirspeedAbove10000FtMin(unittest.TestCase, CreateK
 
     def setUp(self):
         self.node_class = AirspeedMinusMinimumAirspeedAbove10000FtMin
-        self.operational_combinations = [('Airspeed Minus Minimum Airspeed', 'Altitude STD')]
+        self.operational_combinations = [('Airspeed Minus Minimum Airspeed', 'Altitude STD Smoothed')]
         self.function = min_value
         self.second_param_method_calls = [('slices_above', (10000,), {})]
 
     def test_derive(self):
         air_spd = P('Airspeed Minus Minimum Airspeed', np.ma.arange(200, 241))
-        alt_std = P('Altitude STD', np.ma.array(range(20) + range(20, -1, -1)) * 1000)
+        alt_std = P('Altitude STD Smoothed', np.ma.array(range(20) + range(20, -1, -1)) * 1000)
         name = self.node_class.get_name()
         node = self.node_class()
         node.derive(air_spd, alt_std)
@@ -2286,7 +2408,7 @@ class TestAirspeedWithFlapDuringClimbMax(unittest.TestCase, NodeTest):
         mapping = {int(f): str(f) for f in np.ma.unique(array)}
         flap_exc_trans = M('Flap Excluding Transition', array, values_mapping=mapping)
         airspeed = P('Airspeed', np.ma.arange(0, 100, 10))
-        climb = buildsection('Climbing', 2, 8)
+        climb = buildsection('Climbing', 2, 7)
         node = self.node_class()
         node.derive(None, None, flap_inc_trans, flap_exc_trans, airspeed, climb)
         self.assertEqual(node.get_ordered_by_index(), [
@@ -2333,7 +2455,7 @@ class TestAirspeedWithFlapDuringDescentMax(unittest.TestCase, NodeTest):
         mapping = {int(f): str(f) for f in np.ma.unique(array)}
         flap_exc_trans = M('Flap Excluding Transition', array, values_mapping=mapping)
         airspeed = P('Airspeed', np.ma.arange(100, 0, -10))
-        desc = buildsection('Descending', 2, 8)
+        desc = buildsection('Descending', 2, 7)
         node = self.node_class()
         node.derive(None, None, flap_inc_trans, flap_exc_trans, airspeed, desc)
         self.assertEqual(node.get_ordered_by_index(), [
@@ -2376,7 +2498,7 @@ class TestAirspeedMinusFlapManoeuvreSpeedWithFlapDuringDescentMin(unittest.TestC
         mapping = {int(f): str(f) for f in np.ma.unique(array)}
         flap = M('Flap Lever', array, values_mapping=mapping)
         airspeed = P('Airspeed', np.ma.arange(100, 0, -10))
-        descents = buildsection('Descent To Flare', 2, 8)
+        descents = buildsection('Descent To Flare', 2, 7)
         node = self.node_class()
         node.derive(flap, None, airspeed, descents)
         self.assertEqual(node.get_ordered_by_index(), [
@@ -2871,6 +2993,18 @@ class TestMainGearOnGroundToNoseGearOnGroundDuration(unittest.TestCase,
 # Braking
 
 
+class TestBrakeTempDuringTaxiInMax(unittest.TestCase,
+                                        CreateKPVsWithinSlicesTest):
+    def setUp(self):
+        self.node_class = BrakeTempDuringTaxiInMax
+        self.operational_combinations = [('Brake (*) Temp Max', 'Taxi In',)]
+        self.function = max_value
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+
+
 class TestBrakePressureInTakeoffRollMax(unittest.TestCase,
                                         CreateKPVsWithinSlicesTest):
     def setUp(self):
@@ -3166,7 +3300,7 @@ class TestAltitudeWithFlapMax(unittest.TestCase, NodeTest):
 
     def test_derive(self):
         alt_std = P(
-            name='Altitude STD',
+            name='Altitude STD Smoothed',
             array=np.ma.arange(0, 3000, 100),
         )
         airborne = buildsection('Airborne', 2, 28)
@@ -3736,11 +3870,11 @@ class TestAltitudeSTDWithGearDownMax(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = AltitudeSTDWithGearDownMax
         self.operational_combinations = [
-            ('Altitude STD', 'Gear Down', 'Airborne')]
+            ('Altitude STD Smoothed', 'Gear Down', 'Airborne')]
 
     def test_derive_basic(self):
         alt_aal = P(
-            name='Altitude STD',
+            name='Altitude STD Smoothed',
             array=np.ma.arange(10),
         )
         gear = M(
@@ -6569,7 +6703,7 @@ class TestHeadingDuringTakeoff(unittest.TestCase, NodeTest):
 
     def test_derive_basic(self):
         head = P('Heading Continuous',np.ma.array([0,2,4,7,9,8,6,3]))
-        toff = buildsection('Takeoff', 2,6)
+        toff = buildsection('Takeoff', 2,5)
         kpv = HeadingDuringTakeoff()
         kpv.derive(head, toff)
         expected = [KeyPointValue(index=4, value=7.5,
@@ -6578,7 +6712,7 @@ class TestHeadingDuringTakeoff(unittest.TestCase, NodeTest):
 
     def test_derive_modulus(self):
         head = P('Heading Continuous',np.ma.array([0,2,4,7,9,8,6,3])*-1.0)
-        toff = buildsection('Takeoff', 2,6)
+        toff = buildsection('Takeoff', 2,5)
         kpv = HeadingDuringTakeoff()
         kpv.derive(head, toff)
         expected = [KeyPointValue(index=4, value=360-7.5,
@@ -6594,7 +6728,7 @@ class TestHeadingTrueDuringTakeoff(unittest.TestCase, NodeTest):
 
     def test_derive_basic(self):
         head = P('Heading True Continuous',np.ma.array([0,2,4,7,9,8,6,3]))
-        toff = buildsection('Takeoff', 2,6)
+        toff = buildsection('Takeoff', 2,5)
         kpv = self.node_class()
         kpv.derive(head, toff)
         expected = [KeyPointValue(index=4, value=7.5,
@@ -6603,7 +6737,7 @@ class TestHeadingTrueDuringTakeoff(unittest.TestCase, NodeTest):
 
     def test_derive_modulus(self):
         head = P('Heading True Continuous',np.ma.array([0,2,4,7,9,8,6,3])*-1.0)
-        toff = buildsection('Takeoff', 2,6)
+        toff = buildsection('Takeoff', 2,5)
         kpv = self.node_class()
         kpv.derive(head, toff)
         expected = [KeyPointValue(index=4, value=360-7.5,
@@ -6619,7 +6753,7 @@ class TestHeadingDuringLanding(unittest.TestCase, NodeTest):
     def test_derive_basic(self):
         head = P('Heading Continuous',np.ma.array([0,1,2,3,4,5,6,7,8,9,10,-1,-1,
                                                    7,-1,-1,-1,-1,-1,-1,-1,-10]))
-        landing = buildsection('Landing',5,15)
+        landing = buildsection('Landing',5,14)
         head.array[13] = np.ma.masked
         kpv = HeadingDuringLanding()
         kpv.derive(head, landing)
@@ -6639,7 +6773,7 @@ class TestHeadingTrueDuringLanding(unittest.TestCase, NodeTest):
         head = P('Heading True Continuous',
                  np.ma.array([0,1,2,3,4,5,6,7,8,9,10,-1,-1,
                               7,-1,-1,-1,-1,-1,-1,-1,-10]))
-        landing = buildsection('Landing', 5, 15)
+        landing = buildsection('Landing', 5, 14)
         head.array[13] = np.ma.masked
         kpv = HeadingDuringLanding()
         kpv.derive(head, landing)
@@ -7634,6 +7768,60 @@ class TestPitchAbove1000FtMax(unittest.TestCase):
         self.assertEqual(node[0].value, 14)
 
 
+class TestPitch35ToClimbAccelerationStartMax(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = Pitch35ToClimbAccelerationStartMax
+        self.operational_combinations = [('Pitch', 'Initial Climb', 'Climb Acceleration Start')]
+        self.function = max_value
+
+    def test_can_operate(self):
+        opts = self.node_class.get_operational_combinations()
+        self.assertEqual(opts, self.operational_combinations)
+
+    def test_derive_basic(self):
+        pitch = P(
+            name='Pitch',
+            array=np.ma.array([0, 2, 4, 7, 9, 8, 6, 3, -1]),
+        )
+        climb = buildsection('Initial Climb', 1.4, 8)
+        climb_accel_start = KTI('Climb Acceleration Start', items=[KeyTimeInstance(3, 'Climb Acceleration Start')])
+
+        node = self.node_class()
+        node.derive(pitch, climb, climb_accel_start)
+
+        self.assertEqual(node, KPV('Pitch 35 To Climb Acceleration Start Max', items=[
+            KeyPointValue(name='Pitch 35 To Climb Acceleration Start Max', index=3, value=7),
+        ]))
+
+
+class TestPitch35ToClimbAccelerationStartMin(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = Pitch35ToClimbAccelerationStartMin
+        self.operational_combinations = [('Pitch', 'Initial Climb', 'Climb Acceleration Start')]
+        self.function = min_value
+
+    def test_can_operate(self):
+        opts = self.node_class.get_operational_combinations()
+        self.assertEqual(opts, self.operational_combinations)
+
+    def test_derive(self):
+        pitch = P(
+            name='Pitch',
+            array=np.ma.array([0, 2, 4, 7, 9, 8, 6, 3, -1]),
+        )
+        climb = buildsection('Initial Climb', 1.4, 8)
+        climb_accel_start = KTI('Climb Acceleration Start', items=[KeyTimeInstance(3, 'Climb Acceleration Start')])
+
+        node = self.node_class()
+        node.derive(pitch, climb, climb_accel_start)
+
+        self.assertEqual(node, KPV('Pitch 35 To Climb Acceleration Start Min', items=[
+            KeyPointValue(name='Pitch 35 To Climb Acceleration Start Min', index=1.4, value=2.8),
+        ]))
+
+
 class TestPitch35To400FtMax(unittest.TestCase):
 
     def setUp(self):
@@ -7983,6 +8171,32 @@ class TestRateOfClimbMax(unittest.TestCase, NodeTest):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestRateOfClimb35ToClimbAccelerationStartMin(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = RateOfClimb35ToClimbAccelerationStartMin
+
+    def test_can_operate(self):
+        opts = self.node_class.get_operational_combinations()
+        self.assertEqual(opts, [('Vertical Speed', 'Initial Climb', 'Climb Acceleration Start')])
+
+    def test_derive_basic(self):
+        roc_array = np.ma.concatenate(([25]*19, [43, 62, 81, 100, 112, 24, 47, 50, 12, 37, 27, 0, 0, 0]))
+        roc_array = np.ma.concatenate((roc_array, -roc_array[::-1]))
+        vert_spd = P('Vertical Speed', roc_array)
+
+        climb = buildsection('Initial Climb', 1.4, 28)
+        climb_accel_start = KTI('Climb Acceleration Start', items=[KeyTimeInstance(25, 'Touchdown')])
+
+        node = self.node_class()
+        node.derive(vert_spd, climb, climb_accel_start)
+
+        expected = KPV('Rate Of Climb 35 To Climb Acceleration Start Min', items=[
+            KeyPointValue(name='Rate Of Climb 35 To Climb Acceleration Start Min', index=24, value=24),
+        ])
+        self.assertEqual(node, expected)
 
 
 class TestRateOfClimb35To1000FtMin(unittest.TestCase):
@@ -8853,7 +9067,7 @@ class TestTaxiInDuration(unittest.TestCase):
         self.assertEqual(opts, [('Taxi In',)])
         
     def test_derive(self):
-        taxi_ins = buildsections('Taxi In', [5, 10], [20, 30])
+        taxi_ins = buildsections('Taxi In', [5, 9], [20, 29])
         node = TaxiInDuration()
         node.derive(taxi_ins)
         self.assertEqual(len(node), 2)
@@ -8871,7 +9085,7 @@ class TestTaxiOutDuration(unittest.TestCase):
         self.assertEqual(opts, [('Taxi Out',)])
         
     def test_derive(self):
-        taxi_outs = buildsections('Taxi Out', [35, 67])
+        taxi_outs = buildsections('Taxi Out', [35, 66])
         node = TaxiOutDuration()
         node.derive(taxi_outs)
         self.assertEqual(len(node), 1)
@@ -8966,14 +9180,14 @@ class TestTAWSTerrainWarningDuration(unittest.TestCase, NodeTest):
         self.assertEqual(node[0].index, 15)
         self.assertEqual(node[0].value, 10)
         self.assertEqual(node[1].index, 30)
-        self.assertEqual(node[1].value, 3)
+        self.assertEqual(node[1].value, 4)
         node = self.node_class()
         node.derive(taws_terrain, taws_terrain_warning, airborne)
         self.assertEqual(len(node), 2)
         self.assertEqual(node[0].index, 12)
         self.assertEqual(node[0].value, 13)
         self.assertEqual(node[1].index, 30)
-        self.assertEqual(node[1].value, 3)
+        self.assertEqual(node[1].value, 4)
 
 
 class TestTAWSTerrainPullUpWarningDuration(unittest.TestCase, NodeTest):
@@ -9148,6 +9362,8 @@ class TestTAWSTerrainAheadPullUpDuration(unittest.TestCase,
 class TestTAWSWindshearCautionBelow1500FtDuration(unittest.TestCase,
                                                   CreateKPVsWhereTest):
     def setUp(self):
+        # TODO: remove after intervals have been implemented 
+        self.complex_where = True
         self.param_name = 'TAWS Windshear Caution'
         self.phase_name = 'Fast'
         self.node_class = TAWSWindshearCautionBelow1500FtDuration
@@ -9169,6 +9385,8 @@ class TestTAWSWindshearCautionBelow1500FtDuration(unittest.TestCase,
 class TestTAWSWindshearSirenBelow1500FtDuration(unittest.TestCase,
                                                 CreateKPVsWhereTest):
     def setUp(self):
+        # TODO: remove after intervals have been implemented 
+        self.complex_where = True
         self.param_name = 'TAWS Windshear Siren'
         self.phase_name = 'Fast'
         self.node_class = TAWSWindshearSirenBelow1500FtDuration
@@ -9234,7 +9452,7 @@ class TestTCASTAWarningDuration(unittest.TestCase, NodeTest):
         tcas = M(
             'TCAS Combined Control', array=np.ma.array([0,1,2,3,4,6,6,6,4,5]),
             values_mapping=values_mapping)
-        airborne = buildsection('Airborne', 2, 7)
+        airborne = buildsection('Airborne', 2, 6)
         node = self.node_class()
         node.derive(None, tcas, airborne)
         self.assertEqual([KeyPointValue(5.0, 2.0, 'TCAS TA Warning Duration')],
@@ -9280,7 +9498,7 @@ class TestTCASRAWarningDuration(unittest.TestCase, NodeTest):
         tcas = M(
             'TCAS Combined Control', array=np.ma.array([0,1,2,3,4,5,4,5,6]),
             values_mapping=values_mapping)
-        airborne = buildsection('Airborne', 2, 7)
+        airborne = buildsection('Airborne', 2, 6)
         node = self.node_class()
         node.derive(None, tcas, airborne)
         self.assertEqual([KeyPointValue(2, 5.0, 'TCAS RA Warning Duration')],
@@ -9448,6 +9666,17 @@ class TestThrottleCyclesDuringFinalApproach(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = ThrottleCyclesDuringFinalApproach
         self.operational_combinations = [('Throttle Levers', 'Final Approach')]
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestThrottleLeverAtLiftoff(unittest.TestCase, CreateKPVsAtKTIsTest):
+
+    def setUp(self):
+        self.node_class = ThrottleLeverAtLiftoff
+        self.operational_combinations = [('Throttle Levers', 'Liftoff')]
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):

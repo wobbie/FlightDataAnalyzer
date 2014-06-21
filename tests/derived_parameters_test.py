@@ -68,6 +68,9 @@ from analysis_engine.derived_parameters import (
     AOA,
     ApproachRange,
     BrakePressure,
+    Brake_TempAvg,
+    Brake_TempMax,
+    Brake_TempMin,
     CabinAltitude,
     ClimbForFlightPhases,
     ControlColumn,
@@ -578,15 +581,15 @@ class TestAirspeedSelected(unittest.TestCase):
 
 class TestAirspeedTrue(unittest.TestCase):
     def test_can_operate(self):
-        self.assertIn(('Airspeed', 'Altitude STD'), AirspeedTrue.get_operational_combinations())
-        self.assertIn(('Airspeed', 'Altitude STD', 'SAT', 
+        self.assertIn(('Airspeed', 'Altitude STD Smoothed'), AirspeedTrue.get_operational_combinations())
+        self.assertIn(('Airspeed', 'Altitude STD Smoothed', 'SAT', 
                        'Takeoff', 'Landing', 'Rejected Takeoff', 
                        'Groundspeed', 'Acceleration Forwards'), 
                       AirspeedTrue.get_operational_combinations())
         
     def test_tas_basic(self):
         cas = P('Airspeed', np.ma.array([100, 200, 300]))
-        alt = P('Altitude STD', np.ma.array([0, 20000, 40000]))
+        alt = P('Altitude STD Smoothed', np.ma.array([0, 20000, 40000]))
         sat = P('SAT', np.ma.array([20, -10, -55]))
         tas = AirspeedTrue()
         tas.derive(cas, alt, sat)
@@ -597,7 +600,7 @@ class TestAirspeedTrue(unittest.TestCase):
         
     def test_tas_masks(self):
         cas = P('Airspeed', np.ma.array([100, 200, 300]))
-        alt = P('Altitude STD', np.ma.array([0, 20000, 40000]))
+        alt = P('Altitude STD Smoothed', np.ma.array([0, 20000, 40000]))
         tat = P('TAT', np.ma.array([20, -10, -40]))
         tas = AirspeedTrue()
         cas.array[0] = np.ma.masked
@@ -608,7 +611,7 @@ class TestAirspeedTrue(unittest.TestCase):
         
     def test_tas_no_tat(self):
         cas = P('Airspeed', np.ma.array([100, 200, 300]))
-        alt = P('Altitude STD', np.ma.array([0, 10000, 20000]))
+        alt = P('Altitude STD Smoothed', np.ma.array([0, 10000, 20000]))
         tas = AirspeedTrue()
         tas.derive(cas, alt, None)
         result = [100.000, 231.575, 400.097]
@@ -624,7 +627,7 @@ class TestAirspeedTrue(unittest.TestCase):
         gspd = P('Groundspeed', np.ma.array(accel+accel[::-1]))
         gspd.array[0:3] = [12.0, 12.0, 12.0]
         gspd.array[-4:] = [14.0, 14.0, 14.0, 14.0]
-        alt = P('Altitude STD', np.ma.array([0]*40))
+        alt = P('Altitude STD Smoothed', np.ma.array([0]*40))
         acc = P('Acceleration Forwards', np.ma.array([0.25]*20+[-0.25]*20))
         toffs = buildsection('Takeoff', 0, 18)
         lands = buildsection('Landing', 21, None)
@@ -646,7 +649,7 @@ class TestAirspeedTrue(unittest.TestCase):
         speed = [0.0, 4.7, 9.5, 14.3, 19.0, 23.8, 28.6, 33.3, 38.1, 42.9, 
                  47.6, 52.4, 57.1, 61.9, 66.7, 71.4, 76.2, 81.0, 85.7, 90.5]
         cas = P('Airspeed', np.ma.array([0]*9+speed[9:]+speed[-1:8:-1]+[0]*9))
-        alt = P('Altitude STD', np.ma.array([0]*40))
+        alt = P('Altitude STD Smoothed', np.ma.array([0]*40))
         acc = P('Acceleration Forwards', np.ma.array([0.25]*20+[-0.25]*20))
         toffs = buildsection('Takeoff', 0, 18)
         lands = buildsection('Landing', 21, None)
@@ -663,7 +666,7 @@ class TestAirspeedTrue(unittest.TestCase):
         speed = [0.0, 4.7, 9.5, 14.3, 19.0, 23.8, 28.6, 33.3, 38.1, 42.9, 
                  47.6, 52.4, 57.1, 61.9, 66.7, 71.4, 76.2, 81.0, 85.7, 90.5]
         cas = P('Airspeed', np.ma.array([0]*9+speed[9:]+speed[-1:8:-1]+[0]*9))
-        alt = P('Altitude STD', np.ma.array([0]*40))
+        alt = P('Altitude STD Smoothed', np.ma.array([0]*40))
         acc = P('Acceleration Forwards', np.ma.array([0.25]*20+[-0.25]*20))
         rtos = buildsection('Rejected Takeoff', 1, 38)
         tas = AirspeedTrue()
@@ -744,7 +747,7 @@ class TestAltitudeAAL(unittest.TestCase):
         phase_fast = buildsection('Fast', 0, len(testwave))
         alt_aal = AltitudeAAL()
         alt_aal.derive(P('Altitude Radio', rad_data),
-                       P('Altitude STD', testwave),
+                       P('Altitude STD Smoothed', testwave),
                        phase_fast)
         '''
         import matplotlib.pyplot as plt
@@ -768,7 +771,7 @@ class TestAltitudeAAL(unittest.TestCase):
         phase_fast = buildsection('Fast', 0, len(testwave))
         alt_aal = AltitudeAAL()
         alt_aal.derive(None,
-                       P('Altitude STD', testwave),
+                       P('Altitude STD Smoothed', testwave),
                        phase_fast,
                        P('Pitch', np_ma_ones_like(testwave))
                        )
@@ -800,7 +803,7 @@ class TestAltitudeAAL(unittest.TestCase):
         rad_data[42:48] = np.ma.masked
         alt_aal = AltitudeAAL()
         alt_aal.derive(P('Altitude Radio', np.ma.copy(rad_data)),
-                       P('Altitude STD', np.ma.copy(std_wave)),
+                       P('Altitude STD Smoothed', np.ma.copy(std_wave)),
                        phase_fast,
                        P('Pitch', np_ma_ones_like(rad_data))
                        )
@@ -825,7 +828,7 @@ class TestAltitudeAAL(unittest.TestCase):
         phase_fast = buildsection('Fast', 0, 2*len(testwave))
         alt_aal = AltitudeAAL()
         alt_aal.derive(P('Altitude Radio', double_rad),
-                       P('Altitude STD', double_test),
+                       P('Altitude STD Smoothed', double_test),
                        phase_fast)
         '''
         import matplotlib.pyplot as plt
@@ -847,7 +850,7 @@ class TestAltitudeAAL(unittest.TestCase):
         phase_fast = buildsection('Fast', 0, 2*len(testwave))
         alt_aal = AltitudeAAL()
         alt_aal.derive(P('Altitude Radio', double_rad),
-                       P('Altitude STD', double_test),
+                       P('Altitude STD Smoothed', double_test),
                        phase_fast)
         '''
         import matplotlib.pyplot as plt
@@ -867,7 +870,7 @@ class TestAltitudeAAL(unittest.TestCase):
         phase_fast = buildsection('Fast', 0, 254)
         alt_aal = AltitudeAAL()
         alt_aal.derive(None, 
-                       P('Altitude STD', testwave),
+                       P('Altitude STD Smoothed', testwave),
                        phase_fast,
                        P('Pitch', np_ma_ones_like(testwave))
                        )
@@ -895,7 +898,7 @@ class TestAltitudeAAL(unittest.TestCase):
         pch[23:27]=2.0
         alt_aal = AltitudeAAL()
         alt_aal.derive(None, 
-                       P('Altitude STD', testwave),
+                       P('Altitude STD Smoothed', testwave),
                        phase_fast,
                        P('Pitch', pch)
                        )
@@ -1251,7 +1254,7 @@ class TestAltitudeQNH(unittest.TestCase, NodeTest):
     
     def test_new_version(self):
         xalt_aal=P('Altitude AAL', np.ma.array([0]*5+range(0,15000,1000)+[10000]*4+range(10000,-1000,-1000)+[0]*5))
-        xalt_std=P('Altitude STD', np.ma.array([1000]*5+range(1000,16000,1000)+[15000]*4+range(15000,4000,-1000)+[4000]*5))
+        xalt_std=P('Altitude STD Smoothed', np.ma.array([1000]*5+range(1000,16000,1000)+[15000]*4+range(15000,4000,-1000)+[4000]*5))
         xtocs=KTI('Top Of Climb', 19)
         xtods=KTI('Top Of Descent', 24)
         xclimbs=buildsection('Climb', 7, 19)
@@ -1267,7 +1270,7 @@ class TestAltitudeQNH(unittest.TestCase, NodeTest):
         
     def test_trap_alt_difference(self):
         xalt_aal=P('Altitude AAL', np.ma.array([0]*5+range(0,15000,1000)+[10000]*4+range(10000,-1000,-1000)+[0]*5))
-        xalt_std=P('Altitude STD', np.ma.array([1000]*5+range(1000,16000,1000)+[15000]*4+range(15000,4000,-1000)+[4000]*5))
+        xalt_std=P('Altitude STD Smoothed', np.ma.array([1000]*5+range(1000,16000,1000)+[15000]*4+range(15000,4000,-1000)+[4000]*5))
         xtocs=KTI('Top Of Climb', 19)
         xtods=KTI('Top Of Descent', 24)
         xclimbs=buildsection('Climb', 7, 19)
@@ -1532,6 +1535,91 @@ class TestAltitudeTail(unittest.TestCase):
                              dtype=np.float, mask=False)
         np.testing.assert_array_almost_equal(result.data, answer.data)
 
+
+###############################################################################
+# Brakes
+
+class TestBrake_TempAvg(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = Brake_TempAvg
+
+    def test_can_operate(self):
+        poss_combs = self.node_class.get_operational_combinations()
+        self.assertEqual(len(poss_combs), 2**8-1)
+
+    def test_derive(self):
+        brake_1_array =   [0, 30, 50, 80,  100, 100, 70, 70, 70, 50, 50, 10,  0,  0, 0]
+        brake_3_array =   [0,  0, 30, 60,   85, 100, 70, 70, 70, 50, 50, 30, 10, 10, 0]
+        expected_array =  [0, 15, 40, 70, 92.5, 100, 70, 70, 70, 50, 50, 20,  5,  5, 0]
+
+        brake_1 = P(name='Brake (1) Temp', array=brake_1_array, frequency=1,
+                 offset=0.1)
+
+        brake_3 = P(name='Brake (3) Temp', array=brake_3_array, frequency=1,
+                         offset=0.5)
+
+        node = self.node_class()
+        node.derive(brake_1, None, brake_3, None, None, None, None, None)
+
+        np.testing.assert_array_equal(node.array, expected_array)
+        self.assertEqual(node.offset, 0.3)
+
+
+class TestBrake_TempMax(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = Brake_TempMax
+
+    def test_can_operate(self):
+        poss_combs = self.node_class.get_operational_combinations()
+        self.assertEqual(len(poss_combs), 2**8-1)
+
+    def test_derive(self):
+        brake_1_array =  [0, 30, 50, 80, 100, 100, 70, 70, 70, 50, 50, 10,  0,  0, 0]
+        brake_3_array =  [0,  0, 30, 60,  85, 100, 70, 70, 70, 50, 50, 30, 10, 10, 0]
+        expected_array = [0, 30, 50, 80, 100, 100, 70, 70, 70, 50, 50, 30, 10, 10, 0]
+
+        brake_1 = P(name='Brake (1) Temp', array=brake_1_array, frequency=1,
+                 offset=0.1)
+
+        brake_3 = P(name='Brake (3) Temp', array=brake_3_array, frequency=1,
+                         offset=0.5)
+
+        node = self.node_class()
+        node.derive(brake_1, None, brake_3, None, None, None, None, None)
+
+        np.testing.assert_array_equal(node.array, expected_array)
+        self.assertEqual(node.offset, 0.3)
+
+
+class TestBrake_TempMin(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = Brake_TempMin
+
+    def test_can_operate(self):
+        poss_combs = self.node_class.get_operational_combinations()
+        self.assertEqual(len(poss_combs), 2**8-1)
+
+    def test_derive(self):
+        brake_1_array =  [0, 30, 50, 80, 100, 100, 70, 70, 70, 50, 50, 10,  0,  0, 0]
+        brake_3_array =  [0,  0, 30, 60,  85, 100, 70, 70, 70, 50, 50, 30, 10, 10, 0]
+        expected_array = [0,  0, 30, 60,  85, 100, 70, 70, 70, 50, 50, 10,  0,  0, 0]
+
+        brake_1 = P(name='Brake (1) Temp', array=brake_1_array, frequency=1,
+                 offset=0.1)
+
+        brake_3 = P(name='Brake (3) Temp', array=brake_3_array, frequency=1,
+                         offset=0.5)
+
+        node = self.node_class()
+        node.derive(brake_1, None, brake_3, None, None, None, None, None)
+
+        np.testing.assert_array_equal(node.array, expected_array)
+        self.assertEqual(node.offset, 0.3)
+
+
 class TestBrakePressure(unittest.TestCase):
     def test_can_operate(self):
         two_sources = ('Brake (L) Press', 'Brake (R) Press')
@@ -1563,6 +1651,7 @@ class TestBrakePressure(unittest.TestCase):
                                mask = [0,0,0,0,0,0,0,0,0,1])        
         self.assertAlmostEqual(brakes.array[4], 0.75)
         self.assertAlmostEqual(brakes.array[8], 1.0)
+
 
 class TestCabinAltitude(unittest.TestCase):
     def test_can_operate(self):
@@ -3094,12 +3183,12 @@ class TestRateOfTurn(unittest.TestCase):
 class TestMach(unittest.TestCase):
     def test_can_operate(self):
         opts = Mach.get_operational_combinations()
-        self.assertEqual(opts, [('Airspeed', 'Altitude STD')])
+        self.assertEqual(opts, [('Airspeed', 'Altitude STD Smoothed')])
         
     def test_all_cases(self):
         cas = P('Airspeed', np.ma.array(data=[0, 100, 200, 200, 200, 500, 200],
                                         mask=[0,0,0,0,1,0,0], dtype=float))
-        alt = P('Altitude STD', np.ma.array(data=[0, 10000, 20000, 30000, 30000, 45000, 20000],
+        alt = P('Altitude STD Smoothed', np.ma.array(data=[0, 10000, 20000, 30000, 30000, 45000, 20000],
                                         mask=[0,0,0,0,0,0,1], dtype=float))
         mach = Mach()
         mach.derive(cas, alt)
@@ -3206,7 +3295,11 @@ class TestAOA(unittest.TestCase):
         self.assertEqual(opts, [
             ('AOA (L)',),
             ('AOA (R)',),
-            ('AOA (L)', 'AOA (R)')])
+            ('AOA (L)', 'AOA (R)'),
+            ('AOA (L)', 'Family'),
+            ('AOA (R)', 'Family'),
+            ('AOA (L)', 'AOA (R)', 'Family'),
+        ])
         
     def test_derive(self):
         aoa_l = P('AOA (L)', [4.921875, 4.5703125, 4.5703125, 4.5703125,
@@ -3216,9 +3309,9 @@ class TestAOA(unittest.TestCase):
         aoa_r = P('AOA (R)', [4.881875, 4.5703125, 4.5712125, 4.544125],
                           frequency=0.5, offset=0.6484375)
         aoa = AOA()
-        res = aoa.derive(aoa_l, aoa_r)
-        self.assertEqual(aoa.hz, 2)
-        self.assertEqual(aoa.offset, 0)
+        res = aoa.get_derived((aoa_l, aoa_r))
+        self.assertEqual(aoa.hz, 1)
+        self.assertEqual(aoa.offset, 0.1484375)
         
     def test_Derive_only_left(self):
         aoa_l = P('AOA (L)', [4.921875, 4.5703125, 4.5703125, 4.5703125,
@@ -3226,7 +3319,7 @@ class TestAOA(unittest.TestCase):
                   frequency=1.0, offset=0.1484375)
         
         aoa = AOA()
-        res = aoa.derive(aoa_l, None)
+        res = aoa.get_derived((aoa_l, None))
         self.assertEqual(aoa.hz, 1)
         self.assertEqual(aoa.offset, 0.1484375)
         
@@ -5249,7 +5342,7 @@ class TestVref(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = Vref
         self.airspeed = P('Airspeed', np.ma.repeat(200, 128))
-        self.approaches = buildsections('Approach And Landing', (2, 42), (66, 106))
+        self.approaches = buildsections('Approach And Landing', (2, 41), (66, 105))
 
     def test_can_operate(self):
         # AFR:
@@ -5342,7 +5435,7 @@ class TestVrefLookup(unittest.TestCase, NodeTest):
             KeyTimeInstance(name='Touchdown', index=7),
             KeyTimeInstance(name='Touchdown', index=71),
         ])
-        self.approaches = buildsections('Approach And Landing', (2, 42), (66, 106))
+        self.approaches = buildsections('Approach And Landing', (2, 41.1), (66, 105.1))
 
     @patch('analysis_engine.library.at')
     def test_can_operate(self, at):
@@ -5454,7 +5547,7 @@ class TestVapp(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = Vapp
         self.airspeed = P('Airspeed', np.ma.repeat(200, 128))
-        self.approaches = buildsections('Approach And Landing', (2, 42), (66, 106))
+        self.approaches = buildsections('Approach And Landing', (2, 41), (66, 105))
 
     def test_can_operate(self):
         # AFR:
@@ -5547,7 +5640,7 @@ class TestVappLookup(unittest.TestCase, NodeTest):
             KeyTimeInstance(name='Touchdown', index=7),
             KeyTimeInstance(name='Touchdown', index=71),
         ])
-        self.approaches = buildsections('Approach And Landing', (2, 42), (66, 106))
+        self.approaches = buildsections('Approach And Landing', (2, 41), (66, 105))
 
     @patch('analysis_engine.library.at')
     def test_can_operate(self, at):
@@ -5698,7 +5791,7 @@ class TestVMOLookup(unittest.TestCase, NodeTest):
 
     @patch('analysis_engine.library.at')
     def test_can_operate(self, at):
-        nodes = ('Altitude STD', 'Model', 'Series', 'Family', 'Engine Series', 'Engine Type')
+        nodes = ('Altitude STD Smoothed', 'Model', 'Series', 'Family', 'Engine Series', 'Engine Type')
         keys = ('model', 'series', 'family', 'engine_type', 'engine_series')
         boeing = dict(izip(keys, self.generate_attributes('boeing')))
         # Assume that lookup tables are found correctly...
@@ -5823,7 +5916,7 @@ class TestMMOLookup(unittest.TestCase, NodeTest):
 
     @patch('analysis_engine.library.at')
     def test_can_operate(self, at):
-        nodes = ('Altitude STD', 'Model', 'Series', 'Family', 'Engine Series', 'Engine Type')
+        nodes = ('Altitude STD Smoothed', 'Model', 'Series', 'Family', 'Engine Series', 'Engine Type')
         keys = ('model', 'series', 'family', 'engine_type', 'engine_series')
         boeing = dict(izip(keys, self.generate_attributes('boeing')))
         # Assume that lookup tables are found correctly...
@@ -5998,7 +6091,7 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
         self.node_class = FlapManoeuvreSpeed
         self.airspeed = P('Airspeed', np.ma.repeat(200, 90))
         self.weight = P('Gross Weight Smoothed', np.ma.repeat((50000, 60000), 45))
-        self.altitude = P('Altitude STD', np.ma.arange(20010, 19920, -1))
+        self.altitude = P('Altitude STD Smoothed', np.ma.arange(20010, 19920, -1))
         self.descents = buildsections('Descent To Flare', (2, 42), (47, 87))
         self.flap_lever = M(
             name='Flap Lever',
@@ -6010,7 +6103,7 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
     @patch('analysis_engine.derived_parameters.at')
     @patch('analysis_engine.library.at')
     def test_can_operate(self, at0, at1):
-        nodes = ('Airspeed', 'Altitude STD', 'Descent To Flare',
+        nodes = ('Airspeed', 'Altitude STD Smoothed', 'Descent To Flare',
                  'Gross Weight Smoothed', 'Model', 'Series', 'Family',
                  'Engine Series', 'Engine Type')
         attrs = dict(izip(
@@ -6203,6 +6296,20 @@ class TestAirspeedMinusV2(unittest.TestCase, NodeTest):
         expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
+    def test_derive__airspeed_selected(self):
+        '''
+        Test reflecting data we have seen where airspeed selected starts as
+        previous flights landing speed before being changed before takeoff,
+        this data at the start of the flight was causing landing speed to be
+        used when looking back through the last 5 superframes
+        '''
+        node = self.node_class()
+        airspeed_selected = P('Airspeed Selected', np.ma.concatenate(([138]*400, [110]*250, [140]*1350)))
+        node.derive(self.airspeed, None, airspeed_selected, None, self.liftoffs, self.climbs)
+        expected = np.ma.repeat((0, -8, 0), (180, 820, 1000))
+        expected[expected == 0] = np.ma.masked
+        ma_test.assert_masked_array_equal(node.array, expected)
+
     def test_derive__recorded_masked(self):
         self.v2_record.array.mask = True
         node = self.node_class()
@@ -6274,7 +6381,7 @@ class TestAirspeedMinusVref(unittest.TestCase, NodeTest):
         self.airspeed = P('Airspeed', np.ma.repeat(102, 2000))
         self.vref_record = P('Vref', np.ma.repeat((90, 120), 1000))
         self.vref_lookup = P('Vref Lookup', np.ma.repeat((95, 125), 1000))
-        self.approaches = buildsection('Approach And Landing', 500, 1000)
+        self.approaches = buildsection('Approach And Landing', 500, 999)
 
     def test_derive__record_only(self):
         node = self.node_class()
@@ -6378,7 +6485,7 @@ class TestAirspeedMinusVapp(unittest.TestCase, NodeTest):
         self.airspeed = P('Airspeed', np.ma.repeat(102, 2000))
         self.vapp_record = P('Vapp', np.ma.repeat((90, 120), 1000))
         self.vapp_lookup = P('Vapp Lookup', np.ma.repeat((95, 125), 1000))
-        self.approaches = buildsection('Approach And Landing', 500, 1000)
+        self.approaches = buildsection('Approach And Landing', 500, 999)
 
     def test_derive__record_only(self):
         node = self.node_class()

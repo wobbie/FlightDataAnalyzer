@@ -3,6 +3,7 @@
 
 
 import numpy as np
+import pytz
 
 from collections import Counter
 from datetime import datetime
@@ -169,7 +170,7 @@ class AnalysisDatetime(FlightAttributeNode):
         should always derive a flight attribute, 'Start Datetime' is its only
         dependency as it will always be present, though it is unused.
         '''
-        self.set_flight_attr(datetime.now())
+        self.set_flight_attr(datetime.utcnow().replace(tzinfo=pytz.utc))
 
 
 class DestinationAirport(FlightAttributeNode):
@@ -408,7 +409,11 @@ class LandingRunway(FlightAttributeNode):
             # The last approach is assumed to be the landing.
             # XXX: Last approach may not be landing for partial data?!
             if ils_freq_on_app:
-                ils_freq = ils_freq_on_app.get_last(within_slice=landing.slice)
+                if landing.start_edge:
+                    ils_app_slice = slice(landing.start_edge, landing.slice.stop)
+                else:
+                    ils_app_slice = landing.slice
+                ils_freq = ils_freq_on_app.get_last(within_slice=ils_app_slice)
                 if ils_freq:
                     kwargs.update(ils_freq=ils_freq.value)
 

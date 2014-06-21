@@ -1,4 +1,5 @@
 import logging
+import pytz
 import numpy as np
 
 from collections import OrderedDict, namedtuple
@@ -578,7 +579,7 @@ def calculate_timebase(years, months, days, hours, mins, secs):
     # Calculate current year here and pass into
     # convert_two_digit_to_four_digit_year to save calculating year for every
     # second of flight
-    current_year = str(datetime.now().year)
+    current_year = str(datetime.utcnow().year)
     # OrderedDict so if all values are the same, max will consistently take the
     # first val on repeated runs
     clock_variation = OrderedDict()
@@ -599,7 +600,7 @@ def calculate_timebase(years, months, days, hours, mins, secs):
             yr = convert_two_digit_to_four_digit_year(yr, current_year)
 
         try:
-            dt = datetime(int(yr), int(mth), int(day), int(hr), int(mn), int(sc))
+            dt = datetime(int(yr), int(mth), int(day), int(hr), int(mn), int(sc), tzinfo=pytz.utc)
         except (ValueError, TypeError, np.ma.core.MaskError):
             # ValueError is raised if values are out of range, e.g. 0..59.
             # Q: Should we validate these parameters and switch to fallback_dt
@@ -1387,8 +1388,8 @@ def unique_values(array):
 
 def most_common_value(array):
     '''
-    Find the most repeating valid value within an array. Works with mapped
-    arrays too.
+    Find the most repeating non-negative valid value within an array. Works
+    with mapped arrays too.
 
     Hint: If you get "TypeError: array cannot be safely cast to required type"
     and your data is integer type, try casting it to int type:
@@ -1396,13 +1397,14 @@ def most_common_value(array):
     most_common_value(array.astype(int))
 
     :param array: Array to count occurrences of values within
-    :type array: np.array
+    :type array: np.ma.array
     :returns: [(val, count), (val2, count2)]
     :rtype: List of tuples
     '''
     if not np.ma.count(array):
         # no valid data
         return None
+    array[array < 0] = np.ma.masked
     counts = np.bincount(array.compressed())
     key = counts.argmax()
     if hasattr(array, 'values_mapping'):
@@ -1822,8 +1824,11 @@ def find_edges_on_state_change(state, array, change='entering', phase=None, min_
         offset = _slice.start - 0.5
         state_periods = np.ma.clump_unmasked(
             np.ma.masked_not_equal(array[_slice], array.state[state]))
-        # ignore small periods where slice is in state, then remove small gaps where slices are not in state
-        state_periods = slices_remove_small_slices(state_periods, count=min_samples)
+        # ignore small periods where slice is in state, then remove small
+        # gaps where slices are not in state
+        # we are taking 1 away from min_samples here as
+        # slices_remove_small_slices removes slices of less than count
+        state_periods = slices_remove_small_slices(state_periods, count=min_samples - 1)
         state_periods = slices_remove_small_gaps(state_periods, count=min_samples)
         edge_list = []
         for period in state_periods:
@@ -3570,7 +3575,7 @@ def slices_remove_small_gaps(slice_list, time_limit=10, hz=1, count=None):
     
     :returns: slice list.
     '''
-    if count:
+    if count is not None:
         sample_limit = count
     else:
         sample_limit = time_limit * hz
@@ -3603,7 +3608,7 @@ def slices_remove_small_slices(slice_list, time_limit=10, hz=1, count=None):
 
     :returns: slice list.
     '''
-    if count:
+    if count is not None:
         sample_limit = count
     else:
         sample_limit = time_limit * hz
@@ -3828,18 +3833,12 @@ def max_abs_value(array, _slice=slice(None), start_edge=None, stop_edge=None):
 
     :returns: Value named tuple of index and value.
     """
-    index, value = max_value(np.ma.abs(array), _slice)
-    # If start or stop edges are given, check these extreme (interpolated) values.
-    if start_edge:
-        edge_value = abs(value_at_index(array, start_edge) or 0)
-        if edge_value and edge_value > value:
-            index = start_edge
-            value = edge_value
-    if stop_edge:
-        edge_value = abs(value_at_index(array, stop_edge) or 0)
-        if edge_value and edge_value > value:
-            index = stop_edge
-            value = edge_value
+    #slice_start = start_edge if start_edge is not None else _slice.start
+    #slice_stop = stop_edge if stop_edge is not None else _slice.stop
+    #max_val_slice = slice(slice_start, slice_stop, _slice.step)
+    index, value = max_value(np.ma.abs(array), _slice,
+                          start_edge=start_edge, stop_edge=stop_edge)
+
     if value is None:
         return Value(None, None)
     else:
@@ -3862,18 +3861,12 @@ def max_value(array, _slice=slice(None), start_edge=None, stop_edge=None):
 
     :returns: Value named tuple of index and value.
     """
-    index, value = _value(array, _slice, np.ma.argmax)
-    # If start or stop edges are given, check these extreme (interpolated) values.
-    if start_edge:
-        edge_value = value_at_index(array, start_edge)
-        if edge_value and edge_value > value:
-            index = start_edge
-            value = edge_value
-    if stop_edge:
-        edge_value = value_at_index(array, stop_edge)
-        if edge_value and edge_value > value:
-            index = stop_edge
-            value = edge_value
+    #slice_start = start_edge if start_edge is not None else _slice.start
+    #slice_stop = stop_edge if stop_edge is not None else _slice.stop
+    #max_val_slice = slice(slice_start, slice_stop, _slice.step)
+    index, value = _value(array, _slice, np.ma.argmax,
+                          start_edge=start_edge, stop_edge=stop_edge)
+
     return Value(index, value)
 
 
@@ -3906,18 +3899,12 @@ def min_value(array, _slice=slice(None), start_edge=None, stop_edge=None):
 
     :returns: Value named tuple of index and value.
     """
-    index, value = _value(array, _slice, np.ma.argmin)
-    # If start or stop edges are given, check these extreme (interpolated) values.
-    if start_edge:
-        edge_value = value_at_index(array, start_edge)
-        if edge_value and edge_value < value:
-            index = start_edge
-            value = edge_value
-    if stop_edge:
-        edge_value = value_at_index(array, stop_edge)
-        if edge_value and edge_value < value:
-            index = stop_edge
-            value = edge_value
+    #slice_start = start_edge if start_edge is not None else _slice.start
+    #slice_stop = stop_edge if stop_edge is not None else _slice.stop
+    #min_val_slice = slice(slice_start, slice_stop, _slice.step)
+    index, value = _value(array, _slice, np.ma.argmin,
+                          start_edge=start_edge, stop_edge=stop_edge)
+
     return Value(index, value)
 
 
@@ -5002,6 +4989,7 @@ def peak_curvature(array, _slice=slice(None), curve_sense='Concave',
         # did not find curve in valid data
         return None
 
+
 def peak_index(a):
     '''
     Scans an array and returns the peak, where possible computing the local
@@ -5087,7 +5075,7 @@ def rate_of_change_array(to_diff, hz, width=None, method='two_points'):
         # the preceding technique.
 
         # The fit will be for equi-spaced samples around the midpoint.
-        x = np.arange(-hw,hw+1)
+        x = np.arange(-hw, hw+1)
         # Scaling is given by:
         sx2_hz = np.sum(x*x)/hz
         # We extended data array to allow for convolution overruns.
@@ -5098,6 +5086,7 @@ def rate_of_change_array(to_diff, hz, width=None, method='two_points'):
 
     else:
         raise ValueError('Rate of change called with unrecognised method')
+
 
 def rate_of_change(diff_param, width, method='two_points'):
     '''
@@ -6635,17 +6624,48 @@ def index_at_value_or_level_off(array, value, _slice, abs_threshold=None):
             return find_toc_tod(array, rev_slice, 1, 'Descent')
 
 
-def _value(array, _slice, operator):
+def _value(array, _slice, operator, start_edge=None, stop_edge=None):
     """
     Applies logic of min_value and max_value across the array slice.
     """
+    start_result = np.nan
+    stop_result = np.nan
+    slice_start = _slice.start
+    slice_stop = _slice.stop
+    start_idx = slice_start
+    stop_idx = slice_stop
+
+    # have we got sections or slices
+    if slice_start and slice_start % 1:
+        start_edge = slice_start
+        slice_start = ceil(slice_start)
+    if slice_stop and slice_stop % 1:
+        stop_edge = slice_stop
+        slice_stop = floor(slice_stop)
+
+    values = []
+
+    search_slice = slice(slice_start, slice_stop, _slice.step)
+
     if _slice.step and _slice.step < 0:
         raise ValueError("Negative step not supported")
-    if np.ma.count(array[_slice]):
+    if np.ma.count(array[search_slice]):
+        # get start_edge and stop_edge values if required
+        if start_edge:
+            start_result = value_at_index(array, start_edge)
+            if start_result is not None and start_result is not np.ma.masked:
+                values.append((start_result, start_edge))
         # floor the start position as it will have been floored during the slice
-        index = operator(array[_slice]) + floor(_slice.start or 0) * (_slice.step or 1)
-        value = array[index]
-        return Value(index, value)
+        value_index = operator(array[search_slice]) + floor(search_slice.start or 0) * (search_slice.step or 1)
+        value = array[value_index]
+        values.append((value, value_index))
+        if stop_edge:
+            stop_result = value_at_index(array, stop_edge)
+            if stop_result is not None and stop_result is not np.ma.masked:
+                values.append((stop_result, stop_edge))
+        result_idx = operator(np.ma.array(values)[:,0])
+        return Value(values[result_idx][1], values[result_idx][0])
+    
     else:
         return Value(None, None)
 

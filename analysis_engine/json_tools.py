@@ -1,6 +1,9 @@
 import collections
-from datetime import datetime
+import pytz
 import simplejson as json
+import dateutil.parser
+
+from datetime import datetime
 
 
 PROCESS_FLIGHT_RESULT_KEYS = (
@@ -47,7 +50,7 @@ def node_to_jsondict(node):
         if isinstance(v, datetime):
             d[k] = {
                 'type': datetime.__name__,
-                'value': v.strftime('%Y-%m-%d %H:%M:%S.%f'),
+                'value': v.isoformat(),
             }
 
         elif isinstance(v, slice):
@@ -105,7 +108,10 @@ def jsondict_to_node(d):
         if isinstance(n, dict) and 'value' in n and 'type' in n:
             val = n['value']
             if n['type'] == 'datetime':
-                val = datetime.strptime(val, '%Y-%m-%d %H:%M:%S.%f')
+                # TODO: do we need to force tzinfo to pytz?
+                val = dateutil.parser.parse(val)
+                if val.tzinfo is None:
+                    val.replace(tzinfo=pytz.utc)
             elif n['type'] == 'slice':
                 val = slice(*val)
         else:
