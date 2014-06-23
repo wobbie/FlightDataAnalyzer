@@ -1784,6 +1784,44 @@ class StickShaker(MultistateDerivedParameterNode):
             self.frequency = available[0].frequency
 
 
+class SpeedbrakeDeployed(MultistateDerivedParameterNode):
+    '''
+    '''
+    values_mapping = {
+        0: '-',
+        1: 'Deployed',
+    }
+
+    @classmethod
+    def can_operate(cls, available):
+        simple = ('Speedbrake (L) Deployed', 'Speedbrake (R) Deployed')
+        in_out = ('Speedbrake (L) Outboard Deployed',
+                  'Speedbrake (R) Outboard Deployed',
+                  'Speedbrake (L) Inboard Deployed',
+                  'Speedbrake (R) Inboard Deployed')
+        return all_of(simple, available)\
+               or all_of(in_out, available)
+
+    def derive(self, deployed_l=M('Speedbrake (L) Deployed'),
+               deployed_r=M('Speedbrake (R) Deployed'),
+               deployed_l_out=M('Speedbrake (L) Outboard Deployed'),
+               deployed_r_out=M('Speedbrake (R) Outboard Deployed'),
+               deployed_l_in=M('Speedbrake (L) Inboard Deployed'),
+               deployed_r_in=M('Speedbrake (R) Inboard Deployed')):
+
+        deployed_params = (deployed_l, deployed_r, deployed_l_out,
+                           deployed_r_out, deployed_l_in, deployed_r_in)
+        deployed_stack = vstack_params_where_state(*[(d, 'Deployed') for d in deployed_params])
+
+        array = np_ma_zeros_like(deployed_stack[0], dtype=np.short)
+        array = np.ma.where(deployed_stack.all(axis=0), 1, array)
+       
+        # mask indexes with greater than 50% masked values
+        mask = np.ma.where(deployed_stack.mask.sum(axis=0).astype(float)/len(deployed_stack)*100 > 50, 1, 0)
+        self.array = array
+        self.array.mask = mask
+
+
 class SpeedbrakeSelected(MultistateDerivedParameterNode):
     '''
     Determines the selected state of the speedbrake.

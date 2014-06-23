@@ -68,6 +68,7 @@ from analysis_engine.multistate_parameters import (
     SlatExcludingTransition,
     SlatIncludingTransition,
     SpeedControl,
+    SpeedbrakeDeployed,
     SpeedbrakeSelected,
     StableApproach,
     StickPusher,
@@ -1984,6 +1985,54 @@ class TestSlatIncludingTransition(unittest.TestCase, NodeTest):
         self.assertIsInstance(node.array, MappedArray)
         values = unique_values(node.array.astype(int))
         self.assertEqual(values, {0: 6, 16: 16, 25: 33})
+
+
+class TestSpeedbrakeDeployed(unittest.TestCase):
+
+    def test_can_operate(self):
+        node = self.node_class()
+        operational_combinations = node.get_operational_combinations()
+        self.assertTrue(('Speedbrake (L) Deployed', 'Speedbrake (R) Deployed') in operational_combinations)
+        self.assertTrue(('Speedbrake (L) Outboard Deployed',
+                          'Speedbrake (R) Outboard Deployed',
+                          'Speedbrake (L) Inboard Deployed',
+                          'Speedbrake (R) Inboard Deployed') in operational_combinations)
+
+    def setUp(self):
+        deployed_l_array = [ 0,  0,  0,  0,  0,  1,  1,  0,  0,  0]
+        deployed_r_array = [ 0,  0,  0,  0,  1,  1,  1,  0,  0,  0]
+
+        self.deployed_l = M(name='Speedbrake (L) Deployed', array=np.ma.array(deployed_l_array), values_mapping={1:'Deployed'})
+        self.deployed_r = M(name='Speedbrake (R) Deployed', array=np.ma.array(deployed_r_array), values_mapping={1:'Deployed'})
+        self.node_class = SpeedbrakeDeployed
+
+    def test_derive(self):
+        result = [ 0,  0,  0,  0,  0,  1,  1,  0,  0,  0]
+        node = self.node_class()
+        node.derive(self.deployed_l,
+                    self.deployed_r,
+                    None,
+                    None,
+                    None,
+                    None,)
+        np.testing.assert_equal(node.array.data, result)
+
+    def test_derive_masked_value(self):
+        self.deployed_l.array.mask = [ 0,  0,  0,  1,  0,  1,  0,  0,  1,  0]
+        self.deployed_r.array.mask = [ 0,  0,  0,  0,  0,  1,  0,  0,  1,  0]
+
+        result_array = [ 0,  0,  0,  0,  0,  0,  1,  0,  0,  0]
+        result_mask =  [ 0,  0,  0,  0,  0,  1,  0,  0,  1,  0]
+
+        node = self.node_class()
+        node.derive(self.deployed_l,
+                    self.deployed_r,
+                    None,
+                    None,
+                    None,
+                    None,)
+        np.testing.assert_equal(node.array.data, result_array)
+        np.testing.assert_equal(node.array.mask, result_mask)
 
 
 class TestSpeedbrakeSelected(unittest.TestCase):
