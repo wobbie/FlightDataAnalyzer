@@ -3052,6 +3052,21 @@ class BrakeTempDuringTaxiInMax(KeyPointValueNode):
         self.create_kpvs_within_slices(brakes.array, taxiin, max_value)
 
 
+class BrakeTempAfterTouchdownDelta(KeyPointValueNode):
+    '''
+    Difference in the average temperature after Touchdown
+    '''
+
+    units = ut.CELSIUS
+
+    def derive(self, brakes=P('Brake (*) Temp Avg'), touchdowns=S('Touchdown')):
+        touchdown = touchdowns.get_last().index
+        max_temp_idx = np.ma.argmax(brakes.array[touchdown:]) + touchdown
+        max_temp = value_at_index(brakes.array, max_temp_idx)
+        min_temp = np.ma.min(brakes.array[touchdown:max_temp_idx+1])
+        self.create_kpv(max_temp_idx, max_temp-min_temp)
+
+
 class BrakePressureInTakeoffRollMax(KeyPointValueNode):
     '''
     FDS developed this KPV to support the UK CAA Significant Seven programme.
