@@ -3949,12 +3949,13 @@ class ILSLocalizer(DerivedParameterNode):
                src_A=P('ILS (1) Localizer'),
                src_B=P('ILS (2) Localizer'),
                src_C=P('ILS (3) Localizer'),
+               src_D=P('ILS (4) Localizer'),
                src_E=P('ILS (L) Localizer'),
                src_F=P('ILS (R) Localizer'),
                src_G=P('ILS (C) Localizer'),
                src_J=P('ILS (EFIS) Localizer')):
 
-        sources = [src_A, src_B, src_C, src_E, src_F, src_G, src_J]
+        sources = [src_A, src_B, src_C, src_D, src_E, src_F, src_G, src_J]
         self.offset = 0.0
         self.frequency = 2.0
         self.array = blend_parameters(sources, offset=self.offset, 
@@ -3981,12 +3982,13 @@ class ILSGlideslope(DerivedParameterNode):
                src_A=P('ILS (1) Glideslope'),
                src_B=P('ILS (2) Glideslope'),
                src_C=P('ILS (3) Glideslope'),
+               src_D=P('ILS (4) Glideslope'),
                src_E=P('ILS (L) Glideslope'),
                src_F=P('ILS (R) Glideslope'),
                src_G=P('ILS (C) Glideslope'),
                src_J=P('ILS (EFIS) Glideslope')):
 
-        sources = [src_A, src_B, src_C, src_E, src_F, src_G, src_J]
+        sources = [src_A, src_B, src_C, src_D, src_E, src_F, src_G, src_J]
         self.offset = 0.0
         self.frequency = 2.0
         self.array = blend_parameters(sources, offset=self.offset, 
