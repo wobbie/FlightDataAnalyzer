@@ -2961,13 +2961,33 @@ class TestIsSliceWithinSlice(unittest.TestCase):
 
 
 class TestMaskInsideSlices(unittest.TestCase):
+    # Note: This test used "ma_test.assert_equal" but this does not test the
+    # array correctly. Changed to "ma_test.assert_masked_array_equal" for
+    # correct operation.
     def test_mask_inside_slices(self):
         slices = [slice(10, 20), slice(30, 40)]
         array = np.ma.arange(50)
-        array.mask = np.array([True] * 5 + [False] * 45)
+        array.mask = np.array([True] * 5 + [False] * 20 + [True] * 10 + [False] * 10)
         expected_result = np.ma.arange(50)
-        expected_result.mask = np.array([True] * 5 + [False] * 5 + [True] *  10 + [False] * 10 + [True] * 10)
-        ma_test.assert_equal(mask_inside_slices(array, slices),
+        expected_result.mask = np.array([True] * 5 + [False] * 5 + [True] *  11 + [False] * 4 + [True] * 16 + [False] * 4 + [True] * 5)
+        ma_test.assert_masked_array_equal(mask_inside_slices(array, slices),
+                             expected_result)
+
+    def test_mask_inside_slices_floating_ends(self):
+        slices = [slice(10.5, 20.5), slice(30.1, 40.9)]
+        array = np.ma.arange(50)
+        array.mask = np.array([True] * 6 + [False] * 19 + [True] * 11 + [False] * 15)
+        expected_result = np.ma.arange(50)
+        expected_result.mask = np.array([True] * 6 + [False] * 4+ [True] *  12 + [False] * 3 + [True] * 17 + [False] * 8)
+        ma_test.assert_masked_array_equal(mask_inside_slices(array, slices),
+                             expected_result)
+        
+    def test_mask_inside_slices_null_ends(self):
+        slices = [slice(None, 20.5), slice(30.1, None)]
+        array = np.ma.arange(50)
+        expected_result = np.ma.arange(50)
+        expected_result.mask = np.array([True] * 22 + [False] * 8 + [True] * 20)
+        ma_test.assert_masked_array_equal(mask_inside_slices(array, slices),
                              expected_result)
 
 
@@ -3014,14 +3034,34 @@ class TestMaxContinuousUnmasked(unittest.TestCase):
 
 
 class TestMaskOutsideSlices(unittest.TestCase):
+    # Note: This test used "ma_test.assert_equal" but this does not test the
+    # array correctly. Changed to "ma_test.assert_masked_array_equal" for
+    # correct operation.
     def test_mask_outside_slices(self):
         slices = [slice(10, 20), slice(30, 40)]
         array = np.ma.arange(50)
         array.mask = np.array([False] * 10 + [True] * 5 + [False] * 35)
         expected_result = np.ma.arange(50)
         expected_result.mask = np.array([True] * 15 + [False] * 5 + [True] * 10 + [False] * 10 + [True] * 10)
-        ma_test.assert_equal(mask_outside_slices(array, slices),
+        ma_test.assert_masked_array_equal(mask_outside_slices(array, slices),
                              expected_result)
+        
+    def test_mask_outside_slices_floating_ends(self):
+        slices = [slice(10.5, 20.5), slice(30.1, 40.9)]
+        array = np.ma.arange(50)
+        array.mask = np.array([False] * 10 + [True] * 5 + [False] * 35)
+        expected_result = np.ma.arange(50)
+        expected_result.mask = np.array([True] * 15 + [False] * 5 + [True] * 11 + [False] * 9 + [True] * 10)
+        ma_test.assert_masked_array_equal(mask_outside_slices(array, slices),
+                                          expected_result)
+
+    def test_mask_outside_slices_null_ends(self):
+        slices = [slice(None, 20.5), slice(30.1, None)]
+        array = np.ma.arange(50)
+        expected_result = np.ma.arange(50)
+        expected_result.mask = np.array([False] * 20 + [True] * 11 + [False] * 18 + [True])
+        ma_test.assert_masked_array_equal(mask_outside_slices(array, slices),
+                                          expected_result)
 
 class TestMatchAltitudes(unittest.TestCase):
     def test_basic_operation(self):

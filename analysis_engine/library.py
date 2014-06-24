@@ -1,6 +1,7 @@
 import logging
 import pytz
 import numpy as np
+import math
 
 from collections import OrderedDict, namedtuple
 from datetime import datetime, timedelta
@@ -3746,7 +3747,14 @@ def mask_inside_slices(array, slices):
     '''
     mask = np.zeros(len(array), dtype=np.bool_) # Create a mask of False.
     for slice_ in slices:
-        mask[slice_] = True
+        start_ = math.floor(slice_.start or 0)
+        if slice_.stop:
+            stop_ = math.ceil(slice_.stop) + 1
+        else:
+            stop_ = None
+        mask[slice(start_, stop_)] = True
+        # Original version below did not operate correctly with floating point slice ends. Amended temporarily until more comprehensive solution available.
+        # Was: mask[slice_] = True
     return np.ma.array(array, mask=np.ma.mask_or(mask, array.mask))
 
 
@@ -3763,7 +3771,11 @@ def mask_outside_slices(array, slices):
     '''
     mask = np.ones(len(array), dtype=np.bool_) # Create a mask of True.
     for slice_ in slices:
-        mask[slice_] = False
+        start_ = math.ceil(slice_.start or 0)
+        stop_ = math.floor(slice_.stop or -1)
+        mask[slice(start_, stop_)] = False
+        # Original version below did not operate correctly with floating point slice ends. Amended temporarily until more comprehensive solution available.
+        # Was: mask[slice_] = False
     return np.ma.array(array, mask=np.ma.mask_or(mask, array.mask))
 
 
