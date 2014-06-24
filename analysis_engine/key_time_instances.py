@@ -1344,7 +1344,12 @@ class Touchdown(KeyTimeInstanceNode):
                         if delta > 0.1:
                             index_daz = i+1+index_ref-dt_pre*hz
                             break
-                
+                        
+            '''
+            open("touchdown_test","a").write(str([index_alt, index_gog, index_ax, index_dax, index_daz, index_az]))
+            open("touchdown_test","a").write("\n")
+            '''
+
             # Pick the first of the two normal accelerometer measures to
             # avoid triggering a touchdown from a single faulty sensor:
             index_z_list = [x for x in index_az, index_daz if x is not None]
@@ -1364,10 +1369,11 @@ class Touchdown(KeyTimeInstanceNode):
                 index_tdn = index_list[1]
             else:
                 index_tdn = index_list[0]
-            # but in any case, if we have a gear on ground signal which goes
-            # off first, adopt that.
-            if index_gog and index_gog<index_tdn:
-                index_tdn = index_gog
+            
+            ### but in any case, if we have a gear on ground signal which goes
+            ### off first, adopt that.
+            ##if index_gog and index_gog<index_tdn:
+                ##index_tdn = index_gog
             
             self.create_kti(index_tdn)
 
