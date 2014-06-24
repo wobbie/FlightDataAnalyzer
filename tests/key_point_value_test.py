@@ -164,6 +164,7 @@ from analysis_engine.key_point_values import (
     AltitudeWithGearDownMax,
     AutobrakeRejectedTakeoffNotSetDuringTakeoff,
     BrakePressureInTakeoffRollMax,
+    BrakeTempAfterTouchdownDelta,
     BrakeTempDuringTaxiInMax,
     ControlColumnForceMax,
     ControlColumnStiffness,
@@ -3003,6 +3004,30 @@ class TestBrakeTempDuringTaxiInMax(unittest.TestCase,
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestBrakeTempAfterTouchdownDelta(unittest.TestCase):
+    def setUp(self):
+        self.node_class = BrakeTempAfterTouchdownDelta
+        self.operational_combinations = [('Brake (*) Temp Avg', 'Touchdown',)]
+
+    def test_can_operate(self):
+        self.assertEqual(self.node_class.get_operational_combinations(),
+                         self.operational_combinations)
+
+    def test_derive_basic(self):
+        array = np.ma.concatenate((np.ma.arange(200, 130, -1), np.ma.arange(130, 300, 10), np.ma.arange(300, 280, -1)))
+        
+        brake_temp = P('Brake (*) Temp Avg', array)
+        touchdown = KTI(name='Touchdown', items=[
+            KeyTimeInstance(name='Touchdown', index=70),
+        ])
+        
+        node = self.node_class()
+        node.derive(brake_temp, touchdown)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 87)
+        self.assertEqual(node[0].value, 170)
 
 
 class TestBrakePressureInTakeoffRollMax(unittest.TestCase,
