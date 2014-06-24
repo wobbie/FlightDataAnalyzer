@@ -3747,11 +3747,11 @@ def mask_inside_slices(array, slices):
     '''
     mask = np.zeros(len(array), dtype=np.bool_) # Create a mask of False.
     for slice_ in slices:
-        start_ = math.floor(slice_.start)
-        stop_ = math.ceil(slice_.stop)
-        # If the stop point is floating point, ceil will have incremented the result...
-        if stop_ != slice_.stop:
-            stop_+=1
+        start_ = math.floor(slice_.start or 0)
+        if slice_.stop:
+            stop_ = math.ceil(slice_.stop) + 1
+        else:
+            stop_ = None
         mask[slice(start_, stop_)] = True
         # Original version below did not operate correctly with floating point slice ends. Amended temporarily until more comprehensive solution available.
         # Was: mask[slice_] = True
@@ -3771,8 +3771,8 @@ def mask_outside_slices(array, slices):
     '''
     mask = np.ones(len(array), dtype=np.bool_) # Create a mask of True.
     for slice_ in slices:
-        start_ = math.ceil(slice_.start)
-        stop_ = math.floor(slice_.stop)
+        start_ = math.ceil(slice_.start or 0)
+        stop_ = math.floor(slice_.stop or -1)
         mask[slice(start_, stop_)] = False
         # Original version below did not operate correctly with floating point slice ends. Amended temporarily until more comprehensive solution available.
         # Was: mask[slice_] = False
