@@ -760,14 +760,14 @@ class Eng_AnyRunning(MultistateDerivedParameterNode):
             # TODO: extend to NP for props
 
 
-class EngThrustModeRequired(MultistateDerivedParameterNode):
+class ThrustModeSelected(MultistateDerivedParameterNode):
     '''
-    Combines Eng Thrust Mode Required parameters.
+    Combines Thrust Mode Selected parameters.
     '''
 
     values_mapping = {
         0: '-',
-        1: 'Required',
+        1: 'Selected',
     }
 
     @classmethod
@@ -775,15 +775,11 @@ class EngThrustModeRequired(MultistateDerivedParameterNode):
         return any_of(cls.get_dependency_names(), available)
 
     def derive(self,
-               thrust1=P('Eng (1) Thrust Mode Required'),
-               thrust2=P('Eng (2) Thrust Mode Required'),
-               thrust3=P('Eng (3) Thrust Mode Required'),
-               thrust4=P('Eng (4) Thrust Mode Required')):
+               thrust_l=P('Thrust Mode Selected (L)'),
+               thrust_r=P('Thrust Mode Selected (R)')):
 
-        thrusts = [thrust for thrust in [thrust1,
-                                         thrust2,
-                                         thrust3,
-                                         thrust4] if thrust]
+        thrusts = [thrust for thrust in [thrust_l,
+                                         thrust_r] if thrust]
 
         if len(thrusts) == 1:
             self.array = thrusts[0].array
@@ -794,7 +790,7 @@ class EngThrustModeRequired(MultistateDerivedParameterNode):
         masks = []
         for thrust in thrusts:
             masks.append(thrust.array.mask)
-            array[thrust.array == 'Required'] = 'Required'
+            array[thrust.array == 'Selected'] = 'Selected'
 
         array.mask = merge_masks(masks)
         self.array = array

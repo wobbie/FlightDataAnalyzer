@@ -38,7 +38,7 @@ from analysis_engine.multistate_parameters import (
     Configuration,
     Daylight,
     DualInputWarning,
-    EngThrustModeRequired,
+    ThrustModeSelected,
     Eng_1_Fire,
     Eng_2_Fire,
     Eng_3_Fire,
@@ -1028,22 +1028,17 @@ class TestEng_Oil_Press_Warning(unittest.TestCase):
 
 class TestEngThrustModeRequired(unittest.TestCase):
     def test_can_operate(self):
-        opts = EngThrustModeRequired.get_operational_combinations()
-        self.assertTrue(('Eng (1) Thrust Mode Required',) in opts)
-        self.assertTrue(('Eng (2) Thrust Mode Required',) in opts)
-        self.assertTrue(('Eng (3) Thrust Mode Required',) in opts)
-        self.assertTrue(('Eng (4) Thrust Mode Required',) in opts)
-        self.assertTrue(('Eng (1) Thrust Mode Required',
-                         'Eng (2) Thrust Mode Required',
-                         'Eng (3) Thrust Mode Required',
-                         'Eng (4) Thrust Mode Required',) in opts)
+        opts = ThrustModeSelected.get_operational_combinations()
+        self.assertTrue(('Thrust Mode Selected (L)',) in opts)
+        self.assertTrue(('Thrust Mode Selected (R)',) in opts)
+        self.assertTrue(('Thrust Mode Selected (L)', 'Thrust Mode Selected (R)') in opts)
 
     def test_derive_one_param(self):
         thrust_array = np.ma.array([0, 0, 1, 0])
-        thrust = M('Eng (2) Thrust Mode Required', array=thrust_array,
-                   values_mapping=EngThrustModeRequired.values_mapping)
-        node = EngThrustModeRequired()
-        node.derive(None, thrust, None, None)
+        thrust = M('Thrust Mode Selected (R)', array=thrust_array,
+                   values_mapping=ThrustModeSelected.values_mapping)
+        node = ThrustModeSelected()
+        node.derive(None, thrust)
         self.assertEqual(thrust.array.raw.tolist(), thrust_array.tolist())
 
     def test_derive_four_params(self):
@@ -1051,24 +1046,18 @@ class TestEngThrustModeRequired(unittest.TestCase):
                                     mask=[False, False, True, False])
         thrust_array2 = np.ma.array([1, 0, 0, 0],
                                     mask=[True, False, False, False])
-        thrust_array3 = np.ma.array([0, 1, 0, 0])
-        thrust_array4 = np.ma.array([0, 0, 1, 0])
-        thrust1 = M('Eng (1) Thrust Mode Required', array=thrust_array1,
-                    values_mapping=EngThrustModeRequired.values_mapping)
-        thrust2 = M('Eng (2) Thrust Mode Required', array=thrust_array2,
-                    values_mapping=EngThrustModeRequired.values_mapping)
-        thrust3 = M('Eng (3) Thrust Mode Required', array=thrust_array3,
-                    values_mapping=EngThrustModeRequired.values_mapping)
-        thrust4 = M('Eng (4) Thrust Mode Required', array=thrust_array4,
-                    values_mapping=EngThrustModeRequired.values_mapping)
-        node = EngThrustModeRequired()
-        node.derive(thrust1, thrust2, thrust3, thrust4)
+        thrust1 = M('Thrust Mode Selected (L)', array=thrust_array1,
+                    values_mapping=ThrustModeSelected.values_mapping)
+        thrust2 = M('Thrust Mode Selected (R)', array=thrust_array2,
+                    values_mapping=ThrustModeSelected.values_mapping)
+        node = ThrustModeSelected()
+        node.derive(thrust1, thrust2)
 
         self.assertEqual(
             node.array.tolist(),
-            MappedArray([1, 1, 1, 0],
+            MappedArray([1, 0, 1, 0],
                         mask=[True, False, True, False],
-                        values_mapping=EngThrustModeRequired.values_mapping).tolist())
+                        values_mapping=ThrustModeSelected.values_mapping).tolist())
 
 
 class TestFlap(unittest.TestCase, NodeTest):
