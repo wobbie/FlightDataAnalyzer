@@ -55,7 +55,9 @@ from analysis_engine.multistate_parameters import (
     FuelQty_Low,
     GearDown,
     GearDownSelected,
+    GearInTransit,
     GearOnGround,
+    GearUp,
     GearUpSelected,
     Gear_RedWarning,
     KeyVHFCapt,
@@ -1535,6 +1537,7 @@ class TestGearDown(unittest.TestCase, NodeTest):
             ('Gear (R) Down',),
             ('Gear (L) Down', 'Gear (R) Down'),
             ('Gear (L) Down', 'Gear (N) Down', 'Gear (R) Down'),
+            ('Gear Up', 'Gear In Transit'),
             ('Gear Down Selected',),
         ]
 
@@ -1544,9 +1547,47 @@ class TestGearDown(unittest.TestCase, NodeTest):
             1: 'Down',
         })
         down = GearDown()
-        down.derive(None, None, None, sel_down)
+        down.derive(None, None, None, None, None, sel_down)
         self.assertEqual(list(down.array),
                          ['Down', 'Up', 'Up', 'Down', 'Down'])
+
+    def test_derive_from_up_intransit(self):
+        up = M(array=np.ma.array([0,0,0,0,1,1,0,0,0,0]), values_mapping={
+            1: 'Up',
+            0: 'Down',
+        })
+        in_transit = M(array=np.ma.array([0,0,0,1,0,0,1,1,0,0]), values_mapping={
+            1: 'In Transit',
+            0: '-',
+        })
+        node = self.node_class()
+        node.derive(None, None, None, up, in_transit, None)
+        self.assertEqual(list(node.array),
+                 ['Down', 'Down', 'Down', 'Up', 'Up', 'Up', 'Up', 'Up', 'Down', 'Down'])
+
+class TestGearUp(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = GearUp
+        self.operational_combinations = [
+            ('Gear (L) Up',),
+            ('Gear (R) Up',),
+            ('Gear (L) Up', 'Gear (R) Up'),
+            ('Gear (L) Up', 'Gear (N) Up', 'Gear (R) Up'),
+        ]
+
+
+class TestGearInTransit(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = GearInTransit
+        self.operational_combinations = [
+            ('Gear (L) In Transit',),
+            ('Gear (R) In Transit',),
+            ('Gear (L) In Transit', 'Gear (R) In Transit'),
+            ('Gear (L) In Transit', 'Gear (N) In Transit', 'Gear (R) In Transit'),
+        ]
+
 
 
 class TestGearUpSelected(unittest.TestCase):

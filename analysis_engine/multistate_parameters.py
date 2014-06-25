@@ -1160,12 +1160,15 @@ class GearDown(MultistateDerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
         # Can operate with a any combination of parameters available
-        return any_of(cls.get_dependency_names(), available)
+        gear_downs = ('Gear (L) Down', 'Gear (N) Down', 'Gear (R) Down', 'Gear Down Selected')
+        return any_of(gear_downs, available) or all_of(('Gear Up', 'Gear In Transit'), available)
 
     def derive(self,
                gl=M('Gear (L) Down'),
                gn=M('Gear (N) Down'),
                gr=M('Gear (R) Down'),
+               gear_up = M('Gear Up'),
+               gear_transit = M('Gear In Transit'),
                gear_sel=M('Gear Down Selected')):
         # Join all available gear parameters and use whichever are available.
         if gl or gn or gr:
@@ -1174,8 +1177,72 @@ class GearDown(MultistateDerivedParameterNode):
                 (gn, 'Down'),
                 (gr, 'Down'),
             ).any(axis=0)
-        else:
+        elif gear_up and gear_transit:
+            not_up = vstack_params_where_state(
+                (gear_up, 'Up'),
+                (gear_transit, 'In Transit'),
+            ).any(axis=0)
+            self.array = ~not_up
+        else:  # gear_sel
             self.array = gear_sel.array
+
+
+class GearUp(MultistateDerivedParameterNode):
+    '''
+    This Multi-State parameter uses "majority voting" to decide whether the
+    gear is up or down.
+    '''
+
+    align = False
+    values_mapping = {
+        0: 'Down',
+        1: 'Up',
+    }
+
+    @classmethod
+    def can_operate(cls, available):
+        # Can operate with a any combination of parameters available
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               gl=M('Gear (L) Up'),
+               gn=M('Gear (N) Up'),
+               gr=M('Gear (R) Up')):
+        # Join all available gear parameters and use whichever are available.
+        self.array = vstack_params_where_state(
+            (gl, 'Up'),
+            (gn, 'Up'),
+            (gr, 'Up'),
+        ).any(axis=0)
+
+
+class GearInTransit(MultistateDerivedParameterNode):
+    '''
+    This Multi-State parameter uses "majority voting" to decide whether the
+    gear is in transit.
+    '''
+
+    align = False
+    values_mapping = {
+        0: '-',
+        1: 'In Transit',
+    }
+
+    @classmethod
+    def can_operate(cls, available):
+        # Can operate with a any combination of parameters available
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               gl=M('Gear (L) In Transit'),
+               gn=M('Gear (N) In Transit'),
+               gr=M('Gear (R) In Transit')):
+
+        self.array = vstack_params_where_state(
+            (gl, 'In Transit'),
+            (gn, 'In Transit'),
+            (gr, 'In Transit'),
+        ).any(axis=0)
 
 
 class GearOnGround(MultistateDerivedParameterNode):
