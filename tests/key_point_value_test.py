@@ -107,11 +107,12 @@ from analysis_engine.key_point_values import (
     AirspeedRelativeFor3Sec500To20FtMax,
     AirspeedRelativeFor3Sec500To20FtMin,
     AirspeedRelativeWithConfigurationDuringDescentMin,
+    AirspeedSelectedMCPAt8000FtDescending,
     AirspeedTopOfDescentTo10000FtMax,
     AirspeedTopOfDescentTo4000FtMax,
     AirspeedTopOfDescentTo4000FtMin,
     AirspeedTrueAtTouchdown,
-    AirspeedV2Plus20DifferenceAtVNAVModeAndEngThrustModeRequired,
+    AirspeedV2Plus20DifferenceAtAPVNAVModeAndThrustModeSelected,
     AirspeedVacatingRunway,
     AirspeedWhileGearExtendingMax,
     AirspeedWhileGearRetractingMax,
@@ -150,7 +151,7 @@ from analysis_engine.key_point_values import (
     AltitudeAtLastFlapChangeBeforeTouchdown,
     AltitudeAtLastFlapRetraction,
     AltitudeAtMachMax,
-    AltitudeAtVNAVModeAndEngThrustModeRequired,
+    AltitudeAtAPVNAVModeAndThrustModeSelected,
     AltitudeDuringGoAroundMin,
     AltitudeFirstStableDuringApproachBeforeGoAround,
     AltitudeFirstStableDuringLastApproach,
@@ -349,7 +350,6 @@ from analysis_engine.key_point_values import (
     MasterCautionDuringTakeoffDuration,
     MasterWarningDuration,
     MasterWarningDuringTakeoffDuration,
-    ModeControlPanelAirspeedSelectedAt8000FtDescending,
     OverspeedDuration,
     PackValvesOpenAtLiftoff,
     PercentApproachStable,
@@ -375,7 +375,7 @@ from analysis_engine.key_point_values import (
     PitchAt35FtDuringClimb,
     PitchAtLiftoff,
     PitchAtTouchdown,
-    PitchAtVNAVModeAndEngThrustModeRequired,
+    PitchAtAPVNAVModeAndThrustModeSelected,
     PitchCyclesDuringFinalApproach,
     PitchDuringGoAroundMax,
     PitchRate20FtToTouchdownMax,
@@ -1310,13 +1310,13 @@ class TestAirspeedAt8000FtDescending(unittest.TestCase, NodeTest):
                           KeyPointValue(index=18, value=180.0, name='Airspeed At 8000 Ft Descending')])
 
 
-class TestModeControlPanelAirspeedSelectedAt8000FtDescending(unittest.TestCase, NodeTest):
+class TestAirspeedSelectedMCPAt8000FtDescending(unittest.TestCase, NodeTest):
     def setUp(self):
-        self.node_class = ModeControlPanelAirspeedSelectedAt8000FtDescending
-        self.operational_combinations = [('Mode Control Panel Airspeed Selected', 'Altitude When Descending')]
+        self.node_class = AirspeedSelectedMCPAt8000FtDescending
+        self.operational_combinations = [('Airspeed Selected (MCP)', 'Altitude When Descending')]
 
     def test_derive_basic(self):
-        air_spd = P('Mode Control Panel Airspeed Selected', array=np.ma.arange(0, 200, 5))
+        air_spd = P('Airspeed Selected (MCP)', array=np.ma.arange(0, 200, 5))
         alt_std_desc = AltitudeWhenDescending(
             items=[KeyTimeInstance(13, '8000 Ft Descending'),
                    KeyTimeInstance(26, '8000 Ft Descending'),
@@ -1325,9 +1325,9 @@ class TestModeControlPanelAirspeedSelectedAt8000FtDescending(unittest.TestCase, 
         node = self.node_class()
         node.derive(air_spd, alt_std_desc)
         self.assertEqual(node,
-                         [KeyPointValue(index=13, value=65.0, name='Mode Control Panel Airspeed Selected At 8000 Ft Descending'),
-                          KeyPointValue(index=26, value=130.0, name='Mode Control Panel Airspeed Selected At 8000 Ft Descending'),
-                          KeyPointValue(index=32, value=160.0, name='Mode Control Panel Airspeed Selected At 8000 Ft Descending')])
+                         [KeyPointValue(index=13, value=65.0, name='Airspeed Selected (MCP) At 8000 Ft Descending'),
+                          KeyPointValue(index=26, value=130.0, name='Airspeed Selected (MCP) At 8000 Ft Descending'),
+                          KeyPointValue(index=32, value=160.0, name='Airspeed Selected (MCP) At 8000 Ft Descending')])
 
 
 class TestAirspeedMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
@@ -1413,11 +1413,11 @@ class TestAirspeedGustsDuringFinalApproach(unittest.TestCase, NodeTest):
         self.assertEqual(kpv[0].index, 4.75)
 
 
-class TestAirspeedV2Plus20DifferenceAtVNAVModeAndEngThrustModeRequired(unittest.TestCase, NodeTest):
+class TestAirspeedV2Plus20DifferenceAtAPVNAVModeAndThrustModeSelected(unittest.TestCase, NodeTest):
     
     def setUp(self):
-        self.node_class = AirspeedV2Plus20DifferenceAtVNAVModeAndEngThrustModeRequired
-        self.operational_combinations = [('Airspeed', 'V2', 'VNAV Mode And Eng Thrust Mode Required')]
+        self.node_class = AirspeedV2Plus20DifferenceAtAPVNAVModeAndThrustModeSelected
+        self.operational_combinations = [('Airspeed', 'V2', 'AP VNAV Mode And Thrust Mode Selected')]
     
     def test_derive(self):
         airspeed_array = np.ma.arange(0, 200, 10)
@@ -1425,7 +1425,7 @@ class TestAirspeedV2Plus20DifferenceAtVNAVModeAndEngThrustModeRequired(unittest.
         v2_array = np.ma.array([200] * 20)
         v2_array.mask = [False] * 15 + [True] * 3 + [False] * 2
         v2 = P('V2', array=v2_array)
-        kti_name = 'VNAV Mode And Eng Thrust Mode Required'
+        kti_name = 'AP VNAV Mode And Thrust Mode Selected'
         vnav_thrusts = KTI(kti_name, items=[
             KeyTimeInstance(index=5, name=kti_name),
             KeyTimeInstance(index=15, name=kti_name)])
@@ -1437,7 +1437,7 @@ class TestAirspeedV2Plus20DifferenceAtVNAVModeAndEngThrustModeRequired(unittest.
         self.assertEqual(node[1].index, 15)
         self.assertEqual(node[1].value, 70)
         self.assertEqual(node[0].name,
-            'V2+20 Minus Airspeed At VNAV Mode And Eng Thrust Mode Required')
+            'V2+20 Minus Airspeed At AP VNAV Mode And Thrust Mode Selected')
             ##'Airspeed V2 Plus 20 Difference At Vnav Mode And Eng Thrust Mode Required')
 
 
@@ -3287,11 +3287,11 @@ class TestAltitudeOvershootAtSuspectedLevelBust(unittest.TestCase, NodeTest):
         self.assertEqual(len(bust), 0)
 
 
-class TestAltitudeAtVNAVModeAndEngThrustModeRequired(unittest.TestCase, CreateKPVsAtKTIsTest):
+class TestAltitudeAtAPVNAVModeAndThrustModeSelected(unittest.TestCase, CreateKPVsAtKTIsTest):
 
     def setUp(self):
-        self.node_class = AltitudeAtVNAVModeAndEngThrustModeRequired
-        self.operational_combinations = [('Altitude AAL', 'VNAV Mode And Eng Thrust Mode Required')]
+        self.node_class = AltitudeAtAPVNAVModeAndThrustModeSelected
+        self.operational_combinations = [('Altitude AAL', 'AP VNAV Mode And Thrust Mode Selected')]
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
@@ -8103,11 +8103,11 @@ class TestPitchDuringGoAroundMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
         self.assertTrue(False, msg='Test not implemented.')
 
 
-class TestPitchAtVNAVModeAndEngThrustModeRequired(unittest.TestCase, CreateKPVsAtKTIsTest):
+class TestPitchAtAPVNAVModeAndThrustModeSelected(unittest.TestCase, CreateKPVsAtKTIsTest):
 
     def setUp(self):
-        self.node_class = PitchAtVNAVModeAndEngThrustModeRequired
-        self.operational_combinations = [('Pitch', 'VNAV Mode And Eng Thrust Mode Required')]
+        self.node_class = PitchAtAPVNAVModeAndThrustModeSelected
+        self.operational_combinations = [('Pitch', 'AP VNAV Mode And Thrust Mode Selected')]
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):

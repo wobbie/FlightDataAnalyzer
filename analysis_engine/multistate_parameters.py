@@ -760,14 +760,14 @@ class Eng_AnyRunning(MultistateDerivedParameterNode):
             # TODO: extend to NP for props
 
 
-class EngThrustModeRequired(MultistateDerivedParameterNode):
+class ThrustModeSelected(MultistateDerivedParameterNode):
     '''
-    Combines Eng Thrust Mode Required parameters.
+    Combines Thrust Mode Selected parameters.
     '''
 
     values_mapping = {
         0: '-',
-        1: 'Required',
+        1: 'Selected',
     }
 
     @classmethod
@@ -775,15 +775,11 @@ class EngThrustModeRequired(MultistateDerivedParameterNode):
         return any_of(cls.get_dependency_names(), available)
 
     def derive(self,
-               thrust1=P('Eng (1) Thrust Mode Required'),
-               thrust2=P('Eng (2) Thrust Mode Required'),
-               thrust3=P('Eng (3) Thrust Mode Required'),
-               thrust4=P('Eng (4) Thrust Mode Required')):
+               thrust_l=P('Thrust Mode Selected (L)'),
+               thrust_r=P('Thrust Mode Selected (R)')):
 
-        thrusts = [thrust for thrust in [thrust1,
-                                         thrust2,
-                                         thrust3,
-                                         thrust4] if thrust]
+        thrusts = [thrust for thrust in [thrust_l,
+                                         thrust_r] if thrust]
 
         if len(thrusts) == 1:
             self.array = thrusts[0].array
@@ -794,7 +790,7 @@ class EngThrustModeRequired(MultistateDerivedParameterNode):
         masks = []
         for thrust in thrusts:
             masks.append(thrust.array.mask)
-            array[thrust.array == 'Required'] = 'Required'
+            array[thrust.array == 'Selected'] = 'Selected'
 
         array.mask = merge_masks(masks)
         self.array = array
@@ -1164,12 +1160,15 @@ class GearDown(MultistateDerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
         # Can operate with a any combination of parameters available
-        return any_of(cls.get_dependency_names(), available)
+        gear_downs = ('Gear (L) Down', 'Gear (N) Down', 'Gear (R) Down', 'Gear Down Selected')
+        return any_of(gear_downs, available) or all_of(('Gear Up', 'Gear In Transit'), available)
 
     def derive(self,
                gl=M('Gear (L) Down'),
                gn=M('Gear (N) Down'),
                gr=M('Gear (R) Down'),
+               gear_up = M('Gear Up'),
+               gear_transit = M('Gear In Transit'),
                gear_sel=M('Gear Down Selected')):
         # Join all available gear parameters and use whichever are available.
         if gl or gn or gr:
@@ -1178,8 +1177,72 @@ class GearDown(MultistateDerivedParameterNode):
                 (gn, 'Down'),
                 (gr, 'Down'),
             ).any(axis=0)
-        else:
+        elif gear_up and gear_transit:
+            not_up = vstack_params_where_state(
+                (gear_up, 'Up'),
+                (gear_transit, 'In Transit'),
+            ).any(axis=0)
+            self.array = ~not_up
+        else:  # gear_sel
             self.array = gear_sel.array
+
+
+class GearUp(MultistateDerivedParameterNode):
+    '''
+    This Multi-State parameter uses "majority voting" to decide whether the
+    gear is up or down.
+    '''
+
+    align = False
+    values_mapping = {
+        0: 'Down',
+        1: 'Up',
+    }
+
+    @classmethod
+    def can_operate(cls, available):
+        # Can operate with a any combination of parameters available
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               gl=M('Gear (L) Up'),
+               gn=M('Gear (N) Up'),
+               gr=M('Gear (R) Up')):
+        # Join all available gear parameters and use whichever are available.
+        self.array = vstack_params_where_state(
+            (gl, 'Up'),
+            (gn, 'Up'),
+            (gr, 'Up'),
+        ).any(axis=0)
+
+
+class GearInTransit(MultistateDerivedParameterNode):
+    '''
+    This Multi-State parameter uses "majority voting" to decide whether the
+    gear is in transit.
+    '''
+
+    align = False
+    values_mapping = {
+        0: '-',
+        1: 'In Transit',
+    }
+
+    @classmethod
+    def can_operate(cls, available):
+        # Can operate with a any combination of parameters available
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               gl=M('Gear (L) In Transit'),
+               gn=M('Gear (N) In Transit'),
+               gr=M('Gear (R) In Transit')):
+
+        self.array = vstack_params_where_state(
+            (gl, 'In Transit'),
+            (gn, 'In Transit'),
+            (gr, 'In Transit'),
+        ).any(axis=0)
 
 
 class GearOnGround(MultistateDerivedParameterNode):
@@ -1794,20 +1857,20 @@ class SpeedbrakeDeployed(MultistateDerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available):
-        simple = ('Speedbrake (L) Deployed', 'Speedbrake (R) Deployed')
-        in_out = ('Speedbrake (L) Outboard Deployed',
-                  'Speedbrake (R) Outboard Deployed',
-                  'Speedbrake (L) Inboard Deployed',
-                  'Speedbrake (R) Inboard Deployed')
+        simple = ('Spoiler (L) Deployed', 'Spoiler (R) Deployed')
+        in_out = ('Spoiler (L) Outboard Deployed',
+                  'Spoiler (R) Outboard Deployed',
+                  'Spoiler (L) Inboard Deployed',
+                  'Spoiler (R) Inboard Deployed')
         return all_of(simple, available)\
                or all_of(in_out, available)
 
-    def derive(self, deployed_l=M('Speedbrake (L) Deployed'),
-               deployed_r=M('Speedbrake (R) Deployed'),
-               deployed_l_out=M('Speedbrake (L) Outboard Deployed'),
-               deployed_r_out=M('Speedbrake (R) Outboard Deployed'),
-               deployed_l_in=M('Speedbrake (L) Inboard Deployed'),
-               deployed_r_in=M('Speedbrake (R) Inboard Deployed')):
+    def derive(self, deployed_l=M('Spoiler (L) Deployed'),
+               deployed_r=M('Spoiler (R) Deployed'),
+               deployed_l_out=M('Spoiler (L) Outboard Deployed'),
+               deployed_r_out=M('Spoiler (R) Outboard Deployed'),
+               deployed_l_in=M('Spoiler (L) Inboard Deployed'),
+               deployed_r_in=M('Spoiler (R) Inboard Deployed')):
 
         deployed_params = (deployed_l, deployed_r, deployed_l_out,
                            deployed_r_out, deployed_l_in, deployed_r_in)

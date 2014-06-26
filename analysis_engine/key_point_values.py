@@ -2670,15 +2670,16 @@ class AirspeedDuringLevelFlightMax(KeyPointValueNode):
             self.create_kpv(*max_value(air_spd.array, section.slice))
 
 
-class ModeControlPanelAirspeedSelectedAt8000FtDescending(KeyPointValueNode):
+class AirspeedSelectedMCPAt8000FtDescending(KeyPointValueNode):
     '''
     Airspeed Selected in the Mode Control Panel (MCP) at 8000ft in descent.
     '''
 
     units = ut.KT
-    
+    name = 'Airspeed Selected (MCP) At 8000 Ft Descending'
+
     def derive(self,
-               mcp=P('Mode Control Panel Airspeed Selected'),
+               mcp=P('Airspeed Selected (MCP)'),
                alt_std_desc=S('Altitude When Descending')):
         #TODO: Refactor to be a formatted name node if multiple Airspeed At
         #  Altitude KPVs are required. Could depend on either Altitude When
@@ -3362,16 +3363,16 @@ class AltitudeAtFlapExtension(KeyPointValueNode):
                 self.create_kpv(flap.index, value)
 
 
-class AltitudeAtVNAVModeAndEngThrustModeRequired(KeyPointValueNode):
+class AltitudeAtAPVNAVModeAndThrustModeSelected(KeyPointValueNode):
     '''
     '''
     
-    name = 'Altitude At VNAV Mode And Eng Thrust Mode Required'
+    name = 'Altitude At AP VNAV Mode And Thrust Mode Selected'
     units = ut.FT
     
     def derive(self,
                alt_aal=P('Altitude AAL'),
-               vnav_thrust=KTI('VNAV Mode And Eng Thrust Mode Required')):
+               vnav_thrust=KTI('AP VNAV Mode And Thrust Mode Selected')):
         
         self.create_kpvs_at_ktis(alt_aal.array, vnav_thrust)
 
@@ -8884,20 +8885,20 @@ class Pitch7FtToTouchdownMax(KeyPointValueNode):
         )
 
 
-class AirspeedV2Plus20DifferenceAtVNAVModeAndEngThrustModeRequired(KeyPointValueNode):
+class AirspeedV2Plus20DifferenceAtAPVNAVModeAndThrustModeSelected(KeyPointValueNode):
     '''
     This was requested by one customer who wanted to know the speed margin
     from the ideal of V2+20 when the crew put the automatics in after
     take-off.
     '''
     
-    name = 'V2+20 Minus Airspeed At VNAV Mode And Eng Thrust Mode Required'
+    name = 'V2+20 Minus Airspeed At AP VNAV Mode And Thrust Mode Selected'
     units = ut.KT
     
     def derive(self,
                airspeed=P('Airspeed'),
                v2=P('V2'),
-               vnav_thrusts=KTI('VNAV Mode And Eng Thrust Mode Required')):
+               vnav_thrusts=KTI('AP VNAV Mode And Thrust Mode Selected')):
         
         # XXX: Assuming V2 value is constant.
         v2_value = v2.array[np.ma.where(v2.array)[0][0]] + 20
@@ -8942,17 +8943,17 @@ class PitchDuringGoAroundMax(KeyPointValueNode):
         self.create_kpvs_within_slices(pitch.array, go_arounds, max_value)
 
 
-class PitchAtVNAVModeAndEngThrustModeRequired(KeyPointValueNode):
+class PitchAtAPVNAVModeAndThrustModeSelected(KeyPointValueNode):
     '''
     Will create a Pitch KPV for each KTI.
     '''
     
-    name = 'Pitch At VNAV Mode And Eng Thrust Mode Required'
+    name = 'Pitch At AP VNAV Mode And Thrust Mode Selected'
     units = ut.DEGREE
     
     def derive(self,
                pitch=P('Pitch'),
-               vnav_thrust=KTI('VNAV Mode And Eng Thrust Mode Required')):
+               vnav_thrust=KTI('AP VNAV Mode And Thrust Mode Selected')):
         
         self.create_kpvs_at_ktis(pitch.array, vnav_thrust)
 
