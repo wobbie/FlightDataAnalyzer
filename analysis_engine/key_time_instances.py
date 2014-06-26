@@ -957,7 +957,7 @@ class TakeoffAccelerationStart(KeyTimeInstanceNode):
         return 'Airspeed' in available and 'Takeoff' in available
 
     def derive(self, speed=P('Airspeed'), takeoffs=S('Takeoff'),
-               accel=P('Acceleration Longitudinal')):
+               accel=P('Acceleration Longitudinal Offset Removed')):
         for takeoff in takeoffs:
             start_accel = None
             if accel:
