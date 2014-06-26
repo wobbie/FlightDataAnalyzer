@@ -986,12 +986,19 @@ class Grounded(FlightPhaseNode):
 
 class Taxiing(FlightPhaseNode):
     '''
-    TODO: Update docstring.
-    
     This finds the first and last signs of movement to provide endpoints to
     the taxi phases. As Rate Of Turn is derived directly from heading, this
     phase is guaranteed to be operable for very basic aircraft.
+    
+    If groundspeed is available, only periods where the groundspeed is over
+    5kts are considered taxiing.
+    
+    With all mobile and moving periods identified, we then remove all the
+    periods where the aircraft is either airborne, taking off, landing or
+    carrying out a rejected takeoff. What's left are the taxiing on the
+    ground periods.
     '''
+
     @classmethod
     def can_operate(cls, available):
         constraint = (all_of(('Takeoff', 'Landing'), available) or 
@@ -1000,6 +1007,7 @@ class Taxiing(FlightPhaseNode):
     
     def derive(self, mobiles=S('Mobile'), gspd=P('Groundspeed'),
                toffs=S('Takeoff'), lands=S('Landing'),
+               rtos = S('Rejected Takeoff'), 
                airs=S('Airborne')):
         # XXX: There should only be one Mobile slice.
         if gspd:
@@ -1010,20 +1018,16 @@ class Taxiing(FlightPhaseNode):
             taxiing_slices = slices_and(mobiles.get_slices(), taxiing_slices)
         else:
             taxiing_slices = mobiles.get_slices()
-        
-        if toffs and lands:
-            # Exclude Takeoffs and Landings.
-            flight_slice = slice(toffs.get_first().slice.start,
-                                 lands.get_last().slice.stop)
-        elif airs:
-            # Exclude Airbornes.
-            flight_slice = slice(airs.get_first().slice.start,
-                                 airs.get_last().slice.stop)
-        else:
-            # Incomplete flight?
-            return
-        
-        taxiing_slices = slices_and_not(taxiing_slices, [flight_slice])
+
+        if toffs:
+            taxiing_slices = slices_and_not(taxiing_slices, toffs.get_slices())
+        if lands:
+            taxiing_slices = slices_and_not(taxiing_slices, lands.get_slices())
+        if rtos:
+            taxiing_slices = slices_and_not(taxiing_slices, rtos.get_slices())
+        if airs:
+            taxiing_slices = slices_and_not(taxiing_slices, airs.get_slices())
+            
         self.create_phases(taxiing_slices)
 
 

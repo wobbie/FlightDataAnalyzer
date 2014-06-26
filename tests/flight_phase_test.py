@@ -1577,9 +1577,9 @@ class TestTaxiing(unittest.TestCase):
 
     def test_taxiing_mobile_airborne(self):
         mobiles = buildsection('Mobile', 10, 90)
-        airs = buildsection('Airborne', 20, 79)
+        airs = buildsection('Airborne', 20, 80)
         node = Taxiing()
-        node.derive(mobiles, None, None, None, airs)
+        node.derive(mobiles, None, None, None, None, airs)
         self.assertEqual(len(node), 2)
         self.assertEqual(node[0].slice.start, 10)
         self.assertEqual(node[0].slice.stop, 20)
@@ -1589,9 +1589,10 @@ class TestTaxiing(unittest.TestCase):
     def test_taxiing_mobile_takeoff_landing(self):
         mobiles = buildsection('Mobile', 10, 90)
         toffs = buildsection('Takeoff', 20, 30)
-        lands = buildsection('Landing', 70, 79)
+        lands = buildsection('Landing', 70, 80)
+        airs = buildsection('Airborne', 25, 75)
         node = Taxiing()
-        node.derive(mobiles, None, toffs, lands, None)
+        node.derive(mobiles, None, toffs, lands, None, airs)
         self.assertEqual(len(node), 2)
         self.assertEqual(node[0].slice.start, 10)
         self.assertEqual(node[0].slice.stop, 20)
@@ -1607,9 +1608,10 @@ class TestTaxiing(unittest.TestCase):
                                  [0] * 5)
         gspd = P('Groundspeed', array=gspd_array)
         toffs = buildsection('Takeoff', 20, 30)
-        lands = buildsection('Landing', 60, 69)
+        lands = buildsection('Landing', 60, 70)
+        airs = buildsection('Airborne', 25, 65)
         node = Taxiing()
-        node.derive(mobiles, gspd, toffs, lands, None)
+        node.derive(mobiles, gspd, toffs, lands, None, airs)
         self.assertEqual(len(node), 3)
         self.assertEqual(node[0].slice.start, 15)
         self.assertEqual(node[0].slice.stop, 20)
@@ -1617,6 +1619,31 @@ class TestTaxiing(unittest.TestCase):
         self.assertEqual(node[1].slice.stop, 85)
         self.assertEqual(node[2].slice.start, 90)
         self.assertEqual(node[2].slice.stop, 95)
+
+    
+    def test_taxiing_including_rejected_takeoff(self):
+        mobiles = buildsection('Mobile', 3, 100)
+        gspd_array = np.ma.array([0] * 10 +
+                                 [10] * 30 +
+                                 [0] * 5 +
+                                 [10] * 50 +
+                                 [0] * 5)
+        gspd = P('Groundspeed', array=gspd_array)
+        toffs = buildsection('Takeoff',  50, 60)
+        lands = buildsection('Landing', 80, 90)
+        airs = buildsection('Airborne', 55, 85)
+        rtos = buildsection('Rejected Takeoff', 20, 30)
+        node = Taxiing()
+        node.derive(mobiles, gspd, toffs, lands, rtos, airs)
+        self.assertEqual(len(node), 4)
+        self.assertEqual(node[0].slice.start, 10)
+        self.assertEqual(node[0].slice.stop, 20)
+        self.assertEqual(node[1].slice.start, 30)
+        self.assertEqual(node[1].slice.stop, 40)
+        self.assertEqual(node[2].slice.start, 45)
+        self.assertEqual(node[2].slice.stop, 50)
+        self.assertEqual(node[3].slice.start, 90)
+        self.assertEqual(node[3].slice.stop, 95)
 
 
 class TestTurningInAir(unittest.TestCase):
