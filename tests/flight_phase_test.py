@@ -1403,6 +1403,11 @@ class TestStraightAndLevel(unittest.TestCase, NodeTest):
                          
 
 class TestRejectedTakeoff(unittest.TestCase):
+    '''
+    The test was originally written for an acceleration threshold of 0.1g.
+    This was later increased to 0.15g and the test amended to match that
+    scaling, hence the *1.5 factors.
+    '''
     def test_can_operate(self):
         expected = [('Acceleration Longitudinal Offset Removed', 'Grounded')]
         self.assertEqual(
@@ -1413,7 +1418,7 @@ class TestRejectedTakeoff(unittest.TestCase):
         accel_lon = P('Acceleration Longitudinal Offset Removed',
                       np.ma.array([0] * 3 + [0.02, 0.05, 0.11, 0, -0.17,] + [0] * 7 +
                                   [0.2, 0.4, 0.1] + [0.11] * 4 + [0] * 6 + [-2] +
-                                  [0] * 5 + [0.02, 0.08, 0.08, 0.08, 0.08] + [0] * 20))
+                                  [0] * 5 + [0.02, 0.08, 0.08, 0.08, 0.08] + [0] * 20)*1.5)
         grounded = buildsection('Grounded', 0, len(accel_lon.array))
         
         node = RejectedTakeoff()
@@ -1428,6 +1433,7 @@ class TestRejectedTakeoff(unittest.TestCase):
         accel_lon = load(os.path.join(
             test_data_path,
             'RejectedTakeoff_AccelerationLongitudinalOffsetRemoved_2.nod'))
+        accel_lon.array *= 1.5
         grounded = load(os.path.join(test_data_path,
                                      'RejectedTakeoff_Grounded_2.nod'))
         node = RejectedTakeoff()
@@ -1440,6 +1446,7 @@ class TestRejectedTakeoff(unittest.TestCase):
         accel_lon = load(os.path.join(
             test_data_path,
             'RejectedTakeoff_AccelerationLongitudinalOffsetRemoved_5.nod'))
+        accel_lon.array *= 1.5
         grounded = load(os.path.join(test_data_path,
                                      'RejectedTakeoff_Grounded_5.nod'))
         node = RejectedTakeoff()
@@ -1454,6 +1461,7 @@ class TestRejectedTakeoff(unittest.TestCase):
             'RejectedTakeoff_AccelerationLongitudinalOffsetRemoved_4.nod'))
         grounded = load(os.path.join(test_data_path,
                                      'RejectedTakeoff_Grounded_4.nod'))
+        accel_lon.array *= 1.5
         node = RejectedTakeoff()
         node.derive(accel_lon, grounded)
         self.assertEqual(len(node), 0)
@@ -1464,6 +1472,7 @@ class TestRejectedTakeoff(unittest.TestCase):
             'RejectedTakeoff_AccelerationLongitudinalOffsetRemoved_1.nod'))
         grounded = load(os.path.join(test_data_path,
                                      'RejectedTakeoff_Grounded_1.nod'))
+        accel_lon.array *= 1.5
         node = RejectedTakeoff()
         node.derive(accel_lon, grounded)
         self.assertEqual(len(node), 0)
@@ -1472,6 +1481,7 @@ class TestRejectedTakeoff(unittest.TestCase):
         accel_lon = load(os.path.join(
             test_data_path,
             'RejectedTakeoff_AccelerationLongitudinalOffsetRemoved_3.nod'))
+        accel_lon.array *= 1.5
         grounded = load(os.path.join(test_data_path,
                                      'RejectedTakeoff_Grounded_3.nod'))
         node = RejectedTakeoff()
