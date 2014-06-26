@@ -5,8 +5,13 @@ import sys
 import unittest
 import math
 
+from itertools import izip
+from math import ceil
 from mock import Mock, call, patch
 
+from flightdatautilities import aircrafttables as at, units as ut
+from flightdatautilities.aircrafttables.interfaces import VelocitySpeed
+from flightdatautilities import masked_array_testutils as ma_test
 from flightdatautilities.geometry import midpoint
 
 from analysis_engine.library import align
@@ -107,6 +112,7 @@ from analysis_engine.key_point_values import (
     AirspeedRelativeFor3Sec500To20FtMax,
     AirspeedRelativeFor3Sec500To20FtMin,
     AirspeedRelativeWithConfigurationDuringDescentMin,
+    AirspeedSelectedAtLiftoff,
     AirspeedSelectedMCPAt8000FtDescending,
     AirspeedTopOfDescentTo10000FtMax,
     AirspeedTopOfDescentTo4000FtMax,
@@ -489,6 +495,8 @@ from analysis_engine.key_point_values import (
     TurbulenceDuringCruiseMax,
     TurbulenceDuringFlightMax,
     TwoDegPitchTo35FtDuration,
+    V2AtLiftoff,
+    V2LookupAtLiftoff,
     WindAcrossLandingRunwayAt50Ft,
     WindDirectionAtAltitudeDuringDescent,
     WindSpeedAtAltitudeDuringDescent,
@@ -514,6 +522,30 @@ test_data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 
 
 class NodeTest(object):
+
+    def generate_attributes(self, manufacturer):
+        if manufacturer == 'boeing':
+            _am = A('Model', 'B737-333')
+            _as = A('Series', 'B737-300')
+            _af = A('Family', 'B737 Classic')
+            _et = A('Engine Type', 'CFM56-3B1')
+            _es = A('Engine Series', 'CFM56-3')
+            return (_am, _as, _af, _et, _es)
+        if manufacturer == 'airbus':
+            _am = A('Model', 'A330-333')
+            _as = A('Series', 'A330-300')
+            _af = A('Family', 'A330')
+            _et = A('Engine Type', 'Trent 772B-60')
+            _es = A('Engine Series', 'Trent 772B')
+            return (_am, _as, _af, _et, _es)
+        if manufacturer == 'beechcraft':
+            _am = A('Model', '1900D')
+            _as = A('Series', '1900D')
+            _af = A('Family', '1900')
+            _et = A('Engine Type', 'PT6A-67D')
+            _es = A('Engine Series', 'PT6A')
+            return (_am, _as, _af, _et, _es)
+        raise ValueError('Unexpected lookup for attributes.')
 
     def test_can_operate(self):
         if not hasattr(self, 'node_class'):
@@ -1757,6 +1789,385 @@ class TestAirspeedTrueAtTouchdown(unittest.TestCase, CreateKPVsAtKTIsTest):
 
 ########################################
 # Airspeed: Minus V2
+
+
+class TestV2AtLiftoff(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = V2AtLiftoff
+        self.liftoffs = KTI(name='Liftoff', items=[
+            KeyTimeInstance(name='Liftoff', index=269),
+            KeyTimeInstance(name='Liftoff', index=860),
+        ])
+        self.climbs = KTI(name='Climb Start', items=[
+            KeyTimeInstance(name='Climb Start', index=352),
+            KeyTimeInstance(name='Climb Start', index=1060),
+        ])
+
+    def test_can_operate(self):
+        # AFR:
+        self.assertTrue(self.node_class.can_operate(
+            ('AFR V2', 'Liftoff', 'Climb Start'),
+            afr_v2=A('AFR V2', 120),
+        ))
+        self.assertFalse(self.node_class.can_operate(
+            ('AFR V2', 'Liftoff', 'Climb Start'),
+            afr_v2=A('AFR V2', 70),
+        ))
+        # Embraer:
+        self.assertTrue(self.node_class.can_operate(
+            ('V2-Vac', 'Liftoff', 'Climb Start'),
+        ))
+        # Airbus:
+        self.assertTrue(self.node_class.can_operate(
+            ('Airspeed Selected', 'Speed Control', 'Liftoff', 'Climb Start', 'Manufacturer'),
+            manufacturer=A('Manufacturer', 'Airbus'),
+        ))
+        # V2:
+        self.assertTrue(self.node_class.can_operate(
+            ('V2','Liftoff', 'Climb Start')
+        ))
+
+    def test_derive__nothing(self):
+        node = self.node_class()
+        node.derive(None, None, None, None, None, self.liftoffs, self.climbs, None)
+        self.assertEqual(len(node), 0)
+
+    def test_derive__afr_v2(self):
+        afr_v2 = A('AFR V2', 120)
+        node = self.node_class()
+        node.derive(None, None, None, None, afr_v2, self.liftoffs, self.climbs, None)
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].index, 269)
+        self.assertEqual(node[0].value, 120)
+        self.assertEqual(node[1].index, 860)
+        self.assertEqual(node[1].value, 120)
+
+    def test_derive__airbus(self):
+        manufacturer = A(name='Manufacturer', value='Airbus')
+        spd_ctl = M('Speed Control', np.ma.repeat((1, 0), (320, 960)), values_mapping={0: 'Manual', 1: 'Auto'})
+        spd_sel = P('Airspeed Selected', np.ma.repeat((400, 120, 170), (10, 630, 640)))
+        spd_sel.array[:10] = np.ma.masked
+        node = self.node_class()
+        node.derive(None, None, spd_sel, spd_ctl, None, self.liftoffs, self.climbs, manufacturer)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 269)
+        self.assertEqual(node[0].value, 120)
+
+    def test_derive__embraer(self):
+        manufacturer = A(name='Manufacturer', value='Embraer')
+        v2_vac = P('V2-Vac', np.ma.repeat(150, 1280))
+        node = self.node_class()
+        node.derive(None, v2_vac, None, None, None, self.liftoffs, self.climbs, manufacturer)
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].index, 269)
+        self.assertEqual(node[0].value, 150)
+        self.assertEqual(node[1].index, 860)
+        self.assertEqual(node[1].value, 150)
+
+    def test_derive__v2(self):
+        '''
+        Test values were chosen to reflect real data seen and fail if
+        incorrect methods are used
+        '''
+        v2 = P(' V2', np.ma.repeat((400, 120, 170, 400, 170), (190, 130, 192, 192, 448)))
+        node = self.node_class()
+        node.derive(v2, None, None, None, None, self.liftoffs, self.climbs, None)
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].index, 269)
+        self.assertEqual(node[0].value, 120)
+        self.assertEqual(node[1].index, 860)
+        self.assertEqual(node[1].value, 170)
+
+    def test_derive__v2_superframe(self):
+        '''
+        Test values were chosen to reflect real data seen and fail if
+        incorrect methods are used
+        '''
+        liftoffs = KTI(name='Liftoff', items=[
+            KeyTimeInstance(name='Liftoff', index=269/64.0),
+            KeyTimeInstance(name='Liftoff', index=860/64.0),
+        ])
+        climbs = KTI(name='Climb Start', items=[
+            KeyTimeInstance(name='Climb Start', index=352/64.0),
+            KeyTimeInstance(name='Climb Start', index=1060/64.0),
+        ])
+        v2 = P(' V2', np.ma.repeat((400, 120, 170, 400, 170), (190/64.0, 130/64.0, 192/64.0, 192/64.0, 448/64.0)), frequency=1/64.0)
+        node = self.node_class(frequency=1/64.0)
+        node.derive(v2, None, None, None, None, liftoffs, climbs, None)
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].index, 269/64.0)
+        self.assertEqual(node[0].value, 120)
+        self.assertEqual(node[1].index, 860/64.0)
+        self.assertEqual(node[1].value, 170)
+
+    def test_derive__v2_masked(self):
+        '''
+        Test values were chosen to reflect real data seen and fail if
+        incorrect methods are used
+        '''
+        v2 = P(' V2', np.ma.repeat((400, 120, 170, 400, 170), (190, 130, 192, 192, 448)))
+        v2.array[267:272] = np.ma.masked
+        node = self.node_class()
+        node.derive(v2, None, None, None, None, self.liftoffs, self.climbs, None)
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].index, 269)
+        self.assertEqual(node[0].value, 120)
+        self.assertEqual(node[1].index, 860)
+        self.assertEqual(node[1].value, 170)
+
+class TestV2LookupAtLiftoff(unittest.TestCase, NodeTest):
+
+    class VSX(VelocitySpeed):
+        '''
+        Table for aircraft with undefined V2.
+        '''
+        tables = {}
+
+    class VSC0(VelocitySpeed):
+        '''
+        Table for aircraft with configuration and fallback tables.
+        '''
+        weight_unit = ut.TONNE
+        tables = {'v2': {
+            'weight': ( 35,  40,  45,  50,  55,  60,  65),
+           'Lever 1': (113, 119, 126, 132, 139, 145, 152),
+        }}
+        fallback = {'v2': {'Lever 2': 140}}
+
+    class VSC1(VelocitySpeed):
+        '''
+        Table for aircraft with configuration and fallback tables only.
+        '''
+        weight_unit = None
+        fallback = {'v2': {'Lever 1': 135}}
+
+    class VSF0(VelocitySpeed):
+        '''
+        Table for aircraft with flap and fallback tables.
+        '''
+        weight_unit = ut.TONNE
+        tables = {'v2': {
+            'weight': ( 35,  40,  45,  50,  55,  60,  65),
+                '15': (113, 119, 126, 132, 139, 145, 152),
+        }}
+        fallback = {'v2': {'5': 140}}
+
+    class VSF1(VelocitySpeed):
+        '''
+        Table for aircraft with flap and fallback tables only.
+        '''
+        weight_unit = None
+        fallback = {'v2': {'17.5': 135}}
+
+    def setUp(self):
+        self.node_class = V2LookupAtLiftoff
+        self.weight = KPV(name='Gross Weight At Liftoff', items=[
+            KeyPointValue(name='Gross Weight At Liftoff', index=20, value=54192.06),
+            KeyPointValue(name='Gross Weight At Liftoff', index=860, value=44192.06),
+        ])
+        self.liftoffs = KTI(name='Liftoff', items=[
+            KeyTimeInstance(name='Liftoff', index=20),
+            KeyTimeInstance(name='Liftoff', index=860),
+        ])
+        self.climbs = KTI(name='Climb Start', items=[
+            KeyTimeInstance(name='Climb Start', index=420),
+            KeyTimeInstance(name='Climb Start', index=1060),
+        ])
+
+    @patch('analysis_engine.library.at')
+    def test_can_operate(self, at):
+        nodes = ('Liftoff', 'Climb Start',
+                 'Model', 'Series', 'Family', 'Engine Series', 'Engine Type')
+        keys = ('model', 'series', 'family', 'engine_type', 'engine_series')
+        airbus = dict(izip(keys, self.generate_attributes('airbus')))
+        boeing = dict(izip(keys, self.generate_attributes('boeing')))
+        beechcraft = dict(izip(keys, self.generate_attributes('beechcraft')))
+        # Assume that lookup tables are found correctly...
+        at.get_vspeed_map.return_value = self.VSF0
+        # Flap Lever w/ Weight:
+        available = nodes + ('Flap Lever', 'Gross Weight At Liftoff')
+        self.assertTrue(self.node_class.can_operate(available, **boeing))
+        # Flap Lever (Synthetic) w/ Weight:
+        available = nodes + ('Flap Lever (Synthetic)', 'Gross Weight At Liftoff')
+        self.assertTrue(self.node_class.can_operate(available, **airbus))
+        # Flap Lever w/o Weight:
+        available = nodes + ('Flap Lever',)
+        self.assertTrue(self.node_class.can_operate(available, **beechcraft))
+        # Flap Lever (Synthetic) w/o Weight:
+        available = nodes + ('Flap Lever (Synthetic)',)
+        self.assertTrue(self.node_class.can_operate(available, **airbus))
+        # Assume that lookup tables are not found correctly...
+        at.get_vspeed_map.side_effect = (KeyError, self.VSX)
+        available = nodes + ('Flap Lever', 'Gross Weight At Liftoff')
+        for i in range(2):
+            self.assertFalse(self.node_class.can_operate(available, **boeing))
+
+    @patch('analysis_engine.library.at')
+    def test_derive__flap_with_weight__standard(self, at):
+        mapping = {f: str(f) for f in (0, 1, 2, 5, 10, 15, 25, 30, 40)}
+        flap_lever = M('Flap Lever', np.ma.repeat(15, 1280), values_mapping=mapping)
+
+        attributes = self.generate_attributes('boeing')
+        at.get_vspeed_map.return_value = self.VSF0
+
+        node = self.node_class()
+        node.derive(flap_lever, None, self.weight,
+                    self.liftoffs, self.climbs, *attributes)
+
+        attributes = (a.value for a in attributes)
+        at.get_vspeed_map.assert_called_once_with(*attributes)
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].index, 20)
+        self.assertEqual(node[0].value, 138)
+        self.assertEqual(node[1].index, 860)
+        self.assertEqual(node[1].value, 125)
+
+    @patch('analysis_engine.library.at')
+    def test_derive__flap_with_weight__fallback(self, at):
+        mapping = {f: str(f) for f in (0, 1, 2, 5, 10, 15, 25, 30, 40)}
+        flap_lever = M('Flap Lever', np.ma.repeat(5, 1280), values_mapping=mapping)
+
+        attributes = self.generate_attributes('boeing')
+        at.get_vspeed_map.return_value = self.VSF0
+
+        node = self.node_class()
+        node.derive(flap_lever, None, self.weight,
+                    self.liftoffs, self.climbs, *attributes)
+
+        attributes = (a.value for a in attributes)
+        at.get_vspeed_map.assert_called_once_with(*attributes)
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].index, 20)
+        self.assertEqual(node[0].value, 140)
+        self.assertEqual(node[1].index, 860)
+        self.assertEqual(node[1].value, 140)
+
+    @patch('analysis_engine.library.at')
+    def test_derive__flap_without_weight__standard(self, at):
+        mapping = {f: str(f) for f in (0, 17.5, 35)}
+        flap_lever = M('Flap Lever', np.ma.repeat(17.5, 1280), values_mapping=mapping)
+
+        attributes = self.generate_attributes('beechcraft')
+        at.get_vspeed_map.return_value = self.VSF0
+
+        node = self.node_class()
+        node.derive(flap_lever, None, None, self.liftoffs,
+                    self.climbs, *attributes)
+
+        attributes = (a.value for a in attributes)
+        at.get_vspeed_map.assert_called_once_with(*attributes)
+        self.assertEqual(len(node), 0)
+
+    @patch('analysis_engine.library.at')
+    def test_derive__flap_without_weight__fallback(self, at):
+        mapping = {f: str(f) for f in (0, 17.5, 35)}
+        flap_lever = M('Flap Lever', np.ma.repeat(17.5, 1280), values_mapping=mapping)
+
+        attributes = self.generate_attributes('beechcraft')
+        at.get_vspeed_map.return_value = self.VSF1
+
+        node = self.node_class()
+        node.derive(flap_lever, None, None, self.liftoffs,
+                    self.climbs, *attributes)
+
+        attributes = (a.value for a in attributes)
+        at.get_vspeed_map.assert_called_once_with(*attributes)
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].index, 20)
+        self.assertEqual(node[0].value, 135)
+        self.assertEqual(node[1].index, 860)
+        self.assertEqual(node[1].value, 135)
+
+
+class TestAirspeedSelectedAtLiftoff(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = AirspeedSelectedAtLiftoff
+        self.liftoffs = KTI(name='Liftoff', items=[
+            KeyTimeInstance(name='Liftoff', index=269),
+            KeyTimeInstance(name='Liftoff', index=860),
+        ])
+        self.climbs = KTI(name='Climb Start', items=[
+            KeyTimeInstance(name='Climb Start', index=352),
+            KeyTimeInstance(name='Climb Start', index=1060),
+        ])
+
+    def test_can_operate(self):
+        self.assertEqual(self.node_class().get_operational_combinations(),
+            [('Airspeed Selected', 'Liftoff', 'Climb Start')])
+
+    def test_derive(self):
+        '''
+        Test values were chosen to reflect real data seen and fail if
+        incorrect methods are used
+        '''
+        spd_sel = P(' Airspeed Selected', np.ma.repeat((400, 120, 170, 400, 170), (190, 130, 192, 192, 448)))
+        node = self.node_class()
+        node.derive(spd_sel, self.liftoffs, self.climbs)
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].index, 269)
+        self.assertEqual(node[0].value, 120)
+        self.assertEqual(node[1].index, 860)
+        self.assertEqual(node[1].value, 170)
+
+    def test_derive__superframe(self):
+        '''
+        Test values were chosen to reflect real data seen and fail if
+        incorrect methods are used
+        '''
+        liftoffs = KTI(name='Liftoff', items=[
+            KeyTimeInstance(name='Liftoff', index=269/64.0),
+            KeyTimeInstance(name='Liftoff', index=860/64.0),
+        ])
+        climbs = KTI(name='Climb Start', items=[
+            KeyTimeInstance(name='Climb Start', index=352/64.0),
+            KeyTimeInstance(name='Climb Start', index=1060/64.0),
+        ])
+        spd_sel = P(' Airspeed Selected', np.ma.repeat((400, 120, 170, 400, 170), (190/64.0, 130/64.0, 192/64.0, 192/64.0, 448/64.0)), frequency=1/64.0)
+        node = self.node_class(frequency=1/64.0)
+        node.derive(spd_sel,liftoffs, climbs)
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].index, 269/64.0)
+        self.assertEqual(node[0].value, 120)
+        self.assertEqual(node[1].index, 860/64.0)
+        self.assertEqual(node[1].value, 170)
+
+    def test_derive__masked(self):
+        '''
+        Test values were chosen to reflect real data seen and fail if
+        incorrect methods are used
+        '''
+        spd_sel = P(' Airspeed Selected', np.ma.repeat((400, 120, 170, 400, 170), (190, 130, 192, 192, 448)))
+        spd_sel.array[267:272] = np.ma.masked
+        node = self.node_class()
+        node.derive(spd_sel, self.liftoffs, self.climbs)
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].index, 269)
+        self.assertEqual(node[0].value, 120)
+        self.assertEqual(node[1].index, 860)
+        self.assertEqual(node[1].value, 170)
+
+
+    def test_derive__real(self):
+        '''
+        Test reflecting data we have seen where airspeed selected starts as
+        previous flights landing speed before being changed before takeoff,
+        this data at the start of the flight was causing landing speed to be
+        used when looking back through the last 5 superframes
+        '''
+        liftoffs = KTI(name='Liftoff', items=[
+            KeyTimeInstance(name='Liftoff', index=500),
+        ])
+        climbs = KTI(name='Climb Start', items=[
+            KeyTimeInstance(name='Climb Start', index=1000),
+        ])
+        node = self.node_class()
+        airspeed_selected = P('Airspeed Selected', np.ma.concatenate(([138]*400, [110]*250, [140]*1350)))
+        node.derive(airspeed_selected, liftoffs, climbs)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 500)
+        self.assertEqual(node[0].value, 110)
 
 
 class TestAirspeedMinusV2AtLiftoff(unittest.TestCase, CreateKPVsAtKTIsTest):

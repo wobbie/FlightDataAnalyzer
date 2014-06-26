@@ -2,6 +2,7 @@
 
 import numpy as np
 
+from copy import deepcopy
 from math import ceil
 
 from flightdatautilities import aircrafttables as at, units as ut
@@ -10,6 +11,7 @@ from flightdatautilities.geometry import midpoint
 from analysis_engine.settings import (ACCEL_LAT_OFFSET_LIMIT,
                                       ACCEL_LON_OFFSET_LIMIT,
                                       ACCEL_NORM_OFFSET_LIMIT,
+                                      AIRSPEED_THRESHOLD,
                                       CLIMB_OR_DESCENT_MIN_DURATION,
                                       CONTROL_FORCE_THRESHOLD,
                                       FEET_PER_NM,
@@ -52,12 +54,14 @@ from analysis_engine.library import (ambiguous_runway,
                                      index_of_last_stop,
                                      integrate,
                                      is_index_within_slice,
+                                     lookup_table,
                                      mask_inside_slices,
                                      mask_outside_slices,
                                      max_abs_value,
                                      max_continuous_unmasked,
                                      max_value,
                                      min_value,
+                                     most_common_value,
                                      moving_average,
                                      repair_mask,
                                      np_ma_masked_zeros_like,
@@ -74,6 +78,7 @@ from analysis_engine.library import (ambiguous_runway,
                                      slice_midpoint,
                                      slice_samples,
                                      slices_and_not,
+                                     slices_from_ktis,
                                      slices_from_to,
                                      slices_not,
                                      slices_overlap,
@@ -1280,6 +1285,244 @@ class V2VariationMax(KeyPointValueNode):
             max_abs_value,
         )
 
+
+class V2AtLiftoff(KeyPointValueNode):
+    '''
+    Takeoff Safety Speed (V2) if it is recorded is used, if it is not it can be
+    derived for different aircraft.
+    
+    If the value is provided in an achieved flight record (AFR), we use this in
+    preference. This allows us to cater for operators that use improved
+    performance tables so that they can provide the values that they used.
+    
+    For Airbus aircraft, if auto speed control is enabled, we can use the
+    primary flight display selected speed value from the start of the takeoff
+    run.
+    
+    Some other aircraft types record multiple parameters in the same location
+    within data frames. We need to select only the data that we are interested
+    in, i.e. the V2 values.
+    
+    The value is restricted to the range from the start of takeoff acceleration
+    to the end of the initial climb flight phase.
+    
+    Reference was made to the following documentation to assist with the
+    development of this algorithm:
+    
+    - A320 Flight Profile Specification
+    - A321 Flight Profile Specification
+    '''
+
+    units = ut.KT
+    
+    @classmethod
+    def can_operate(cls, available, afr_v2=A('AFR V2'),
+                    manufacturer=A('Manufacturer')):
+    
+        afr = all_of((
+            'AFR V2',
+            'Liftoff',
+            'Climb Start',
+        ), available) and afr_v2 and afr_v2.value >= AIRSPEED_THRESHOLD
+    
+        airbus = all_of((
+            'Airspeed Selected',
+            'Speed Control',
+            'Liftoff',
+            'Climb Start',
+            'Manufacturer',
+        ), available) and manufacturer and manufacturer.value == 'Airbus'
+    
+        embraer = all_of((
+            'V2-Vac',
+            'Liftoff',
+            'Climb Start',
+        ), available)
+
+        v2 = all_of((
+            'V2',
+            'Liftoff',
+            'Climb Start',
+            ), available)
+
+        return v2 or afr or airbus or embraer
+
+
+    def derive(self,
+               v2=P('V2'),
+               v2_vac=A('V2-Vac'),
+               spd_sel=P('Airspeed Selected'),
+               spd_ctl=P('Speed Control'),
+               afr_v2=A('AFR V2'),
+               liftoffs=KTI('Liftoff'),
+               climb_starts=KTI('Climb Start'),
+               manufacturer=A('Manufacturer')):
+
+        # Determine interesting sections of flight which we want to use for V2.
+        # Due to issues with how data is recorded, use five superframes before
+        # liftoff until the start of the climb:
+        starts = deepcopy(liftoffs)
+        for start in starts:
+            start.index = max(start.index - 5 * 64 * self.frequency, 0)
+        phases = slices_from_ktis(starts, climb_starts)
+
+        # 1. Use recorded value (if available):
+        if v2:
+            for phase in phases:
+                index = liftoffs.get_last(within_slice=phase).index
+                if v2.frequency >= 0.125:
+                    _, value = closest_unmasked_value(v2.array, index, 
+                                                  start_index=phase.start, 
+                                                  stop_index=phase.stop)
+                    self.create_kpv(index, value)
+                else:
+                    value = most_common_value(v2.array[phase].astype(np.int))
+                    self.create_kpv(index, value)
+            return
+
+        # 2. Use value provided in achieved flight record (if available):
+        if afr_v2 and afr_v2.value >= AIRSPEED_THRESHOLD:
+            for phase in phases:
+                index = liftoffs.get_last(within_slice=phase).index
+                value = round(afr_v2.value)
+                if value is not None:
+                    self.create_kpv(index, value)
+            return
+
+        # 3. Derive parameter for Embraer 170/190:
+        if v2_vac:
+            for phase in phases:
+                value = most_common_value(v2_vac.array[phase].astype(np.int))
+                index = liftoffs.get_last(within_slice=phase).index
+                if value is not None:
+                    self.create_kpv(index, value)
+            return
+
+        # 4. Derive parameter for Airbus:
+        if manufacturer and manufacturer.value == 'Airbus':
+            spd_sel.array[spd_ctl.array == 'Manual'] = np.ma.masked
+            for phase in phases:
+                value = most_common_value(spd_sel.array[phase].astype(np.int))
+                index = liftoffs.get_last(within_slice=phase).index
+                if value is not None:
+                    self.create_kpv(index, value)
+            return
+
+
+class V2LookupAtLiftoff(KeyPointValueNode):
+
+    '''
+    Takeoff Safety Speed (V2) can be derived for different aircraft.
+
+    In cases where values cannot be derived solely from recorded parameters, we
+    can make use of a look-up table to determine values for velocity speeds.
+
+    For V2, looking up a value requires the weight and flap (lever detents)
+    at liftoff.
+
+    Flap is used as the first dependency to avoid interpolation of flap detents
+    when flap is recorded at a lower frequency than airspeed.
+    '''
+
+    units = ut.KT
+
+    @classmethod
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family'),
+                    engine_series=A('Engine Series'), engine_type=A('Engine Type')):
+
+        core = all_of((
+            'Liftoff',
+            'Climb Start',
+            'Model',
+            'Series',
+            'Family',
+            'Engine Type',
+            'Engine Series',
+        ), available)
+
+        flap = any_of((
+            'Flap Lever',
+            'Flap Lever (Synthetic)',
+        ), available)
+
+        attrs = (model, series, family, engine_type, engine_series)
+        return core and flap and lookup_table(cls, 'v2', *attrs)
+
+    def derive(self,
+               flap_lever=M('Flap Lever'),
+               flap_synth=M('Flap Lever (Synthetic)'),
+               weight_liftoffs=KPV('Gross Weight At Liftoff'),
+               liftoffs=KTI('Liftoff'),
+               climb_starts=KTI('Climb Start'),
+               model=A('Model'),
+               series=A('Series'),
+               family=A('Family'),
+               engine_type=A('Engine Type'),
+               engine_series=A('Engine Series')):
+
+        # Determine interesting sections of flight which we want to use for V2.
+        # Due to issues with how data is recorded, use five superframes before
+        # liftoff until the start of the climb:
+        starts = deepcopy(liftoffs)
+        for start in starts:
+            start.index = max(start.index - 5 * 64 * self.hz, 0)
+        phases = slices_from_ktis(starts, climb_starts)
+
+        # Initialise the velocity speed lookup table:
+        attrs = (model, series, family, engine_type, engine_series)
+        table = lookup_table(self, 'v2', *attrs)
+
+        for phase in phases:
+
+            if weight_liftoffs:
+                weight_liftoff = weight_liftoffs.get_first(within_slice=phase)
+                index, weight = weight_liftoff.index, weight_liftoff.value
+            else:
+                index, weight = liftoffs.get_first(within_slice=phase).index, None
+
+            if index is None:
+                continue
+
+            detent = (flap_lever or flap_synth).array[index]
+
+            try:
+                index = liftoffs.get_last(within_slice=phase).index
+                value = table.v2(detent, weight)
+                self.create_kpv(index, value)
+            except (KeyError, ValueError) as error:
+                self.warning("Error in '%s': %s", self.name, error)
+                # Where the aircraft takes off with flap settings outside the
+                # documented V2 range, we need the program to continue without
+                # raising an exception, so that the incorrect flap at takeoff
+                # can be detected.
+                continue
+
+
+class AirspeedSelectedAtLiftoff(KeyPointValueNode):
+    '''
+    '''
+
+    units = ut.KT
+
+    def derive(self,
+               spd_sel=P('Airspeed Selected'),
+               liftoffs=KTI('Liftoff'),
+               climb_starts=KTI('Climb Start')):
+
+        starts = deepcopy(liftoffs)
+        for start in starts:
+            start.index = max(start.index - 5 * 64 * self.hz, 0)
+        phases = slices_from_ktis(starts, climb_starts)
+        for phase in phases:
+            index = liftoffs.get_last(within_slice=phase).index
+            if spd_sel.frequency >= 0.125:
+                _, value = closest_unmasked_value(spd_sel.array, index, 
+                                              start_index=phase.start, 
+                                              stop_index=phase.stop)
+            else:
+                value = most_common_value(spd_sel.array[phase].astype(np.int))
+            self.create_kpv(index, value)
 
 ########################################
 # Airspeed: Minus V2
