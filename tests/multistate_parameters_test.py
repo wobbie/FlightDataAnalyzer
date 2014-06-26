@@ -2022,18 +2022,18 @@ class TestSpeedbrakeDeployed(unittest.TestCase):
     def test_can_operate(self):
         node = self.node_class()
         operational_combinations = node.get_operational_combinations()
-        self.assertTrue(('Speedbrake (L) Deployed', 'Speedbrake (R) Deployed') in operational_combinations)
-        self.assertTrue(('Speedbrake (L) Outboard Deployed',
-                          'Speedbrake (R) Outboard Deployed',
-                          'Speedbrake (L) Inboard Deployed',
-                          'Speedbrake (R) Inboard Deployed') in operational_combinations)
+        self.assertTrue(('Spoiler (L) Deployed', 'Spoiler (R) Deployed') in operational_combinations)
+        self.assertTrue(('Spoiler (L) Outboard Deployed',
+                          'Spoiler (R) Outboard Deployed',
+                          'Spoiler (L) Inboard Deployed',
+                          'Spoiler (R) Inboard Deployed') in operational_combinations)
 
     def setUp(self):
         deployed_l_array = [ 0,  0,  0,  0,  0,  1,  1,  0,  0,  0]
         deployed_r_array = [ 0,  0,  0,  0,  1,  1,  1,  0,  0,  0]
 
-        self.deployed_l = M(name='Speedbrake (L) Deployed', array=np.ma.array(deployed_l_array), values_mapping={1:'Deployed'})
-        self.deployed_r = M(name='Speedbrake (R) Deployed', array=np.ma.array(deployed_r_array), values_mapping={1:'Deployed'})
+        self.deployed_l = M(name='Spoiler (L) Deployed', array=np.ma.array(deployed_l_array), values_mapping={1:'Deployed'})
+        self.deployed_r = M(name='Spoiler (R) Deployed', array=np.ma.array(deployed_r_array), values_mapping={1:'Deployed'})
         self.node_class = SpeedbrakeDeployed
 
     def test_derive(self):

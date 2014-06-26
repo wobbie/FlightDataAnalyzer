@@ -1857,20 +1857,20 @@ class SpeedbrakeDeployed(MultistateDerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available):
-        simple = ('Speedbrake (L) Deployed', 'Speedbrake (R) Deployed')
-        in_out = ('Speedbrake (L) Outboard Deployed',
-                  'Speedbrake (R) Outboard Deployed',
-                  'Speedbrake (L) Inboard Deployed',
-                  'Speedbrake (R) Inboard Deployed')
+        simple = ('Spoiler (L) Deployed', 'Spoiler (R) Deployed')
+        in_out = ('Spoiler (L) Outboard Deployed',
+                  'Spoiler (R) Outboard Deployed',
+                  'Spoiler (L) Inboard Deployed',
+                  'Spoiler (R) Inboard Deployed')
         return all_of(simple, available)\
                or all_of(in_out, available)
 
-    def derive(self, deployed_l=M('Speedbrake (L) Deployed'),
-               deployed_r=M('Speedbrake (R) Deployed'),
-               deployed_l_out=M('Speedbrake (L) Outboard Deployed'),
-               deployed_r_out=M('Speedbrake (R) Outboard Deployed'),
-               deployed_l_in=M('Speedbrake (L) Inboard Deployed'),
-               deployed_r_in=M('Speedbrake (R) Inboard Deployed')):
+    def derive(self, deployed_l=M('Spoiler (L) Deployed'),
+               deployed_r=M('Spoiler (R) Deployed'),
+               deployed_l_out=M('Spoiler (L) Outboard Deployed'),
+               deployed_r_out=M('Spoiler (R) Outboard Deployed'),
+               deployed_l_in=M('Spoiler (L) Inboard Deployed'),
+               deployed_r_in=M('Spoiler (R) Inboard Deployed')):
 
         deployed_params = (deployed_l, deployed_r, deployed_l_out,
                            deployed_r_out, deployed_l_in, deployed_r_in)
