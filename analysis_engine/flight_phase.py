@@ -1331,6 +1331,16 @@ class TakeoffRoll(FlightPhaseNode):
                 self.create_phase(chunk)
 
 
+class TakeoffRollOrRejectedTakeoff(FlightPhaseNode):
+    '''
+    For monitoring configuration warnings especially, this combines actual
+    and rejected takeoffs into a single phase node for convenience.
+    '''
+    def derive(self, toffs=S('Takeoff'), rtoffs=S('Rejected Takeoff')):
+        self.create_phases([s.slice for s in toffs + rtoffs], 
+                           name= "Takeoff Roll Or Rejected Takeoff")
+
+
 class TakeoffRotation(FlightPhaseNode):
     '''
     This is used by correlation tests to check control movements during the
