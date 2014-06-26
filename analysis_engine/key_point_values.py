@@ -3322,7 +3322,7 @@ class BrakePressureInTakeoffRollMax(KeyPointValueNode):
 
     units = None  # FIXME
 
-    def derive(self, bp=P('Brake Pressure'), rolls=S('Takeoff Roll')):
+    def derive(self, bp=P('Brake Pressure'), rolls=S('Takeoff Roll Or Rejected Takeoff')):
 
         self.create_kpvs_within_slices(bp.array, rolls, max_value)
 
@@ -3377,7 +3377,7 @@ class AutobrakeRejectedTakeoffNotSetDuringTakeoff(KeyPointValueNode):
 
     def derive(self,
                ab_rto=M('Autobrake Selected RTO'),
-               takeoff=S('Takeoff Roll')):
+               takeoff=S('Takeoff Roll Or Rejected Takeoff')):
 
         # In order to avoid false positives, so we assume masked values are
         # Selected.
@@ -8538,7 +8538,7 @@ class GroundspeedStabilizerOutOfTrimDuringTakeoffMax(KeyPointValueNode):
     @classmethod
     def can_operate(cls, available, model=A('Model'), series=A('Series'), family=A('Family')):
 
-        if not all_of(('Groundspeed', 'Stabilizer', 'Takeoff Roll', 'Model', 'Series', 'Family'), available):
+        if not all_of(('Groundspeed', 'Stabilizer', 'Takeoff Roll Or Rejected Takeoff', 'Model', 'Series', 'Family'), available):
             return False
 
         try:
@@ -8553,7 +8553,7 @@ class GroundspeedStabilizerOutOfTrimDuringTakeoffMax(KeyPointValueNode):
     def derive(self,
                gnd_spd=P('Groundspeed'),
                stab=P('Stabilizer'),
-               takeoff_roll=S('Takeoff Roll'),
+               takeoff_roll=S('Takeoff Roll Or Rejected Takeoff'),
                model=A('Model'), series=A('Series'), family=A('Family')):
 
         stab_fwd, stab_aft = at.get_stabilizer_limits(model.value, series.value, family.value)
@@ -8576,7 +8576,7 @@ class GroundspeedSpeedbrakeHandleDuringTakeoffMax(KeyPointValueNode):
     def derive(self,
                gnd_spd=P('Groundspeed'),
                spdbrk=P('Speedbrake Handle'),
-               takeoff_roll=S('Takeoff Roll')):
+               takeoff_roll=S('Takeoff Roll Or Rejected Takeoff')):
 
         SPEEDBRAKE_HANDLE_LIMIT = 2.0
 
@@ -8601,7 +8601,7 @@ class GroundspeedSpeedbrakeDuringTakeoffMax(KeyPointValueNode):
     def derive(self,
                gnd_spd=P('Groundspeed'),
                spdbrk=P('Speedbrake'),
-               takeoff_roll=S('Takeoff Roll')):
+               takeoff_roll=S('Takeoff Roll Or Rejected Takeoff')):
 
         SPEEDBRAKE_LIMIT = 39
 
@@ -8626,7 +8626,7 @@ class GroundspeedFlapChangeDuringTakeoffMax(KeyPointValueNode):
     def derive(self,
                gnd_spd=P('Groundspeed'),
                flap=M('Flap'),
-               takeoff_roll=S('Takeoff Roll')):
+               takeoff_roll=S('Takeoff Roll Or Rejected Takeoff')):
 
         flap_changes = np.ma.ediff1d(flap.array, to_begin=0)
         masked_in_range = np.ma.masked_equal(flap_changes, 0)
@@ -9895,7 +9895,7 @@ class RudderDuringTakeoffMax(KeyPointValueNode):
 
     def derive(self,
                rudder=P('Rudder'),
-               to_rolls=S('Takeoff Roll')):
+               to_rolls=S('Takeoff Roll Or Rejected Takeoff')):
 
         self.create_kpvs_within_slices(rudder.array, to_rolls, max_abs_value)
 
@@ -10302,7 +10302,7 @@ class MasterWarningDuringTakeoffDuration(KeyPointValueNode):
 
     def derive(self,
                warning=M('Master Warning'),
-               takeoff_rolls=S('Takeoff Roll')):
+               takeoff_rolls=S('Takeoff Roll Or Rejected Takeoff')):
 
         self.create_kpvs_where(warning.array == 'Warning', 
                                warning.hz, phase=takeoff_rolls)
@@ -10318,7 +10318,7 @@ class MasterCautionDuringTakeoffDuration(KeyPointValueNode):
 
     def derive(self,
                caution=M('Master Caution'),
-               takeoff_rolls=S('Takeoff Roll')):
+               takeoff_rolls=S('Takeoff Roll Or Rejected Takeoff')):
 
         self.create_kpvs_where(caution.array == 'Caution',
                                caution.hz, phase=takeoff_rolls)
@@ -10954,7 +10954,7 @@ class TakeoffConfigurationWarningDuration(KeyPointValueNode):
     units = ut.SECOND
     
     def derive(self, takeoff_warn=M('Takeoff Configuration Warning'),
-               takeoff=S('Takeoff Roll')):
+               takeoff=S('Takeoff Roll Or Rejected Takeoff')):
         self.create_kpvs_where(takeoff_warn.array == 'Warning',
                                takeoff_warn.hz, phase=takeoff)
 
@@ -10966,7 +10966,7 @@ class TakeoffConfigurationFlapWarningDuration(KeyPointValueNode):
     units = ut.SECOND
 
     def derive(self, takeoff_warn=M('Takeoff Configuration Flap Warning'),
-               takeoff=S('Takeoff Roll')):
+               takeoff=S('Takeoff Roll Or Rejected Takeoff')):
         self.create_kpvs_where(takeoff_warn.array == 'Warning',
                                takeoff_warn.hz, phase=takeoff)
 
@@ -10979,7 +10979,7 @@ class TakeoffConfigurationParkingBrakeWarningDuration(KeyPointValueNode):
 
     def derive(self,
                takeoff_warn=M('Takeoff Configuration Parking Brake Warning'),
-               takeoff=S('Takeoff Roll')):
+               takeoff=S('Takeoff Roll Or Rejected Takeoff')):
         self.create_kpvs_where(takeoff_warn.array == 'Warning',
                                takeoff_warn.hz, phase=takeoff)
 
@@ -10992,7 +10992,7 @@ class TakeoffConfigurationSpoilerWarningDuration(KeyPointValueNode):
 
     def derive(self,
                takeoff_cfg_warn=M('Takeoff Configuration Spoiler Warning'),
-               takeoff=S('Takeoff Roll')):
+               takeoff=S('Takeoff Roll Or Rejected Takeoff')):
         self.create_kpvs_where(takeoff_cfg_warn.array == 'Warning',
                                takeoff_cfg_warn.hz, phase=takeoff)
 
@@ -11005,7 +11005,7 @@ class TakeoffConfigurationStabilizerWarningDuration(KeyPointValueNode):
 
     def derive(self,
                takeoff_cfg_warn=M('Takeoff Configuration Stabilizer Warning'),
-               takeoff=S('Takeoff Roll')):
+               takeoff=S('Takeoff Roll Or Rejected Takeoff')):
         self.create_kpvs_where(takeoff_cfg_warn.array == 'Warning',
                                takeoff_cfg_warn.hz, phase=takeoff)
 
@@ -11090,7 +11090,7 @@ class ThrustAsymmetryDuringTakeoffMax(KeyPointValueNode):
     units = ut.PERCENT
 
     def derive(self, ta=P('Thrust Asymmetry'),
-               takeoff_rolls=S('Takeoff Roll')):
+               takeoff_rolls=S('Takeoff Roll Or Rejected Takeoff')):
 
         self.create_kpvs_within_slices(ta.array, takeoff_rolls, max_value)
 
@@ -11497,7 +11497,7 @@ class DualInputDuration(KeyPointValueNode):
 
     def derive(self,
                dual=M('Dual Input Warning'),
-               takeoff_rolls=S('Takeoff Roll'),
+               takeoff_rolls=S('Takeoff Roll Or Rejected Takeoff'),
                landing_rolls=S('Landing Roll')):
 
         start = takeoff_rolls.get_first().slice.start
@@ -11688,12 +11688,12 @@ class LastFlapChangeToTakeoffRollEndDuration(KeyPointValueNode):
     def can_operate(cls, available):
 
         return any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available) \
-            and 'Takeoff Roll' in available
+            and 'Takeoff Roll Or Rejected Takeoff' in available
 
     def derive(self,
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
-               rolls=S('Takeoff Roll')):
+               rolls=S('Takeoff Roll Or Rejected Takeoff')):
 
         flap = flap_lever or flap_synth
         for roll in rolls:

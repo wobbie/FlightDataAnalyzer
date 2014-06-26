@@ -358,7 +358,8 @@ REVERSE_THRUST_EFFECTIVE_N1 = 65 # %N1
 SPOILER_DEPLOYED = 5.0 # deg
 
 # Acceleration forwards at the start of the takeoff roll.
-TAKEOFF_ACCELERATION_THRESHOLD = 0.1  # g
+# Was 0.1g, but increased to avoid nuisance triggers during enthusiastic taxiing.
+TAKEOFF_ACCELERATION_THRESHOLD = 0.15  # g
 
 # Height in ft where Altitude AAL switches between Radio and STD sources.
 TRANSITION_ALT_RAD_TO_STD = 100

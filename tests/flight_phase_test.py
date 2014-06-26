@@ -1403,6 +1403,11 @@ class TestStraightAndLevel(unittest.TestCase, NodeTest):
                          
 
 class TestRejectedTakeoff(unittest.TestCase):
+    '''
+    The test was originally written for an acceleration threshold of 0.1g.
+    This was later increased to 0.15g and the test amended to match that
+    scaling, hence the *1.5 factors.
+    '''
     def test_can_operate(self):
         expected = [('Acceleration Longitudinal Offset Removed', 'Grounded')]
         self.assertEqual(
@@ -1413,7 +1418,7 @@ class TestRejectedTakeoff(unittest.TestCase):
         accel_lon = P('Acceleration Longitudinal Offset Removed',
                       np.ma.array([0] * 3 + [0.02, 0.05, 0.11, 0, -0.17,] + [0] * 7 +
                                   [0.2, 0.4, 0.1] + [0.11] * 4 + [0] * 6 + [-2] +
-                                  [0] * 5 + [0.02, 0.08, 0.08, 0.08, 0.08] + [0] * 20))
+                                  [0] * 5 + [0.02, 0.08, 0.08, 0.08, 0.08] + [0] * 20)*1.5)
         grounded = buildsection('Grounded', 0, len(accel_lon.array))
         
         node = RejectedTakeoff()
@@ -1428,6 +1433,7 @@ class TestRejectedTakeoff(unittest.TestCase):
         accel_lon = load(os.path.join(
             test_data_path,
             'RejectedTakeoff_AccelerationLongitudinalOffsetRemoved_2.nod'))
+        accel_lon.array *= 1.5
         grounded = load(os.path.join(test_data_path,
                                      'RejectedTakeoff_Grounded_2.nod'))
         node = RejectedTakeoff()
@@ -1440,6 +1446,7 @@ class TestRejectedTakeoff(unittest.TestCase):
         accel_lon = load(os.path.join(
             test_data_path,
             'RejectedTakeoff_AccelerationLongitudinalOffsetRemoved_5.nod'))
+        accel_lon.array *= 1.5
         grounded = load(os.path.join(test_data_path,
                                      'RejectedTakeoff_Grounded_5.nod'))
         node = RejectedTakeoff()
@@ -1454,6 +1461,7 @@ class TestRejectedTakeoff(unittest.TestCase):
             'RejectedTakeoff_AccelerationLongitudinalOffsetRemoved_4.nod'))
         grounded = load(os.path.join(test_data_path,
                                      'RejectedTakeoff_Grounded_4.nod'))
+        accel_lon.array *= 1.5
         node = RejectedTakeoff()
         node.derive(accel_lon, grounded)
         self.assertEqual(len(node), 0)
@@ -1464,6 +1472,7 @@ class TestRejectedTakeoff(unittest.TestCase):
             'RejectedTakeoff_AccelerationLongitudinalOffsetRemoved_1.nod'))
         grounded = load(os.path.join(test_data_path,
                                      'RejectedTakeoff_Grounded_1.nod'))
+        accel_lon.array *= 1.5
         node = RejectedTakeoff()
         node.derive(accel_lon, grounded)
         self.assertEqual(len(node), 0)
@@ -1472,6 +1481,7 @@ class TestRejectedTakeoff(unittest.TestCase):
         accel_lon = load(os.path.join(
             test_data_path,
             'RejectedTakeoff_AccelerationLongitudinalOffsetRemoved_3.nod'))
+        accel_lon.array *= 1.5
         grounded = load(os.path.join(test_data_path,
                                      'RejectedTakeoff_Grounded_3.nod'))
         node = RejectedTakeoff()
@@ -1577,9 +1587,9 @@ class TestTaxiing(unittest.TestCase):
 
     def test_taxiing_mobile_airborne(self):
         mobiles = buildsection('Mobile', 10, 90)
-        airs = buildsection('Airborne', 20, 79)
+        airs = buildsection('Airborne', 20, 80)
         node = Taxiing()
-        node.derive(mobiles, None, None, None, airs)
+        node.derive(mobiles, None, None, None, None, airs)
         self.assertEqual(len(node), 2)
         self.assertEqual(node[0].slice.start, 10)
         self.assertEqual(node[0].slice.stop, 20)
@@ -1589,9 +1599,10 @@ class TestTaxiing(unittest.TestCase):
     def test_taxiing_mobile_takeoff_landing(self):
         mobiles = buildsection('Mobile', 10, 90)
         toffs = buildsection('Takeoff', 20, 30)
-        lands = buildsection('Landing', 70, 79)
+        lands = buildsection('Landing', 70, 80)
+        airs = buildsection('Airborne', 25, 75)
         node = Taxiing()
-        node.derive(mobiles, None, toffs, lands, None)
+        node.derive(mobiles, None, toffs, lands, None, airs)
         self.assertEqual(len(node), 2)
         self.assertEqual(node[0].slice.start, 10)
         self.assertEqual(node[0].slice.stop, 20)
@@ -1607,9 +1618,10 @@ class TestTaxiing(unittest.TestCase):
                                  [0] * 5)
         gspd = P('Groundspeed', array=gspd_array)
         toffs = buildsection('Takeoff', 20, 30)
-        lands = buildsection('Landing', 60, 69)
+        lands = buildsection('Landing', 60, 70)
+        airs = buildsection('Airborne', 25, 65)
         node = Taxiing()
-        node.derive(mobiles, gspd, toffs, lands, None)
+        node.derive(mobiles, gspd, toffs, lands, None, airs)
         self.assertEqual(len(node), 3)
         self.assertEqual(node[0].slice.start, 15)
         self.assertEqual(node[0].slice.stop, 20)
@@ -1617,6 +1629,31 @@ class TestTaxiing(unittest.TestCase):
         self.assertEqual(node[1].slice.stop, 85)
         self.assertEqual(node[2].slice.start, 90)
         self.assertEqual(node[2].slice.stop, 95)
+
+    
+    def test_taxiing_including_rejected_takeoff(self):
+        mobiles = buildsection('Mobile', 3, 100)
+        gspd_array = np.ma.array([0] * 10 +
+                                 [10] * 30 +
+                                 [0] * 5 +
+                                 [10] * 50 +
+                                 [0] * 5)
+        gspd = P('Groundspeed', array=gspd_array)
+        toffs = buildsection('Takeoff',  50, 60)
+        lands = buildsection('Landing', 80, 90)
+        airs = buildsection('Airborne', 55, 85)
+        rtos = buildsection('Rejected Takeoff', 20, 30)
+        node = Taxiing()
+        node.derive(mobiles, gspd, toffs, lands, rtos, airs)
+        self.assertEqual(len(node), 4)
+        self.assertEqual(node[0].slice.start, 10)
+        self.assertEqual(node[0].slice.stop, 20)
+        self.assertEqual(node[1].slice.start, 30)
+        self.assertEqual(node[1].slice.stop, 40)
+        self.assertEqual(node[2].slice.start, 45)
+        self.assertEqual(node[2].slice.stop, 50)
+        self.assertEqual(node[3].slice.start, 90)
+        self.assertEqual(node[3].slice.stop, 95)
 
 
 class TestTurningInAir(unittest.TestCase):
