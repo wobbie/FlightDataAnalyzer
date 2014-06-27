@@ -4460,55 +4460,53 @@ def most_points_cost(coefs, x, y):
     return np.ma.sum(e)
 
 
-def moving_average(array, window=9, weightings=None, pad=True, copy=False):
+def moving_average(array, window=9, weightings=None):
     """
     Moving average over an array with window of n samples. Weightings allows
     customisation of the importance of each position's value in the average.
 
-    Recommend odd lengthed moving windows as the result is positioned
+    Requires odd lengthed moving windows so that the result is positioned
     centrally in the window offset.
 
     :param array: Masked Array
     :type array: np.ma.array
     :param window: Size of moving average window to use
     :type window: Integer
-    :param pad: Pad the returned array to the same length of the input, using masked 0's
-    :type pad: Boolean
     :param weightings: Apply uneven weightings across the window - the same length as window.
     :type weightings: array-like object consisting of floats
+    
+    deprecated...
+    :param pad: Pad the returned array to the same length of the input, using masked 0's
+    :type pad: Boolean
 
     Ref: http://argandgahandapandpa.wordpress.com/2011/02/24/python-numpy-moving-average-for-data/
     """
-    if copy:
-        array = np.ma.copy(array)
-
+    # Make sure we are working with a valid window size.
+    assert window%2 == 1
     if len(array)==0:
         return None
-
+    
     if weightings is None:
         weightings = np.repeat(1.0, window) / window
     elif len(weightings) != window:
         raise ValueError("weightings argument (len:%d) must equal window (len:%d)" % (
             len(weightings), window))
-    # repair mask
-    repaired = repair_mask(array, repair_duration=None,
-                           raise_duration_exceedance=False)
-    # if start of mask, ignore this section and remask at end
-    start, end = np.ma.notmasked_edges(repaired)
-    stop = end+1
-    # slice array with these edges
-    unmasked_data = repaired.data[start:stop]
+    
+    copy_array = np.ma.copy(array) # To avoid corrupting the mask.
+    # repair mask otherwise masked elements will expand to cover the whole window dimension.
+    repaired = repair_mask(copy_array , 
+                           repair_duration=None,
+                           raise_duration_exceedance=False,
+                           extrapolate=True)
+    stretch = int(window/2)
+    stretched_data = np.ma.concatenate([[repaired[0]]*stretch,
+                                        repaired,
+                                        [repaired[-1]]*stretch])
 
-    averaged = np.convolve(unmasked_data, weightings, 'valid')
-    if pad:
-        # mask the new stuff
-        pad_front = np.ma.zeros(window/2 + start)
-        pad_front.mask = True
-        pad_end = np.ma.zeros(len(array)-1 + ceil(window/2.0) - stop)
-        pad_end.mask = True
-        return np.ma.hstack([pad_front, averaged, pad_end])
-    else:
-        return averaged
+    averaged = np.convolve(stretched_data.data, weightings, 'valid')
+    result = np.ma.array(data=averaged, 
+                         mask=np.ma.getmaskarray(array))
+    return result
 
 
 def nearest_neighbour_mask_repair(array, copy=True, repair_gap_size=None, direction='both'):
