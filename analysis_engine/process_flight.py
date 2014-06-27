@@ -288,7 +288,7 @@ def parse_analyser_profiles(analyser_profiles):
 
 
 def process_flight(hdf_path, tail_number, aircraft_info={},
-                   start_datetime=datetime.now(), achieved_flight_record={},
+                   start_datetime=None, achieved_flight_record={},
                    requested=[], required=[], include_flight_attributes=True,
                    additional_modules=[]):
     '''
@@ -462,6 +462,9 @@ def process_flight(hdf_path, tail_number, aircraft_info={},
     ],
 
     '''
+    if start_datetime is None:
+        import pytz
+        start_datetime = datetime.utcnow().replace(tzinfo=pytz.utc)
     logger.info("Processing: %s", hdf_path)
 
     if aircraft_info:
@@ -676,7 +679,9 @@ def main():
             hdf.delete_params(hdf.derived_keys())
     res = process_flight(
         hdf_copy, args.tail_number, aircraft_info=aircraft_info,
-        requested=args.requested, required=args.required)
+        requested=args.requested, required=args.required,
+        additional_modules=['flightdataprofiles.fcp.kpvs']
+    )
     logger.info("Derived parameters stored in hdf: %s", hdf_copy)
     # Write CSV file
     if not args.disable_csv:
