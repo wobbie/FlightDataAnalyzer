@@ -188,8 +188,8 @@ from analysis_engine.derived_parameters import (
     FlapManoeuvreSpeed,
     MMOLookup,
     MinimumAirspeed,
-    V2,
-    V2Lookup,
+    #V2,
+    #V2Lookup,
     Vapp,
     VappLookup,
     Vref,
@@ -5102,235 +5102,235 @@ class TestGrossWeight(unittest.TestCase):
 # Takeoff Safety Speed (V2)
 
 
-class TestV2(unittest.TestCase, NodeTest):
+#class TestV2(unittest.TestCase, NodeTest):
 
-    def setUp(self):
-        self.node_class = V2
-        self.airspeed = P('Airspeed', np.ma.repeat(200, 1280))
-        self.liftoffs = KTI(name='Liftoff', items=[
-            KeyTimeInstance(name='Liftoff', index=20),
-            KeyTimeInstance(name='Liftoff', index=860),
-        ])
-        self.climbs = KTI(name='Climb Start', items=[
-            KeyTimeInstance(name='Climb Start', index=420),
-            KeyTimeInstance(name='Climb Start', index=1060),
-        ])
+    #def setUp(self):
+        #self.node_class = V2
+        #self.airspeed = P('Airspeed', np.ma.repeat(200, 1280))
+        #self.liftoffs = KTI(name='Liftoff', items=[
+            #KeyTimeInstance(name='Liftoff', index=20),
+            #KeyTimeInstance(name='Liftoff', index=860),
+        #])
+        #self.climbs = KTI(name='Climb Start', items=[
+            #KeyTimeInstance(name='Climb Start', index=420),
+            #KeyTimeInstance(name='Climb Start', index=1060),
+        #])
 
-    def test_can_operate(self):
-        # AFR:
-        self.assertTrue(self.node_class.can_operate(
-            ('Airspeed', 'AFR V2', 'Liftoff', 'Climb Start'),
-            afr_v2=A('AFR V2', 120),
-        ))
-        self.assertFalse(self.node_class.can_operate(
-            ('Airspeed', 'AFR V2', 'Liftoff', 'Climb Start'),
-            afr_v2=A('AFR V2', 70),
-        ))
-        # Embraer:
-        self.assertTrue(self.node_class.can_operate(
-            ('Airspeed', 'V2-Vac', 'Liftoff', 'Climb Start'),
-        ))
-        # Airbus:
-        self.assertTrue(self.node_class.can_operate(
-            ('Airspeed', 'Airspeed Selected', 'Speed Control', 'Liftoff', 'Climb Start', 'Manufacturer'),
-            manufacturer=A('Manufacturer', 'Airbus'),
-        ))
+    #def test_can_operate(self):
+        ## AFR:
+        #self.assertTrue(self.node_class.can_operate(
+            #('Airspeed', 'AFR V2', 'Liftoff', 'Climb Start'),
+            #afr_v2=A('AFR V2', 120),
+        #))
+        #self.assertFalse(self.node_class.can_operate(
+            #('Airspeed', 'AFR V2', 'Liftoff', 'Climb Start'),
+            #afr_v2=A('AFR V2', 70),
+        #))
+        ## Embraer:
+        #self.assertTrue(self.node_class.can_operate(
+            #('Airspeed', 'V2-Vac', 'Liftoff', 'Climb Start'),
+        #))
+        ## Airbus:
+        #self.assertTrue(self.node_class.can_operate(
+            #('Airspeed', 'Airspeed Selected', 'Speed Control', 'Liftoff', 'Climb Start', 'Manufacturer'),
+            #manufacturer=A('Manufacturer', 'Airbus'),
+        #))
 
-    def test_derive__nothing(self):
-        node = self.node_class()
-        node.derive(self.airspeed, None, None, None, None, self.liftoffs, self.climbs, None)
-        expected = np.ma.repeat(0, 1280)
-        expected[expected == 0] = np.ma.masked
-        ma_test.assert_masked_array_equal(node.array, expected)
+    #def test_derive__nothing(self):
+        #node = self.node_class()
+        #node.derive(self.airspeed, None, None, None, None, self.liftoffs, self.climbs, None)
+        #expected = np.ma.repeat(0, 1280)
+        #expected[expected == 0] = np.ma.masked
+        #ma_test.assert_masked_array_equal(node.array, expected)
 
-    def test_derive__afr_v2(self):
-        afr_v2 = A('AFR V2', 120)
-        node = self.node_class()
-        node.derive(self.airspeed, None, None, None, afr_v2, self.liftoffs, self.climbs, None)
-        expected = np.ma.repeat((120, 0, 120, 0), (420, 120, 520, 220))
-        expected[expected == 0] = np.ma.masked
-        ma_test.assert_masked_array_equal(node.array, expected)
+    #def test_derive__afr_v2(self):
+        #afr_v2 = A('AFR V2', 120)
+        #node = self.node_class()
+        #node.derive(self.airspeed, None, None, None, afr_v2, self.liftoffs, self.climbs, None)
+        #expected = np.ma.repeat((120, 0, 120, 0), (420, 120, 520, 220))
+        #expected[expected == 0] = np.ma.masked
+        #ma_test.assert_masked_array_equal(node.array, expected)
 
-    def test_derive__airbus(self):
-        manufacturer = A(name='Manufacturer', value='Airbus')
-        spd_ctl = M('Speed Control', np.ma.repeat((1, 0), (320, 960)), values_mapping={0: 'Manual', 1: 'Auto'})
-        spd_sel = P('Airspeed Selected', np.ma.repeat((400, 120, 170), (10, 630, 640)))
-        spd_sel.array[:10] = np.ma.masked
-        node = self.node_class()
-        node.derive(self.airspeed, None, spd_sel, spd_ctl, None, self.liftoffs, self.climbs, manufacturer)
-        expected = np.ma.repeat((120, 0), (420, 860))
-        expected[expected == 0] = np.ma.masked
-        ma_test.assert_masked_array_equal(node.array, expected)
+    #def test_derive__airbus(self):
+        #manufacturer = A(name='Manufacturer', value='Airbus')
+        #spd_ctl = M('Speed Control', np.ma.repeat((1, 0), (320, 960)), values_mapping={0: 'Manual', 1: 'Auto'})
+        #spd_sel = P('Airspeed Selected', np.ma.repeat((400, 120, 170), (10, 630, 640)))
+        #spd_sel.array[:10] = np.ma.masked
+        #node = self.node_class()
+        #node.derive(self.airspeed, None, spd_sel, spd_ctl, None, self.liftoffs, self.climbs, manufacturer)
+        #expected = np.ma.repeat((120, 0), (420, 860))
+        #expected[expected == 0] = np.ma.masked
+        #ma_test.assert_masked_array_equal(node.array, expected)
 
-    def test_derive__embraer(self):
-        manufacturer = A(name='Manufacturer', value='Embraer')
-        v2_vac = P('V2-Vac', np.ma.repeat(150, 1280))
-        node = self.node_class()
-        node.derive(self.airspeed, v2_vac, None, None, None, self.liftoffs, self.climbs, manufacturer)
-        expected = np.ma.repeat((150, 0, 150, 0), (420, 120, 520, 220))
-        expected[expected == 0] = np.ma.masked
-        ma_test.assert_masked_array_equal(node.array, expected)
+    #def test_derive__embraer(self):
+        #manufacturer = A(name='Manufacturer', value='Embraer')
+        #v2_vac = P('V2-Vac', np.ma.repeat(150, 1280))
+        #node = self.node_class()
+        #node.derive(self.airspeed, v2_vac, None, None, None, self.liftoffs, self.climbs, manufacturer)
+        #expected = np.ma.repeat((150, 0, 150, 0), (420, 120, 520, 220))
+        #expected[expected == 0] = np.ma.masked
+        #ma_test.assert_masked_array_equal(node.array, expected)
 
 
-class TestV2Lookup(unittest.TestCase, NodeTest):
+#class TestV2Lookup(unittest.TestCase, NodeTest):
 
-    class VSX(VelocitySpeed):
-        '''
-        Table for aircraft with undefined V2.
-        '''
-        tables = {}
+    #class VSX(VelocitySpeed):
+        #'''
+        #Table for aircraft with undefined V2.
+        #'''
+        #tables = {}
 
-    class VSC0(VelocitySpeed):
-        '''
-        Table for aircraft with configuration and fallback tables.
-        '''
-        weight_unit = ut.TONNE
-        tables = {'v2': {
-            'weight': ( 35,  40,  45,  50,  55,  60,  65),
-           'Lever 1': (113, 119, 126, 132, 139, 145, 152),
-        }}
-        fallback = {'v2': {'Lever 2': 140}}
+    #class VSC0(VelocitySpeed):
+        #'''
+        #Table for aircraft with configuration and fallback tables.
+        #'''
+        #weight_unit = ut.TONNE
+        #tables = {'v2': {
+            #'weight': ( 35,  40,  45,  50,  55,  60,  65),
+           #'Lever 1': (113, 119, 126, 132, 139, 145, 152),
+        #}}
+        #fallback = {'v2': {'Lever 2': 140}}
 
-    class VSC1(VelocitySpeed):
-        '''
-        Table for aircraft with configuration and fallback tables only.
-        '''
-        weight_unit = None
-        fallback = {'v2': {'Lever 1': 135}}
+    #class VSC1(VelocitySpeed):
+        #'''
+        #Table for aircraft with configuration and fallback tables only.
+        #'''
+        #weight_unit = None
+        #fallback = {'v2': {'Lever 1': 135}}
 
-    class VSF0(VelocitySpeed):
-        '''
-        Table for aircraft with flap and fallback tables.
-        '''
-        weight_unit = ut.TONNE
-        tables = {'v2': {
-            'weight': ( 35,  40,  45,  50,  55,  60,  65),
-                '15': (113, 119, 126, 132, 139, 145, 152),
-        }}
-        fallback = {'v2': {'5': 140}}
+    #class VSF0(VelocitySpeed):
+        #'''
+        #Table for aircraft with flap and fallback tables.
+        #'''
+        #weight_unit = ut.TONNE
+        #tables = {'v2': {
+            #'weight': ( 35,  40,  45,  50,  55,  60,  65),
+                #'15': (113, 119, 126, 132, 139, 145, 152),
+        #}}
+        #fallback = {'v2': {'5': 140}}
 
-    class VSF1(VelocitySpeed):
-        '''
-        Table for aircraft with flap and fallback tables only.
-        '''
-        weight_unit = None
-        fallback = {'v2': {'17.5': 135}}
+    #class VSF1(VelocitySpeed):
+        #'''
+        #Table for aircraft with flap and fallback tables only.
+        #'''
+        #weight_unit = None
+        #fallback = {'v2': {'17.5': 135}}
 
-    def setUp(self):
-        self.node_class = V2Lookup
-        self.airspeed = P('Airspeed', np.ma.repeat(200, 1280))
-        self.weight = KPV(name='Gross Weight At Liftoff', items=[
-            KeyPointValue(name='Gross Weight At Liftoff', index=20, value=54192.06),
-            KeyPointValue(name='Gross Weight At Liftoff', index=860, value=44192.06),
-        ])
-        self.liftoffs = KTI(name='Liftoff', items=[
-            KeyTimeInstance(name='Liftoff', index=20),
-            KeyTimeInstance(name='Liftoff', index=860),
-        ])
-        self.climbs = KTI(name='Climb Start', items=[
-            KeyTimeInstance(name='Climb Start', index=420),
-            KeyTimeInstance(name='Climb Start', index=1060),
-        ])
+    #def setUp(self):
+        #self.node_class = V2Lookup
+        #self.airspeed = P('Airspeed', np.ma.repeat(200, 1280))
+        #self.weight = KPV(name='Gross Weight At Liftoff', items=[
+            #KeyPointValue(name='Gross Weight At Liftoff', index=20, value=54192.06),
+            #KeyPointValue(name='Gross Weight At Liftoff', index=860, value=44192.06),
+        #])
+        #self.liftoffs = KTI(name='Liftoff', items=[
+            #KeyTimeInstance(name='Liftoff', index=20),
+            #KeyTimeInstance(name='Liftoff', index=860),
+        #])
+        #self.climbs = KTI(name='Climb Start', items=[
+            #KeyTimeInstance(name='Climb Start', index=420),
+            #KeyTimeInstance(name='Climb Start', index=1060),
+        #])
 
-    @patch('analysis_engine.library.at')
-    def test_can_operate(self, at):
-        nodes = ('Airspeed', 'Liftoff', 'Climb Start',
-                 'Model', 'Series', 'Family', 'Engine Series', 'Engine Type')
-        keys = ('model', 'series', 'family', 'engine_type', 'engine_series')
-        airbus = dict(izip(keys, self.generate_attributes('airbus')))
-        boeing = dict(izip(keys, self.generate_attributes('boeing')))
-        beechcraft = dict(izip(keys, self.generate_attributes('beechcraft')))
-        # Assume that lookup tables are found correctly...
-        at.get_vspeed_map.return_value = self.VSF0
-        # Flap Lever w/ Weight:
-        available = nodes + ('Flap Lever', 'Gross Weight At Liftoff')
-        self.assertTrue(self.node_class.can_operate(available, **boeing))
-        # Flap Lever (Synthetic) w/ Weight:
-        available = nodes + ('Flap Lever (Synthetic)', 'Gross Weight At Liftoff')
-        self.assertTrue(self.node_class.can_operate(available, **airbus))
-        # Flap Lever w/o Weight:
-        available = nodes + ('Flap Lever',)
-        self.assertTrue(self.node_class.can_operate(available, **beechcraft))
-        # Flap Lever (Synthetic) w/o Weight:
-        available = nodes + ('Flap Lever (Synthetic)',)
-        self.assertTrue(self.node_class.can_operate(available, **airbus))
-        # Assume that lookup tables are not found correctly...
-        at.get_vspeed_map.side_effect = (KeyError, self.VSX)
-        available = nodes + ('Flap Lever', 'Gross Weight At Liftoff')
-        for i in range(2):
-            self.assertFalse(self.node_class.can_operate(available, **boeing))
+    #@patch('analysis_engine.library.at')
+    #def test_can_operate(self, at):
+        #nodes = ('Airspeed', 'Liftoff', 'Climb Start',
+                 #'Model', 'Series', 'Family', 'Engine Series', 'Engine Type')
+        #keys = ('model', 'series', 'family', 'engine_type', 'engine_series')
+        #airbus = dict(izip(keys, self.generate_attributes('airbus')))
+        #boeing = dict(izip(keys, self.generate_attributes('boeing')))
+        #beechcraft = dict(izip(keys, self.generate_attributes('beechcraft')))
+        ## Assume that lookup tables are found correctly...
+        #at.get_vspeed_map.return_value = self.VSF0
+        ## Flap Lever w/ Weight:
+        #available = nodes + ('Flap Lever', 'Gross Weight At Liftoff')
+        #self.assertTrue(self.node_class.can_operate(available, **boeing))
+        ## Flap Lever (Synthetic) w/ Weight:
+        #available = nodes + ('Flap Lever (Synthetic)', 'Gross Weight At Liftoff')
+        #self.assertTrue(self.node_class.can_operate(available, **airbus))
+        ## Flap Lever w/o Weight:
+        #available = nodes + ('Flap Lever',)
+        #self.assertTrue(self.node_class.can_operate(available, **beechcraft))
+        ## Flap Lever (Synthetic) w/o Weight:
+        #available = nodes + ('Flap Lever (Synthetic)',)
+        #self.assertTrue(self.node_class.can_operate(available, **airbus))
+        ## Assume that lookup tables are not found correctly...
+        #at.get_vspeed_map.side_effect = (KeyError, self.VSX)
+        #available = nodes + ('Flap Lever', 'Gross Weight At Liftoff')
+        #for i in range(2):
+            #self.assertFalse(self.node_class.can_operate(available, **boeing))
 
-    @patch('analysis_engine.library.at')
-    def test_derive__flap_with_weight__standard(self, at):
-        mapping = {f: str(f) for f in (0, 1, 2, 5, 10, 15, 25, 30, 40)}
-        flap_lever = M('Flap Lever', np.ma.repeat(15, 1280), values_mapping=mapping)
+    #@patch('analysis_engine.library.at')
+    #def test_derive__flap_with_weight__standard(self, at):
+        #mapping = {f: str(f) for f in (0, 1, 2, 5, 10, 15, 25, 30, 40)}
+        #flap_lever = M('Flap Lever', np.ma.repeat(15, 1280), values_mapping=mapping)
 
-        attributes = self.generate_attributes('boeing')
-        at.get_vspeed_map.return_value = self.VSF0
+        #attributes = self.generate_attributes('boeing')
+        #at.get_vspeed_map.return_value = self.VSF0
 
-        node = self.node_class()
-        node.derive(flap_lever, None, self.airspeed, self.weight,
-                    self.liftoffs, self.climbs, *attributes)
+        #node = self.node_class()
+        #node.derive(flap_lever, None, self.airspeed, self.weight,
+                    #self.liftoffs, self.climbs, *attributes)
 
-        attributes = (a.value for a in attributes)
-        at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.repeat((138, 0, 125, 0), (420, 120, 520, 220))
-        expected[expected == 0] = np.ma.masked
-        ma_test.assert_masked_array_equal(node.array, expected)
+        #attributes = (a.value for a in attributes)
+        #at.get_vspeed_map.assert_called_once_with(*attributes)
+        #expected = np.ma.repeat((138, 0, 125, 0), (420, 120, 520, 220))
+        #expected[expected == 0] = np.ma.masked
+        #ma_test.assert_masked_array_equal(node.array, expected)
 
-    @patch('analysis_engine.library.at')
-    def test_derive__flap_with_weight__fallback(self, at):
-        mapping = {f: str(f) for f in (0, 1, 2, 5, 10, 15, 25, 30, 40)}
-        flap_lever = M('Flap Lever', np.ma.repeat(5, 1280), values_mapping=mapping)
+    #@patch('analysis_engine.library.at')
+    #def test_derive__flap_with_weight__fallback(self, at):
+        #mapping = {f: str(f) for f in (0, 1, 2, 5, 10, 15, 25, 30, 40)}
+        #flap_lever = M('Flap Lever', np.ma.repeat(5, 1280), values_mapping=mapping)
 
-        attributes = self.generate_attributes('boeing')
-        at.get_vspeed_map.return_value = self.VSF0
+        #attributes = self.generate_attributes('boeing')
+        #at.get_vspeed_map.return_value = self.VSF0
 
-        node = self.node_class()
-        node.derive(flap_lever, None, self.airspeed, self.weight,
-                    self.liftoffs, self.climbs, *attributes)
+        #node = self.node_class()
+        #node.derive(flap_lever, None, self.airspeed, self.weight,
+                    #self.liftoffs, self.climbs, *attributes)
 
-        attributes = (a.value for a in attributes)
-        at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.repeat((140, 0, 140, 0), (420, 120, 520, 220))
-        expected[expected == 0] = np.ma.masked
-        ma_test.assert_masked_array_equal(node.array, expected)
+        #attributes = (a.value for a in attributes)
+        #at.get_vspeed_map.assert_called_once_with(*attributes)
+        #expected = np.ma.repeat((140, 0, 140, 0), (420, 120, 520, 220))
+        #expected[expected == 0] = np.ma.masked
+        #ma_test.assert_masked_array_equal(node.array, expected)
 
-    @patch('analysis_engine.library.at')
-    def test_derive__flap_without_weight__standard(self, at):
-        mapping = {f: str(f) for f in (0, 17.5, 35)}
-        flap_lever = M('Flap Lever', np.ma.repeat(17.5, 1280), values_mapping=mapping)
+    #@patch('analysis_engine.library.at')
+    #def test_derive__flap_without_weight__standard(self, at):
+        #mapping = {f: str(f) for f in (0, 17.5, 35)}
+        #flap_lever = M('Flap Lever', np.ma.repeat(17.5, 1280), values_mapping=mapping)
 
-        attributes = self.generate_attributes('beechcraft')
-        at.get_vspeed_map.return_value = self.VSF0
+        #attributes = self.generate_attributes('beechcraft')
+        #at.get_vspeed_map.return_value = self.VSF0
 
-        node = self.node_class()
-        node.derive(flap_lever, None, self.airspeed, None, self.liftoffs,
-                    self.climbs, *attributes)
+        #node = self.node_class()
+        #node.derive(flap_lever, None, self.airspeed, None, self.liftoffs,
+                    #self.climbs, *attributes)
 
-        attributes = (a.value for a in attributes)
-        at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.repeat(0, 1280)
-        expected[expected == 0] = np.ma.masked
-        ma_test.assert_masked_array_equal(node.array, expected)
+        #attributes = (a.value for a in attributes)
+        #at.get_vspeed_map.assert_called_once_with(*attributes)
+        #expected = np.ma.repeat(0, 1280)
+        #expected[expected == 0] = np.ma.masked
+        #ma_test.assert_masked_array_equal(node.array, expected)
 
-    @patch('analysis_engine.library.at')
-    def test_derive__flap_without_weight__fallback(self, at):
-        mapping = {f: str(f) for f in (0, 17.5, 35)}
-        flap_lever = M('Flap Lever', np.ma.repeat(17.5, 1280), values_mapping=mapping)
+    #@patch('analysis_engine.library.at')
+    #def test_derive__flap_without_weight__fallback(self, at):
+        #mapping = {f: str(f) for f in (0, 17.5, 35)}
+        #flap_lever = M('Flap Lever', np.ma.repeat(17.5, 1280), values_mapping=mapping)
 
-        attributes = self.generate_attributes('beechcraft')
-        at.get_vspeed_map.return_value = self.VSF1
+        #attributes = self.generate_attributes('beechcraft')
+        #at.get_vspeed_map.return_value = self.VSF1
 
-        node = self.node_class()
-        node.derive(flap_lever, None, self.airspeed, None, self.liftoffs,
-                    self.climbs, *attributes)
+        #node = self.node_class()
+        #node.derive(flap_lever, None, self.airspeed, None, self.liftoffs,
+                    #self.climbs, *attributes)
 
-        attributes = (a.value for a in attributes)
-        at.get_vspeed_map.assert_called_once_with(*attributes)
-        expected = np.ma.repeat((135, 0, 135, 0), (420, 120, 520, 220))
-        expected[expected == 0] = np.ma.masked
-        ma_test.assert_masked_array_equal(node.array, expected)
+        #attributes = (a.value for a in attributes)
+        #at.get_vspeed_map.assert_called_once_with(*attributes)
+        #expected = np.ma.repeat((135, 0, 135, 0), (420, 120, 520, 220))
+        #expected[expected == 0] = np.ma.masked
+        #ma_test.assert_masked_array_equal(node.array, expected)
 
 
 ########################################
@@ -6251,16 +6251,16 @@ class TestAirspeedMinusV2(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = AirspeedMinusV2
         self.operational_combinations = [
-            ('Airspeed', 'V2', 'Liftoff', 'Climb Start'),
-            ('Airspeed', 'Airspeed Selected', 'Liftoff', 'Climb Start'),
-            ('Airspeed', 'V2', 'Airspeed Selected', 'Liftoff', 'Climb Start'),
-            ('Airspeed', 'Airspeed Selected', 'V2 Lookup', 'Liftoff', 'Climb Start'),
-            ('Airspeed', 'V2', 'Airspeed Selected', 'V2 Lookup', 'Liftoff', 'Climb Start'),
+            ('Airspeed', 'V2 At Liftoff', 'Liftoff', 'Climb Start'),
+            ('Airspeed', 'Airspeed Selected At Liftoff', 'Liftoff', 'Climb Start'),
+            ('Airspeed', 'V2 At Liftoff', 'Airspeed Selected At Liftoff', 'Liftoff', 'Climb Start'),
+            ('Airspeed', 'Airspeed Selected At Liftoff', 'V2 Lookup At Liftoff', 'Liftoff', 'Climb Start'),
+            ('Airspeed', 'V2 At Liftoff', 'Airspeed Selected At Liftoff', 'V2 Lookup At Liftoff', 'Liftoff', 'Climb Start'),
         ]
         self.airspeed = P('Airspeed', np.ma.repeat(102, 2000))
-        self.v2_record = P('V2', np.ma.repeat((90, 120), 1000))
-        self.airspeed_selected = P('Airspeed Selected', np.ma.repeat((110, 140), 1000))
-        self.v2_lookup = P('V2 Lookup', np.ma.repeat((95, 125), 1000))
+        self.v2_record = KPV([KeyPointValue(index=500, value=90, name='V2 At Liftoff')])
+        self.airspeed_selected = KPV([KeyPointValue(index=500, value=110, name='Airspeed Selected At Liftoff')])
+        self.v2_lookup = KPV([KeyPointValue(index=500, value=95, name='V2 Lookup At Liftoff')])
         self.liftoffs = KTI(name='Liftoff', items=[
             KeyTimeInstance(name='Liftoff', index=500),
         ])
@@ -6296,43 +6296,24 @@ class TestAirspeedMinusV2(unittest.TestCase, NodeTest):
         expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
-    def test_derive__airspeed_selected(self):
-        '''
-        Test reflecting data we have seen where airspeed selected starts as
-        previous flights landing speed before being changed before takeoff,
-        this data at the start of the flight was causing landing speed to be
-        used when looking back through the last 5 superframes
-        '''
-        node = self.node_class()
-        airspeed_selected = P('Airspeed Selected', np.ma.concatenate(([138]*400, [110]*250, [140]*1350)))
-        node.derive(self.airspeed, None, airspeed_selected, None, self.liftoffs, self.climbs)
-        expected = np.ma.repeat((0, -8, 0), (180, 820, 1000))
-        expected[expected == 0] = np.ma.masked
-        ma_test.assert_masked_array_equal(node.array, expected)
-
     def test_derive__recorded_masked(self):
-        self.v2_record.array.mask = True
         node = self.node_class()
-        node.derive(self.airspeed, self.v2_record, None, self.v2_lookup, self.liftoffs, self.climbs)
+        node.derive(self.airspeed, KPV(items=[]), None, self.v2_lookup, self.liftoffs, self.climbs)
         expected = np.ma.repeat((0, 7, 0), (180, 820, 1000))
         expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__recorded_and_lookup_masked(self):
-        self.v2_record.array.mask = True
-        self.v2_lookup.array.mask = True
         node = self.node_class()
-        node.derive(self.airspeed, self.v2_record, None, self.v2_lookup, self.liftoffs, self.climbs)
+        node.derive(self.airspeed, KPV(items=[]), None, KPV(items=[]), self.liftoffs, self.climbs)
         expected = np.ma.repeat(0, 2000)
         expected[expected == 0] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
     def test_derive__masked_within_phase(self):
-        self.v2_record.array[:-1] = np.ma.masked
         node = self.node_class()
-        node.derive(self.airspeed, self.v2_record, None, self.v2_lookup, self.liftoffs, self.climbs)
-        expected = np.ma.repeat((0, 7, 0), (180, 820, 1000))
-        expected[expected == 0] = np.ma.masked
+        node.derive(self.airspeed, KPV(items=[]), None, KPV(items=[]), self.liftoffs, self.climbs)
+        expected = np_ma_masked_zeros_like(self.airspeed.array)
         ma_test.assert_masked_array_equal(node.array, expected)
 
 
