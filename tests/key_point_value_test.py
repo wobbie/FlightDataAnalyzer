@@ -7330,6 +7330,15 @@ class TestFuelQtyWingDifferenceMax(unittest.TestCase):
         self.assertEqual(node[0].index, 2)
         self.assertEqual(node[0].value, 15)
 
+    def test_derive_handed(self):
+        qty_r = P('Fuel Qty (R)', array=np.ma.array([100, 90, 80, 70, 60, 50]))
+        qty_l = P('Fuel Qty (L)', array=np.ma.array([110, 100, 95, 80, 70, 60]))
+        node = FuelQtyWingDifferenceMax()
+        node.derive(qty_l, qty_r)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 2)
+        self.assertEqual(node[0].value, -15)
+
 
 class TestFuelJettisonDuration(unittest.TestCase, CreateKPVsWhereTest):
     def setUp(self):
