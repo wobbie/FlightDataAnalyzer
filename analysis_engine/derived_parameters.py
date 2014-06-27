@@ -1005,7 +1005,7 @@ class AltitudeSTDSmoothed(DerivedParameterNode):
             # Here two sources are sampled alternately, so this form of
             # weighting merges the two to create a smoothed average.
             self.array = moving_average(alt.array, window=3,
-                                        weightings=[0.25,0.5,0.25], pad=True)
+                                        weightings=[0.25,0.5,0.25])
 
         elif frame_name.startswith('747-200-') or \
              frame_name in ['A300-203-B4']:
@@ -5286,6 +5286,8 @@ class ThrustAsymmetry(DerivedParameterNode):
     used to provide a similar single asymmetry value.
     '''
 
+    align_frequency = 1 # Forced alignment to allow fixed window period.
+    align_offset = 0
     units = ut.PERCENT
 
     @classmethod
@@ -5300,7 +5302,7 @@ class ThrustAsymmetry(DerivedParameterNode):
             diff = (epr_max.array - epr_min.array) * 100
         else:
             diff = (n1_max.array - n1_min.array)
-        window = 5 * self.frequency # 5 second window
+        window = 5 # 5 second window
         self.array = moving_average(diff, window=window)
 
 

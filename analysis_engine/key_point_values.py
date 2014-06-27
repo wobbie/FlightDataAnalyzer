@@ -8290,7 +8290,7 @@ class FuelQtyAtLiftoff(KeyPointValueNode):
                liftoffs=KTI('Liftoff')):
 
         self.create_kpvs_at_ktis(
-            moving_average(repair_mask(fuel_qty.array), 20), liftoffs)
+            moving_average(repair_mask(fuel_qty.array), 19), liftoffs)
 
 
 class FuelQtyAtTouchdown(KeyPointValueNode):
@@ -8307,7 +8307,7 @@ class FuelQtyAtTouchdown(KeyPointValueNode):
                touchdowns=KTI('Touchdown')):
 
         self.create_kpvs_at_ktis(
-            moving_average(repair_mask(fuel_qty.array), 20), touchdowns)
+            moving_average(repair_mask(fuel_qty.array), 19), touchdowns)
 
 
 class FuelQtyWingDifferenceMax(KeyPointValueNode):

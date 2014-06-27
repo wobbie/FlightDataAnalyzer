@@ -2253,7 +2253,7 @@ class StableApproach(MultistateDerivedParameterNode):
             glideslope = repair(gdev.array, _slice) if gdev else None  # optional
             localizer = repair(ldev.array, _slice) if ldev else None  # optional
             # apply quite a large moving average to smooth over peaks and troughs
-            vertical_speed = moving_average(repair(vspd.array, _slice), 10)
+            vertical_speed = moving_average(repair(vspd.array, _slice), 11)
             if eng_epr:
                 # use EPR if available
                 engine = repair(eng_epr.array, _slice)
