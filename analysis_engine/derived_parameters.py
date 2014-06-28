@@ -7559,17 +7559,32 @@ class AirspeedRelative(DerivedParameterNode):
     def can_operate(cls, available):
 
         return any_of((
+            'Airspeed Minus V2',
             'Airspeed Minus Vapp',
             'Airspeed Minus Vref',
         ), available)
 
     def derive(self,
+               takeoff=P('Airspeed Minus V2'),
                vapp=P('Airspeed Minus Vapp'),
                vref=P('Airspeed Minus Vref')):
 
-        parameter = vapp or vref
-        self.array = parameter.array
-
+        approach = vapp or vref
+        app_array = approach.array
+        if takeoff:
+            toff_array = takeoff.array
+            # We know the two areas of interest cannot overlap so we just add
+            # the values, inverting the mask to provide a 0=ignore, 1=use_this
+            # multiplier.
+            speeds = toff_array.data*~toff_array.mask + app_array.data*~app_array.mask
+            # And build this back into an array, masked only where both were
+            # masked.
+            combined = np.ma.array(data=speeds, 
+                                   mask = np.logical_and(toff_array.mask, app_array.mask))
+            self.array = combined
+        else:
+            self.array = app_array
+            
 
 class AirspeedRelativeFor3Sec(DerivedParameterNode):
     '''
@@ -7586,16 +7601,31 @@ class AirspeedRelativeFor3Sec(DerivedParameterNode):
     def can_operate(cls, available):
 
         return any_of((
+            'Airspeed Minus V2 For 3 Sec',
             'Airspeed Minus Vapp For 3 Sec',
             'Airspeed Minus Vref For 3 Sec',
         ), available)
 
     def derive(self,
+               takeoff=P('Airspeed Minus V2 For 3 Sec'),
                vapp=P('Airspeed Minus Vapp For 3 Sec'),
                vref=P('Airspeed Minus Vref For 3 Sec')):
 
-        parameter = vapp or vref
-        self.array = parameter.array
+        approach = vapp or vref
+        app_array = approach.array
+        if takeoff:
+            toff_array = takeoff.array
+            # We know the two areas of interest cannot overlap so we just add
+            # the values, inverting the mask to provide a 0=ignore, 1=use_this
+            # multiplier.
+            speeds = toff_array.data*~toff_array.mask + app_array.data*~app_array.mask
+            # And build this back into an array, masked only where both were
+            # masked.
+            combined = np.ma.array(data=speeds, 
+                                   mask = np.logical_and(toff_array.mask, app_array.mask))
+            self.array = combined
+        else:
+            self.array = app_array
 
 
 ##############################################################################

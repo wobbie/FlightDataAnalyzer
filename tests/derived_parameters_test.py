@@ -6682,27 +6682,39 @@ class TestAirspeedRelative(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = AirspeedRelative
         self.operational_combinations = [
+            ('Airspeed Minus V2',),
             ('Airspeed Minus Vapp',),
             ('Airspeed Minus Vref',),
             ('Airspeed Minus Vapp', 'Airspeed Minus Vref'),
         ]
-        self.vapp = P('Airspeed Minus Vapp', np.ma.arange(100, 200))
-        self.vref = P('Airspeed Minus Vref', np.ma.arange(200, 300))
+        self.v2 = P('Airspeed Minus V2', np.ma.array(data=range(20,120),
+                                                      mask=[[True]*5+[False]*10+[True]*85]))
+        self.vapp = P('Airspeed Minus Vapp', np.ma.array(data=range(30,130),
+                                                      mask=[[True]*80+[False]*10+[True]*10]))
+        self.vref = P('Airspeed Minus Vref', np.ma.array(data=range(40,140),
+                                                      mask=[[True]*80+[False]*10+[True]*10]))
 
     def test_derive__vapp(self):
         node = self.node_class()
-        node.derive(self.vapp, None)
+        node.derive(None, self.vapp, None)
         ma_test.assert_masked_array_equal(node.array, self.vapp.array)
 
     def test_derive__vref(self):
         node = self.node_class()
-        node.derive(None, self.vref)
+        node.derive(None, None, self.vref)
         ma_test.assert_masked_array_equal(node.array, self.vref.array)
 
-    def test_derive__both(self):
+    def test_derive__both_approach(self):
         node = self.node_class()
-        node.derive(self.vapp, self.vref)
+        node.derive(None, self.vapp, self.vref)
         ma_test.assert_masked_array_equal(node.array, self.vapp.array)
+
+    def test_derive_all_three(self):
+        node = self.node_class()
+        node.derive(self.v2, self.vapp, self.vref)
+        expected = np.ma.array(data=range(20,70)+range(80,130),
+                               mask=[True]*5+[False]*10+[True]*65+[False]*10+[True]*10)
+        ma_test.assert_masked_array_equal(node.array, expected)
 
 
 class TestAirspeedRelativeFor3Sec(unittest.TestCase, NodeTest):
@@ -6710,27 +6722,39 @@ class TestAirspeedRelativeFor3Sec(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = AirspeedRelativeFor3Sec
         self.operational_combinations = [
+            ('Airspeed Minus V2 For 3 Sec',),
             ('Airspeed Minus Vapp For 3 Sec',),
             ('Airspeed Minus Vref For 3 Sec',),
             ('Airspeed Minus Vapp For 3 Sec', 'Airspeed Minus Vref For 3 Sec'),
         ]
-        self.vapp = P('Airspeed Minus Vapp For 3 Sec', np.ma.arange(100, 200), frequency=2)
-        self.vref = P('Airspeed Minus Vref For 3 Sec', np.ma.arange(200, 300), frequency=2)
+        self.v2 = P('Airspeed Minus V2 For 3 Sec', np.ma.array(data=range(20,120),
+                                                      mask=[[True]*5+[False]*10+[True]*85]))
+        self.vapp = P('Airspeed Minus Vapp For 3 Sec', np.ma.array(data=range(30,130),
+                                                      mask=[[True]*80+[False]*10+[True]*10]))
+        self.vref = P('Airspeed Minus Vref For 3 Sec', np.ma.array(data=range(40,140),
+                                                      mask=[[True]*80+[False]*10+[True]*10]))
 
     def test_derive__vapp(self):
         node = self.node_class()
-        node.get_derived([self.vapp, None])
+        node.derive(None, self.vapp, None)
         ma_test.assert_masked_array_equal(node.array, self.vapp.array)
 
     def test_derive__vref(self):
         node = self.node_class()
-        node.get_derived([None, self.vref])
+        node.derive(None, None, self.vref)
         ma_test.assert_masked_array_equal(node.array, self.vref.array)
 
-    def test_derive__both(self):
+    def test_derive__both_approach(self):
         node = self.node_class()
-        node.get_derived([self.vapp, self.vref])
+        node.derive(None, self.vapp, self.vref)
         ma_test.assert_masked_array_equal(node.array, self.vapp.array)
+
+    def test_derive_all_three(self):
+        node = self.node_class()
+        node.derive(self.v2, self.vapp, self.vref)
+        expected = np.ma.array(data=range(20,70)+range(80,130),
+                               mask=[True]*5+[False]*10+[True]*65+[False]*10+[True]*10)
+        ma_test.assert_masked_array_equal(node.array, expected)
 
 
 ##############################################################################
