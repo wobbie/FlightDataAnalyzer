@@ -4492,8 +4492,9 @@ def moving_average(array, window=9, weightings=None):
         raise ValueError("weightings argument (len:%d) must equal window (len:%d)" % (
             len(weightings), window))
     
+    # We repair the mask otherwise masked elements will expand to cover the
+    # whole window dimension.
     copy_array = np.ma.copy(array) # To avoid corrupting the mask.
-    # repair mask otherwise masked elements will expand to cover the whole window dimension.
     repaired = repair_mask(copy_array , 
                            repair_duration=None,
                            raise_duration_exceedance=False,
