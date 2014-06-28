@@ -3440,7 +3440,17 @@ class TestBrakeTempAfterTouchdownDelta(unittest.TestCase):
         self.assertEqual(node[0].index, 87)
         self.assertEqual(node[0].value, 170)
 
-
+    def test_basic(self):
+        # DJ wrote this test, having implemented the same algorithm
+        # independently. Transferred here to show great minds think alike.
+        temp=P('Brake (*) Temp Avg', np.ma.array(data=[3,3,3,4,5,6,7,8,9,8,7]))
+        touchdown = KTI(name='Touchdown', items=[
+            KeyTimeInstance(name='Touchdown', index=2),])
+        dt = BrakeTempAfterTouchdownDelta()
+        dt.get_derived((temp, touchdown))
+        self.assertEqual(dt[0].value, 6)
+        self.assertEqual(dt[0].index, 8)
+               
 class TestBrakePressureInTakeoffRollMax(unittest.TestCase,
                                         CreateKPVsWithinSlicesTest):
     def setUp(self):
