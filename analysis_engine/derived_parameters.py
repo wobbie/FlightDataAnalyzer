@@ -976,7 +976,10 @@ class AltitudeRadioOffsetRemoved(DerivedParameterNode):
             adjustment = np.ma.median(alt_rad.array[each_slice])
             if 0 < adjustment < 5:
                 adjust[each_slice] = adjustment
-        adjust_array = repair_mask(adjust, repair_duration=None, extrapolate=True)
+        adjust_array = repair_mask(adjust, 
+                                   repair_duration=None, 
+                                   extrapolate=True,
+                                   raise_entirely_masked=False)
         self.array = alt_rad.array - adjust_array
             
 
