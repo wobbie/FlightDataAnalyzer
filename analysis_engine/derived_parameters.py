@@ -613,7 +613,7 @@ class AltitudeAAL(DerivedParameterNode):
 
         return alt_result
 
-    def derive(self, alt_rad=P('Altitude Radio'),
+    def derive(self, alt_rad=P('Altitude Radio Offset Removed'),
                alt_std=P('Altitude STD Smoothed'),
                speedies=S('Fast'),
                pitch=P('Pitch')):
@@ -962,6 +962,22 @@ class AltitudeRadio(DerivedParameterNode):
             scaling = 0.365 #ft/deg, +ve for altimeters aft of the main wheels.
             offset = -1.5 #ft at pitch=0
             self.array = self.array + (scaling * pitch.array) + offset
+
+
+class AltitudeRadioOffsetRemoved(DerivedParameterNode):
+    '''
+    Remove the offset form Altitude Radio parameters so that it averages 0ft on
+    the ground.
+    '''
+    def derive(self, alt_rad=P('Altitude Radio')):
+        adjust = np_ma_masked_zeros_like(alt_rad.array)
+        low_slices = np.ma.clump_unmasked(np.ma.masked_greater(alt_rad.array, 20.0))
+        for each_slice in low_slices:
+            adjustment = np.ma.median(alt_rad.array[each_slice])
+            if 0 < adjustment < 5:
+                adjust[each_slice] = adjustment
+        adjust_array = repair_mask(adjust, repair_duration=None, extrapolate=True)
+        self.array = alt_rad.array - adjust_array
             
 
 class AltitudeSTDSmoothed(DerivedParameterNode):

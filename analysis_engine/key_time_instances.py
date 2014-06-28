@@ -1042,7 +1042,7 @@ class Liftoff(KeyTimeInstanceNode):
                vert_spd=P('Vertical Speed Inertial'),
                acc_norm=P('Acceleration Normal Offset Removed'),
                vert_spd_baro=P('Vertical Speed'),
-               alt_rad=P('Altitude Radio'),
+               alt_rad=P('Altitude Radio Offset Removed'),
                gog=M('Gear On Ground'),
                airs=S('Airborne'),
                frame=A('Frame')):
