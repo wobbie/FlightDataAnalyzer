@@ -1052,13 +1052,13 @@ class Liftoff(KeyTimeInstanceNode):
             index_air = air.start_edge
             if index_air == None:
                 continue
-            back_3 = (air.slice.start - 3.0*self.frequency)
-            if back_3 < 0:
+            back_6 = (air.slice.start - 6.0*self.frequency)
+            if back_6 < 0:
                 # unlikely to have lifted off within 3 seconds of data start
                 # STOP ONLY slice without a liftoff in this Airborne section
                 continue
-            on_3 = (air.slice.start + 3.0*self.frequency) + 1 # For indexing
-            to_scan = slice(back_3, on_3)
+            on_6 = (air.slice.start + 6.0*self.frequency) + 1 # For indexing
+            to_scan = slice(back_6, on_6)
 
             if vert_spd:
                 index_vs = index_at_value(vert_spd.array,
@@ -1073,7 +1073,7 @@ class Liftoff(KeyTimeInstanceNode):
                 if acc_norm:
                     idx = np.ma.argmax(acc_norm.array[to_scan])
                     if acc_norm.array[to_scan][idx]>1.2:
-                        index_acc=idx+back_3
+                        index_acc=idx+back_6
             
             if alt_rad:
                 index_rad = index_at_value(alt_rad.array, 0.0, to_scan)
@@ -1084,7 +1084,7 @@ class Liftoff(KeyTimeInstanceNode):
                     'Ground', gog.array[to_scan], change='leaving')
                 if edges:
                     # use the last liftoff point
-                    index = edges[-1] + back_3
+                    index = edges[-1] + back_6
                     # Check we were within 5ft of the ground when the switch triggered.
                     if alt_rad == None:
                         index_gog = index
