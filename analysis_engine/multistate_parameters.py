@@ -1619,6 +1619,8 @@ class PilotFlying(MultistateDerivedParameterNode):
             # defined to work over a window and it doesn't affect the result as
             # the arrays are altered in the same way and are still comparable.
             window = 61 * self.hz  # Use 61 seconds for 30 seconds either side.
+            if not window%2:
+                window+=1
             angle_capt = moving_average(stick_capt.array, window)
             angle_fo = moving_average(stick_fo.array, window)
             # Repair the array as the moving average is padded with masked
