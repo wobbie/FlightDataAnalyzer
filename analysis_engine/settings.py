@@ -122,6 +122,10 @@ ALTITUDE_AAL_LAG_TC = 3.0
 # climbing above 15000 ft and below 10000 ft.
 ALTITUDE_FOR_CLB_CRU_DSC = 12500
 
+# The maximum radio altimeter offset we are able to compensate for.
+# NB: Negative offsets are not corrected, assumed to be from oleo compression.
+ALTITUDE_RADIO_OFFSET_LIMIT = 10.0
+
 # Minimum descent height range for an approach and landing phase.
 APPROACH_MIN_DESCENT = 500
 
