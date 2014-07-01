@@ -113,6 +113,7 @@ from analysis_engine.key_point_values import (
     AirspeedRelativeFor3Sec500To20FtMin,
     AirspeedRelativeWithConfigurationDuringDescentMin,
     AirspeedSelectedAtLiftoff,
+    AirspeedSelectedFMCMinusFlapManoeuvreSpeed1000to5000FtMin,
     AirspeedSelectedMCPAt8000FtDescending,
     AirspeedTopOfDescentTo10000FtMax,
     AirspeedTopOfDescentTo4000FtMax,
@@ -2918,6 +2919,29 @@ class TestAirspeedMinusFlapManoeuvreSpeedWithFlapDuringDescentMin(unittest.TestC
             KeyPointValue(index=5, value=50, name='Airspeed Minus Flap Manoeuvre Speed With Flap 10 During Descent Min'),
             KeyPointValue(index=8, value=20, name='Airspeed Minus Flap Manoeuvre Speed With Flap 15 During Descent Min'),
         ])
+
+
+class TestAirspeedSelectedFMCMinusFlapManoeuvreSpeed1000to5000FtMin(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = AirspeedSelectedFMCMinusFlapManoeuvreSpeed1000to5000FtMin
+
+    def test_can_operate(self):
+        expected = [('Airspeed Selected (FMC)', 'Flap Manoeuvre Speed', 'Altitude AAL For Flight Phases', 'Climb')]
+        self.assertEqual(self.node_class().get_operational_combinations(),
+                         expected)
+
+    def test_derive(self):
+        spd_sel = P('Airspeed Selected (FMC)', np.ma.repeat((150, 250), 20))
+        manoeuvre_spd = P('Flap Manoeuvre Speed', np.ma.repeat((155, 175, 200), (11, 4, 25)))
+        alt_aal = P('Altitude AAL For Flight Phases', np.ma.arange(0, 6000, 150))
+        climbs = buildsection('Climb', 6, 33)
+        node = self.node_class()
+
+        node.derive(spd_sel, manoeuvre_spd, alt_aal, climbs)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].value, -50)
+        self.assertEqual(node[0].index, 15)
 
 
 ########################################

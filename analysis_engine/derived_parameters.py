@@ -7190,7 +7190,6 @@ class FlapManoeuvreSpeed(DerivedParameterNode):
                vref_25=P('Vref (25)'),
                vref_30=P('Vref (30)'),
                alt_std=P('Altitude STD Smoothed'),
-               descents=S('Descent To Flare'),
                model=A('Model'),
                series=A('Series'),
                family=A('Family'),
@@ -7237,9 +7236,8 @@ class FlapManoeuvreSpeed(DerivedParameterNode):
 
         # We want to mask out sections of flight where the aircraft is not
         # airborne and where the aircraft is above 20000ft as, for the majority
-        # of aircraft, flaps should not be extended above that limit. We are
-        # only interested in the descent phase of flight up until the flare.
-        phases = slices_and(alt_std.slices_below(20000), descents.get_slices())
+        # of aircraft, flaps should not be extended above that limit.
+        phases = slices_and(alt_std.slices_below(20000), alt_std.slices_above(50))
         self.array = mask_outside_slices(self.array, phases)
 
 

@@ -2489,6 +2489,28 @@ class AirspeedAtFirstFlapExtensionWhileAirborne(KeyPointValueNode):
             self.create_kpv(index, value_at_index(airspeed.array, index))
 
 
+class AirspeedSelectedFMCMinusFlapManoeuvreSpeed1000to5000FtMin(KeyPointValueNode):
+    '''
+    This KPV compares Airspeed Select (FMC) and Flap Manoeuvre Speed to
+    identify an unsafe situation where the Speed Select (FMC) speed is below
+    the Minimum Manoeuvre Speed immediately prior to VNAV engagement.
+    '''
+
+    units = ut.KT
+    name = 'Airspeed Selected (FMC) Minus Flap Manoeuvre Speed 1000 to 5000 Ft Min'
+
+    def derive(self, spd_sel=P('Airspeed Selected (FMC)'),
+               flap_spd=P('Flap Manoeuvre Speed'), 
+               alt_aal=P('Altitude AAL For Flight Phases'),
+               climbs=S('Climb')):
+        alt_band = np.ma.masked_outside(alt_aal.array, 1000, 5000)
+        alt_climb_sections = valid_slices_within_array(alt_band, climbs)
+        array = spd_sel.array - flap_spd.array
+
+        self.create_kpvs_within_slices(array, alt_climb_sections, min_value)
+        
+
+
 ########################################
 # Airspeed: Landing Gear
 

@@ -6150,7 +6150,7 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
 
         node = self.node_class()
         node.derive(self.airspeed, self.flap_lever, None, self.weight,
-                    None, None, self.altitude, self.descents, *attributes)
+                    None, None, self.altitude, *attributes)
 
         attributes = [a.value for a in attributes]
         at0.get_vspeed_map.assert_called_once_with(*attributes)
@@ -6159,7 +6159,7 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
             (201, 181, 0, 161, 161, 176, 166, 156, 147, 146),
             (10, 10, 10, 10, 5, 5, 10, 10, 10, 10)
         )
-        for s in slice(0, 10), slice(20, 30), slice(42, 47), slice(87, 90):
+        for s in slice(0, 10), slice(20, 30):
             expected[s] = np.ma.masked
         ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
 
@@ -6182,7 +6182,7 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
 
         node = self.node_class()
         node.derive(self.airspeed, self.flap_lever, None, self.weight,
-                    None, None, self.altitude, self.descents, *attributes)
+                    None, None, self.altitude, *attributes)
 
         attributes = [a.value for a in attributes]
         at0.get_vspeed_map.assert_called_once_with(*attributes)
@@ -6191,7 +6191,7 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
             (210, 190, 0, 170, 160, 170, 160, 150, 147, 146),
             (10, 10, 10, 10, 5, 5, 10, 10, 10, 10)
         )
-        for s in slice(0, 10), slice(20, 30), slice(42, 47), slice(87, 90):
+        for s in slice(0, 10), slice(20, 30):
             expected[s] = np.ma.masked
         ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
 
@@ -6226,14 +6226,13 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
 
         node = self.node_class()
         node.derive(self.airspeed, self.flap_lever, None, self.weight,
-                    self.vref_25, self.vref_30, self.altitude, self.descents,
-                    *attributes)
+                    self.vref_25, self.vref_30, self.altitude, *attributes)
 
         attributes = [a.value for a in attributes]
         at0.get_vspeed_map.assert_called_once_with(*attributes)
         at1.get_fms_map.assert_called_once_with(*attributes[:3])
         expected = np.ma.repeat((230, 210, 190, 170, 170, 155, 150), 10)
-        for s in slice(0, 10), slice(32, 37), slice(67, 70):
+        for s in (slice(0, 10),):
             expected[s] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
