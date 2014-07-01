@@ -1318,6 +1318,7 @@ class GearDownSelected(MultistateDerivedParameterNode):
 
         self.array = np.ma.zeros(gear_down.array.size, dtype=np.short)
         self.array[gear_down.array == 'Down'] = 'Down'
+        self.array.mask = gear_down.array.mask
         if gear_warn:
             # We use up to 10s of `Gear (*) Red Warning` == 'Warning'
             # preceeding the actual gear position change state to define the
@@ -1619,6 +1620,8 @@ class PilotFlying(MultistateDerivedParameterNode):
             # defined to work over a window and it doesn't affect the result as
             # the arrays are altered in the same way and are still comparable.
             window = 61 * self.hz  # Use 61 seconds for 30 seconds either side.
+            if not window%2:
+                window+=1
             angle_capt = moving_average(stick_capt.array, window)
             angle_fo = moving_average(stick_fo.array, window)
             # Repair the array as the moving average is padded with masked
@@ -2253,7 +2256,7 @@ class StableApproach(MultistateDerivedParameterNode):
             glideslope = repair(gdev.array, _slice) if gdev else None  # optional
             localizer = repair(ldev.array, _slice) if ldev else None  # optional
             # apply quite a large moving average to smooth over peaks and troughs
-            vertical_speed = moving_average(repair(vspd.array, _slice), 10)
+            vertical_speed = moving_average(repair(vspd.array, _slice), 11)
             if eng_epr:
                 # use EPR if available
                 engine = repair(eng_epr.array, _slice)

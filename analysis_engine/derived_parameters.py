@@ -90,6 +90,7 @@ from analysis_engine.library import (actuator_mismatch,
                                      vstack_params)
 
 from settings import (AIRSPEED_THRESHOLD,
+                      ALTITUDE_RADIO_OFFSET_LIMIT,
                       AZ_WASHOUT_TC,
                       BOUNCED_LANDING_THRESHOLD,
                       CLIMB_THRESHOLD,
@@ -613,7 +614,7 @@ class AltitudeAAL(DerivedParameterNode):
 
         return alt_result
 
-    def derive(self, alt_rad=P('Altitude Radio'),
+    def derive(self, alt_rad=P('Altitude Radio Offset Removed'),
                alt_std=P('Altitude STD Smoothed'),
                speedies=S('Fast'),
                pitch=P('Pitch')):
@@ -962,6 +963,47 @@ class AltitudeRadio(DerivedParameterNode):
             scaling = 0.365 #ft/deg, +ve for altimeters aft of the main wheels.
             offset = -1.5 #ft at pitch=0
             self.array = self.array + (scaling * pitch.array) + offset
+
+
+class AltitudeRadioOffsetRemoved(DerivedParameterNode):
+    '''
+    Remove the offset form Altitude Radio parameters so that it averages 0ft on
+    the ground.
+    '''
+    def derive(self, alt_rad=P('Altitude Radio')):
+        adjust = np_ma_masked_zeros_like(alt_rad.array)
+
+        '''
+        The line below retains the existing alt_rad mask, so the slices are all valid data below 20ft.
+        a=np.ma.array(data=[1,2,3,4,5,6,7,8],mask=[0,1,1,0,0,0,0,0])
+        np.ma.clump_unmasked(np.ma.masked_greater(a, 5))
+        [slice(0, 1, None), slice(3, 5, None)]
+        '''
+        high_slices = np.ma.clump_unmasked(alt_rad.array)
+        for high_slice in high_slices:
+            low_slices = np.ma.clump_unmasked(np.ma.masked_greater(alt_rad.array[high_slice], 20.0))
+            for low_slice in low_slices:
+                adjustment = np.ma.median(alt_rad.array[high_slice][low_slice])
+                slice_len = low_slice.stop - low_slice.start
+                if 0.0 < adjustment < ALTITUDE_RADIO_OFFSET_LIMIT \
+                   and slice_len > 10:
+                    # Correct for this amount.
+                    adjust.data[high_slice][low_slice] = adjustment
+                else:
+                    # No adjustment will be applied.
+                    adjust.data[high_slice][low_slice] = 0.0
+                # In either case, this is what we are going to use.
+                adjust.mask[high_slice][low_slice] = False
+            adjust[high_slice] = repair_mask(adjust[high_slice],
+                                             repair_duration=None, 
+                                             extrapolate=True,
+                                             raise_entirely_masked=False)
+            
+        ##adjust_array = repair_mask(adjust, 
+                                   ##repair_duration=None, 
+                                   ##extrapolate=True,
+                                   ##raise_entirely_masked=False)
+        self.array = alt_rad.array - adjust
             
 
 class AltitudeSTDSmoothed(DerivedParameterNode):
@@ -1005,7 +1047,7 @@ class AltitudeSTDSmoothed(DerivedParameterNode):
             # Here two sources are sampled alternately, so this form of
             # weighting merges the two to create a smoothed average.
             self.array = moving_average(alt.array, window=3,
-                                        weightings=[0.25,0.5,0.25], pad=True)
+                                        weightings=[0.25,0.5,0.25])
 
         elif frame_name.startswith('747-200-') or \
              frame_name in ['A300-203-B4']:
@@ -5286,6 +5328,8 @@ class ThrustAsymmetry(DerivedParameterNode):
     used to provide a similar single asymmetry value.
     '''
 
+    align_frequency = 1 # Forced alignment to allow fixed window period.
+    align_offset = 0
     units = ut.PERCENT
 
     @classmethod
@@ -5300,7 +5344,7 @@ class ThrustAsymmetry(DerivedParameterNode):
             diff = (epr_max.array - epr_min.array) * 100
         else:
             diff = (n1_max.array - n1_min.array)
-        window = 5 * self.frequency # 5 second window
+        window = 5 # 5 second window
         self.array = moving_average(diff, window=window)
 
 
@@ -7555,17 +7599,32 @@ class AirspeedRelative(DerivedParameterNode):
     def can_operate(cls, available):
 
         return any_of((
+            'Airspeed Minus V2',
             'Airspeed Minus Vapp',
             'Airspeed Minus Vref',
         ), available)
 
     def derive(self,
+               takeoff=P('Airspeed Minus V2'),
                vapp=P('Airspeed Minus Vapp'),
                vref=P('Airspeed Minus Vref')):
 
-        parameter = vapp or vref
-        self.array = parameter.array
-
+        approach = vapp or vref
+        app_array = approach.array
+        if takeoff:
+            toff_array = takeoff.array
+            # We know the two areas of interest cannot overlap so we just add
+            # the values, inverting the mask to provide a 0=ignore, 1=use_this
+            # multiplier.
+            speeds = toff_array.data*~toff_array.mask + app_array.data*~app_array.mask
+            # And build this back into an array, masked only where both were
+            # masked.
+            combined = np.ma.array(data=speeds, 
+                                   mask = np.logical_and(toff_array.mask, app_array.mask))
+            self.array = combined
+        else:
+            self.array = app_array
+            
 
 class AirspeedRelativeFor3Sec(DerivedParameterNode):
     '''
@@ -7582,16 +7641,31 @@ class AirspeedRelativeFor3Sec(DerivedParameterNode):
     def can_operate(cls, available):
 
         return any_of((
+            'Airspeed Minus V2 For 3 Sec',
             'Airspeed Minus Vapp For 3 Sec',
             'Airspeed Minus Vref For 3 Sec',
         ), available)
 
     def derive(self,
+               takeoff=P('Airspeed Minus V2 For 3 Sec'),
                vapp=P('Airspeed Minus Vapp For 3 Sec'),
                vref=P('Airspeed Minus Vref For 3 Sec')):
 
-        parameter = vapp or vref
-        self.array = parameter.array
+        approach = vapp or vref
+        app_array = approach.array
+        if takeoff:
+            toff_array = takeoff.array
+            # We know the two areas of interest cannot overlap so we just add
+            # the values, inverting the mask to provide a 0=ignore, 1=use_this
+            # multiplier.
+            speeds = toff_array.data*~toff_array.mask + app_array.data*~app_array.mask
+            # And build this back into an array, masked only where both were
+            # masked.
+            combined = np.ma.array(data=speeds, 
+                                   mask = np.logical_and(toff_array.mask, app_array.mask))
+            self.array = combined
+        else:
+            self.array = app_array
 
 
 ##############################################################################

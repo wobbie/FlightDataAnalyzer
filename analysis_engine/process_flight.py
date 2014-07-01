@@ -18,6 +18,7 @@ from analysis_engine.node import (ApproachNode, Attribute,
                                   derived_param_from_hdf,
                                   DerivedParameterNode,
                                   FlightAttributeNode,
+                                  FlightPhaseNode,
                                   KeyPointValueNode,
                                   KeyTimeInstanceNode,
                                   NodeManager, P, Section, SectionNode)
@@ -59,6 +60,28 @@ def _timestamp(start_datetime, item_list):
     for item in item_list:
         item.datetime = start_datetime + timedelta(seconds=float(item.index))
     return item_list
+
+
+def get_node_type(node):
+    '''
+    Return node type string, for logging
+    '''
+    node_class = node.__class__
+    if issubclass(node_class, DerivedParameterNode):
+        node_type = 'parameter'
+    elif issubclass(node_class, KeyPointValueNode):
+        node_type = 'KPV'
+    elif issubclass(node_class, KeyTimeInstanceNode):
+        node_type = 'KTI'
+    elif issubclass(node_class, FlightPhaseNode):
+        node_type = 'phase'
+    elif issubclass(node_class, FlightAttributeNode):
+        node_type = 'attribute'
+    elif issubclass(node_class, ApproachNode):
+        node_type = 'approach'
+    else:
+        node_type = node_class.__name__
+    return node_type
 
 
 def derive_parameters(hdf, node_mgr, process_order):
@@ -132,7 +155,7 @@ def derive_parameters(hdf, node_mgr, process_order):
         node._p = params
         node._h = hdf
         node._n = node_mgr
-        logger.info("Processing parameter %s", param_name)
+        logger.info("Processing %s `%s`", get_node_type(node), param_name)
         # Derive the resulting value
 
         result = node.get_derived(deps)
@@ -288,7 +311,7 @@ def parse_analyser_profiles(analyser_profiles):
 
 
 def process_flight(hdf_path, tail_number, aircraft_info={},
-                   start_datetime=datetime.now(), achieved_flight_record={},
+                   start_datetime=None, achieved_flight_record={},
                    requested=[], required=[], include_flight_attributes=True,
                    additional_modules=[]):
     '''
@@ -462,6 +485,9 @@ def process_flight(hdf_path, tail_number, aircraft_info={},
     ],
 
     '''
+    if start_datetime is None:
+        import pytz
+        start_datetime = datetime.utcnow().replace(tzinfo=pytz.utc)
     logger.info("Processing: %s", hdf_path)
 
     if aircraft_info:
@@ -676,7 +702,9 @@ def main():
             hdf.delete_params(hdf.derived_keys())
     res = process_flight(
         hdf_copy, args.tail_number, aircraft_info=aircraft_info,
-        requested=args.requested, required=args.required)
+        requested=args.requested, required=args.required,
+        additional_modules=['flightdataprofiles.fcp.kpvs']
+    )
     logger.info("Derived parameters stored in hdf: %s", hdf_copy)
     # Write CSV file
     if not args.disable_csv:

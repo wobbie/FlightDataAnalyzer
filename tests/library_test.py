@@ -3528,38 +3528,35 @@ class TestMostPointsCost(unittest.TestCase):
 
 class TestMovingAverage(unittest.TestCase):
     def test_basic_average(self):
-        res = moving_average(np.ma.array([1,2,3,3,3,2,1]), window=2)
+        res = moving_average(np.ma.array([1,2,3,3,3,2,1]), window=3)
         # note mask at the start
-        self.assertEqual(list(res), [np.ma.masked, 1.5,  2.5,  3. ,  3. ,  2.5,  1.5])
+        ma_test.assert_masked_array_approx_equal(res, np.ma.array(data=[4/3.0, 2.0, 8/3.0, 3.0, 8/3.0, 2.0, 4/3.0],
+                                                                  mask=[0,0,0,0,0,0,0]))
         # 7 went in, 7 come out
         self.assertEqual(len(res), 7)
 
-        # mask evenly at start and end
-        res = moving_average(np.ma.arange(20), window=5)
-        self.assertEqual(len(res), 20)
-        self.assertEqual(list(res[:2]), [np.ma.masked, np.ma.masked])
-        self.assertEqual(list(res[-2:]), [np.ma.masked, np.ma.masked])
-
     def test_custom_weightings(self):
-        res = moving_average(np.ma.arange(10), window=4, weightings=[0.25]*4)
-        self.assertEqual(list(res), [np.ma.masked, np.ma.masked,
-                                     1.5,  2.5,  3.5,  4.5,  5.5,  6.5, 7.5,
-                                     np.ma.masked])
+        res = moving_average(np.ma.arange(10), window=5, weightings=[0.2]*5)
+        expected = np.ma.array(data=[0.6, 1.2, 2, 3, 4, 5, 6, 7.0, 7.8, 8.4],
+                               mask=[  0,   0, 0, 0, 0, 0, 0,   0,   0,   0])
+        ma_test.assert_masked_array_approx_equal(res, expected)
 
     def test_masked_edges(self):
-        #Q: Should we shift at the front only or evenly at front and end of array?
-
-        array = np.ma.array([1,2,3,4,5,5,5,5,5,5,5,5,5,5,5], mask=
-                            [0,0,0,0,0,0,0,0,0,1,1,1,1,0,1])
-        res = moving_average(array, window=10, pad=True)
+        array = np.ma.array(data=[1,2,3,4,5,5,5,5,5,5,5,5,4,5,5], 
+                            mask=[0,0,0,0,0,0,0,0,0,1,1,1,0,0,1])
+        res = moving_average(array, window=5)
         self.assertEqual(len(res), 15)
-        self.assertEqual(list(res.data[:5]), [0]*5)
-        self.assertEqual(list(res.data[-5:]), [0]*5)
-        # test masked edges
-        self.assertEqual(list(res.mask[:5]), [True]*5) # first 5 are masked (upper boundary of window/2)
-        self.assertEqual(list(res.mask[-5:]), [True]*5) # last 5 are masked (lower boundary of window/2 + one masked value)
+        expected = np.ma.array(data=[1.6, 2.2, 3,3.8,4.4,4.8, 5, 4.8,4.6,4.4, 4.2, 4.2, 4.4, 4.6, 1], 
+                               mask=[  0,   0, 0,  0,  0,  0, 0,   0,  0,  1,   1,   1,   0,   0, 1])
+        ma_test.assert_masked_array_approx_equal(res, expected)
 
-
+    def test_short_data(self):
+        array = np.ma.array([1.0, 2, 3, 4])
+        res = moving_average(array)
+        expected = np.ma.array([6, 7, 8, 9])/3.0
+        ma_test.assert_masked_array_approx_equal(res, expected)
+        
+        
 class TestNearestNeighbourMaskRepair(unittest.TestCase):
     def test_nn_mask_repair(self):
         array = np.ma.arange(30)

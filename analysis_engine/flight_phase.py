@@ -1183,8 +1183,7 @@ class RejectedTakeoff(FlightPhaseNode):
     
     def derive(self, accel_lon=P('Acceleration Longitudinal Offset Removed'),
                groundeds=S('Grounded')):
-        accel_lon_masked = moving_average(accel_lon.array, copy=True)
-        accel_lon_masked.mask = accel_lon.array.mask
+        accel_lon_masked = moving_average(accel_lon.array)
         accel_lon_masked.mask |= \
             accel_lon_masked <= TAKEOFF_ACCELERATION_THRESHOLD
 
