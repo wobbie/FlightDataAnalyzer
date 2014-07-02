@@ -7213,7 +7213,7 @@ class FlapManoeuvreSpeed(DerivedParameterNode):
             return False
 
         core = all_of((
-            'Airspeed', 'Altitude STD Smoothed', 'Descent To Flare',
+            'Airspeed', 'Altitude STD Smoothed',
             'Gross Weight Smoothed', 'Model', 'Series', 'Family',
             'Engine Type', 'Engine Series',
         ), available)
