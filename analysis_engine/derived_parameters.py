@@ -98,6 +98,7 @@ from settings import (AIRSPEED_THRESHOLD,
                       HYSTERESIS_FPIAS,
                       HYSTERESIS_FPROC,
                       GRAVITY_IMPERIAL,
+                      GRAVITY_METRIC,
                       KTS_TO_FPS,
                       KTS_TO_MPS,
                       LANDING_THRESHOLD_HEIGHT,
@@ -7669,3 +7670,39 @@ class AirspeedRelativeFor3Sec(DerivedParameterNode):
 
 
 ##############################################################################
+
+########################################
+# Aircraft Energy
+
+class KineticEnergy(DerivedParameterNode):
+    '''Caclculate the kinetic energy of Aircraft in MegaJoule'''
+
+    units = ut.MJ
+
+    def derive(self,airspeed=P('Airspeed True'),
+               mass=P('Gross Weight Smoothed')):
+        v = airspeed.array * 0.5144 # v in m/s
+        # m is in kg
+        self.array = (0.5 * mass.array * v ** 2 * 10 **-6) # converted to MJoule
+
+
+class PotentialEnergy(DerivedParameterNode):
+    '''Potential energy of Aircraft'''
+
+    align_frequency = 1
+    units = ut.MJ
+
+    def derive(self, altitude_aal=P('Altitude AAL'),
+               gross_weight_smoothed=P('Gross Weight Smoothed')):
+        altitude = altitude_aal.array * ut.CONVERSION_MULTIPLIERS[ut.FT][ut.METER]
+        self.array = gross_weight_smoothed.array * GRAVITY_METRIC * altitude / 10 ** 6
+
+
+class AircraftEnergy(DerivedParameterNode):
+    '''Total energy of Aircraft'''
+
+    units = ut.MJ
+
+    def derive(self, potential_energy=P('Potential Energy'),
+               kinetic_energy=P('Kinetic Energy')):
+        self.array = potential_energy.array + kinetic_energy.array

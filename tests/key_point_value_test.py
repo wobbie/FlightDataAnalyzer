@@ -49,6 +49,7 @@ from analysis_engine.key_point_values import (
     AccelerationNormalWithFlapDownWhileAirborneMin,
     AccelerationNormalWithFlapUpWhileAirborneMax,
     AccelerationNormalWithFlapUpWhileAirborneMin,
+    AircraftEnergyWhenDescending,
     Airspeed10000To5000FtMax,
     Airspeed10000To8000FtMax,
     Airspeed1000To500FtMax,
@@ -329,6 +330,7 @@ from analysis_engine.key_point_values import (
     ILSLocalizerDeviation500To200FtMax,
     ILSLocalizerDeviationAtTouchdown,
     IsolationValveOpenAtLiftoff,
+    KineticEnergyAtRunwayTurnoff,
     LandingConfigurationGearWarningDuration,
     LandingConfigurationSpeedbrakeCautionDuration,
     LastFlapChangeToTakeoffRollEndDuration,
@@ -10865,3 +10867,48 @@ class TestMachMinusMMOMax(unittest.TestCase, NodeTest):
         self.assertEqual(node, KPV(name=name, items=[
             KeyPointValue(index=10, value=0.019991386482538398, name=name),
         ]))
+
+
+########################################
+# Aircraft Energy
+
+
+class TestKineticEnergyAtRunwayTurnoff(unittest.TestCase):
+    def test_derive(self):
+        
+        turn_off = KTI('Landing Turn Off Runway',
+                    items=[KeyTimeInstance(10, 'Landing Turn Off Runway')])
+        
+        array = np.ma.array([0, 10, 20, 30, 40, 40, 40, 40, 30, 20, 10, 0])
+        kinetic_energy = P('Kinetic Energy', array=array )
+        
+        ke = KineticEnergyAtRunwayTurnoff()
+        ke.derive(turn_off, kinetic_energy)
+        
+        self.assertEqual( ke[0].value, 10 )
+        
+
+class TestAircraftEnergyWhenDescending(unittest.TestCase):
+    def test_derive(self):
+        aircraft_energy_array = np.ma.arange(20000, 1000, -100)
+        aircraft_energy = P('Aircraft Energy',
+                            array=aircraft_energy_array)
+        
+        descending = KTI('Altitude When Descending',
+                         items =[KeyTimeInstance(100, '10000 Ft Descending'),
+                                 KeyTimeInstance(150.5, '5000 Ft Descending')])
+        
+        aewd = AircraftEnergyWhenDescending()
+        aewd.derive(aircraft_energy, descending)
+        
+        self.assertEqual(aewd[0].value, 10000)
+        
+        # value_at_index = takes the linear interpolation value at the given index
+        # value_at_index is used in the derive method
+        # Altitude at index 150 = 5000
+        # Altitude at index 151 = 4900
+        # Altitude at index 150.5 = 4950 (interpolated)
+        self.assertEqual(aewd[1].value, 4950)
+        
+        self.assertEqual(aewd[0].name, 'Aircraft Energy at 10000 Ft Descending')
+        self.assertEqual(aewd[1].name, 'Aircraft Energy at 5000 Ft Descending')

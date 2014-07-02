@@ -11811,3 +11811,36 @@ class MachMinusMMOMax(KeyPointValueNode):
             airborne,
             max_value,
         )
+
+
+########################################
+# Aircraft Energy
+
+
+class KineticEnergyAtRunwayTurnoff(KeyPointValueNode):
+    '''KPV at Runway Turnoff'''
+
+    units = ut.MJ
+
+    def derive(self, turn_off=KTI('Landing Turn Off Runway'),
+               kinetic_energy=P('Kinetic Energy')):
+
+        self.create_kpvs_at_ktis(kinetic_energy.array, turn_off)
+
+
+class AircraftEnergyWhenDescending(KeyPointValueNode):
+    '''Aircraft Energy when Descending'''
+
+    from analysis_engine.key_time_instances import AltitudeWhenDescending
+
+    NAME_FORMAT = 'Aircraft Energy at %(height)s'
+    NAME_VALUES = {'height': AltitudeWhenDescending.names()}
+
+    units = ut.MJ
+
+    def derive(self, aircraft_energy=P('Aircraft Energy'), 
+               altitude_when_descending=KTI('Altitude When Descending')):
+
+        for altitude in altitude_when_descending:
+            value = value_at_index(aircraft_energy.array, altitude.index)
+            self.create_kpv(altitude.index, value, height=altitude.name)
