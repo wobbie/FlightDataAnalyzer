@@ -1622,8 +1622,8 @@ class PilotFlying(MultistateDerivedParameterNode):
             window = 61 * self.hz  # Use 61 seconds for 30 seconds either side.
             if not window%2:
                 window+=1
-            angle_capt = moving_average(stick_capt.array, window)
-            angle_fo = moving_average(stick_fo.array, window)
+            angle_capt = moving_average(np.ma.abs(stick_capt.array), window)
+            angle_fo = moving_average(np.ma.abs(stick_fo.array), window)
             # Repair the array as the moving average is padded with masked
             # zeros
             angle_capt = repair_mask(angle_capt, repair_duration=31,
