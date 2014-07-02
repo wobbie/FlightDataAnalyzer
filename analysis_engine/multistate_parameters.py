@@ -1316,9 +1316,8 @@ class GearDownSelected(MultistateDerivedParameterNode):
                gear_down=M('Gear Down'),
                gear_warn=M('Gear (*) Red Warning')):
 
-        self.array = np.ma.zeros(gear_down.array.size, dtype=np.short)
+        self.array = np.zeros_like(gear_down.array, dtype=np.short)
         self.array[gear_down.array == 'Down'] = 'Down'
-        self.array.mask = gear_down.array.mask
         if gear_warn:
             # We use up to 10s of `Gear (*) Red Warning` == 'Warning'
             # preceeding the actual gear position change state to define the
