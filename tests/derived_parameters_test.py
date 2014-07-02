@@ -6784,6 +6784,11 @@ class TestAirspeedRelative(unittest.TestCase, NodeTest):
                                mask=[True]*5+[False]*10+[True]*65+[False]*10+[True]*10)
         ma_test.assert_masked_array_equal(node.array, expected)
 
+    def test_derive_v2(self):
+        node = self.node_class()
+        node.derive(self.v2, None, None)
+        ma_test.assert_masked_array_equal(node.array, self.v2.array)
+
 
 class TestAirspeedRelativeFor3Sec(unittest.TestCase, NodeTest):
 
@@ -6823,6 +6828,11 @@ class TestAirspeedRelativeFor3Sec(unittest.TestCase, NodeTest):
         expected = np.ma.array(data=range(20,70)+range(80,130),
                                mask=[True]*5+[False]*10+[True]*65+[False]*10+[True]*10)
         ma_test.assert_masked_array_equal(node.array, expected)
+
+    def test_derive_v2(self):
+        node = self.node_class()
+        node.derive(self.v2, None, None)
+        ma_test.assert_masked_array_equal(node.array, self.v2.array)
 
 
 ##############################################################################

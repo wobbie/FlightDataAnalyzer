@@ -7611,7 +7611,12 @@ class AirspeedRelative(DerivedParameterNode):
                vref=P('Airspeed Minus Vref')):
 
         approach = vapp or vref
-        app_array = approach.array
+
+        if approach:
+            app_array = approach.array
+        else:
+            app_array = np_ma_masked_zeros_like(takeoff.array)
+
         if takeoff:
             toff_array = takeoff.array
             # We know the two areas of interest cannot overlap so we just add
@@ -7653,7 +7658,12 @@ class AirspeedRelativeFor3Sec(DerivedParameterNode):
                vref=P('Airspeed Minus Vref For 3 Sec')):
 
         approach = vapp or vref
-        app_array = approach.array
+
+        if approach:
+            app_array = approach.array
+        else:
+            app_array = np_ma_masked_zeros_like(takeoff.array)
+
         if takeoff:
             toff_array = takeoff.array
             # We know the two areas of interest cannot overlap so we just add
