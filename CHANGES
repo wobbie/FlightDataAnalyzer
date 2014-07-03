@@ -9,6 +9,57 @@ You can view the differences in tagged versions as follows:
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
 
+V0.13.1
+-------
+
+Flight Data Converter has been made timezone aware
+
+ - Imprevements
+   - Touchdown:
+      - better handling when no clear normal acceleration in period tested
+      - removed bias towards Gear On Ground
+   - Taxiing: now takes into account rejected takeoffs
+   - Libary slices: improved handling of floating point start and stops
+   - Speedbrake Selected: Globals can process with eiter speedbrake or handle
+   - ILS Localizer/Glideslope: added extra sources
+   - V2 related nodes: Better handling of different frequencies encountered
+   - Takeoff acceleration threshold increased to 0.15g to avoid enthusiastic 
+       taxiing being identified as a takeoff start.
+   - Moving Average function reworked to operate better with masked data.
+   - Airspeed relative now includes V2 comparison during takeoff phase.
+   - Flap Manoeuvre Speed: now includes values for Climb
+   - Gear Down Selected: retain gear down mask
+ - Derived Parameters Added;
+   - Brake Temperature Min/Max/Avg.
+   - Speedbrake Deployed (Multistate).
+   - Gear Up (Multistate).
+   - Gear In Transition (Multistate).
+   - Altitude Radio Offset Removed.
+   - Kinetic Energy
+   - Potential Energy
+   - Aircraft Energy
+ - KPVs Added
+   - Throttle Lever at Liftoff
+   - Brake Temp During Taxi In Max
+   - Brake Temp After Touchdown Delta
+   - V2 At Liftoff
+   - V2 Lookup At Liftoff
+   - Airspeed Selected At Liftoff
+   - Airspeed Selected FMC Minus Flap Manoeuvre Speed 1000 to 5000 Ft Min
+   - Kinetic Energy At Runway Turnoff
+   - Aircraft Energy When Descending
+ - Phases Added:
+   - Takeoff Roll Or Rejected Takeoff
+ - Fixes:
+   - Parameter renames:
+     - Airspeed Selected (MCP)
+     - AP VNAV
+     - Thrust Mode Selected
+ - Derived Parameters Removed;
+   - V2
+   - V2 Lookup
+
+
 V0.12.4
 -------
 
