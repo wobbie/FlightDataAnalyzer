@@ -2473,6 +2473,47 @@ class AirspeedMinusFlapManoeuvreSpeedWithFlapDuringDescentMin(KeyPointValueNode,
             self.create_kpv(index, value, flap=detent)
 
 
+class AirspeedMinusFlapManoeuvreSpeedFor3SecWithFlapDuringDescentMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
+    '''
+    Airspeed relative to the flap manoeuvre speed for 3 seconds during the 
+    descent phase for each flap setting.
+
+    Based on Flap Lever for safety based investigations which primarily
+    depend upon the pilot actions, rather than maintenance investigations
+    which depend upon the actual flap surface position. Uses Flap Lever if
+    available otherwise falls back to Flap Lever (Synthetic) which is
+    established from other sources.
+    '''
+
+    NAME_FORMAT = 'Airspeed Minus Flap Manoeuvre Speed For 3 Sec With Flap %(flap)s During Descent Min'
+    NAME_VALUES = NAME_VALUES_LEVER
+    units = ut.KT
+
+    @classmethod
+    def can_operate(cls, available):
+
+        core = all_of((
+            'Airspeed Minus Flap Manoeuvre Speed For 3 Sec',
+            'Descent To Flare',
+        ), available)
+        flap = any_of((
+            'Flap Lever',
+            'Flap Lever (Synthetic)',
+        ), available)
+        return core and flap
+
+    def derive(self,
+               flap_lever=M('Flap Lever'),
+               flap_synth=M('Flap Lever (Synthetic)'),
+               airspeed=P('Airspeed Minus Flap Manoeuvre Speed For 3 Sec'),
+               scope=S('Descent To Flare')):
+
+        flap = flap_lever or flap_synth
+        data = self.flap_or_conf_max_or_min(flap, airspeed, min_value, scope)
+        for index, value, detent in data:
+            self.create_kpv(index, value, flap=detent)
+
+
 class AirspeedAtFirstFlapExtensionWhileAirborne(KeyPointValueNode):
     '''
     Airspeed measured at the point of Flap Extension while airborne.
