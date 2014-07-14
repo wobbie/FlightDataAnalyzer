@@ -2024,9 +2024,7 @@ class TestSpeedbrakeDeployed(unittest.TestCase):
         operational_combinations = node.get_operational_combinations()
         self.assertTrue(('Spoiler (L) Deployed', 'Spoiler (R) Deployed') in operational_combinations)
         self.assertTrue(('Spoiler (L) Outboard Deployed',
-                          'Spoiler (R) Outboard Deployed',
-                          'Spoiler (L) Inboard Deployed',
-                          'Spoiler (R) Inboard Deployed') in operational_combinations)
+                          'Spoiler (R) Outboard Deployed') in operational_combinations)
 
     def setUp(self):
         deployed_l_array = [ 0,  0,  0,  0,  0,  1,  1,  0,  0,  0]
@@ -2042,8 +2040,6 @@ class TestSpeedbrakeDeployed(unittest.TestCase):
         node.derive(self.deployed_l,
                     self.deployed_r,
                     None,
-                    None,
-                    None,
                     None,)
         np.testing.assert_equal(node.array.data, result)
 
@@ -2057,8 +2053,6 @@ class TestSpeedbrakeDeployed(unittest.TestCase):
         node = self.node_class()
         node.derive(self.deployed_l,
                     self.deployed_r,
-                    None,
-                    None,
                     None,
                     None,)
         np.testing.assert_equal(node.array.data, result_array)

@@ -1861,21 +1861,16 @@ class SpeedbrakeDeployed(MultistateDerivedParameterNode):
     def can_operate(cls, available):
         simple = ('Spoiler (L) Deployed', 'Spoiler (R) Deployed')
         in_out = ('Spoiler (L) Outboard Deployed',
-                  'Spoiler (R) Outboard Deployed',
-                  'Spoiler (L) Inboard Deployed',
-                  'Spoiler (R) Inboard Deployed')
+                  'Spoiler (R) Outboard Deployed')
         return all_of(simple, available)\
                or all_of(in_out, available)
 
     def derive(self, deployed_l=M('Spoiler (L) Deployed'),
                deployed_r=M('Spoiler (R) Deployed'),
                deployed_l_out=M('Spoiler (L) Outboard Deployed'),
-               deployed_r_out=M('Spoiler (R) Outboard Deployed'),
-               deployed_l_in=M('Spoiler (L) Inboard Deployed'),
-               deployed_r_in=M('Spoiler (R) Inboard Deployed')):
+               deployed_r_out=M('Spoiler (R) Outboard Deployed')):
 
-        deployed_params = (deployed_l, deployed_r, deployed_l_out,
-                           deployed_r_out, deployed_l_in, deployed_r_in)
+        deployed_params = (deployed_l, deployed_r, deployed_l_out, deployed_r_out)
         deployed_stack = vstack_params_where_state(*[(d, 'Deployed') for d in deployed_params])
 
         array = np_ma_zeros_like(deployed_stack[0], dtype=np.short)
