@@ -280,6 +280,24 @@ class AccelerationLateralDuringLandingMax(KeyPointValueNode):
         )
 
 
+class AccelerationLateralWhileAirborneMax(KeyPointValueNode):
+    '''
+    
+    '''
+
+    units = ut.G
+
+    def derive(self,
+               acc_lat=P('Acceleration Lateral Offset Removed'),
+               Airborne=S('Airborne')):
+
+        self.create_kpv_from_slices(
+            acc_lat.array,
+            Airborne,
+            max_abs_value,
+        )
+
+
 class AccelerationLateralWhileTaxiingStraightMax(KeyPointValueNode):
     '''
     Lateral acceleration while not turning is rarely an issue, so we compute
