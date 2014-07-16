@@ -5779,7 +5779,7 @@ class Speedbrake(DerivedParameterNode):
                 'Spoiler (1)' in available and
                 'Spoiler (14)' in available
             ) or
-            family_name in ['G-V', 'Learjet', 'A300', 'Phenom 300'] and all_of((
+            family_name in ['G-V', 'Learjet', 'A300', 'Phenom 300', 'CL-600'] and all_of((
                 'Spoiler (L)',
                 'Spoiler (R)'),
                 available
@@ -5848,6 +5848,9 @@ class Speedbrake(DerivedParameterNode):
             self.merge_spoiler(spoiler_1, spoiler_14)
 
         elif family_name in ['G-V', 'Learjet', 'A300', 'Phenom 300']:
+            self.merge_spoiler(spoiler_L, spoiler_R)
+
+        elif family_name == 'CL-600' and (spoiler_L or spoiler_R):
             self.merge_spoiler(spoiler_L, spoiler_R)
 
         elif family_name in ['CRJ 900', 'CL-600', 'G-IV']:

@@ -1908,7 +1908,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
             return 'Speedbrake Handle' in x and 'Spoiler Ground Armed' in x
         elif family and family.value == 'Global':
             return any_of(('Speedbrake', 'Speedbrake Handle'), available)
-        elif family and family.value in ('CRJ 100/200', 'ERJ-135/145', 'B777'):
+        elif family and family.value in ('CRJ 100/200', 'B777'):
             return 'Speedbrake Handle' in x
         elif family and family.value in ('A319', 'A320', 'A321'):
             return 'Speedbrake' in x and 'Speedbrake Armed' in x
