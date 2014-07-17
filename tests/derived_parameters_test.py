@@ -53,6 +53,7 @@ from analysis_engine.derived_parameters import (
     AccelerationAcrossTrack,
     Aileron,
     AimingPointRange,
+    AircraftEnergy,
     AirspeedForFlightPhases,
     AirspeedSelected,
     AirspeedTrue,
@@ -138,6 +139,7 @@ from analysis_engine.derived_parameters import (
     #ILSGlideslope,
     #ILSLocalizer,
     #ILSLocalizerRange,
+    KineticEnergy,
     LatitudePrepared,
     LatitudeSmoothed,
     LongitudePrepared,
@@ -146,6 +148,7 @@ from analysis_engine.derived_parameters import (
     MagneticVariation,
     MagneticVariationFromRunway,
     Pitch,
+    PotentialEnergy,
     RollRate,
     RudderPedal,
     SidestickAngleCapt,
@@ -6216,7 +6219,7 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
 
         node = self.node_class()
         node.derive(self.airspeed, self.flap_lever, None, self.weight,
-                    None, None, self.altitude, self.descents, *attributes)
+                    None, None, self.altitude, *attributes)
 
         attributes = [a.value for a in attributes]
         at0.get_vspeed_map.assert_called_once_with(*attributes)
@@ -6225,7 +6228,7 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
             (201, 181, 0, 161, 161, 176, 166, 156, 147, 146),
             (10, 10, 10, 10, 5, 5, 10, 10, 10, 10)
         )
-        for s in slice(0, 10), slice(20, 30), slice(42, 47), slice(87, 90):
+        for s in slice(0, 10), slice(20, 30):
             expected[s] = np.ma.masked
         ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
 
@@ -6248,7 +6251,7 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
 
         node = self.node_class()
         node.derive(self.airspeed, self.flap_lever, None, self.weight,
-                    None, None, self.altitude, self.descents, *attributes)
+                    None, None, self.altitude, *attributes)
 
         attributes = [a.value for a in attributes]
         at0.get_vspeed_map.assert_called_once_with(*attributes)
@@ -6257,7 +6260,7 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
             (210, 190, 0, 170, 160, 170, 160, 150, 147, 146),
             (10, 10, 10, 10, 5, 5, 10, 10, 10, 10)
         )
-        for s in slice(0, 10), slice(20, 30), slice(42, 47), slice(87, 90):
+        for s in slice(0, 10), slice(20, 30):
             expected[s] = np.ma.masked
         ma_test.assert_masked_array_almost_equal(node.array, expected, decimal=0)
 
@@ -6292,14 +6295,13 @@ class TestFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
 
         node = self.node_class()
         node.derive(self.airspeed, self.flap_lever, None, self.weight,
-                    self.vref_25, self.vref_30, self.altitude, self.descents,
-                    *attributes)
+                    self.vref_25, self.vref_30, self.altitude, *attributes)
 
         attributes = [a.value for a in attributes]
         at0.get_vspeed_map.assert_called_once_with(*attributes)
         at1.get_fms_map.assert_called_once_with(*attributes[:3])
         expected = np.ma.repeat((230, 210, 190, 170, 170, 155, 150), 10)
-        for s in slice(0, 10), slice(32, 37), slice(67, 70):
+        for s in (slice(0, 10),):
             expected[s] = np.ma.masked
         ma_test.assert_masked_array_equal(node.array, expected)
 
@@ -6782,6 +6784,11 @@ class TestAirspeedRelative(unittest.TestCase, NodeTest):
                                mask=[True]*5+[False]*10+[True]*65+[False]*10+[True]*10)
         ma_test.assert_masked_array_equal(node.array, expected)
 
+    def test_derive_v2(self):
+        node = self.node_class()
+        node.derive(self.v2, None, None)
+        ma_test.assert_masked_array_equal(node.array, self.v2.array)
+
 
 class TestAirspeedRelativeFor3Sec(unittest.TestCase, NodeTest):
 
@@ -6822,8 +6829,120 @@ class TestAirspeedRelativeFor3Sec(unittest.TestCase, NodeTest):
                                mask=[True]*5+[False]*10+[True]*65+[False]*10+[True]*10)
         ma_test.assert_masked_array_equal(node.array, expected)
 
+    def test_derive_v2(self):
+        node = self.node_class()
+        node.derive(self.v2, None, None)
+        ma_test.assert_masked_array_equal(node.array, self.v2.array)
+
 
 ##############################################################################
+
+########################################
+# Aircraft Energy
+
+
+class TestKineticEnergy(unittest.TestCase):
+    def test_derive(self):
+
+        airspeed_array = np.ma.concatenate(([0]*20,
+                                            np.ma.arange(20,170,1.25),
+                                            [170]*1000,
+                                            np.arange(170,20,-0.25),
+                                            [0]*260))
+        airspeed = P(name='Airspeed True', array=airspeed_array, frequency=1, 
+                       offset=0)
+
+        mass_array=np.ma.arange(23000,21000,-1)
+        mass = P(name='Gross Weight Smoothed', array=mass_array, frequency=1, 
+                offset=0)
+
+        ke = KineticEnergy()
+        ke.derive(airspeed,mass)
+
+        # take element 100, 120 knots, 
+        # velocity = airspeed in m/s
+        # velocity = 120 * 0.5144
+        # airspeed at element 100 = 120
+        # mass at element 100 = 22900
+        # result = 0.5 * 22900 * velocity **2
+        # result / 10 ** 6
+
+        # the effective value is rounded to 4 places after the comma
+        # therefore we get
+        # Exception: AssertionError: 43.628461516799995 != 43.6284 within 4 places
+        # self.assertAlmostEqual(ke.array[100], 43.6284, places=4)
+
+        self.assertAlmostEqual(ke.array[100],43.6285, places=4)
+
+    def test_can_operate(self):    
+        result = KineticEnergy.can_operate(['Airspeed True','Gross Weight Smoothed'])
+        self.assertTrue(result)   # positive test 
+        result = KineticEnergy.can_operate(['Airspeed True',''])
+        self.assertFalse(result)  # partial 1 test 
+        result = KineticEnergy.can_operate(['Gross Weight Smoothed',])
+        self.assertFalse(result)  # missing other test 
+
+
+class TestPotentialEnergy(unittest.TestCase):
+    def test_derive(self):
+        gross_weight_smoothed_array = np.ma.arange(23000, 21000, -1)
+        gross_weight_smoothed = P(name='Gross Weight Smoothed', array=gross_weight_smoothed_array)
+
+        altitude_aal_array = np.ma.concatenate(([0]*50,
+                                                np.ma.arange(0,10000,100),
+                                                [10000]*1700,
+                                                np.ma.arange(10000,0,-100),
+                                                [0]*50))
+        altitude_aal = param = P(name='Altitude AAL', array=altitude_aal_array)
+
+        self.assertEqual(len(gross_weight_smoothed_array), len(altitude_aal_array))
+
+        pe = PotentialEnergy()
+        pe.derive(gross_weight_smoothed, altitude_aal)
+
+        # gross_weight_smoothed[1000] = 22000
+        # altitude_aal[1000] = 10000
+        # converstion FT / METER = 0.3048
+        # gravity meter = 9.81
+        # potential energy[1000] = 657.81936
+
+        self.assertAlmostEqual(pe.array[1000],657.81936, places=5)
+
+    def test_can_operate(self):    
+        result = PotentialEnergy.can_operate(['Altitude AAL','Gross Weight Smoothed'])
+        self.assertTrue(result)   # positive test
+
+
+class TestAircraftEnergy(unittest.TestCase):
+    def test_derive(self):
+
+        kinetic_energy_array = np.ma.concatenate(( [0]*90, 
+                                                  np.ma.arange( 0, 1000, 100),
+                                                  [1000]*800,
+                                                  np.ma.arange(1000,0,-100),
+                                                  [0]*90 ))
+
+        kinetic_energy = P('Kinetic Energy',
+                           array=kinetic_energy_array)
+
+        potential_energy_array = np.ma.concatenate(( [0]*50, 
+                                                  np.ma.arange( 0, 10000, 50),
+                                                  [10000]*500,
+                                                  np.ma.arange(10000,0,-50),
+                                                  [0]*50 ))
+
+        potential_energy = P('Potential Energy',
+                             array=potential_energy_array)
+
+        ae = AircraftEnergy()
+        ae.derive(kinetic_energy, potential_energy)
+
+        #60 Pot: 500, Kin:0, Total: 500
+        #92 Pot: 2100 Kin: 200, Total: 2300 
+        #500 Pot: 10000, Kin:1000, Total: 11000
+        self.assertAlmostEqual( ae.array[60], 500 )
+        self.assertAlmostEqual( ae.array[92], 2300 )
+        self.assertAlmostEqual( ae.array[500], 11000 )
 
 
 if __name__ == '__main__':

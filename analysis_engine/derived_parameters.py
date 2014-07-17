@@ -98,6 +98,7 @@ from settings import (AIRSPEED_THRESHOLD,
                       HYSTERESIS_FPIAS,
                       HYSTERESIS_FPROC,
                       GRAVITY_IMPERIAL,
+                      GRAVITY_METRIC,
                       KTS_TO_FPS,
                       KTS_TO_MPS,
                       LANDING_THRESHOLD_HEIGHT,
@@ -5778,7 +5779,7 @@ class Speedbrake(DerivedParameterNode):
                 'Spoiler (1)' in available and
                 'Spoiler (14)' in available
             ) or
-            family_name in ['G-V', 'Learjet', 'A300', 'Phenom 300'] and all_of((
+            family_name in ['G-V', 'Learjet', 'A300', 'Phenom 300', 'CL-600'] and all_of((
                 'Spoiler (L)',
                 'Spoiler (R)'),
                 available
@@ -5847,6 +5848,9 @@ class Speedbrake(DerivedParameterNode):
             self.merge_spoiler(spoiler_1, spoiler_14)
 
         elif family_name in ['G-V', 'Learjet', 'A300', 'Phenom 300']:
+            self.merge_spoiler(spoiler_L, spoiler_R)
+
+        elif family_name == 'CL-600' and (spoiler_L or spoiler_R):
             self.merge_spoiler(spoiler_L, spoiler_R)
 
         elif family_name in ['CRJ 900', 'CL-600', 'G-IV']:
@@ -7213,7 +7217,7 @@ class FlapManoeuvreSpeed(DerivedParameterNode):
             return False
 
         core = all_of((
-            'Airspeed', 'Altitude STD Smoothed', 'Descent To Flare',
+            'Airspeed', 'Altitude STD Smoothed',
             'Gross Weight Smoothed', 'Model', 'Series', 'Family',
             'Engine Type', 'Engine Series',
         ), available)
@@ -7234,7 +7238,6 @@ class FlapManoeuvreSpeed(DerivedParameterNode):
                vref_25=P('Vref (25)'),
                vref_30=P('Vref (30)'),
                alt_std=P('Altitude STD Smoothed'),
-               descents=S('Descent To Flare'),
                model=A('Model'),
                series=A('Series'),
                family=A('Family'),
@@ -7281,9 +7284,8 @@ class FlapManoeuvreSpeed(DerivedParameterNode):
 
         # We want to mask out sections of flight where the aircraft is not
         # airborne and where the aircraft is above 20000ft as, for the majority
-        # of aircraft, flaps should not be extended above that limit. We are
-        # only interested in the descent phase of flight up until the flare.
-        phases = slices_and(alt_std.slices_below(20000), descents.get_slices())
+        # of aircraft, flaps should not be extended above that limit.
+        phases = slices_and(alt_std.slices_below(20000), alt_std.slices_above(50))
         self.array = mask_outside_slices(self.array, phases)
 
 
@@ -7612,7 +7614,12 @@ class AirspeedRelative(DerivedParameterNode):
                vref=P('Airspeed Minus Vref')):
 
         approach = vapp or vref
-        app_array = approach.array
+
+        if approach:
+            app_array = approach.array
+        else:
+            app_array = np_ma_masked_zeros_like(takeoff.array)
+
         if takeoff:
             toff_array = takeoff.array
             # We know the two areas of interest cannot overlap so we just add
@@ -7654,7 +7661,12 @@ class AirspeedRelativeFor3Sec(DerivedParameterNode):
                vref=P('Airspeed Minus Vref For 3 Sec')):
 
         approach = vapp or vref
-        app_array = approach.array
+
+        if approach:
+            app_array = approach.array
+        else:
+            app_array = np_ma_masked_zeros_like(takeoff.array)
+
         if takeoff:
             toff_array = takeoff.array
             # We know the two areas of interest cannot overlap so we just add
@@ -7671,3 +7683,39 @@ class AirspeedRelativeFor3Sec(DerivedParameterNode):
 
 
 ##############################################################################
+
+########################################
+# Aircraft Energy
+
+class KineticEnergy(DerivedParameterNode):
+    '''Caclculate the kinetic energy of Aircraft in MegaJoule'''
+
+    units = ut.MJ
+
+    def derive(self,airspeed=P('Airspeed True'),
+               mass=P('Gross Weight Smoothed')):
+        v = airspeed.array * 0.5144 # v in m/s
+        # m is in kg
+        self.array = (0.5 * mass.array * v ** 2 * 10 **-6) # converted to MJoule
+
+
+class PotentialEnergy(DerivedParameterNode):
+    '''Potential energy of Aircraft'''
+
+    align_frequency = 1
+    units = ut.MJ
+
+    def derive(self, altitude_aal=P('Altitude AAL'),
+               gross_weight_smoothed=P('Gross Weight Smoothed')):
+        altitude = altitude_aal.array * ut.CONVERSION_MULTIPLIERS[ut.FT][ut.METER]
+        self.array = gross_weight_smoothed.array * GRAVITY_METRIC * altitude / 10 ** 6
+
+
+class AircraftEnergy(DerivedParameterNode):
+    '''Total energy of Aircraft'''
+
+    units = ut.MJ
+
+    def derive(self, potential_energy=P('Potential Energy'),
+               kinetic_energy=P('Kinetic Energy')):
+        self.array = potential_energy.array + kinetic_energy.array

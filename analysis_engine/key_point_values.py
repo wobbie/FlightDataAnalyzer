@@ -280,6 +280,24 @@ class AccelerationLateralDuringLandingMax(KeyPointValueNode):
         )
 
 
+class AccelerationLateralWhileAirborneMax(KeyPointValueNode):
+    '''
+    
+    '''
+
+    units = ut.G
+
+    def derive(self,
+               acc_lat=P('Acceleration Lateral Offset Removed'),
+               Airborne=S('Airborne')):
+
+        self.create_kpv_from_slices(
+            acc_lat.array,
+            Airborne,
+            max_abs_value,
+        )
+
+
 class AccelerationLateralWhileTaxiingStraightMax(KeyPointValueNode):
     '''
     Lateral acceleration while not turning is rarely an issue, so we compute
@@ -2473,6 +2491,47 @@ class AirspeedMinusFlapManoeuvreSpeedWithFlapDuringDescentMin(KeyPointValueNode,
             self.create_kpv(index, value, flap=detent)
 
 
+class AirspeedMinusFlapManoeuvreSpeedFor3SecWithFlapDuringDescentMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
+    '''
+    Airspeed relative to the flap manoeuvre speed for 3 seconds during the 
+    descent phase for each flap setting.
+
+    Based on Flap Lever for safety based investigations which primarily
+    depend upon the pilot actions, rather than maintenance investigations
+    which depend upon the actual flap surface position. Uses Flap Lever if
+    available otherwise falls back to Flap Lever (Synthetic) which is
+    established from other sources.
+    '''
+
+    NAME_FORMAT = 'Airspeed Minus Flap Manoeuvre Speed For 3 Sec With Flap %(flap)s During Descent Min'
+    NAME_VALUES = NAME_VALUES_LEVER
+    units = ut.KT
+
+    @classmethod
+    def can_operate(cls, available):
+
+        core = all_of((
+            'Airspeed Minus Flap Manoeuvre Speed For 3 Sec',
+            'Descent To Flare',
+        ), available)
+        flap = any_of((
+            'Flap Lever',
+            'Flap Lever (Synthetic)',
+        ), available)
+        return core and flap
+
+    def derive(self,
+               flap_lever=M('Flap Lever'),
+               flap_synth=M('Flap Lever (Synthetic)'),
+               airspeed=P('Airspeed Minus Flap Manoeuvre Speed For 3 Sec'),
+               scope=S('Descent To Flare')):
+
+        flap = flap_lever or flap_synth
+        data = self.flap_or_conf_max_or_min(flap, airspeed, min_value, scope)
+        for index, value, detent in data:
+            self.create_kpv(index, value, flap=detent)
+
+
 class AirspeedAtFirstFlapExtensionWhileAirborne(KeyPointValueNode):
     '''
     Airspeed measured at the point of Flap Extension while airborne.
@@ -2487,6 +2546,28 @@ class AirspeedAtFirstFlapExtensionWhileAirborne(KeyPointValueNode):
         if ff_ext:
             index = ff_ext[-1].index
             self.create_kpv(index, value_at_index(airspeed.array, index))
+
+
+class AirspeedSelectedFMCMinusFlapManoeuvreSpeed1000to5000FtMin(KeyPointValueNode):
+    '''
+    This KPV compares Airspeed Select (FMC) and Flap Manoeuvre Speed to
+    identify an unsafe situation where the Speed Select (FMC) speed is below
+    the Minimum Manoeuvre Speed immediately prior to VNAV engagement.
+    '''
+
+    units = ut.KT
+    name = 'Airspeed Selected (FMC) Minus Flap Manoeuvre Speed 1000 to 5000 Ft Min'
+
+    def derive(self, spd_sel=P('Airspeed Selected (FMC)'),
+               flap_spd=P('Flap Manoeuvre Speed'), 
+               alt_aal=P('Altitude AAL For Flight Phases'),
+               climbs=S('Climb')):
+        alt_band = np.ma.masked_outside(alt_aal.array, 1000, 5000)
+        alt_climb_sections = valid_slices_within_array(alt_band, climbs)
+        array = spd_sel.array - flap_spd.array
+
+        self.create_kpvs_within_slices(array, alt_climb_sections, min_value)
+        
 
 
 ########################################
@@ -11789,3 +11870,36 @@ class MachMinusMMOMax(KeyPointValueNode):
             airborne,
             max_value,
         )
+
+
+########################################
+# Aircraft Energy
+
+
+class KineticEnergyAtRunwayTurnoff(KeyPointValueNode):
+    '''KPV at Runway Turnoff'''
+
+    units = ut.MJ
+
+    def derive(self, turn_off=KTI('Landing Turn Off Runway'),
+               kinetic_energy=P('Kinetic Energy')):
+
+        self.create_kpvs_at_ktis(kinetic_energy.array, turn_off)
+
+
+class AircraftEnergyWhenDescending(KeyPointValueNode):
+    '''Aircraft Energy when Descending'''
+
+    from analysis_engine.key_time_instances import AltitudeWhenDescending
+
+    NAME_FORMAT = 'Aircraft Energy at %(height)s'
+    NAME_VALUES = {'height': AltitudeWhenDescending.names()}
+
+    units = ut.MJ
+
+    def derive(self, aircraft_energy=P('Aircraft Energy'), 
+               altitude_when_descending=KTI('Altitude When Descending')):
+
+        for altitude in altitude_when_descending:
+            value = value_at_index(aircraft_energy.array, altitude.index)
+            self.create_kpv(altitude.index, value, height=altitude.name)

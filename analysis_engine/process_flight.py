@@ -18,6 +18,7 @@ from analysis_engine.node import (ApproachNode, Attribute,
                                   derived_param_from_hdf,
                                   DerivedParameterNode,
                                   FlightAttributeNode,
+                                  FlightPhaseNode,
                                   KeyPointValueNode,
                                   KeyTimeInstanceNode,
                                   NodeManager, P, Section, SectionNode)
@@ -59,6 +60,28 @@ def _timestamp(start_datetime, item_list):
     for item in item_list:
         item.datetime = start_datetime + timedelta(seconds=float(item.index))
     return item_list
+
+
+def get_node_type(node):
+    '''
+    Return node type string, for logging
+    '''
+    node_class = node.__class__
+    if issubclass(node_class, DerivedParameterNode):
+        node_type = 'parameter'
+    elif issubclass(node_class, KeyPointValueNode):
+        node_type = 'KPV'
+    elif issubclass(node_class, KeyTimeInstanceNode):
+        node_type = 'KTI'
+    elif issubclass(node_class, FlightPhaseNode):
+        node_type = 'phase'
+    elif issubclass(node_class, FlightAttributeNode):
+        node_type = 'attribute'
+    elif issubclass(node_class, ApproachNode):
+        node_type = 'approach'
+    else:
+        node_type = node_class.__name__
+    return node_type
 
 
 def derive_parameters(hdf, node_mgr, process_order):
@@ -132,7 +155,7 @@ def derive_parameters(hdf, node_mgr, process_order):
         node._p = params
         node._h = hdf
         node._n = node_mgr
-        logger.info("Processing parameter %s", param_name)
+        logger.info("Processing %s `%s`", get_node_type(node), param_name)
         # Derive the resulting value
 
         result = node.get_derived(deps)

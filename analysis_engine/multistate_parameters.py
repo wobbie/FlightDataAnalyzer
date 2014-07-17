@@ -1316,7 +1316,7 @@ class GearDownSelected(MultistateDerivedParameterNode):
                gear_down=M('Gear Down'),
                gear_warn=M('Gear (*) Red Warning')):
 
-        self.array = np.ma.zeros(gear_down.array.size, dtype=np.short)
+        self.array = np.zeros_like(gear_down.array, dtype=np.short)
         self.array[gear_down.array == 'Down'] = 'Down'
         if gear_warn:
             # We use up to 10s of `Gear (*) Red Warning` == 'Warning'
@@ -1621,8 +1621,8 @@ class PilotFlying(MultistateDerivedParameterNode):
             window = 61 * self.hz  # Use 61 seconds for 30 seconds either side.
             if not window%2:
                 window+=1
-            angle_capt = moving_average(stick_capt.array, window)
-            angle_fo = moving_average(stick_fo.array, window)
+            angle_capt = moving_average(np.ma.abs(stick_capt.array), window)
+            angle_fo = moving_average(np.ma.abs(stick_fo.array), window)
             # Repair the array as the moving average is padded with masked
             # zeros
             angle_capt = repair_mask(angle_capt, repair_duration=31,
@@ -1861,21 +1861,16 @@ class SpeedbrakeDeployed(MultistateDerivedParameterNode):
     def can_operate(cls, available):
         simple = ('Spoiler (L) Deployed', 'Spoiler (R) Deployed')
         in_out = ('Spoiler (L) Outboard Deployed',
-                  'Spoiler (R) Outboard Deployed',
-                  'Spoiler (L) Inboard Deployed',
-                  'Spoiler (R) Inboard Deployed')
+                  'Spoiler (R) Outboard Deployed')
         return all_of(simple, available)\
                or all_of(in_out, available)
 
     def derive(self, deployed_l=M('Spoiler (L) Deployed'),
                deployed_r=M('Spoiler (R) Deployed'),
                deployed_l_out=M('Spoiler (L) Outboard Deployed'),
-               deployed_r_out=M('Spoiler (R) Outboard Deployed'),
-               deployed_l_in=M('Spoiler (L) Inboard Deployed'),
-               deployed_r_in=M('Spoiler (R) Inboard Deployed')):
+               deployed_r_out=M('Spoiler (R) Outboard Deployed')):
 
-        deployed_params = (deployed_l, deployed_r, deployed_l_out,
-                           deployed_r_out, deployed_l_in, deployed_r_in)
+        deployed_params = (deployed_l, deployed_r, deployed_l_out, deployed_r_out)
         deployed_stack = vstack_params_where_state(*[(d, 'Deployed') for d in deployed_params])
 
         array = np_ma_zeros_like(deployed_stack[0], dtype=np.short)
@@ -1913,7 +1908,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
             return 'Speedbrake Handle' in x and 'Spoiler Ground Armed' in x
         elif family and family.value == 'Global':
             return any_of(('Speedbrake', 'Speedbrake Handle'), available)
-        elif family and family.value in ('CRJ 100/200', 'ERJ-135/145', 'B777'):
+        elif family and family.value in ('CRJ 100/200', 'B777'):
             return 'Speedbrake Handle' in x
         elif family and family.value in ('A319', 'A320', 'A321'):
             return 'Speedbrake' in x and 'Speedbrake Armed' in x

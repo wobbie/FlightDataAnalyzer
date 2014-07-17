@@ -35,6 +35,7 @@ from analysis_engine.key_point_values import (
     AccelerationLateralDuringTakeoffMax,
     AccelerationLateralMax,
     AccelerationLateralOffset,
+    AccelerationLateralWhileAirborneMax,
     AccelerationLateralWhileTaxiingStraightMax,
     AccelerationLateralWhileTaxiingTurnMax,
     AccelerationLongitudinalDuringLandingMin,
@@ -49,6 +50,7 @@ from analysis_engine.key_point_values import (
     AccelerationNormalWithFlapDownWhileAirborneMin,
     AccelerationNormalWithFlapUpWhileAirborneMax,
     AccelerationNormalWithFlapUpWhileAirborneMin,
+    AircraftEnergyWhenDescending,
     Airspeed10000To5000FtMax,
     Airspeed10000To8000FtMax,
     Airspeed1000To500FtMax,
@@ -82,6 +84,7 @@ from analysis_engine.key_point_values import (
     AirspeedGustsDuringFinalApproach,
     AirspeedMax,
     AirspeedMinsToTouchdown,
+    AirspeedMinusFlapManoeuvreSpeedFor3SecWithFlapDuringDescentMin,
     AirspeedMinusFlapManoeuvreSpeedWithFlapDuringDescentMin,
     AirspeedMinusMinimumAirspeedAbove10000FtMin,
     AirspeedMinusMinimumAirspeed35To10000FtMin,
@@ -113,6 +116,7 @@ from analysis_engine.key_point_values import (
     AirspeedRelativeFor3Sec500To20FtMin,
     AirspeedRelativeWithConfigurationDuringDescentMin,
     AirspeedSelectedAtLiftoff,
+    AirspeedSelectedFMCMinusFlapManoeuvreSpeed1000to5000FtMin,
     AirspeedSelectedMCPAt8000FtDescending,
     AirspeedTopOfDescentTo10000FtMax,
     AirspeedTopOfDescentTo4000FtMax,
@@ -328,6 +332,7 @@ from analysis_engine.key_point_values import (
     ILSLocalizerDeviation500To200FtMax,
     ILSLocalizerDeviationAtTouchdown,
     IsolationValveOpenAtLiftoff,
+    KineticEnergyAtRunwayTurnoff,
     LandingConfigurationGearWarningDuration,
     LandingConfigurationSpeedbrakeCautionDuration,
     LastFlapChangeToTakeoffRollEndDuration,
@@ -983,6 +988,23 @@ class TestAccelerationLateralDuringLandingMax(unittest.TestCase, NodeTest):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test Not Implemented')
+
+
+class TestAccelerationLateralWhileAirborneMax(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = AccelerationLateralWhileAirborneMax
+        self.operational_combinations = [('Acceleration Lateral Offset Removed', 'Airborne')]
+
+    def test_derive(self):
+        array = -0.1 + np.ma.sin(np.arange(0, 3.14*2, 0.04))
+        accel_lat = P(name='Acceleration Lateral Offset Removed', array=array)
+        airborne = buildsection('Airborne', 5, 150)
+        node = self.node_class()
+        node.derive(accel_lat, airborne)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 118)
+        self.assertAlmostEqual(node[0].value, -1.1, places=1)
 
 
 class TestAccelerationLateralWhileTaxiingStraightMax(unittest.TestCase, NodeTest):
@@ -2918,6 +2940,54 @@ class TestAirspeedMinusFlapManoeuvreSpeedWithFlapDuringDescentMin(unittest.TestC
             KeyPointValue(index=5, value=50, name='Airspeed Minus Flap Manoeuvre Speed With Flap 10 During Descent Min'),
             KeyPointValue(index=8, value=20, name='Airspeed Minus Flap Manoeuvre Speed With Flap 15 During Descent Min'),
         ])
+
+
+class TestAirspeedMinusFlapManoeuvreSpeedFor3SecWithFlapDuringDescentMin(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = AirspeedMinusFlapManoeuvreSpeedFor3SecWithFlapDuringDescentMin
+        self.operational_combinations = [
+            ('Flap Lever', 'Airspeed Minus Flap Manoeuvre Speed For 3 Sec', 'Descent To Flare'),
+            ('Flap Lever (Synthetic)', 'Airspeed Minus Flap Manoeuvre Speed For 3 Sec', 'Descent To Flare'),
+            ('Flap Lever', 'Flap Lever (Synthetic)', 'Airspeed Minus Flap Manoeuvre Speed For 3 Sec', 'Descent To Flare'),
+        ]
+
+    def test_derive(self):
+        array = np.ma.array((0, 0, 5, 10, 10, 10, 15, 15, 15, 35))
+        mapping = {int(f): str(f) for f in np.ma.unique(array)}
+        flap = M('Flap Lever', array, values_mapping=mapping)
+        airspeed = P('Airspeed', np.ma.arange(100, 0, -10))
+        descents = buildsection('Descent To Flare', 2, 7)
+        node = self.node_class()
+        node.derive(flap, None, airspeed, descents)
+        self.assertEqual(node.get_ordered_by_index(), [
+            KeyPointValue(index=2, value=80, name='Airspeed Minus Flap Manoeuvre Speed For 3 Sec With Flap 5 During Descent Min'),
+            KeyPointValue(index=5, value=50, name='Airspeed Minus Flap Manoeuvre Speed For 3 Sec With Flap 10 During Descent Min'),
+            KeyPointValue(index=8, value=20, name='Airspeed Minus Flap Manoeuvre Speed For 3 Sec With Flap 15 During Descent Min'),
+        ])
+
+
+class TestAirspeedSelectedFMCMinusFlapManoeuvreSpeed1000to5000FtMin(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = AirspeedSelectedFMCMinusFlapManoeuvreSpeed1000to5000FtMin
+
+    def test_can_operate(self):
+        expected = [('Airspeed Selected (FMC)', 'Flap Manoeuvre Speed', 'Altitude AAL For Flight Phases', 'Climb')]
+        self.assertEqual(self.node_class().get_operational_combinations(),
+                         expected)
+
+    def test_derive(self):
+        spd_sel = P('Airspeed Selected (FMC)', np.ma.repeat((150, 250), 20))
+        manoeuvre_spd = P('Flap Manoeuvre Speed', np.ma.repeat((155, 175, 200), (11, 4, 25)))
+        alt_aal = P('Altitude AAL For Flight Phases', np.ma.arange(0, 6000, 150))
+        climbs = buildsection('Climb', 6, 33)
+        node = self.node_class()
+
+        node.derive(spd_sel, manoeuvre_spd, alt_aal, climbs)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].value, -50)
+        self.assertEqual(node[0].index, 15)
 
 
 ########################################
@@ -10841,3 +10911,48 @@ class TestMachMinusMMOMax(unittest.TestCase, NodeTest):
         self.assertEqual(node, KPV(name=name, items=[
             KeyPointValue(index=10, value=0.019991386482538398, name=name),
         ]))
+
+
+########################################
+# Aircraft Energy
+
+
+class TestKineticEnergyAtRunwayTurnoff(unittest.TestCase):
+    def test_derive(self):
+        
+        turn_off = KTI('Landing Turn Off Runway',
+                    items=[KeyTimeInstance(10, 'Landing Turn Off Runway')])
+        
+        array = np.ma.array([0, 10, 20, 30, 40, 40, 40, 40, 30, 20, 10, 0])
+        kinetic_energy = P('Kinetic Energy', array=array )
+        
+        ke = KineticEnergyAtRunwayTurnoff()
+        ke.derive(turn_off, kinetic_energy)
+        
+        self.assertEqual( ke[0].value, 10 )
+        
+
+class TestAircraftEnergyWhenDescending(unittest.TestCase):
+    def test_derive(self):
+        aircraft_energy_array = np.ma.arange(20000, 1000, -100)
+        aircraft_energy = P('Aircraft Energy',
+                            array=aircraft_energy_array)
+        
+        descending = KTI('Altitude When Descending',
+                         items =[KeyTimeInstance(100, '10000 Ft Descending'),
+                                 KeyTimeInstance(150.5, '5000 Ft Descending')])
+        
+        aewd = AircraftEnergyWhenDescending()
+        aewd.derive(aircraft_energy, descending)
+        
+        self.assertEqual(aewd[0].value, 10000)
+        
+        # value_at_index = takes the linear interpolation value at the given index
+        # value_at_index is used in the derive method
+        # Altitude at index 150 = 5000
+        # Altitude at index 151 = 4900
+        # Altitude at index 150.5 = 4950 (interpolated)
+        self.assertEqual(aewd[1].value, 4950)
+        
+        self.assertEqual(aewd[0].name, 'Aircraft Energy at 10000 Ft Descending')
+        self.assertEqual(aewd[1].name, 'Aircraft Energy at 5000 Ft Descending')

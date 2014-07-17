@@ -132,19 +132,12 @@ The versions of these packages in the Ubuntu repositories and PPAs are too old.
 
     sudo apt-get purge python-setuptools python-virtualenv python-pip python-profiler
 
-Install distribute.
+Install setuptools and pip.
 
 .. code-block:: shell
 
-    curl -O http://python-distribute.org/distribute_setup.py
-    sudo python2.7 distribute_setup.py
-
-Install pip.
-
-.. code-block:: shell
-
-    curl -O https://raw.github.com/pypa/pip/master/contrib/get-pip.py
-    sudo python2.7 get-pip.py
+    curl --silent https://bootstrap.pypa.io/ez_setup.py | sudo python2.7
+    curl --silent https://bootstrap.pypa.io/get-pip.py | sudo python2.7
 
 Use pip to install virtualenv and virtualenv wrapper.
 
