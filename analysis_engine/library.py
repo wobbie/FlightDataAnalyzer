@@ -6932,6 +6932,12 @@ def alt2press_ratio(alt_ft):
                        _alt2press_ratio_gradient(alt_ft),
                        _alt2press_ratio_isothermal(alt_ft))
 
+def air_density(alt, sat):
+    pr = alt2press_ratio(alt)
+    tr = (sat+T0-15.0)/T0
+    dr = pr/tr
+    return dr*Rhoref
+
 def cas2dp(cas_kt):
     """
     Convert corrected airspeed to pressure rise (includes allowance for
