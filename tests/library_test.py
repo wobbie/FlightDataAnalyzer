@@ -6098,6 +6098,20 @@ class TestAlt2PressRatio(unittest.TestCase):
         self.assertAlmostEqual(Value, Truth)
 
 
+class TestAirDensity(unittest.TestCase):
+    def test_01(self):
+        Value = air_density(0.0, 15.0)
+        self.assertEqual(Value, 1.225)
+
+    def test_02(self):
+        Value = air_density(20000.0, -24.6240)
+        self.assertAlmostEqual(Value, 0.652694, places=5)
+
+    def test_03(self):
+        Value = air_density(10000.0, 20.1880)
+        self.assertAlmostEqual(Value, 0.827539, places=5)
+
+
 class TestCas2Dp(unittest.TestCase):
 
     # Many AeroCalc tests using different units removed as we are
