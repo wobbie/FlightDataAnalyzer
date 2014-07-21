@@ -279,7 +279,7 @@ def align(slave, master, interpolate=True):
         # force disable interpolate!
         slave_array = slave_array.raw
         interpolate = False
-        _dtype = int
+        _dtype = slave_array.dtype
     elif isinstance(slave_array, np.ma.MaskedArray):
         _dtype = float
     else:
