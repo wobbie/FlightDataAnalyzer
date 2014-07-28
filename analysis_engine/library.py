@@ -1322,7 +1322,7 @@ def closest_unmasked_value(array, index, start_index=None, stop_index=None):
     elif next_value:
         return next_value
     else:
-        return None
+        return None, None
 
 
 def clump_multistate(array, state, _slices=[slice(None)], condition=True):
