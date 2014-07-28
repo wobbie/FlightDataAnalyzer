@@ -1540,7 +1540,10 @@ class AirspeedSelectedAtLiftoff(KeyPointValueNode):
                                               stop_index=phase.stop)
             else:
                 value = most_common_value(spd_sel.array[phase].astype(np.int))
-            self.create_kpv(index, value)
+            if value:
+                self.create_kpv(index, value)
+            else:
+                self.warning("%s is entirely mased within %s", spd_sel.__class__.__name__, phase)
 
 ########################################
 # Airspeed: Minus V2
