@@ -29,7 +29,6 @@ from analysis_engine.library import (actuator_mismatch,
                                      cycle_finder,
                                      dp2tas,
                                      dp_over_p2mach,
-                                     fill_masked_edges,
                                      filter_vor_ils_frequencies,
                                      first_valid_parameter,
                                      first_valid_sample,
@@ -3568,80 +3567,13 @@ class FlapAngle(DerivedParameterNode):
     units = ut.DEGREE
 
     @classmethod
-    def can_operate(cls, available, family=A('Family')):
+    def can_operate(cls, available):
 
-        flap_angle = any_of((
+        return any_of((
             'Flap Angle (L)', 'Flap Angle (R)', 
             'Flap Angle (C)', 'Flap Angle (MCP)',
             'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard',
         ), available)
-
-        if family and family.value == 'B787':
-            return flap_angle and 'Slat Angle' in available
-        else:
-            return flap_angle
-    
-    @staticmethod
-    def _combine_flap_slat(slat_array, flap_array, lever_angles):
-        '''
-        Combines Flap and Slat parameters and returns a Flap Angle array.
-        
-        Example conf map (slat, flap):
-        'B787': {
-            0:    (0, 0),
-            1:    (50, 0),
-            5:    (50, 5),
-            15:   (50, 15),
-            20:   (50, 20),
-            25:   (100, 20),
-            30:   (100, 30),
-        }
-        Creates interpolation params:
-        Slat X: [0, 50, 100]
-        Slat Y: [0, 1, 6]
-        Flap X: [0, 5, 15, 20, 30]
-        Flap Y: [0, 4, 14, 19, 24]
-        
-        :param slat_array: Slat parameter array.
-        :type slat_array: np.ma.masked_array
-        :param flap_array: Flap parameter array.
-        :type flap_array: np.ma.masked_array
-        :param lever_angles: Configuration map from model information.
-        :type lever_angles: {int: (int, int)}
-        '''
-        # Assumes states are strings.
-        previous_value = None
-        previous_slat = None
-        previous_flap = None
-        slat_interp_x = []
-        slat_interp_y = []
-        flap_interp_x = []
-        flap_interp_y = []
-        for index, (current_value, (current_slat, current_flap, _)) in enumerate(sorted(lever_angles.items())):
-            if index == 0:
-                previous_value = current_value
-            state_difference = current_value - previous_value
-            if index == 0 or (previous_slat != current_slat):
-                slat_interp_x.append(current_slat)
-                slat_interp_y.append((slat_interp_y[-1] if slat_interp_y else 0)
-                                     + state_difference)
-                previous_slat = current_slat
-            if index == 0 or (previous_flap != current_flap):
-                flap_interp_x.append(current_flap)
-                flap_interp_y.append((flap_interp_y[-1] if flap_interp_y else 0)
-                                     + state_difference)
-                previous_flap = current_flap
-            previous_value = current_value
-        slat_interp = InterpolatedUnivariateSpline(slat_interp_x, slat_interp_y,
-                                                   k=1)
-        flap_interp = InterpolatedUnivariateSpline(flap_interp_x, flap_interp_y,
-                                                   k=1)
-        # Exclude masked values which may be outside of the interpolation range.
-        slat_unmasked = np.invert(np.ma.getmaskarray(slat_array))
-        flap_unmasked = np.invert(np.ma.getmaskarray(flap_array))
-        slat_array[slat_unmasked] = slat_interp(slat_array[slat_unmasked])
-        flap_array[flap_unmasked] = flap_interp(flap_array[flap_unmasked])
-        return slat_array + flap_array
 
     def derive(self,
                flap_A=P('Flap Angle (L)'),
@@ -3650,26 +3582,13 @@ class FlapAngle(DerivedParameterNode):
                flap_D=P('Flap Angle (MCP)'),
                flap_A_inboard=P('Flap Angle (L) Inboard'),
                flap_B_inboard=P('Flap Angle (R) Inboard'),
-               slat=P('Slat Angle'),
-               frame=A('Frame'),
-               family=A('Family')):
+               frame=A('Frame')):
 
         frame_name = frame.value if frame else ''
-        family_name = family.value if family else ''
         flap_A = flap_A or flap_A_inboard
         flap_B = flap_B or flap_B_inboard
 
-        if family_name == 'B787':
-            lever_angles = at.get_lever_angles(None, None, family_name, key='value')
-            # Flap settings 1 and 25 only affect Slat.
-            # Combine Flap Angle (L) and Flap Angle (R).
-            self.array, self.frequency, self.offset = blend_two_parameters(
-                flap_A, flap_B)
-            # Frequency will be doubled after blending parameters.
-            slat.array = align(slat, self)
-            self.array = self._combine_flap_slat(slat.array, self.array,
-                                                 lever_angles)
-        elif frame_name in ['747-200-GE', '747-200-PW', '747-200-AP-BIB']:
+        if frame_name in ['747-200-GE', '747-200-PW', '747-200-AP-BIB']:
             # Only the right inboard flap is instrumented.
             self.array = flap_B.array
         else:
