@@ -3050,6 +3050,22 @@ class AlphaFloorDuration(KeyPointValueNode):
 # Angle of Attack
 
 
+class AOADuringGoAroundMax(KeyPointValueNode):
+    '''
+    FDS developed this KPV to support the UK CAA Significant Seven programme.
+    "Loss of Control Mis-handled G/A"
+    '''
+
+    name = 'AOA During Go Around Max'
+    units = ut.DEGREE
+
+    def derive(self,
+               aoa=P('AOA'),
+               go_arounds=S('Go Around And Climbout')):
+
+        self.create_kpvs_within_slices(aoa.array, go_arounds, max_value)
+
+
 class AOAWithFlapMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
     '''
     FDS developed this KPV to support the UK CAA Significant Seven programme.
@@ -3086,20 +3102,58 @@ class AOAWithFlapMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
             self.create_kpv(index, value, flap=detent)
 
 
-class AOADuringGoAroundMax(KeyPointValueNode):
+class AOAWithFlapDuringClimbMax(KeyPointValueNode):
     '''
-    FDS developed this KPV to support the UK CAA Significant Seven programme.
-    "Loss of Control Mis-handled G/A"
+    Maximum Angle of Attack During Climb.
     '''
-
-    name = 'AOA During Go Around Max'
+    
+    name = 'AOA With Flap During Climb Max'
     units = ut.DEGREE
-
+    
+    @classmethod
+    def can_operate(cls, available):
+        return (all_of(('AOA', 'Climbing'), available) and
+                any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available))
+    
     def derive(self,
+               flap_lever=M('Flap Lever'),
+               flap_synth=M('Flap Lever (Synthetic)'),
                aoa=P('AOA'),
-               go_arounds=S('Go Around And Climbout')):
+               climbs=S('Climbing')):
+        flap = flap_lever or flap_synth
+        if 'Lever 0' in flap.array.state:
+            retracted = flap.array == 'Lever 0'
+        elif '0' in flap.array.state:
+            retracted = flap.array == '0'
+        aoa_flap = np.ma.masked_where(retracted, aoa.array)
+        self.create_kpvs_within_slices(aoa_flap, climbs, max_value)
 
-        self.create_kpvs_within_slices(aoa.array, go_arounds, max_value)
+
+class AOAWithFlapDuringDescentMax(KeyPointValueNode):
+    '''
+    Maximum Angle of Attack During Descent.
+    '''
+    
+    name = 'AOA With Flap During Descent Max'
+    units = ut.DEGREE
+    
+    @classmethod
+    def can_operate(cls, available):
+        return (all_of(('AOA', 'Descending'), available) and
+                any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available))
+    
+    def derive(self,
+               flap_lever=M('Flap Lever'),
+               flap_synth=M('Flap Lever (Synthetic)'),
+               aoa=P('AOA'),
+               descends=S('Descending')):
+        flap = flap_lever or flap_synth
+        if 'Lever 0' in flap.array.state:
+            retracted = flap.array == 'Lever 0'
+        elif '0' in flap.array.state:
+            retracted = flap.array == '0'
+        aoa_flap = np.ma.masked_where(retracted, aoa.array)
+        self.create_kpvs_within_slices(aoa_flap, descends, max_value)
 
 
 ##############################################################################
@@ -7593,7 +7647,7 @@ class EngTorqueWhileDescendingMax(KeyPointValueNode):
     def derive(self,
                eng_trq_max=P('Eng (*) Torque Max'),
                descending=S('Descending')):
-
+        
         self.create_kpv_from_slices(eng_trq_max.array, descending, max_value)
 
 

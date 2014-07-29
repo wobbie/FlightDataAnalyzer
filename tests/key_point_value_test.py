@@ -26,6 +26,8 @@ from analysis_engine.multistate_parameters import (
 )
 from analysis_engine.key_point_values import (
     AOADuringGoAroundMax,
+    AOAWithFlapDuringClimbMax,
+    AOAWithFlapDuringDescentMax,
     AOAWithFlapMax,
     APDisengagedDuringCruiseDuration,
     APUOnDuringFlightDuration,
@@ -3269,7 +3271,6 @@ class TestAirspeedWithSpeedbrakeDeployedMax(unittest.TestCase, NodeTest):
         )
         node = self.node_class()
         node.derive(air_spd, spoiler)
-        print node
         self.assertItemsEqual(node, [
             KeyPointValue(index=9, value=9.0,
                           name='Airspeed With Speedbrake Deployed Max'),
@@ -3293,6 +3294,78 @@ class TestAOAWithFlapMax(unittest.TestCase, NodeTest):
     @unittest.skip('Test not implemented.')
     def test_derive(self):
         pass
+
+
+class TestAOAWithFlapDuringClimbMax(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = AOAWithFlapDuringClimbMax
+        self.operational_combinations = [
+            ('Flap Lever', 'AOA', 'Climbing'),
+            ('Flap Lever (Synthetic)', 'AOA', 'Climbing'),
+            ('Flap Lever', 'Flap Lever (Synthetic)', 'AOA', 'Climbing'),
+        ]
+
+    def test_derive_basic(self):
+        aoa = P('AOA', array=np.arange(30))
+        
+        flap_values_mapping = {0: '0', 10: '10'}
+        flap_array = np.ma.array([10] * 10 + [0] * 10 + [10] * 10)
+        flap = M('Flap Lever', array=flap_array, values_mapping=flap_values_mapping)
+        
+        flap_synth_values_mapping = {0: 'Lever 0', 1: 'Lever 1'}
+        flap_synth_array = np.ma.array([0] * 10 + [1] * 10 + [0] * 10)
+        flap_synth = M('Flap Lever (Synthetic)', array=flap_synth_array, values_mapping=flap_synth_values_mapping)
+        
+        climbs = buildsections('Climbing', (15, 25))
+        
+        node = self.node_class()
+        node.derive(flap, None, aoa, climbs)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 25)
+        self.assertEqual(node[0].value, 25)
+        
+        node = self.node_class()
+        node.derive(None, flap_synth, aoa, climbs)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 19)
+        self.assertEqual(node[0].value, 19)
+
+
+class TestAOAWithFlapDuringDescentMax(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = AOAWithFlapDuringDescentMax
+        self.operational_combinations = [
+            ('Flap Lever', 'AOA', 'Descending'),
+            ('Flap Lever (Synthetic)', 'AOA', 'Descending'),
+            ('Flap Lever', 'Flap Lever (Synthetic)', 'AOA', 'Descending'),
+        ]
+
+    def test_derive_basic(self):
+        aoa = P('AOA', array=np.arange(30, 0, -1))
+        
+        flap_values_mapping = {0: '0', 10: '10'}
+        flap_array = np.ma.array([10] * 10 + [0] * 10 + [10] * 10)
+        flap = M('Flap Lever', array=flap_array, values_mapping=flap_values_mapping)
+        
+        flap_synth_values_mapping = {0: 'Lever 0', 1: 'Lever 1'}
+        flap_synth_array = np.ma.array([0] * 10 + [1] * 10 + [0] * 10)
+        flap_synth = M('Flap Lever (Synthetic)', array=flap_synth_array, values_mapping=flap_synth_values_mapping)
+        
+        climbs = buildsections('Descending', (15, 25))
+        
+        node = self.node_class()
+        node.derive(flap, None, aoa, climbs)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 20)
+        self.assertEqual(node[0].value, 10)
+        
+        node = self.node_class()
+        node.derive(None, flap_synth, aoa, climbs)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 15)
+        self.assertEqual(node[0].value, 15)
 
 
 class TestAOADuringGoAroundMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
