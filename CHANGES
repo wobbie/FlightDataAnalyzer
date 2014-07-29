@@ -9,6 +9,22 @@ You can view the differences in tagged versions as follows:
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
 
+V0.13.2
+-------
+
+ - Imprevements
+   - Fix to align now retains the data type of multistate parameter instead of forcing to int
+   - changed speedbrake deployed to only use outboard spoilers
+   - speedbrake fixes for ERJ-135 and Challenger 850
+   - FlapAngle: Removed 787 combining slat
+   - closest_unmasked_value: Always return 2 args
+   - Handle Airspeed Selected being masked during t/off
+   - consistent return type from step_values
+ - KPVs Added
+   - Airspeed Minus Flap Manoeuvre Speed For 3 Sec With Flap During Descent Min
+   - Acceleration Lateral While Airborne Max
+
+
 V0.13.1
 -------
 
