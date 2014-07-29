@@ -6088,7 +6088,7 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
 
     if not transitions:
         logger.warning("No changes between steps could be found in step_values.")
-        return new_array
+        return np.ma.array(new_array)
 
     # sort based on index
     sorted_transitions = sorted(transitions, key=lambda v: v[0])
