@@ -927,6 +927,12 @@ class AltitudeRadio(DerivedParameterNode):
             for source in sources:
                 if source is None:
                     continue
+                ## FIXME: this process should be moved to pre validation as
+                ## we have seen flights where terrain arround the rollover
+                ## point (2047) in quick succession get masked by rate of
+                ## change. This prevents overflow_correction from correcting
+                ## the parameter and leads to multiple touchdowns. example
+                ## hash:acda842c2799
                 max_val = 8191 if source.array.ptp() > 4095 else 4095
                 # correct for overflow, aligning the fast slice to each source
                 source.array = overflow_correction(
