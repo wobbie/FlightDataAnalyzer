@@ -1041,11 +1041,11 @@ class TestGearRetracting(unittest.TestCase):
     def test_can_operate(self):
         opts = self.node_class.get_operational_combinations()
         self.assertEqual(opts,[
-                         ('Gear Up Selected', 'Gear Down', 'Airborne')])
+                         ('Gear Up Selected', 'Gear Up', 'Airborne')])
 
     def test_derive(self):
-        gear_down = M('Gear Down', np.ma.array([1,1,1,1,0,0,0,0,0,1,1,1]),
-                      values_mapping={0:'Up', 1:'Down'})
+        gear_down = M('Gear Up', np.ma.array([0,0,0,0,1,1,1,1,1,0,0,0]),
+                      values_mapping={0:'Down', 1:'Up'})
         gear_up_sel = M('Gear Up Selected',
                         np.ma.array([0,0,1,1,1,1,1,0,0,0,0,0]),
                         values_mapping={0:'Down', 1:'Up'})
@@ -1801,7 +1801,7 @@ class TestGearExtended(unittest.TestCase):
     def test_can_operate(self):
         self.assertEqual(GearExtended.get_operational_combinations(),
                          [('Gear Down',)])
-        
+
     def test_basic(self):
         gear = M(
             name='Gear Down',
@@ -1812,19 +1812,21 @@ class TestGearExtended(unittest.TestCase):
         self.assertEqual(gear_ext[0].slice, slice(0, 5))
         self.assertEqual(gear_ext[1].slice, slice(13,16))
 
+
 class TestGearRetracted(unittest.TestCase):
     def test_can_operate(self):
         self.assertEqual(GearRetracted.get_operational_combinations(),
-                         [('Gear Down',)])
-        
+                         [('Gear Up',)])
+
     def test_basic(self):
         gear = M(
-            name='Gear Down',
-            array=np.ma.array([1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1]),
-            values_mapping={0: 'Up', 1: 'Down'})
+            name='Gear Up',
+            array=np.ma.array([0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0]),
+            values_mapping={0: 'Down', 1: 'Up'})
         gear_ext = GearRetracted()
         gear_ext.derive(gear)
         self.assertEqual(gear_ext[0].slice, slice(5, 14))
+
 
 class TestGoAround5MinRating(unittest.TestCase):
     def test_can_operate(self):

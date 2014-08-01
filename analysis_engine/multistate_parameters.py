@@ -1202,18 +1202,51 @@ class GearUp(MultistateDerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
         # Can operate with a any combination of parameters available
-        return any_of(cls.get_dependency_names(), available)
+        merge_gear_up = any_of(('Gear (L) Up', 'Gear (N) Up', 'Gear (R) Up'), available)
+        calc_gear_up = all_of(('Gear Down', 'Gear (*) Red Warning'), available)
+        return merge_gear_up or calc_gear_up
 
     def derive(self,
                gl=M('Gear (L) Up'),
                gn=M('Gear (N) Up'),
-               gr=M('Gear (R) Up')):
-        # Join all available gear parameters and use whichever are available.
-        self.array = vstack_params_where_state(
-            (gl, 'Up'),
-            (gn, 'Up'),
-            (gr, 'Up'),
-        ).any(axis=0)
+               gr=M('Gear (R) Up'),
+               gear_down=M('Gear Down'),
+               gear_warn=M('Gear (*) Red Warning')):
+
+        if gl or gn or gr:
+            # Join all available gear parameters and use whichever are available.
+            self.array = vstack_params_where_state(
+                (gl, 'Up'),
+                (gn, 'Up'),
+                (gr, 'Up'),
+            ).any(axis=0)
+        else:
+            self.array = np.zeros_like(gear_down.array, dtype=np.short)
+            self.array[gear_down.array == 'Up'] = 'Up'
+            # Calculate gear up from gear down and gear red warnings.
+            # We use up to 10s of `Gear (*) Red Warning` == 'Warning'
+            # preceeding the actual gear position change state to define the
+            # gear transition.
+            start_end_warnings = find_edges_on_state_change(
+                'Warning', gear_warn.array, change='entering_and_leaving')
+            starts = start_end_warnings[::2]
+            ends = start_end_warnings[1::2]
+            start_end_warnings = zip(starts, ends)
+
+            for start, end in start_end_warnings:
+                # for clarity, we're only interested in the end of the
+                # transition - so ceiling finds the end
+                start = math.ceil(start)
+                end = math.ceil(end)
+                if (end - start) / self.frequency > 10:
+                    # we are only using 10s gear transitions
+                    end = start + 10 * self.frequency
+
+                # look for state before gear started moving (back one sample)
+                if gear_down.array[start - 1] == 'Down':
+                    # Prepend the warning to the gear position to define the
+                    # selection
+                    self.array[start:end + 1] = 'Down'
 
 
 class GearInTransit(MultistateDerivedParameterNode):

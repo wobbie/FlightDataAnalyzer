@@ -1574,7 +1574,23 @@ class TestGearUp(unittest.TestCase, NodeTest):
             ('Gear (R) Up',),
             ('Gear (L) Up', 'Gear (R) Up'),
             ('Gear (L) Up', 'Gear (N) Up', 'Gear (R) Up'),
+            ('Gear Down', 'Gear (*) Red Warning'),
         ]
+
+    def test_derive__calc_gear_up(self):
+        gear_down_array = np.ma.array([1]*20 + [0]*60 + [1]*20, dtype=int)
+        gear_down = M('Gear Down', gear_down_array,
+                      values_mapping={0: 'Up',1: 'Down'})
+        gear_red_warn_array = np.ma.array([0]*20 + [1]*15 + [0]*30 + [1]*15 + [0]*20, dtype=int)
+        gear_red_warn = M('Gear (*) Red Warning', gear_red_warn_array,
+                          values_mapping = {0: '-', 1: 'Warning'})
+
+        node = self.node_class()
+        node.derive(None, None, None, gear_down, gear_red_warn)
+
+        expected = M('Gear Up', np.ma.array([0]*31 + [1]*49 + [0]*20, dtype=int),
+                     values_mapping={0: 'Down',1: 'Up'})
+        np.testing.assert_array_equal(node.array.data,  expected.array.data)
 
 
 class TestGearInTransit(unittest.TestCase, NodeTest):
