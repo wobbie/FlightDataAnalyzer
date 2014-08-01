@@ -628,9 +628,9 @@ class GearRetracting(FlightPhaseNode):
     '''
 
     def derive(self, gear_up_selected=M('Gear Up Selected'),
-               gear_down=M('Gear Down'), airs=S('Airborne')):
-        
-        in_transit = (gear_up_selected.array == 'Up') & (gear_down.array != 'Up')
+               gear_up=M('Gear Up'), airs=S('Airborne')):
+
+        in_transit = (gear_up_selected.array == 'Up') & (gear_up.array != 'Up')
         gear_retracting = slices_and(runs_of_ones(in_transit), airs.get_slices())
         self.create_phases(gear_retracting)
 
@@ -639,9 +639,8 @@ class GearRetracted(FlightPhaseNode):
     '''
     Simple phase translation of the Gear Down parameter to show gear Up.
     '''
-    def derive(self, gear_down=M('Gear Down')):
-        #TODO: self = 1 - 'Gear Extended'
-        repaired = repair_mask(gear_down.array, gear_down.frequency, 
+    def derive(self, gear_up=M('Gear Up')):
+        repaired = repair_mask(gear_up.array, gear_up.frequency,
                                repair_duration=120, extrapolate=True,
                                method='fill_start')
         gear_up = runs_of_ones(repaired == 'Up')
