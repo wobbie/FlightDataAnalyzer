@@ -5284,7 +5284,8 @@ class TurbulenceRMSG(DerivedParameterNode):
 
     def derive(self, acc=P('Acceleration Vertical')):
 
-        width=int(acc.frequency*5+1)
+        width = int(acc.frequency*5)
+        width += 1 - width % 2
         mean = moving_average(acc.array, window=width)
         acc_sq = (acc.array)**2.0
         n__sum_sq = moving_average(acc_sq, window=width)
