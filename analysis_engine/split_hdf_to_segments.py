@@ -603,16 +603,16 @@ def _calculate_start_datetime(hdf, fallback_dt=None):
             a_day_before = timebase - relativedelta(days=1)
             if a_day_before < now:
                 logger.info(
-                    "Timebase was in the future, using a day before "
-                    "satisfies requirements")
+                    "Timebase was in the future, using a DAY before "
+                    "satisfies requirements: %s", a_day_before)
                 return a_day_before
             # continue to take away a Year
         if 'Year' not in hdf:
             # remove a year from the timebase
             a_year_before = timebase - relativedelta(years=1)
             if a_year_before < now:
-                logger.info("Timebase was in the future, using a day before "
-                            "satisfies requirements")
+                logger.info("Timebase was in the future, using a YEAR before "
+                            "satisfies requirements: %s", a_year_before)
                 return a_year_before
 
         raise TimebaseError("Timebase '%s' is in the future.", timebase)
