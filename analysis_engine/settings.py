@@ -199,7 +199,6 @@ HEADING_RATE_FOR_MOBILE = 2.0  # deg/sec
 HEADING_RATE_FOR_STRAIGHT_FLIGHT = 1.0 # deg/sec
 
 # Threshold for turn onto runway at start of takeoff.
-# This will usually be overwritten by the peak curvature test.
 HEADING_TURN_ONTO_RUNWAY = 15.0  # deg
 
 #Threshold for turn off runway at end of takeoff. This allows for turning
