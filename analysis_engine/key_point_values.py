@@ -9515,9 +9515,11 @@ class RateOfClimbBelow10000FtMax(KeyPointValueNode):
                vrt_spd=P('Vertical Speed'),
                alt_aal=P('Altitude STD Smoothed')):
         vrt_spd.array[vrt_spd.array < 0] = np.ma.masked
+        # Range for scanning starts at 1ft AAL to prevent corrupt data on the
+        # ground triggering a KPV.
         self.create_kpvs_within_slices(
             vrt_spd.array,
-            alt_aal.slices_from_to(0, 10000),
+            alt_aal.slices_from_to(1, 10000),
             max_value,
         )
 
