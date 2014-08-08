@@ -282,6 +282,9 @@ LANDING_ACCELERATION_THRESHOLD = -0.1  # g
 # Threshold for start of landing phase
 LANDING_THRESHOLD_HEIGHT = 50  # (Radio, where available)
 
+# Speed for end of landing roll (Groundspeed where available, else TAS)
+LANDING_ROLL_END_SPEED = 65.0
+
 # Level flight minimum duration
 LEVEL_FLIGHT_MIN_DURATION = 60  # sec
 
