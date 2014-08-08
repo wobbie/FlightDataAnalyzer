@@ -41,6 +41,7 @@ from analysis_engine.flight_phase import (
     Takeoff,
     Takeoff5MinRating,
     TakeoffRoll,
+    TakeoffRollOrRejectedTakeoff,
     TakeoffRotation,
     Taxiing,
     TaxiIn,
@@ -1872,6 +1873,21 @@ class TestTakeoffRoll(unittest.TestCase):
         self.assertEqual(len(node), 1)
         self.assertAlmostEqual(node[0].slice.start, 967.92, places=1)
         self.assertAlmostEqual(node[0].slice.stop, 990.27, places=1)
+
+
+class TestTakeoffRollOrRejectedTakeoff(unittest.TestCase):
+    def test_can_operate(self):
+        self.assertEqual(TakeoffRollOrRejectedTakeoff.get_operational_combinations(),
+                         [('Takeoff Roll', 'Rejected Takeoff',)])
+
+    def test_derive(self):
+        rolls = buildsections('Takeoff Roll', [5,15], [105.2,115.4])
+        rejs = buildsections('Rejected Takeoff', [50,65])
+        expected = buildsections('Takeoff Roll Or Rejected Takeoff', [5,15], [50,65], [105.2,115.4])
+        phase = TakeoffRollOrRejectedTakeoff()
+        phase.derive(rolls, rejs)
+        self.assertEqual([s.slice for s in sorted(list(expected))],
+                         [s.slice for s in list(expected)])
 
 
 class TestTakeoffRotation(unittest.TestCase):

@@ -50,6 +50,7 @@ from analysis_engine.settings import (
     ILS_CAPTURE,
     INITIAL_CLIMB_THRESHOLD,
     KTS_TO_MPS,
+    LANDING_ROLL_END_SPEED,
     LANDING_THRESHOLD_HEIGHT,
     RATE_OF_TURN_FOR_FLIGHT_PHASES,
     RATE_OF_TURN_FOR_TAXI_TURNS,
@@ -1157,7 +1158,7 @@ class LandingRoll(FlightPhaseNode):
             speed = aspd.array
         for land in lands:
             # Airspeed True on some aircraft do not record values below 61
-            end = index_at_value(speed, 65.0, land.slice)
+            end = index_at_value(speed, LANDING_ROLL_END_SPEED, land.slice)
             if end is None:
                 # due to masked values, use the land.stop rather than
                 # searching from the end of the data
@@ -1334,8 +1335,8 @@ class TakeoffRollOrRejectedTakeoff(FlightPhaseNode):
     For monitoring configuration warnings especially, this combines actual
     and rejected takeoffs into a single phase node for convenience.
     '''
-    def derive(self, toffs=S('Takeoff'), rtoffs=S('Rejected Takeoff')):
-        self.create_phases([s.slice for s in toffs + rtoffs], 
+    def derive(self, trolls=S('Takeoff Roll'), rtoffs=S('Rejected Takeoff')):
+        self.create_phases([s.slice for s in trolls + rtoffs], 
                            name= "Takeoff Roll Or Rejected Takeoff")
 
 

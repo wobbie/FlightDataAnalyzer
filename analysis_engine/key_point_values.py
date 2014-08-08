@@ -8660,8 +8660,10 @@ class GroundspeedWithThrustReversersDeployedMin(KeyPointValueNode):
         power.frequency = gnd_spd.frequency
         tr.array = align(tr, gnd_spd)
         tr.frequency = gnd_spd.frequency
+        aligned_landings = landings.get_aligned(gnd_spd)
 
-        for landing in landings:
+        for landing in aligned_landings:
+            # handle difference in frequencies
             high_rev = thrust_reversers_working(landing, power, tr, threshold)
             self.create_kpvs_within_slices(gnd_spd.array, high_rev, min_value)
 
@@ -9515,9 +9517,11 @@ class RateOfClimbBelow10000FtMax(KeyPointValueNode):
                vrt_spd=P('Vertical Speed'),
                alt_aal=P('Altitude STD Smoothed')):
         vrt_spd.array[vrt_spd.array < 0] = np.ma.masked
+        # Range for scanning starts at 1ft AAL to prevent corrupt data on the
+        # ground triggering a KPV.
         self.create_kpvs_within_slices(
             vrt_spd.array,
-            alt_aal.slices_from_to(0, 10000),
+            alt_aal.slices_from_to(1, 10000),
             max_value,
         )
 
