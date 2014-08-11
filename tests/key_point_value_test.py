@@ -8826,7 +8826,7 @@ class TestRateOfClimbBelow10000FtMax(unittest.TestCase):
 
     def test_can_operate(self):
         opts = RateOfClimbBelow10000FtMax.get_operational_combinations()
-        self.assertEqual(opts, [('Vertical Speed', 'Altitude STD Smoothed')])
+        self.assertEqual(opts, [('Vertical Speed', 'Altitude STD Smoothed', 'Airborne')])
 
     def test_derive(self):
         array = np.ma.concatenate((np.ma.arange(0, 5000, 250), np.ma.arange(5000, 10000, 1000), [10500, 9500, 9900], [11000]*5))
@@ -8835,13 +8835,28 @@ class TestRateOfClimbBelow10000FtMax(unittest.TestCase):
         roc_array = np.ma.concatenate(([250]*19, [437, 625, 812, 1000, 1125, 625, 475, 500, 125, 375, 275, 0, 0, 0]))
         roc_array = np.ma.concatenate((roc_array, 1-roc_array[::-1]))
         vert_spd = P('Vertical Speed', roc_array)
-
+        airs = buildsection('Airborne', 1, 200)
         node = RateOfClimbBelow10000FtMax()
-        node.derive(vert_spd, alt)
+        node.derive(vert_spd, alt, airs)
 
         expected = KPV('Rate Of Climb Below 10000 Ft Max', items=[
             KeyPointValue(name='Rate Of Climb Below 10000 Ft Max', index=23, value=1125),
-            KeyPointValue(name='Rate Of Climb Below 10000 Ft Max', index=26, value=500),
+        ])
+        self.assertEqual(node, expected)
+
+    def test_airborne_restriction(self):
+        array = np.ma.concatenate((np.ma.arange(0, 5000, 250), np.ma.arange(5000, 10000, 1000), [10500, 9500, 9900], [11000]*5))
+        array = np.ma.concatenate((array, array[::-1]))
+        alt = P('Altitude STD Smoothed', array)
+        roc_array = np.ma.concatenate(([250]*19, [437, 625, 812, 1000, 1125, 625, 475, 500, 125, 375, 275, 0, 0, 0]))
+        roc_array = np.ma.concatenate((roc_array, 1-roc_array[::-1]))
+        vert_spd = P('Vertical Speed', roc_array)
+        airs = buildsection('Airborne', 1, 2)
+        node = RateOfClimbBelow10000FtMax()
+        node.derive(vert_spd, alt, airs)
+
+        expected = KPV('Rate Of Climb Below 10000 Ft Max', items=[
+            KeyPointValue(name='Rate Of Climb Below 10000 Ft Max', index=1, value=250),
         ])
         self.assertEqual(node, expected)
 
@@ -8890,9 +8905,37 @@ class TestRateOfDescentBelow10000FtMax(unittest.TestCase):
         opts = RateOfDescentBelow10000FtMax.get_operational_combinations()
         self.assertEqual(opts, [('Vertical Speed', 'Altitude STD Smoothed', 'Combined Descent')])
 
-    @unittest.skip('Test Not Implemented')
     def test_derive(self):
-        self.assertTrue(False, msg='Test Not Implemented')
+        array = np.ma.concatenate((np.ma.arange(0, 5000, 250), np.ma.arange(5000, 10000, 1000), [10500, 9500, 9900], [11000]*5))
+        array = np.ma.concatenate((array, array[::-1]))
+        alt = P('Altitude STD Smoothed', array)
+        roc_array = np.ma.concatenate(([250]*19, [437, 625, 812, 1000, 1125, 625, 475, 500, 125, 375, 275, 0, 0, 0]))
+        roc_array = np.ma.concatenate((roc_array, 1-roc_array[::-1]))
+        vert_spd = P('Vertical Speed', -roc_array)
+        airs = buildsection('Combined Descent', 1, 200)
+        node = RateOfDescentBelow10000FtMax()
+        node.derive(vert_spd, alt, airs)
+
+        expected = KPV('Rate Of Descent Below 10000 Ft Max', items=[
+            KeyPointValue(name='Rate Of Descent Below 10000 Ft Max', index=23, value=-1125),
+        ])
+        self.assertEqual(node, expected)
+
+    def test_airborne_restriction(self):
+        array = np.ma.concatenate((np.ma.arange(0, 5000, 250), np.ma.arange(5000, 10000, 1000), [10500, 9500, 9900], [11000]*5))
+        array = np.ma.concatenate((array, array[::-1]))
+        alt = P('Altitude STD Smoothed', array)
+        roc_array = np.ma.concatenate(([250]*19, [437, 625, 812, 1000, 1125, 625, 475, 500, 125, 375, 275, 0, 0, 0]))
+        roc_array = np.ma.concatenate((roc_array, 1-roc_array[::-1]))
+        vert_spd = P('Vertical Speed', -roc_array)
+        airs = buildsection('Combined Descent', 1, 2)
+        node = RateOfDescentBelow10000FtMax()
+        node.derive(vert_spd, alt, airs)
+
+        expected = KPV('Rate Of Descent Below 10000 Ft Max', items=[
+            KeyPointValue(name='Rate Of Descent Below 10000 Ft Max', index=1, value=-250),
+        ])
+        self.assertEqual(node, expected)
 
 
 class TestRateOfDescent10000To5000FtMax(unittest.TestCase):
