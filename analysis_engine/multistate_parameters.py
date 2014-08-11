@@ -1203,14 +1203,14 @@ class GearUp(MultistateDerivedParameterNode):
     def can_operate(cls, available):
         # Can operate with a any combination of parameters available
         merge_gear_up = any_of(('Gear (L) Up', 'Gear (N) Up', 'Gear (R) Up'), available)
-        calc_gear_up = all_of(('Gear Down', 'Gear (*) Red Warning'), available)
+        calc_gear_up = all_of(('Gear Up Selected', 'Gear (*) Red Warning'), available)
         return merge_gear_up or calc_gear_up
 
     def derive(self,
                gl=M('Gear (L) Up'),
                gn=M('Gear (N) Up'),
                gr=M('Gear (R) Up'),
-               gear_down=M('Gear Down'),
+               gear_up_sel=M('Gear Up Selected'),
                gear_warn=M('Gear (*) Red Warning')):
 
         if gl or gn or gr:
@@ -1221,8 +1221,16 @@ class GearUp(MultistateDerivedParameterNode):
                 (gr, 'Up'),
             ).any(axis=0)
         else:
-            self.array = np.zeros_like(gear_down.array, dtype=np.short)
-            self.array[gear_down.array == 'Up'] = 'Up'
+            # we need to align the gear down and gear red warnings parameters
+            # before we continue
+            if gear_up_sel.frequency > gear_warn.frequency:
+                gear_warn = gear_warn.get_aligned(gear_up_sel)
+            else:
+                gear_up_sel = gear_up_sel.get_aligned(gear_warn)
+            self.frequency = gear_up_sel.frequency
+            self.offset = gear_up_sel.offset
+            self.array = np.zeros_like(gear_up_sel.array, dtype=np.short)
+            self.array[gear_up_sel.array == 'Up'] = 'Up'
             # Calculate gear up from gear down and gear red warnings.
             # We use up to 10s of `Gear (*) Red Warning` == 'Warning'
             # preceeding the actual gear position change state to define the
@@ -1243,10 +1251,11 @@ class GearUp(MultistateDerivedParameterNode):
                     end = start + 10 * self.frequency
 
                 # look for state before gear started moving (back one sample)
-                if gear_down.array[start - 1] == 'Down':
+                if gear_up_sel.array[start - 1] == 'Down':
                     # Prepend the warning to the gear position to define the
                     # selection
                     self.array[start:end + 1] = 'Down'
+            self.array.mask = gear_up_sel.array.mask
 
 
 class GearInTransit(MultistateDerivedParameterNode):
