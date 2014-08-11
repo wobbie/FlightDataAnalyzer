@@ -1066,6 +1066,41 @@ class TestGoAroundAndClimbout(unittest.TestCase):
         self.assertTrue(('Altitude AAL For Flight Phases','Level Flight') in opts)
         self.assertTrue(('Altitude AAL For Flight Phases',) in opts)
 
+    def test_go_around_and_climbout_basic(self):
+        # The Go-Around phase starts 500ft before the minimum altitude is
+        # reached, and ends after 2000ft climb....
+        height = np.ma.array(range(0,40)+
+                             range(40,20,-1)+
+                             range(20,45)+
+                             [45]*5+
+                             range(45,0,-1))*100.0
+        alt = Parameter('Altitude For Flight Phases', height)
+        levels = buildsection('Level Flight', 85, 91)
+        ga_phase = GoAroundAndClimbout()
+        ga_phase.derive(alt, levels)
+        expected = buildsection('Go Around And Climbout', 55, 80)
+        self.assertEqual(len(ga_phase), 1)
+        self.assertEqual(ga_phase.get_first().start_edge, expected[0].start_edge)
+        self.assertEqual(ga_phase.get_first().stop_edge, expected[0].stop_edge)
+
+    def test_go_around_and_climbout_level_off(self):
+        # The Go-Around phase starts 500ft before the minimum altitude is
+        # reached, and ends ... or until level-off.
+        height = np.ma.array(range(0,40)+
+                             range(40,20,-1)+
+                             range(20,30)+
+                             [30]*5+
+                             range(30,0,-1))*100.0
+        alt = Parameter('Altitude For Flight Phases', height)
+        levels = buildsection('Level Flight', 70, 76)
+        ga_phase = GoAroundAndClimbout()
+        ga_phase.derive(alt, levels)
+        # Level flight reached at 70
+        expected = buildsection('Go Around And Climbout', 55, 70)
+        self.assertEqual(len(ga_phase), 1)
+        self.assertEqual(ga_phase.get_first().start_edge, expected[0].start_edge)
+        self.assertEqual(ga_phase.get_first().stop_edge, expected[0].stop_edge)
+
     def test_go_around_and_climbout_phase_not_reaching_2000ft(self):
         '''
         down = np.ma.array(range(4000,1000,-490)+[1000]*7) - 4000
@@ -1145,6 +1180,7 @@ class TestGoAroundAndClimbout(unittest.TestCase):
         self.assertAlmostEqual(ga_phase[0].slice.stop, 10945, places=0)
         self.assertAlmostEqual(ga_phase[1].slice.start, 12056, places=0)
         self.assertAlmostEqual(ga_phase[1].slice.stop, 12737, places=0)
+
 
 
 class TestHolding(unittest.TestCase):
