@@ -9540,7 +9540,7 @@ class RateOfDescentBelow10000FtMax(KeyPointValueNode):
                descents=S('Combined Descent')):
         alt_band = np.ma.masked_outside(alt_std.array, 0, 10000)
         alt_descent_sections = valid_slices_within_array(alt_band, descents)
-        self.create_kpvs_within_slices(
+        self.create_kpv_from_slices(
             vrt_spd.array,
             alt_descent_sections,
             min_value
