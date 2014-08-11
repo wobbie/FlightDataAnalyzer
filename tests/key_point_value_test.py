@@ -9399,7 +9399,19 @@ class TestStickShakerActivatedDuration(unittest.TestCase, CreateKPVsWhereTest):
 
         self.basic_setup()
 
-
+    def test_short_pulses(self):
+        # We have seen aircraft with one sensor stuck on. This checks that
+        # the KPV does not record in this condition.
+        shaker = [0, 1] 
+        values_mapping = {0: '-', 1: 'Shake'}
+        shaker = M(
+            'Stick Shaker', values_mapping=values_mapping,
+            array=np.ma.array(shaker * 5), frequency=2.0)
+        airs = buildsection('Airborne', 0, 20)
+        node = StickShakerActivatedDuration()
+        node.derive(shaker, airs)
+        self.assertEqual(node, [])
+        
 class TestOverspeedDuration(unittest.TestCase, CreateKPVsWhereTest):
     def setUp(self):
         self.param_name = 'Overspeed Warning'
