@@ -10252,7 +10252,7 @@ class StickShakerActivatedDuration(KeyPointValueNode):
 
     def derive(self, stick_shaker=M('Stick Shaker'), airs=S('Airborne')):
         self.create_kpvs_where(stick_shaker.array == 'Shake',
-                               stick_shaker.hz, phase=airs)
+                               stick_shaker.hz, phase=airs, min_duration=1.0)
 
 
 class OverspeedDuration(KeyPointValueNode):
