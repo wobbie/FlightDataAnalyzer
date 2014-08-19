@@ -9,6 +9,25 @@ You can view the differences in tagged versions as follows:
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
 
+V0.13.3
+-------
+
+ - Imprevements
+   - Turbulence RMSG can now operate at 1hz
+   - Rate of Climb below 10,000ft amended to remove spurious values triggered on the ground
+   - Rate of Climb below 10,000ft (CAA KPV) amended to provide a single KPV per flight.
+   - Rate of Descent below 10,000 ft (CAA KPV) amended to provide single value per flight.
+   - Fixed frequency issue with gear up also changed to using Gear Up Selected to improve accuracy at gear extention.
+   - Stick Shaker KPVs not created for segments less than one second.
+   - Engine Start and Stop now work with Eng (*) Ng where available. 
+ - Fixes:
+   - Fixes to Gear parameters to correct Gear Retracting and prevent Gear Retracting
+     and Gear Retracted phases overlapping
+   - Split segments datetime correction logging
+   - Correction to Takeoff Roll Or Rejected Takeoff phase
+   - Groundspeed With Thrust Reversers Deployed Min to handle difference in frequencies
+
+
 V0.13.2
 -------
 

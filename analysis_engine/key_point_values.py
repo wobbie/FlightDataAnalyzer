@@ -9515,13 +9515,13 @@ class RateOfClimbBelow10000FtMax(KeyPointValueNode):
 
     def derive(self,
                vrt_spd=P('Vertical Speed'),
-               alt_aal=P('Altitude STD Smoothed')):
+               alt_aal=P('Altitude STD Smoothed'),
+               airborne=S('Airborne')):
         vrt_spd.array[vrt_spd.array < 0] = np.ma.masked
-        # Range for scanning starts at 1ft AAL to prevent corrupt data on the
-        # ground triggering a KPV.
-        self.create_kpvs_within_slices(
+        self.create_kpv_from_slices(
             vrt_spd.array,
-            alt_aal.slices_from_to(1, 10000),
+            slices_and(alt_aal.slices_from_to(0, 10000),
+                       [s.slice for s in airborne]),
             max_value,
         )
 
@@ -9594,7 +9594,7 @@ class RateOfDescentBelow10000FtMax(KeyPointValueNode):
                descents=S('Combined Descent')):
         alt_band = np.ma.masked_outside(alt_std.array, 0, 10000)
         alt_descent_sections = valid_slices_within_array(alt_band, descents)
-        self.create_kpvs_within_slices(
+        self.create_kpv_from_slices(
             vrt_spd.array,
             alt_descent_sections,
             min_value
@@ -10252,7 +10252,7 @@ class StickShakerActivatedDuration(KeyPointValueNode):
 
     def derive(self, stick_shaker=M('Stick Shaker'), airs=S('Airborne')):
         self.create_kpvs_where(stick_shaker.array == 'Shake',
-                               stick_shaker.hz, phase=airs)
+                               stick_shaker.hz, phase=airs, min_duration=1.0)
 
 
 class OverspeedDuration(KeyPointValueNode):

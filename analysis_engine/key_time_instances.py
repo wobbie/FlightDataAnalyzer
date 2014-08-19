@@ -349,9 +349,10 @@ class EngStart(KeyTimeInstanceNode):
 
     @classmethod
     def can_operate(cls, available):
-        return any_of(('Eng (%d) N1' % n for n in range(1, 3)), available) or \
+        return any_of(('Eng (%d) N1' % n for n in range(1, 5)), available) or \
                any_of(('Eng (%d) N2' % n for n in range(1, 5)), available) or \
-               any_of(('Eng (%d) N3' % n for n in range(1, 5)), available)
+               any_of(('Eng (%d) N3' % n for n in range(1, 5)), available) or \
+               any_of(('Eng (%d) Ng' % n for n in range(1, 5)), available)
 
     def derive(self,
                eng_1_n1=P('Eng (1) N1'),
@@ -367,8 +368,13 @@ class EngStart(KeyTimeInstanceNode):
                eng_1_n3=P('Eng (1) N3'),
                eng_2_n3=P('Eng (2) N3'),
                eng_3_n3=P('Eng (3) N3'),
-               eng_4_n3=P('Eng (4) N3')):
-        
+               eng_4_n3=P('Eng (4) N3'),
+
+               eng_1_ng=P('Eng (1) Ng'),
+               eng_2_ng=P('Eng (2) Ng'),
+               eng_3_ng=P('Eng (3) Ng'),
+               eng_4_ng=P('Eng (4) Ng')):
+ 
         if eng_1_n3 or eng_2_n3:
             # This aircraft has 3-spool engines
             eng_nx_list = (eng_1_n3, eng_2_n3, eng_3_n3, eng_4_n3)
@@ -376,6 +382,10 @@ class EngStart(KeyTimeInstanceNode):
         elif eng_1_n2 or eng_2_n2:
             # The engines are 2-spool engines
             eng_nx_list = (eng_1_n2, eng_2_n2, eng_3_n2, eng_4_n2)
+            limit = MIN_CORE_SUSTAINABLE
+        elif eng_1_ng or eng_2_ng:
+            # The engines have gas generator second stages
+            eng_nx_list = (eng_1_ng, eng_2_ng, eng_3_ng, eng_4_ng)
             limit = MIN_CORE_SUSTAINABLE
         else:
             eng_nx_list = (eng_1_n1, eng_2_n1, eng_3_n1, eng_4_n1)
@@ -465,7 +475,12 @@ class EngStop(KeyTimeInstanceNode):
                eng_1_n3=P('Eng (1) N3'),
                eng_2_n3=P('Eng (2) N3'),
                eng_3_n3=P('Eng (3) N3'),
-               eng_4_n3=P('Eng (4) N3')):
+               eng_4_n3=P('Eng (4) N3'),
+
+               eng_1_ng=P('Eng (1) Ng'),
+               eng_2_ng=P('Eng (2) Ng'),
+               eng_3_ng=P('Eng (3) Ng'),
+               eng_4_ng=P('Eng (4) Ng')):
 
         if eng_1_n3 or eng_2_n3:
             # This aircraft has 3-spool engines
@@ -474,6 +489,10 @@ class EngStop(KeyTimeInstanceNode):
         elif eng_1_n2 or eng_2_n2:
             # The engines are 2-spool engines
             eng_nx_list = (eng_1_n2, eng_2_n2, eng_3_n2, eng_4_n2)
+            limit = MIN_CORE_SUSTAINABLE
+        elif eng_1_ng or eng_2_ng:
+            # The engines have gas generator second stages
+            eng_nx_list = (eng_1_ng, eng_2_ng, eng_3_ng, eng_4_ng)
             limit = MIN_CORE_SUSTAINABLE
         else:
             eng_nx_list = (eng_1_n1, eng_2_n1, eng_3_n1, eng_4_n1)
