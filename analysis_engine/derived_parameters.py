@@ -5818,7 +5818,7 @@ class SpeedbrakeHandle(DerivedParameterNode):
             self.array = blend_parameters(
                 available, self.offset, self.frequency)
         elif len(available) == 1:
-            self.array = available[0]
+            self.array = available[0].array
 
 
 class Stabilizer(DerivedParameterNode):
