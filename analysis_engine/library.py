@@ -6824,7 +6824,7 @@ def vstack_params_where_state(*param_states):
     return np.ma.vstack(param_arrays)
 
 
-def second_window(array, frequency, seconds):
+def second_window(array, frequency, seconds, extend_window=False):
     '''
     Only include values which are maintained for a number of seconds, shorter
     exceedances are excluded.
@@ -6834,10 +6834,15 @@ def second_window(array, frequency, seconds):
     e.g. [0, 1, 2, 3, 2, 1, 2, 3] -> [0, 1, 2, 2, 2, 2, 2, 2]
 
     :type array: np.ma.masked_array
+    :param extend_window: Extend window by 1 second if frequency is incompatible.
+    :type extend_window: bool
     '''
     if ((seconds % 2 == 0 and not frequency % 2 == 1) or
         (seconds % 2 == 1 and not frequency % 2 == 0)):
-        raise ValueError('Invalid seconds for frequency')
+        if extend_window:
+            seconds += 1
+        else:
+            raise ValueError('Invalid seconds for frequency')
     
     samples = int(seconds * frequency)
     
