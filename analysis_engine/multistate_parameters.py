@@ -687,8 +687,6 @@ class Eng_AllRunning(MultistateDerivedParameterNode):
     TODO: Confirm that all engines were recording for the N2 Min / Fuel Flow
     Min parameters - theoretically there could be only three engines in the
     frame for a four engine aircraft. Use "Engine Count".
-
-    TODO: Support shutdown for Propellor aircraft that don't record fuel flow.
     '''
     name = 'Eng (*) All Running'
     values_mapping = {
@@ -700,15 +698,20 @@ class Eng_AllRunning(MultistateDerivedParameterNode):
     def can_operate(cls, available):
         return 'Eng (*) N1 Min' in available or \
                'Eng (*) N2 Min' in available or \
+               'Eng (*) Np Min' in available or \
                'Eng (*) Fuel Flow Min' in available
 
     def derive(self,
                eng_n1=P('Eng (*) N1 Min'),
                eng_n2=P('Eng (*) N2 Min'),
+               eng_np=P('Eng (*) Np Min'),
                fuel_flow=P('Eng (*) Fuel Flow Min')):
         # TODO: move values to settings
 
-        if eng_n2 or fuel_flow:
+        if eng_np:
+            # If it's got propellors, this overrides core engine measurements.
+            self.array = eng_np.array > 10
+        elif eng_n2 or fuel_flow:
             # Ideally have N2 and Fuel Flow with both available,
             # otherwise use just one source
             n2_running = eng_n2.array > 10 if eng_n2 \
@@ -719,7 +722,6 @@ class Eng_AllRunning(MultistateDerivedParameterNode):
         else:
             # Fall back on N1
             self.array = eng_n1.array > 10
-            # TODO: extend to NP for props
 
 
 class Eng_AnyRunning(MultistateDerivedParameterNode):
@@ -739,14 +741,18 @@ class Eng_AnyRunning(MultistateDerivedParameterNode):
     def can_operate(cls, available):
         return 'Eng (*) N1 Max' in available or \
                'Eng (*) N2 Max' in available or \
+               'Eng (*) Np Max' in available or \
                'Eng (*) Fuel Flow Max' in available
 
     def derive(self,
                eng_n1=P('Eng (*) N1 Max'),
                eng_n2=P('Eng (*) N2 Max'),
+               eng_np=P('Eng (*) Np Max'),
                fuel_flow=P('Eng (*) Fuel Flow Max')):
 
-        if eng_n2 or fuel_flow:
+        if eng_np:
+            self.array = eng_np.array > 10
+        elif eng_n2 or fuel_flow:
             # TODO: move values to settings
             n2_running = eng_n2.array > 10 if eng_n2 \
                 else np.ones_like(fuel_flow.array, dtype=bool)
@@ -757,7 +763,6 @@ class Eng_AnyRunning(MultistateDerivedParameterNode):
         else:
             # Only have N1 available
             self.array = eng_n1.array > 10
-            # TODO: extend to NP for props
 
 
 class ThrustModeSelected(MultistateDerivedParameterNode):

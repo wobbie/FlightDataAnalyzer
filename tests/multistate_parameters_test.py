@@ -912,6 +912,7 @@ class TestEng_AllRunning(unittest.TestCase, NodeTest):
         self.node_class = Eng_AllRunning
         self.operational_combinations = [
             ('Eng (*) N1 Min',),
+            ('Eng (*) Np Min',),
             ('Eng (*) N2 Min',), ('Eng (*) Fuel Flow Min',),
             ('Eng (*) N2 Min', 'Eng (*) Fuel Flow Min'),
         ]
@@ -921,7 +922,7 @@ class TestEng_AllRunning(unittest.TestCase, NodeTest):
         n2 = P('Eng (*) N2 Min', array=n2_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(None, n2, None)
+        node.derive(None, n2, None, None)
         self.assertEqual(node.array.raw.tolist(), expected)
 
     def test_derive_ff_only(self):
@@ -929,7 +930,7 @@ class TestEng_AllRunning(unittest.TestCase, NodeTest):
         ff = P('Eng (*) Fuel Flow Min', array=ff_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(None, None, ff)
+        node.derive(None, None, None, ff)
         self.assertEqual(node.array.raw.tolist(), expected)
 
     def test_derive_n2_ff(self):
@@ -939,7 +940,7 @@ class TestEng_AllRunning(unittest.TestCase, NodeTest):
         ff = P('Eng (*) Fuel Flow Min', array=ff_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(None, n2, ff)
+        node.derive(None, n2, None, ff)
         self.assertEqual(node.array.raw.tolist(), expected)
 
     def test_derive_n1_only(self):
@@ -948,7 +949,16 @@ class TestEng_AllRunning(unittest.TestCase, NodeTest):
         n1 = P('Eng (*) N2 Min', array=n1_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(None, n1, None)
+        node.derive(None, n1, None, None)
+        self.assertEqual(node.array.raw.tolist(), expected)
+
+    def test_derive_np_only(self):
+        # Propellors 
+        np_array = np.ma.array([0, 5, 10, 15, 11, 5, 0])
+        eng_np = P('Eng (*) Np Min', array=np_array)
+        expected = [False, False, False, True, True, False, False]
+        node = self.node_class()
+        node.derive(None, None, eng_np , None)
         self.assertEqual(node.array.raw.tolist(), expected)
 
 
@@ -960,6 +970,7 @@ class TestEng_AnyRunning(unittest.TestCase, NodeTest):
         self.node_class = Eng_AnyRunning
         self.operational_combinations = [
             ('Eng (*) N1 Max',),
+            ('Eng (*) Np Max',),
             ('Eng (*) N2 Max',), ('Eng (*) Fuel Flow Max',),
             ('Eng (*) N2 Max', 'Eng (*) Fuel Flow Max'),
         ]
@@ -969,7 +980,7 @@ class TestEng_AnyRunning(unittest.TestCase, NodeTest):
         n2 = P('Eng (*) N2 Max', array=n2_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(None, n2, None)
+        node.derive(None, n2, None, None)
         self.assertEqual(node.array.raw.tolist(), expected)
 
     def test_derive_ff_only(self):
@@ -977,7 +988,7 @@ class TestEng_AnyRunning(unittest.TestCase, NodeTest):
         ff = P('Eng (*) Fuel Flow Max', array=ff_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(None, None, ff)
+        node.derive(None, None, None, ff)
         self.assertEqual(node.array.raw.tolist(), expected)
 
     def test_derive_n2_ff(self):
@@ -987,7 +998,7 @@ class TestEng_AnyRunning(unittest.TestCase, NodeTest):
         ff = P('Eng (*) Fuel Flow Max', array=ff_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(None, n2, ff)
+        node.derive(None, n2, None, ff)
         self.assertEqual(node.array.raw.tolist(), expected)
 
     def test_derive_n1_only(self):
@@ -996,7 +1007,16 @@ class TestEng_AnyRunning(unittest.TestCase, NodeTest):
         n1 = P('Eng (*) N1 Max', array=n1_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(n1, None, None)
+        node.derive(n1, None, None, None)
+        self.assertEqual(node.array.raw.tolist(), expected)
+
+    def test_derive_np_only(self):
+        # Propellors 
+        np_array = np.ma.array([0, 5, 10, 15, 11, 5, 0])
+        eng_np = P('Eng (*) Np Min', array=np_array)
+        expected = [False, False, False, True, True, False, False]
+        node = self.node_class()
+        node.derive(None, None, eng_np , None)
         self.assertEqual(node.array.raw.tolist(), expected)
 
 
