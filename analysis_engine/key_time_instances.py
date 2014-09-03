@@ -8,6 +8,7 @@ from analysis_engine.library import (all_of,
                                      find_toc_tod,
                                      hysteresis,
                                      index_at_value,
+                                     last_valid_sample,
                                      max_value,
                                      minimum_unmasked,
                                      np_ma_masked_zeros_like,
@@ -501,7 +502,8 @@ class EngStop(KeyTimeInstanceNode):
         for number, eng_nx in enumerate(eng_nx_list, start=1):
             if not eng_nx:
                 continue
-            
+
+            stopped = False
             # Repair 30 seconds of masked data when detecting engine stops.
             array = hysteresis(
                 repair_mask(eng_nx.array,
@@ -509,18 +511,26 @@ class EngStop(KeyTimeInstanceNode):
                             extrapolate=True),
                 HYSTERESIS_ENG_START_STOP)
             below_slices = runs_of_ones(array < limit)
-            
+
             for below_slice in below_slices:
-                
                 if (below_slice.start == 0 or
-                    slice_duration(below_slice, self.hz) < 6 or
-                    eng_nx.array[below_slice.start - 1] is np.ma.masked):
-                    # Small dip, reached the end of the array or 
+                        slice_duration(below_slice, self.hz) < 6 or
+                        eng_nx.array[below_slice.start - 1] is np.ma.masked):
+                    # Small dip, reached the end of the array or
                     # following masked data.
                     continue
-                
+
+                stopped = True
                 self.create_kti(below_slice.start,
                                 replace_values={'number': number})
+            if not stopped:
+                i, v = last_valid_sample(eng_nx.array)
+                if i is not None:
+                    self.warning(
+                        'Eng (%d) Stop: `%s` spin down not detected, '
+                        'sampling at the end of the data.' % (number,
+                                                              eng_nx.name))
+                    self.create_kti(i, replace_values={'number': number})
 
 
 class LastEngStopAfterTouchdown(KeyTimeInstanceNode):
