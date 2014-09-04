@@ -6,6 +6,7 @@ from analysis_engine.library import (all_of,
                                      coreg,
                                      find_edges_on_state_change,
                                      find_toc_tod,
+                                     first_valid_sample,
                                      hysteresis,
                                      index_at_value,
                                      last_valid_sample,
@@ -340,7 +341,7 @@ class ClimbThrustDerateDeselected(KeyTimeInstanceNode):
 class EngStart(KeyTimeInstanceNode):
     '''
     Records the moment of engine start for each engine in turn.
-    
+
     Engines running at the start of the valid data are assumed to start when
     the data starts.
     '''
@@ -350,22 +351,24 @@ class EngStart(KeyTimeInstanceNode):
 
     @classmethod
     def can_operate(cls, available):
-        return any_of(('Eng (%d) N1' % n for n in range(1, 5)), available) or \
-               any_of(('Eng (%d) N2' % n for n in range(1, 5)), available) or \
-               any_of(('Eng (%d) N3' % n for n in range(1, 5)), available) or \
-               any_of(('Eng (%d) Ng' % n for n in range(1, 5)), available)
+        return (
+            any_of(('Eng (%d) N1' % n for n in range(1, 5)), available) or
+            any_of(('Eng (%d) N2' % n for n in range(1, 5)), available) or
+            any_of(('Eng (%d) N3' % n for n in range(1, 5)), available) or
+            any_of(('Eng (%d) Ng' % n for n in range(1, 5)), available)
+        )
 
     def derive(self,
                eng_1_n1=P('Eng (1) N1'),
                eng_2_n1=P('Eng (2) N1'),
                eng_3_n1=P('Eng (3) N1'),
                eng_4_n1=P('Eng (4) N1'),
-               
+
                eng_1_n2=P('Eng (1) N2'),
                eng_2_n2=P('Eng (2) N2'),
                eng_3_n2=P('Eng (3) N2'),
                eng_4_n2=P('Eng (4) N2'),
-               
+
                eng_1_n3=P('Eng (1) N3'),
                eng_2_n3=P('Eng (2) N3'),
                eng_3_n3=P('Eng (3) N3'),
@@ -375,7 +378,7 @@ class EngStart(KeyTimeInstanceNode):
                eng_2_ng=P('Eng (2) Ng'),
                eng_3_ng=P('Eng (3) Ng'),
                eng_4_ng=P('Eng (4) Ng')):
- 
+
         if eng_1_n3 or eng_2_n3:
             # This aircraft has 3-spool engines
             eng_nx_list = (eng_1_n3, eng_2_n3, eng_3_n3, eng_4_n3)
@@ -391,11 +394,12 @@ class EngStart(KeyTimeInstanceNode):
         else:
             eng_nx_list = (eng_1_n1, eng_2_n1, eng_3_n1, eng_4_n1)
             limit = MIN_FAN_RUNNING
-        
+
         for number, eng_nx in enumerate(eng_nx_list, start=1):
             if not eng_nx:
                 continue
-            
+
+            started = False
             # Repair 30 seconds of masked data when detecting engine starts.
             array = hysteresis(
                 repair_mask(eng_nx.array,
@@ -403,18 +407,28 @@ class EngStart(KeyTimeInstanceNode):
                             extrapolate=True),
                 HYSTERESIS_ENG_START_STOP)
             below_slices = runs_of_ones(array < limit)
-            
+
             for below_slice in below_slices:
-                
+
                 if ((below_slice.start != 0 and
-                     slice_duration(below_slice, self.hz) < 6) or 
-                    below_slice.stop == len(array) or 
-                    eng_nx.array[below_slice.stop] is np.ma.masked):
+                        slice_duration(below_slice, self.hz) < 6) or
+                        below_slice.stop == len(array) or
+                        eng_nx.array[below_slice.stop] is np.ma.masked):
                     # Small dip or reached the end of the array.
                     continue
-                
+
+                started = True
                 self.create_kti(below_slice.stop,
                                 replace_values={'number': number})
+
+            if not started:
+                i, v = first_valid_sample(eng_nx.array)
+                if i is not None:
+                    self.warning(
+                        'Eng (%d) Start: `%s` spin up not detected, '
+                        'sampling at the end beginning the data.' %
+                        (number, eng_nx.name))
+                    self.create_kti(i, replace_values={'number': number})
 
 
 class FirstEngStartBeforeLiftoff(KeyTimeInstanceNode):
@@ -422,7 +436,7 @@ class FirstEngStartBeforeLiftoff(KeyTimeInstanceNode):
     Check for the first engine start before liftoff. The index will be the first
     time an engine is started and remains on before liftoff.
     '''
-    
+
     def derive(self, eng_starts=KTI('Eng Start'), eng_count=A('Engine Count'),
                liftoffs=KTI('Liftoff')):
         if not liftoffs:
@@ -449,7 +463,7 @@ class EngStop(KeyTimeInstanceNode):
     '''
     Monitors the engine stop time. Engines still running at the end of the
     data are assumed to stop at the end of the data recording.
-    
+
     We use MIN_CORE_SUSTAINABLE/2 to make sure the engine truly is stopping,
     and not just running freakishly slow.
     '''
@@ -459,20 +473,22 @@ class EngStop(KeyTimeInstanceNode):
 
     @classmethod
     def can_operate(cls, available):
-        return any_of(('Eng (%d) N1' % n for n in range(1, 5)), available) or \
-               any_of(('Eng (%d) N2' % n for n in range(1, 5)), available)
+        return (
+            any_of(('Eng (%d) N1' % n for n in range(1, 5)), available) or
+            any_of(('Eng (%d) N2' % n for n in range(1, 5)), available)
+        )
 
     def derive(self,
                eng_1_n1=P('Eng (1) N1'),
                eng_2_n1=P('Eng (2) N1'),
                eng_3_n1=P('Eng (3) N1'),
                eng_4_n1=P('Eng (4) N1'),
-    
+
                eng_1_n2=P('Eng (1) N2'),
                eng_2_n2=P('Eng (2) N2'),
                eng_3_n2=P('Eng (3) N2'),
                eng_4_n2=P('Eng (4) N2'),
-               
+
                eng_1_n3=P('Eng (1) N3'),
                eng_2_n3=P('Eng (2) N3'),
                eng_3_n3=P('Eng (3) N3'),
