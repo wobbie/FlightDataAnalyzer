@@ -423,7 +423,7 @@ class EngStart(KeyTimeInstanceNode):
 
             if not started:
                 i, v = first_valid_sample(eng_nx.array)
-                if i is not None:
+                if i is not None and v >= limit:
                     self.warning(
                         'Eng (%d) Start: `%s` spin up not detected, '
                         'sampling at the end beginning the data.' %
@@ -541,7 +541,7 @@ class EngStop(KeyTimeInstanceNode):
                                 replace_values={'number': number})
             if not stopped:
                 i, v = last_valid_sample(eng_nx.array)
-                if i is not None:
+                if i is not None and v >= limit:
                     self.warning(
                         'Eng (%d) Stop: `%s` spin down not detected, '
                         'sampling at the end of the data.' % (number,
