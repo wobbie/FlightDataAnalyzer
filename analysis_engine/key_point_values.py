@@ -10255,6 +10255,18 @@ class StickShakerActivatedDuration(KeyPointValueNode):
                                stick_shaker.hz, phase=airs, min_duration=1.0)
 
 
+class StallWarningActivatedDuration(KeyPointValueNode):
+    '''
+    We annotate the stall warning event with the duration of the event.
+    '''
+
+    units = ut.SECOND
+
+    def derive(self, stall_warn=M('Stall Warning'), airs=S('Airborne')):
+        self.create_kpvs_where(stall_warn.array == 'Warning',
+                               stall_warn.hz, phase=airs, min_duration=1.0)
+
+
 class OverspeedDuration(KeyPointValueNode):
     '''
     '''
