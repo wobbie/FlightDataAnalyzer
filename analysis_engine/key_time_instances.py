@@ -546,7 +546,7 @@ class EngStop(KeyTimeInstanceNode):
                         'Eng (%d) Stop: `%s` spin down not detected, '
                         'sampling at the end of the data.' % (number,
                                                               eng_nx.name))
-                    self.create_kti(i, replace_values={'number': number})
+                    self.create_kti(i-1, replace_values={'number': number})
 
 
 class LastEngStopAfterTouchdown(KeyTimeInstanceNode):
