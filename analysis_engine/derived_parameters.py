@@ -614,7 +614,7 @@ class AltitudeAAL(DerivedParameterNode):
 
         return alt_result
 
-    def derive(self, alt_rad=P('Altitude Radio Offset Removed'),
+    def derive(self, alt_rad=P('Altitude Radio'),
                alt_std=P('Altitude STD Smoothed'),
                speedies=S('Fast'),
                pitch=P('Pitch')):
@@ -710,17 +710,20 @@ class AltitudeAAL(DerivedParameterNode):
                         # Let's find the lowest rad alt reading
                         # (this may not be exactly the highest ground, but
                         # it was probably the point of highest concern!)
-                        arg_hg_max = \
-                            np.ma.argmin(alt_rad.array[down_up]) + \
-                            alt_idxs[n]
-                        hg_max = alt_std.array[arg_hg_max] - \
-                            alt_rad.array[arg_hg_max]
-                        if np.ma.count(hg_max):
+                        ##arg_hg_max = \
+                            ##np.ma.argmin(alt_rad.array[down_up]) + \
+                            ##alt_idxs[n]
+                        ##hg_max = alt_std.array[arg_hg_max] - \
+                            ##alt_rad.array[arg_hg_max]
+                        hb_min = np.ma.min(alt_std.array[down_up])
+                        hr_min = np.ma.min(alt_rad.array[down_up])
+                        hg_max = hb_min - hr_min
+                        if hg_max:
                             # The rad alt measured height above a peak...
                             dips.append({
                                 'type': 'over_gnd',
                                 'slice': down_up,
-                                'alt_std': alt_std.array[arg_hg_max],
+                                'alt_std': hb_min,
                                 'highest_ground': hg_max,
                             })
                     else:
