@@ -7027,7 +7027,11 @@ class EngN1AtTOGADuringTakeoff(KeyPointValueNode):
 class EngN154to72PercentWithThrustReversersDeployedDurationMax(KeyPointValueNode):
     '''
     KPV created at customer request following Service Bullitin from Rolls Royce
-    (TAY-72-A1771)
+    (TAY-72-A1771).
+    From EASA PROPOSAL TO ISSUE AN AIRWORTHINESS DIRECTIVE, PAD No.: 13-100:
+    Applicability: Tay 620-15 and Tay 620-15/20 engines, all serial numbers.
+    These engines are known to be installed on, but not limited to, Fokker F28
+    Mark 0070 and Mark 0100 series aeroplanes.
     '''
 
     NAME_FORMAT = 'Eng (%(number)d) N1 54 To 72 Percent With Thrust Reversers Deployed Duration Max'
@@ -7035,16 +7039,17 @@ class EngN154to72PercentWithThrustReversersDeployedDurationMax(KeyPointValueNode
     units = ut.SECOND
 
     @classmethod
-    def can_operate(cls, available):
+    def can_operate(cls, available, family=A('Family')):
         return all((
             any_of(('Eng (%d) N1' % n for n in cls.NAME_VALUES['number']), available),
             'Thrust Reversers' in available,
+            family.value=='F28',
         ))
 
     def derive(self, eng1_n1=P('Eng (1) N1'), eng2_n1=P('Eng (2) N1'),
                eng3_n1=P('Eng (3) N1'), eng4_n1=P('Eng (4) N1'),
-               tr=M('Thrust Reversers'),):
-
+               tr=M('Thrust Reversers'), family=A('Family')):
+        
         eng_n1_list = (eng1_n1, eng2_n1, eng3_n1, eng4_n1)
         reverser_deployed = np.ma.where(tr.array == 'Deployed', tr.array, np.ma.masked)
         for eng_num, eng_n1 in enumerate(eng_n1_list, 1):

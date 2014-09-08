@@ -6044,7 +6044,8 @@ class TestEngN154to72PercentWithThrustReversersDeployedDurationMax(unittest.Test
         thrust_reversers = M('Thrust Reversers', array=thrust_reversers_array, values_mapping=values_mapping)
 
         node = self.node_class()
-        node.derive(eng_1, None, None, None, thrust_reversers)
+        family = A(name='Family', value='F27')
+        node.derive(eng_1, None, None, None, thrust_reversers, family)
 
         self.assertEqual(node[0].name, 'Eng (1) N1 54 To 72 Percent With Thrust Reversers Deployed Duration Max')
         self.assertEqual(node[0].index, 64)
