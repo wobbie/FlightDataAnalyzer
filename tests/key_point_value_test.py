@@ -4556,14 +4556,14 @@ class TestControlColumnStiffness(unittest.TestCase, NodeTest):
 class TestControlColumnForceMax(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = ControlColumnForceMax
-        self.operational_combinations = [('Control Column Force', 'Fast')]
+        self.operational_combinations = [('Control Column Force', 'Airborne')]
 
     def test_derive(self):
         ccf = P(
             name='Control Column Force',
             array=np.ma.array(data=range(50, 30, -1), dtype=float),
         )
-        phase_fast = buildsection('Fast', 3, 9)
+        phase_fast = buildsection('Airborne', 3, 9)
         node = self.node_class()
         node.derive(ccf, phase_fast)
         self.assertEqual(
@@ -4577,14 +4577,14 @@ class TestControlColumnForceMax(unittest.TestCase, NodeTest):
 class TestControlWheelForceMax(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = ControlWheelForceMax
-        self.operational_combinations = [('Control Wheel Force', 'Fast')]
+        self.operational_combinations = [('Control Wheel Force', 'Airborne')]
 
     def test_derive(self):
         cwf = P(
             name='Control Wheel Force',
             array=np.ma.array(data=range(50, 30, -1), dtype=float),
         )
-        phase_fast = buildsection('Fast', 3, 9)
+        phase_fast = buildsection('Airborne', 3, 9)
         node = self.node_class()
         node.derive(cwf, phase_fast)
         self.assertEqual(
@@ -6012,6 +6012,7 @@ class TestEngN154to72PercentWithThrustReversersDeployedDurationMax(unittest.Test
         self.node_class = EngN154to72PercentWithThrustReversersDeployedDurationMax
 
     def test_can_operate(self):
+        eng_series = A(name='Engine Series', value='Tay 620')
         opts = self.node_class.get_operational_combinations()
         expected = [('Eng (1) N1', 'Thrust Reversers'),
                     ('Eng (2) N1', 'Thrust Reversers'),
@@ -6028,8 +6029,11 @@ class TestEngN154to72PercentWithThrustReversersDeployedDurationMax(unittest.Test
                     ('Eng (1) N1', 'Eng (3) N1', 'Eng (4) N1', 'Thrust Reversers'),
                     ('Eng (2) N1', 'Eng (3) N1', 'Eng (4) N1', 'Thrust Reversers'),
                     ('Eng (1) N1', 'Eng (2) N1', 'Eng (3) N1', 'Eng (4) N1', 'Thrust Reversers')]
-
-        self.assertEqual(expected, opts)
+        for combination in expected:
+            self.assertTrue(self.node_class().can_operate(combination, eng_series))
+        eng_series.value = 'Tay 611'
+        for combination in expected:
+            self.assertFalse(self.node_class().can_operate(combination, eng_series))
 
     def test_derive(self):
         values_mapping = {
@@ -6044,8 +6048,8 @@ class TestEngN154to72PercentWithThrustReversersDeployedDurationMax(unittest.Test
         thrust_reversers = M('Thrust Reversers', array=thrust_reversers_array, values_mapping=values_mapping)
 
         node = self.node_class()
-        family = A(name='Family', value='F27')
-        node.derive(eng_1, None, None, None, thrust_reversers, family)
+        eng_series = A(name='Engine Series', value='Tay 620')
+        node.derive(eng_1, None, None, None, thrust_reversers, eng_series)
 
         self.assertEqual(node[0].name, 'Eng (1) N1 54 To 72 Percent With Thrust Reversers Deployed Duration Max')
         self.assertEqual(node[0].index, 64)

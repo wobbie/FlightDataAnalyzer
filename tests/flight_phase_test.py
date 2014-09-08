@@ -1492,6 +1492,20 @@ class TestRejectedTakeoff(unittest.TestCase):
         self.assertAlmostEqual(node[0].slice.start, 2373, 0)
         self.assertAlmostEqual(node[0].slice.stop, 2435, 0)
     
+    def test_derive_flight_with_rejected_takeoff_short(self):
+        '''
+        test derived from genuine low speed rejected takeoff FDS hash 452728ea2768
+        '''
+        accel_lon = load(os.path.join(
+            test_data_path,
+            'RejectedTakeoff_AccelerationLongitudinalOffsetRemoved_Short.nod'))
+        grounded = buildsections('Grounded', [0, 3796], [23516, 24576])
+        node = RejectedTakeoff(frequency=4)
+        node.derive(accel_lon, grounded)
+        self.assertEqual(len(node), 1)
+        self.assertAlmostEqual(node[0].slice.start, 1878, 0)
+        self.assertAlmostEqual(node[0].slice.stop, 2056, 0)
+
     def test_derive_flight_without_rejected_takeoff_3(self):
         accel_lon = load(os.path.join(
             test_data_path,

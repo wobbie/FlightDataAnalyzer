@@ -4584,7 +4584,7 @@ class ControlColumnForceMax(KeyPointValueNode):
 
     def derive(self,
                force=P('Control Column Force'),
-               fast=S('Fast')):
+               fast=S('Airborne')):
         self.create_kpvs_within_slices(
             force.array, fast.get_slices(),
             max_value)
@@ -4598,7 +4598,7 @@ class ControlWheelForceMax(KeyPointValueNode):
 
     def derive(self,
                force=P('Control Wheel Force'),
-               fast=S('Fast')):
+               fast=S('Airborne')):
         self.create_kpvs_within_slices(
             force.array, fast.get_slices(),
             max_value)
@@ -7039,16 +7039,16 @@ class EngN154to72PercentWithThrustReversersDeployedDurationMax(KeyPointValueNode
     units = ut.SECOND
 
     @classmethod
-    def can_operate(cls, available, family=A('Family')):
+    def can_operate(cls, available, eng_series=A('Engine Series')):
         return all((
             any_of(('Eng (%d) N1' % n for n in cls.NAME_VALUES['number']), available),
             'Thrust Reversers' in available,
-            family.value=='F28',
+            eng_series.value=='Tay 620',
         ))
 
     def derive(self, eng1_n1=P('Eng (1) N1'), eng2_n1=P('Eng (2) N1'),
                eng3_n1=P('Eng (3) N1'), eng4_n1=P('Eng (4) N1'),
-               tr=M('Thrust Reversers'), family=A('Family')):
+               tr=M('Thrust Reversers'), eng_series=A('Engine Series')):
         
         eng_n1_list = (eng1_n1, eng2_n1, eng3_n1, eng4_n1)
         reverser_deployed = np.ma.where(tr.array == 'Deployed', tr.array, np.ma.masked)
