@@ -4584,7 +4584,7 @@ class ControlColumnForceMax(KeyPointValueNode):
 
     def derive(self,
                force=P('Control Column Force'),
-               fast=S('Fast')):
+               fast=S('Airborne')):
         self.create_kpvs_within_slices(
             force.array, fast.get_slices(),
             max_value)
@@ -4598,7 +4598,7 @@ class ControlWheelForceMax(KeyPointValueNode):
 
     def derive(self,
                force=P('Control Wheel Force'),
-               fast=S('Fast')):
+               fast=S('Airborne')):
         self.create_kpvs_within_slices(
             force.array, fast.get_slices(),
             max_value)

@@ -4556,14 +4556,14 @@ class TestControlColumnStiffness(unittest.TestCase, NodeTest):
 class TestControlColumnForceMax(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = ControlColumnForceMax
-        self.operational_combinations = [('Control Column Force', 'Fast')]
+        self.operational_combinations = [('Control Column Force', 'Airborne')]
 
     def test_derive(self):
         ccf = P(
             name='Control Column Force',
             array=np.ma.array(data=range(50, 30, -1), dtype=float),
         )
-        phase_fast = buildsection('Fast', 3, 9)
+        phase_fast = buildsection('Airborne', 3, 9)
         node = self.node_class()
         node.derive(ccf, phase_fast)
         self.assertEqual(
@@ -4577,14 +4577,14 @@ class TestControlColumnForceMax(unittest.TestCase, NodeTest):
 class TestControlWheelForceMax(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = ControlWheelForceMax
-        self.operational_combinations = [('Control Wheel Force', 'Fast')]
+        self.operational_combinations = [('Control Wheel Force', 'Airborne')]
 
     def test_derive(self):
         cwf = P(
             name='Control Wheel Force',
             array=np.ma.array(data=range(50, 30, -1), dtype=float),
         )
-        phase_fast = buildsection('Fast', 3, 9)
+        phase_fast = buildsection('Airborne', 3, 9)
         node = self.node_class()
         node.derive(cwf, phase_fast)
         self.assertEqual(
