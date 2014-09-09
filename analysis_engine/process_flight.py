@@ -284,7 +284,7 @@ def derive_parameters(hdf, node_mgr, process_order):
     return kti_list, kpv_list, section_list, approach_list, flight_attrs
 
 
-def parse_analyser_profiles(analyser_profiles):
+def parse_analyser_profiles(analyser_profiles, filter_modules=None):
     '''
     Parse analyser profiles into additional_modules and required nodes as
     expected by process_flight.
@@ -293,6 +293,8 @@ def parse_analyser_profiles(analyser_profiles):
         semicolon separated module paths and whether or not the nodes are
         required e.g. [('package.module_one;package.module_two', True), ]
     :type analyser_profiles: [[str, bool], ]
+    :param filter_paths: Optional list of analyser profiles to keep.
+    :type filter_paths: [str] or None
     :returns: A list of additional module paths and a list of required node
         names.
     :rtype: [str], [str]
@@ -301,6 +303,8 @@ def parse_analyser_profiles(analyser_profiles):
     required_nodes = []
     for import_paths, is_required in analyser_profiles:
         for import_path in import_paths.split(';'):
+            if filter_modules is not None and import_path not in filter_modules:
+                continue
             import_path = import_path.strip()
             if not import_path:
                 continue
