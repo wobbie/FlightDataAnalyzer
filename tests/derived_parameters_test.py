@@ -1425,28 +1425,28 @@ class TestAltitudeRadioOffsetRemoved(unittest.TestCase):
         aor = AltitudeRadioOffsetRemoved()
         aor.derive(ralt)
         expected = ralt.array - 1
-        ma_test.assert_array_equal(aor.array, expected)
+        ma_test.assert_masked_array_equal(aor.array, expected)
         
     def test_no_change_for_wierd_values(self):
         ralt = P('Altitude Radio', self.test_array + 312)
         aor = AltitudeRadioOffsetRemoved()
         aor.derive(ralt)
         expected = ralt.array
-        ma_test.assert_array_equal(aor.array, expected)
+        ma_test.assert_masked_array_equal(aor.array, expected)
         
     def test_no_change_for_negative_values(self):
         ralt = P('Altitude Radio', self.test_array - 4)
         aor = AltitudeRadioOffsetRemoved()
         aor.derive(ralt)
         expected = ralt.array
-        ma_test.assert_array_equal(aor.array, expected)
+        ma_test.assert_masked_array_equal(aor.array, expected)
         
     def test_no_change_for_excessive_adjustment(self):
         ralt = P('Altitude Radio', self.test_array + 11)
         aor = AltitudeRadioOffsetRemoved()
         aor.derive(ralt)
         expected = ralt.array
-        ma_test.assert_array_equal(aor.array, expected)
+        ma_test.assert_masked_array_equal(aor.array, expected)
         
     def test_with_realistic_values(self):
         testwave = np.ma.hstack([[-1.6]*10, 1500.0*(1.0 - np.cos(np.arange(0,6.1,0.1))), [1.2]*20])
@@ -1465,7 +1465,7 @@ class TestAltitudeRadioOffsetRemoved(unittest.TestCase):
         plt.plot(expected)
         plt.show()
         '''
-        ma_test.assert_array_equal(aor.array, expected)
+        ma_test.assert_masked_array_equal(aor.array, expected)
 
     def test_with_go_around(self):
         testwave = np.ma.cos(np.arange(0, 3.14 * 4, 0.2)) * -1500 + 1500 + \
@@ -1483,7 +1483,7 @@ class TestAltitudeRadioOffsetRemoved(unittest.TestCase):
         plt.show()
         '''
         
-        ma_test.assert_array_equal(aor.array, testwave)
+        ma_test.assert_masked_array_equal(aor.array, testwave)
         self.assertTrue(False) # The test above passes, but the arrays are NOT the same.
 
         
@@ -1493,7 +1493,7 @@ class TestAltitudeRadioOffsetRemoved(unittest.TestCase):
         aor = AltitudeRadioOffsetRemoved()
         aor.derive(ralt)
         expected = ralt.array
-        ma_test.assert_array_equal(aor.array, expected)
+        ma_test.assert_masked_array_equal(aor.array, expected)
         
         
 """
