@@ -1425,28 +1425,28 @@ class TestAltitudeRadioOffsetRemoved(unittest.TestCase):
         aor = AltitudeRadioOffsetRemoved()
         aor.derive(ralt)
         expected = ralt.array - 1
-        ma_test.assert_array_equal(aor.array, expected)
+        ma_test.assert_masked_array_equal(aor.array, expected)
         
     def test_no_change_for_wierd_values(self):
         ralt = P('Altitude Radio', self.test_array + 312)
         aor = AltitudeRadioOffsetRemoved()
         aor.derive(ralt)
         expected = ralt.array
-        ma_test.assert_array_equal(aor.array, expected)
+        ma_test.assert_masked_array_equal(aor.array, expected)
         
     def test_no_change_for_negative_values(self):
         ralt = P('Altitude Radio', self.test_array - 4)
         aor = AltitudeRadioOffsetRemoved()
         aor.derive(ralt)
         expected = ralt.array
-        ma_test.assert_array_equal(aor.array, expected)
+        ma_test.assert_masked_array_equal(aor.array, expected)
         
     def test_no_change_for_excessive_adjustment(self):
         ralt = P('Altitude Radio', self.test_array + 11)
         aor = AltitudeRadioOffsetRemoved()
         aor.derive(ralt)
         expected = ralt.array
-        ma_test.assert_array_equal(aor.array, expected)
+        ma_test.assert_masked_array_equal(aor.array, expected)
         
     def test_with_realistic_values(self):
         testwave = np.ma.hstack([[-1.6]*10, 1500.0*(1.0 - np.cos(np.arange(0,6.1,0.1))), [1.2]*20])
@@ -1457,6 +1457,7 @@ class TestAltitudeRadioOffsetRemoved(unittest.TestCase):
         expected = np_ma_masked_zeros_like(testwave)
         expected [:40] = testwave[:40]
         expected[40:] = testwave[40:]-1.2
+        
         '''
         # Plot to check shape of test waveform
         import matplotlib.pyplot as plt
@@ -1464,7 +1465,27 @@ class TestAltitudeRadioOffsetRemoved(unittest.TestCase):
         plt.plot(expected)
         plt.show()
         '''
-        ma_test.assert_array_equal(aor.array, expected)
+        ma_test.assert_masked_array_equal(aor.array, expected)
+
+    def test_with_go_around(self):
+        testwave = np.ma.cos(np.arange(0, 3.14 * 4, 0.2)) * -1500 + 1500 + \
+            np.ma.cos(np.arange(0, 3.14 * 2, 0.1)) * -100 + 100
+        testwave = np.ma.masked_greater(testwave, 2500.0)
+        ralt = P('Altitude Radio', testwave)
+        aor = AltitudeRadioOffsetRemoved()
+        aor.derive(ralt)
+        
+        '''
+        # Plot to check shape of test waveform
+        import matplotlib.pyplot as plt
+        plt.plot(testwave+100) # Offset to make it easier to see.
+        plt.plot(aor.array)
+        plt.show()
+        '''
+        
+        ma_test.assert_masked_array_equal(aor.array, testwave)
+        self.assertTrue(False) # The test above passes, but the arrays are NOT the same.
+
         
     def test_no_change_for_mask_near_liftoff(self):
         ralt = P('Altitude Radio', np.ma.array(data=[1,1,1,1,3,8,13,28,67],
@@ -1472,7 +1493,7 @@ class TestAltitudeRadioOffsetRemoved(unittest.TestCase):
         aor = AltitudeRadioOffsetRemoved()
         aor.derive(ralt)
         expected = ralt.array
-        ma_test.assert_array_equal(aor.array, expected)
+        ma_test.assert_masked_array_equal(aor.array, expected)
         
         
 """

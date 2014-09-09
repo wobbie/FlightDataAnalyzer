@@ -1214,7 +1214,9 @@ class RejectedTakeoff(FlightPhaseNode):
                 # if soon after potential rto and still grounded we have a
                 # rto, otherwise we continue to takeoff
                 duration = (potential_rto.stop - potential_rto.start) / self.hz
-                if duration >= 5:
+                # Note: A duration of 2 seconds was detecting enthusiastic
+                # taxiing as RTO's and a duration of 5 seconds missed a genuine RTO
+                if duration >= 3.5:
                     start = max(potential_rto.start - (10 * self.hz), 0)
                     stop = min(potential_rto.stop + (30 * self.hz),
                                len(accel_lon.array))
