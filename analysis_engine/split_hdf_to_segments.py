@@ -253,7 +253,7 @@ def _split_on_dfc(slice_start_secs, slice_stop_secs, dfc_frequency,
     :rtype: int or float or None
     '''
     dfc_slice = slice(slice_start_secs * dfc_frequency,
-                      floor(slice_stop_secs * dfc_frequency)+1)
+                      floor(slice_stop_secs * dfc_frequency) + 1)
     unmasked_edges = np.ma.flatnotmasked_edges(dfc_diff[dfc_slice])
     if unmasked_edges is None:
         return None
@@ -534,10 +534,10 @@ def _calculate_start_datetime(hdf, fallback_dt=None):
     a TimebaseError is raised
     """
     now = datetime.utcnow().replace(tzinfo=pytz.utc)
-    
+
     if fallback_dt is not None:
         if (fallback_dt.tzinfo is None or
-            fallback_dt.tzinfo.utcoffset(fallback_dt) is None):
+                fallback_dt.tzinfo.utcoffset(fallback_dt) is None):
             # Assume fallback_dt is UTC.
             fallback_dt = fallback_dt.replace(tzinfo=pytz.utc)
         assert fallback_dt < now, (
@@ -768,14 +768,14 @@ def split_hdf_to_segments(hdf_path, aircraft_info, fallback_dt=None,
         dest_basename = os.path.splitext(basename)[0] + '.%03d.hdf5' % part
         dest_path = os.path.join(dest_dir, dest_basename)
         logger.debug("Writing segment %d: %s", part, dest_path)
-        
+
         if arinc == '717':
             # ARINC 717 data has frames or superframes.
             boundary = 64 if supf_boundary else 4
         else:
             # ARINC 767 boundary will be min frequency.
             boundary = 1 / min(frequencies)
-            
+
         write_segment(hdf_path, segment_slice, dest_path,
                       boundary=boundary)
         segment = append_segment_info(dest_path, segment_type, segment_slice,
