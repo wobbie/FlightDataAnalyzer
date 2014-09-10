@@ -732,9 +732,7 @@ def split_hdf_to_segments(hdf_path, aircraft_info, fallback_dt=None,
         plot_essential(hdf_path)
 
     with hdf_file(hdf_path) as hdf:
-        arinc = hdf.arinc
         superframe_present = hdf.superframe_present
-        frequencies = hdf.frequencies
 
         # Confirm aircraft tail for the entire datafile
         logger.info("Validating aircraft matches that recorded in data")
@@ -768,14 +766,10 @@ def split_hdf_to_segments(hdf_path, aircraft_info, fallback_dt=None,
         dest_basename = os.path.splitext(basename)[0] + '.%03d.hdf5' % part
         dest_path = os.path.join(dest_dir, dest_basename)
         logger.debug("Writing segment %d: %s", part, dest_path)
-        
-        if arinc == '717':
-            # ARINC 717 data has frames or superframes.
-            boundary = 64 if supf_boundary else 4
-        else:
-            # ARINC 767 boundary will be min frequency.
-            boundary = 1 / min(frequencies)
-            
+
+        # ARINC 717 data has frames or superframes. ARINC 767 will be split
+        # on a minimum boundary of 4 seconds for the analyser.
+        boundary = 64 if superframe_present else 4
         write_segment(hdf_path, segment_slice, dest_path,
                       boundary=boundary)
         segment = append_segment_info(dest_path, segment_type, segment_slice,
