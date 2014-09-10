@@ -4482,7 +4482,7 @@ def moving_average(array, window=9, weightings=None):
     Ref: http://argandgahandapandpa.wordpress.com/2011/02/24/python-numpy-moving-average-for-data/
     """
     # Make sure we are working with a valid window size.
-    assert window%2 == 1
+    assert window%2 == 1, 'Window %d is not an odd number' % window
     if len(array)==0:
         return None
     
