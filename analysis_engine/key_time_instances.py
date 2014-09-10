@@ -25,7 +25,8 @@ from analysis_engine.node import A, M, P, S, KTI, KeyTimeInstanceNode
 
 from settings import (CLIMB_THRESHOLD,
                       HYSTERESIS_ENG_START_STOP,
-                      MIN_CORE_SUSTAINABLE,
+                      CORE_START_SPEED,
+                      CORE_STOP_SPEED,
                       MIN_FAN_RUNNING,
                       NAME_VALUES_CLIMB,
                       NAME_VALUES_DESCENT,
@@ -382,15 +383,15 @@ class EngStart(KeyTimeInstanceNode):
         if eng_1_n3 or eng_2_n3:
             # This aircraft has 3-spool engines
             eng_nx_list = (eng_1_n3, eng_2_n3, eng_3_n3, eng_4_n3)
-            limit = MIN_CORE_SUSTAINABLE
+            limit = CORE_START_SPEED
         elif eng_1_n2 or eng_2_n2:
             # The engines are 2-spool engines
             eng_nx_list = (eng_1_n2, eng_2_n2, eng_3_n2, eng_4_n2)
-            limit = MIN_CORE_SUSTAINABLE
+            limit = CORE_START_SPEED
         elif eng_1_ng or eng_2_ng:
             # The engines have gas generator second stages
             eng_nx_list = (eng_1_ng, eng_2_ng, eng_3_ng, eng_4_ng)
-            limit = MIN_CORE_SUSTAINABLE
+            limit = CORE_START_SPEED
         else:
             eng_nx_list = (eng_1_n1, eng_2_n1, eng_3_n1, eng_4_n1)
             limit = MIN_FAN_RUNNING
@@ -464,7 +465,7 @@ class EngStop(KeyTimeInstanceNode):
     Monitors the engine stop time. Engines still running at the end of the
     data are assumed to stop at the end of the data recording.
 
-    We use MIN_CORE_SUSTAINABLE/2 to make sure the engine truly is stopping,
+    We use CORE_STOP_SPEED to make sure the engine truly is stopping,
     and not just running freakishly slow.
     '''
 
@@ -502,15 +503,15 @@ class EngStop(KeyTimeInstanceNode):
         if eng_1_n3 or eng_2_n3:
             # This aircraft has 3-spool engines
             eng_nx_list = (eng_1_n3, eng_2_n3, eng_3_n3, eng_4_n3)
-            limit = MIN_CORE_SUSTAINABLE
+            limit = CORE_STOP_SPEED
         elif eng_1_n2 or eng_2_n2:
             # The engines are 2-spool engines
             eng_nx_list = (eng_1_n2, eng_2_n2, eng_3_n2, eng_4_n2)
-            limit = MIN_CORE_SUSTAINABLE
+            limit = CORE_STOP_SPEED
         elif eng_1_ng or eng_2_ng:
             # The engines have gas generator second stages
             eng_nx_list = (eng_1_ng, eng_2_ng, eng_3_ng, eng_4_ng)
-            limit = MIN_CORE_SUSTAINABLE
+            limit = CORE_STOP_SPEED
         else:
             eng_nx_list = (eng_1_n1, eng_2_n1, eng_3_n1, eng_4_n1)
             limit = MIN_FAN_RUNNING
