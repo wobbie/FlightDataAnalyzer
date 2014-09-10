@@ -6792,6 +6792,31 @@ def vstack_params(*params):
     return np.ma.vstack([getattr(p, 'array', p) for p in params if p is not None])
 
 
+def vstack_params_avg(window, *params):
+    '''
+    Create a multi-dimensional masked array with a dimension per param.
+
+    The arrays are averaged in `window` seconds.
+
+    :param params: Parameter arguments as required. Allows some None values.
+    :type params: np.ma.array or Parameter object or None
+    :returns: Each parameter stacked onto a new dimension
+    :rtype: np.ma.array
+    :raises: ValueError if all params are None (concatenation of zero-length sequences is impossible)
+    '''
+    params = [p for p in params if p is not None]
+    window = int(window * params[0].frequency)
+    if not window % 2:
+        window += 1
+
+    if window > 1:
+        arrays = [moving_average(p.array, window) for p in params]
+    else:
+        arrays = [p.array for p in params]
+
+    return np.ma.vstack(*arrays)
+
+
 def vstack_params_where_state(*param_states):
     '''
     Create a multi-dimensional masked array with a dimension for each param,
