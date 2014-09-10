@@ -4723,6 +4723,20 @@ class TestSlicesDuration(unittest.TestCase):
                                           slice(30, 60)], 2), 19)
 
 
+class TestSlicesExtend(unittest.TestCase):
+    def test_slices_extend(self):
+        slices = [slice(None, 10), slice(30, 40), slice(70, None)]
+        expected = [slice(None, 15), slice(25, 45), slice(65, None)]
+        self.assertEqual(slices_extend(slices, 5), expected)
+
+
+class TestSlicesExtendDuration(unittest.TestCase):
+    def test_slices_extend_duration(self):
+        slices = [slice(None, 10), slice(30, 40), slice(70, None)]
+        expected = [slice(None, 16), slice(24, 46), slice(64, None)]
+        self.assertEqual(slices_extend_duration(slices, 1/2.0, 3), expected)
+
+
 class TestSliceSamples(unittest.TestCase):
     def test_slice_samples(self):
         test_slice=slice(45,47,1)

@@ -5492,6 +5492,38 @@ def slices_duration(slices, hz):
     return sum([slice_duration(_slice, hz) for _slice in slices])
 
 
+def slices_extend(slices, length):
+    '''
+    :param slices: Slices to extend.
+    :type slices: [slice]
+    :param length: Length of extension in samples.
+    :type length: int or float
+    :returns: Extended slices.
+    :rtype: [slice]
+    '''
+    extended_slices = []
+    for s in slices:
+        extended_slices.append(slice(
+            s.start - length if s.start else None,
+            s.stop + length if s.stop else None,
+        ))
+    return extended_slices
+
+
+def slices_extend_duration(slices, frequency, seconds):
+    '''
+    :param slices: Slices to extend.
+    :type slices: [slice]
+    :param frequency: Frequency of slices.
+    :type frequency: int or float
+    :param seconds: Seconds to extend the slices by.
+    :type seconds: int or float
+    :returns: Extended slices.
+    :rtype: [slice]
+    '''
+    return slices_extend(slices, seconds / float(frequency))
+
+
 def slices_after(slices, index):
     '''
     Gets slices truncated to only contain sections after an index.
