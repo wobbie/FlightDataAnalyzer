@@ -9,6 +9,14 @@ You can view the differences in tagged versions as follows:
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
 
+V0.13.4
+-------
+
+ - Improvements
+   - Split segments provides a numeric boundary argument to write_segments which allows for 
+flexibility when processing non-ARINC 717 data.
+
+
 V0.13.3
 -------
 
