@@ -86,7 +86,8 @@ from analysis_engine.library import (actuator_mismatch,
                                      straighten_headings,
                                      track_linking,
                                      value_at_index,
-                                     vstack_params)
+                                     vstack_params,
+                                     vstack_params_avg)
 
 from settings import (AIRSPEED_THRESHOLD,
                       ALTITUDE_RADIO_OFFSET_LIMIT,
@@ -3085,9 +3086,10 @@ class Eng_VibN1Max(DerivedParameterNode):
                lpt1=P('Eng (1) Vib N1 Turbine'),
                lpt2=P('Eng (2) Vib N1 Turbine')):
 
-        engines = vstack_params(eng1, eng2, eng3, eng4, fan1, fan2, lpt1, lpt2)
+        params = eng1, eng2, eng3, eng4, fan1, fan2, lpt1, lpt2
+        engines = vstack_params_avg(8, *params)
         self.array = np.ma.max(engines, axis=0)
-        self.offset = offset_select('mean', [eng1, eng2, eng3, eng4, fan1, fan2, lpt1, lpt2])
+        self.offset = offset_select('mean', params)
 
 
 ##############################################################################
@@ -3119,9 +3121,10 @@ class Eng_VibN2Max(DerivedParameterNode):
                hpt1=P('Eng (1) Vib N2 Turbine'),
                hpt2=P('Eng (2) Vib N2 Turbine')):
 
-        engines = vstack_params(eng1, eng2, eng3, eng4, hpc1, hpc2, hpt1, hpt2)
+        params = eng1, eng2, eng3, eng4, hpc1, hpc2, hpt1, hpt2
+        engines = vstack_params_avg(8, *params)
         self.array = np.ma.max(engines, axis=0)
-        self.offset = offset_select('mean', [eng1, eng2, eng3, eng4, hpc1, hpc2, hpt1, hpt2])
+        self.offset = offset_select('mean', params)
 
 
 ##############################################################################
@@ -3149,9 +3152,10 @@ class Eng_VibN3Max(DerivedParameterNode):
                eng3=P('Eng (3) Vib N3'),
                eng4=P('Eng (4) Vib N3')):
 
-        engines = vstack_params(eng1, eng2, eng3, eng4)
+        params = eng1, eng2, eng3, eng4
+        engines = vstack_params_avg(8, *params)
         self.array = np.ma.max(engines, axis=0)
-        self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
+        self.offset = offset_select('mean', params)
 
 
 ##############################################################################
@@ -3170,7 +3174,7 @@ class Eng_VibBroadbandMax(DerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available):
-        
+
         return any_of(cls.get_dependency_names(), available)
 
     def derive(self,
@@ -3186,12 +3190,12 @@ class Eng_VibBroadbandMax(DerivedParameterNode):
                eng2_accel_b=P('Eng (2) Vib Broadband Accel B'),
                eng3_accel_b=P('Eng (3) Vib Broadband Accel B'),
                eng4_accel_b=P('Eng (4) Vib Broadband Accel B')):
-        
+
         params = (eng1, eng2, eng3, eng4,
                   eng1_accel_a, eng2_accel_a, eng3_accel_a, eng4_accel_a,
                   eng1_accel_b, eng2_accel_b, eng3_accel_b, eng4_accel_b)
 
-        engines = vstack_params(*params)
+        engines = vstack_params_avg(8, *params)
         self.array = np.ma.max(engines, axis=0)
         self.offset = offset_select('mean', params)
 
@@ -3221,9 +3225,10 @@ class Eng_VibAMax(DerivedParameterNode):
                eng3=P('Eng (3) Vib (A)'),
                eng4=P('Eng (4) Vib (A)')):
 
-        engines = vstack_params(eng1, eng2, eng3, eng4)
+        params = eng1, eng2, eng3, eng4
+        engines = vstack_params_avg(8, *params)
         self.array = np.ma.max(engines, axis=0)
-        self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
+        self.offset = offset_select('mean', params)
 
 
 ##############################################################################
@@ -3251,9 +3256,10 @@ class Eng_VibBMax(DerivedParameterNode):
                eng3=P('Eng (3) Vib (B)'),
                eng4=P('Eng (4) Vib (B)')):
 
-        engines = vstack_params(eng1, eng2, eng3, eng4)
+        params = eng1, eng2, eng3, eng4
+        engines = vstack_params_avg(8, *params)
         self.array = np.ma.max(engines, axis=0)
-        self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
+        self.offset = offset_select('mean', params)
 
 
 ##############################################################################
@@ -3281,9 +3287,10 @@ class Eng_VibCMax(DerivedParameterNode):
                eng3=P('Eng (3) Vib (C)'),
                eng4=P('Eng (4) Vib (C)')):
 
-        engines = vstack_params(eng1, eng2, eng3, eng4)
+        params = eng1, eng2, eng3, eng4
+        engines = vstack_params_avg(8, *params)
         self.array = np.ma.max(engines, axis=0)
-        self.offset = offset_select('mean', [eng1, eng2, eng3, eng4])
+        self.offset = offset_select('mean', params)
 
 
 ##############################################################################
