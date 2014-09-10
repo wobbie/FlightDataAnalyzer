@@ -478,7 +478,9 @@ class Daylight(MultistateDerivedParameterNode):
     With these references, it was decided to make civil twilight the default.
     '''
     align = True
-    align_frequency = 0.25
+    # 1/4 is the minimum allowable frequency due to minimum data boundary
+    # of 4 seconds.
+    align_frequency = 1 / 4.0
     align_offset = 0.0
 
     values_mapping = {

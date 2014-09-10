@@ -4498,7 +4498,8 @@ class MagneticVariation(DerivedParameterNode):
     Example: A Magnetic Variation of +5 deg means one adds 5 degrees to
     the Magnetic Heading to obtain the True Heading.
     '''
-
+    # 1/4 is the minimum allowable frequency due to minimum data boundary
+    # of 4 seconds.
     align_frequency = 1 / 4.0
     align_offset = 0.0
     units = ut.DEGREE
@@ -4581,8 +4582,9 @@ class MagneticVariationFromRunway(DerivedParameterNode):
     '''
 
     # TODO: Instead of linear interpolation, perhaps base it on distance flown.
-
-    align_frequency = 1/4.0
+    # 1/4 is the minimum allowable frequency due to minimum data boundary
+    # of 4 seconds.
+    align_frequency = 1 / 4.0
     align_offset = 0.0
     units = ut.DEGREE
 
