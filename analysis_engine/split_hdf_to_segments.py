@@ -771,7 +771,7 @@ def split_hdf_to_segments(hdf_path, aircraft_info, fallback_dt=None,
 
         if arinc == '717':
             # ARINC 717 data has frames or superframes.
-            boundary = 64 if supf_boundary else 4
+            boundary = 64 if superframe_present else 4
         else:
             # ARINC 767 boundary will be min frequency.
             boundary = 1 / min(frequencies)
