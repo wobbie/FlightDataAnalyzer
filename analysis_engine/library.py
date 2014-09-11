@@ -6846,7 +6846,7 @@ def vstack_params_avg(window, *params):
     else:
         arrays = [p.array for p in params]
 
-    return np.ma.vstack(*arrays)
+    return np.ma.vstack(arrays)
 
 
 def vstack_params_where_state(*param_states):
