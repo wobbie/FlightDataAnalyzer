@@ -303,11 +303,11 @@ METRES_TO_FEET = 1000/25.4/12
 METRES_TO_NM = 1852.0
 
 # Engine core speed for engine starting.
-CORE_START_SPEED = 20.0  # %
+CORE_START_SPEED = 35.0  # %
 
 # Engine core speed for engine to stopping.
 # Note: Challenger 300 reports 49.5% after engine start.
-CORE_STOP_SPEED = 49.0  # %
+CORE_STOP_SPEED = 35.0  # %
 
 # Minimum fan speed at idle for engines where N2/N3 not recorded.
 MIN_FAN_RUNNING = 5.0  # %
