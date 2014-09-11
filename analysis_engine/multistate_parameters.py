@@ -9,101 +9,36 @@ from flightdatautilities import aircrafttables as at, units as ut
 
 from hdfaccess.parameter import MappedArray
 
-#from analysis_engine.exceptions import DataFrameError
 from analysis_engine.node import (
     A, MultistateDerivedParameterNode,
-    #KPV, KTI,
     M,
     P,
     S
 )
-from analysis_engine.library import (#actuator_mismatch,
-                                     #air_track,
-                                     #align,
-                                     all_of,
-                                     any_of,
-                                     #alt2press,
-                                     #alt2sat,
-                                     #bearing_and_distance,
-                                     #bearings_and_distances,
-                                     #blend_parameters,
-                                     #blend_two_parameters,
-                                     #cas2dp,
-                                     #coreg,
-                                     #cycle_finder,
-                                     datetime_of_index,
-                                     #dp2tas,
-                                     #dp_over_p2mach,
-                                     #filter_vor_ils_frequencies,
-                                     find_edges_on_state_change,
-                                     #first_valid_sample,
-                                     #first_order_lag,
-                                     #first_order_washout,
-                                     #ground_track,
-                                     #ground_track_precise,
-                                     #hysteresis,
-                                     index_at_value,
-                                     #integrate,
-                                     #ils_localizer_align,
-                                     index_closest_value,
-                                     #interpolate,
-                                     is_day,
-                                     #is_index_within_slice,
-                                     #last_valid_sample,
-                                     #latitudes_and_longitudes,
-                                     #localizer_scale,
-                                     #machtat2sat,
-                                     #mask_inside_slices,
-                                     #mask_outside_slices,
-                                     #max_value,
-                                     merge_masks,
-                                     merge_sources,
-                                     merge_two_parameters,
-                                     moving_average,
-                                     nearest_neighbour_mask_repair,
-                                     #np_ma_ones_like,
-                                     np_ma_masked_zeros_like,
-                                     np_ma_zeros_like,
-                                     offset_select,
-                                     #peak_curvature,
-                                     #rate_of_change,
-                                     repair_mask,
-                                     #rms_noise,
-                                     #round_to_nearest,
-                                     runs_of_ones,
-                                     #runway_deviation,
-                                     #runway_distances,
-                                     #runway_heading,
-                                     #runway_length,
-                                     #runway_snap_dict,
-                                     #shift_slice,
-                                     #slices_between,
-                                     slices_from_to,
-                                     #slices_not,
-                                     #slices_or,
-                                     slices_remove_small_gaps,
-                                     slices_remove_small_slices,
-                                     #smooth_track,
-                                     step_values,
-                                     #straighten_altitudes,
-                                     #straighten_headings,
-                                     #second_window,
-                                     #track_linking,
-                                     #value_at_index,
-                                     #vstack_params,
-                                     vstack_params_where_state,
-                                     )
-
-#from settings import (AZ_WASHOUT_TC,
-                      #FEET_PER_NM,
-                      #HYSTERESIS_FPIAS,
-                      #HYSTERESIS_FPROC,
-                      #GRAVITY_IMPERIAL,
-                      #KTS_TO_FPS,
-                      #KTS_TO_MPS,
-                      #METRES_TO_FEET,
-                      #METRES_TO_NM,
-                      #VERTICAL_SPEED_LAG_TC)
+from analysis_engine.library import (
+    all_of,
+    any_of,
+    datetime_of_index,
+    find_edges_on_state_change,
+    index_at_value,
+    index_closest_value,
+    is_day,
+    merge_masks,
+    merge_sources,
+    merge_two_parameters,
+    moving_average,
+    nearest_neighbour_mask_repair,
+    np_ma_masked_zeros_like,
+    np_ma_zeros_like,
+    offset_select,
+    repair_mask,
+    runs_of_ones,
+    slices_from_to,
+    slices_remove_small_gaps,
+    slices_remove_small_slices,
+    step_values,
+    vstack_params_where_state,
+)
 
 
 logger = logging.getLogger(name=__name__)
@@ -124,14 +59,15 @@ class APEngaged(MultistateDerivedParameterNode):
     def can_operate(cls, available):
         return any_of(cls.get_dependency_names(), available)
 
-    def derive(self, ap1=M('AP (1) Engaged'),
-                     ap2=M('AP (2) Engaged'),
-                     ap3=M('AP (3) Engaged')):
+    def derive(self,
+               ap1=M('AP (1) Engaged'),
+               ap2=M('AP (2) Engaged'),
+               ap3=M('AP (3) Engaged')):
         stacked = vstack_params_where_state(
             (ap1, 'Engaged'),
             (ap2, 'Engaged'),
             (ap3, 'Engaged'),
-            )
+        )
         self.array = stacked.any(axis=0)
         self.offset = offset_select('mean', [ap1, ap2, ap3])
 
@@ -181,7 +117,7 @@ class APLateralMode(MultistateDerivedParameterNode):
         24: 'LAND',
         64: 'HDG',
     }
-    
+
     @classmethod
     def can_operate(cls, available):
         return any_of(('Lateral Mode Selected',
@@ -192,7 +128,7 @@ class APLateralMode(MultistateDerivedParameterNode):
                        'Roll Go Around Mode Active',
                        'Land Track Active',
                        'Heading Mode Active'), available)
-    
+
     def derive(self,
                lateral_mode_selected=M('Lateral Mode Selected'),
                runway_mode_active=M('Runway Mode Active'),
@@ -211,7 +147,7 @@ class APLateralMode(MultistateDerivedParameterNode):
                                      land_track_active,
                                      heading_mode_active) if p)
         self.array = np_ma_zeros_like(parameter.array)
-        
+
         if lateral_mode_selected:
             self.array[lateral_mode_selected.array == 'Runway Mode Active'] = 'RWY'
             self.array[lateral_mode_selected.array == 'NAV Mode Active'] = 'NAV'
@@ -249,7 +185,7 @@ class APVerticalMode(MultistateDerivedParameterNode):
         18: 'FINAL',
         22: 'FLARE',
         24: 'LAND',
-        26: 'DES', # geo path, A/THR mode SPEED
+        26: 'DES',  # geo path, A/THR mode SPEED
         64: 'OP CLB',
         66: 'OP DES',
         68: 'ALT CAPT',
@@ -259,36 +195,36 @@ class APVerticalMode(MultistateDerivedParameterNode):
         86: 'EXPED CLB',
         88: 'EXPED DES',
     }
-    
+
     @classmethod
     def can_operate(cls, available):
-        return any_of(('Climb Active',
+        return any_of(('AT Active',
+                       'Climb Mode Active',
                        'Longitudinal Mode Selected',
                        'ILS Glideslope Capture Active',
                        'ILS Glideslope Active',
                        'Flare Mode',
-                       'AT Active',
                        'Open Climb Mode',
                        'Open Descent Mode',
                        'Altitude Capture Mode',
                        'Altitude Mode',
                        'Expedite Climb Mode',
                        'Expedite Descent Mode'), available)
-    
+
     def derive(self,
-               climb_active=M('Climb Active'),
+               at_active=M('AT Active'),
+               climb_mode_active=M('Climb Mode Active'),
                longitudinal_mode_selected=M('Longitudinal Mode Selected'),
                ils_glideslope_capture_active=M('ILS Glideslope Capture Active'),
                ils_glideslope_active=M('ILS Glideslope Active'),
                flare_mode=M('Flare Mode'),
-               at_active=M('AT Active'),
                open_climb_mode=M('Open Climb Mode'),
                open_descent_mode=M('Open Descent Mode'),
                altitude_capture_mode=M('Altitude Capture Mode'),
                altitude_mode=M('Altitude Mode'),
                expedite_climb_mode=M('Expedite Climb Mode'),
                expedite_descent_mode=M('Expedite Descent Mode')):
-        parameter = next(p for p in (climb_active,
+        parameter = next(p for p in (climb_mode_active,
                                      longitudinal_mode_selected,
                                      ils_glideslope_capture_active,
                                      ils_glideslope_active,
@@ -301,9 +237,11 @@ class APVerticalMode(MultistateDerivedParameterNode):
                                      expedite_climb_mode,
                                      expedite_descent_mode) if p)
         self.array = np_ma_zeros_like(parameter.array)
-        
-        if climb_active:
-            self.array[climb_active.array == 'Activated'] = 'CLB'
+
+        if at_active:
+            self.array[at_active.array == 'Activated'] = 'DES'
+        if climb_mode_active:
+            self.array[climb_mode_active.array == 'Activated'] = 'CLB'
         if longitudinal_mode_selected:
             self.array[longitudinal_mode_selected.array == 'Altitude'] = 'ALT CSTR'
             self.array[longitudinal_mode_selected.array == 'Final Descent Mode'] = 'FINAL'
@@ -316,8 +254,6 @@ class APVerticalMode(MultistateDerivedParameterNode):
             self.array[ils_glideslope_active.array == 'Activated'] = 'GS'
         if flare_mode:
             self.array[flare_mode.array == 'Engaged'] = 'FLARE'
-        if at_active:
-            self.array[at_active.array == 'Activated'] = 'DES'
         if open_climb_mode:
             self.array[open_climb_mode.array == 'Activated'] = 'OP CLB'
         if open_descent_mode:
@@ -336,15 +272,15 @@ class APUOn(MultistateDerivedParameterNode):
     '''
     Combine APU (1) On and APU (2) On parameters.
     '''
-    
+
     name = 'APU On'
-    
+
     values_mapping = {0: '-', 1: 'On'}
-    
+
     @classmethod
     def can_operate(cls, available):
         return any_of(('APU (1) On', 'APU (2) On'), available)
-    
+
     def derive(self, apu_1=M('APU (1) On'), apu_2=M('APU (2) On')):
         self.array = vstack_params_where_state(
             (apu_1, 'On'),
@@ -360,8 +296,8 @@ class APURunning(MultistateDerivedParameterNode):
 
     name = 'APU Running'
 
-    values_mapping = {0 : '-',  1: 'Running'}
-    
+    values_mapping = {0: '-', 1: 'Running'}
+
     @classmethod
     def can_operate(cls, available):
         return any_of(('APU N1',
@@ -437,7 +373,6 @@ class Configuration(MultistateDerivedParameterNode):
 
         return True
 
-
     def derive(self, slat=M('Slat'), flap=M('Flap'), flaperon=M('Flaperon'),
                model=A('Model'), series=A('Series'), family=A('Family')):
 
@@ -478,13 +413,15 @@ class Daylight(MultistateDerivedParameterNode):
     With these references, it was decided to make civil twilight the default.
     '''
     align = True
-    align_frequency = 0.25
+    # 1/4 is the minimum allowable frequency due to minimum data boundary
+    # of 4 seconds.
+    align_frequency = 1 / 4.0
     align_offset = 0.0
 
     values_mapping = {
-        0 : 'Night',
-        1 : 'Day'
-        }
+        0: 'Night',
+        1: 'Day'
+    }
 
     def derive(self,
                latitude=P('Latitude Smoothed'),
@@ -653,7 +590,7 @@ class Eng_Fire(MultistateDerivedParameterNode):
 
 class Eng_Oil_Press_Warning(MultistateDerivedParameterNode):
     '''
-    Combine all oil pressure warning indications.
+    Combine all oil pressure (low) warning indications.
     '''
 
     name = 'Eng (*) Oil Press Warning'
@@ -675,7 +612,7 @@ class Eng_Oil_Press_Warning(MultistateDerivedParameterNode):
             (eng2, 'Low Press'),
             (eng3, 'Low Press'),
             (eng4, 'Low Press'),
-            ).any(axis=0)
+        ).any(axis=0)
 
 
 class Eng_AllRunning(MultistateDerivedParameterNode):
@@ -687,28 +624,31 @@ class Eng_AllRunning(MultistateDerivedParameterNode):
     TODO: Confirm that all engines were recording for the N2 Min / Fuel Flow
     Min parameters - theoretically there could be only three engines in the
     frame for a four engine aircraft. Use "Engine Count".
-
-    TODO: Support shutdown for Propellor aircraft that don't record fuel flow.
     '''
     name = 'Eng (*) All Running'
     values_mapping = {
-        0 : 'Not Running',
-        1 : 'Running',
-        }
+        0: 'Not Running',
+        1: 'Running',
+    }
 
     @classmethod
     def can_operate(cls, available):
         return 'Eng (*) N1 Min' in available or \
                'Eng (*) N2 Min' in available or \
+               'Eng (*) Np Min' in available or \
                'Eng (*) Fuel Flow Min' in available
 
     def derive(self,
                eng_n1=P('Eng (*) N1 Min'),
                eng_n2=P('Eng (*) N2 Min'),
+               eng_np=P('Eng (*) Np Min'),
                fuel_flow=P('Eng (*) Fuel Flow Min')):
         # TODO: move values to settings
 
-        if eng_n2 or fuel_flow:
+        if eng_np:
+            # If it's got propellors, this overrides core engine measurements.
+            self.array = eng_np.array > 10
+        elif eng_n2 or fuel_flow:
             # Ideally have N2 and Fuel Flow with both available,
             # otherwise use just one source
             n2_running = eng_n2.array > 10 if eng_n2 \
@@ -719,7 +659,6 @@ class Eng_AllRunning(MultistateDerivedParameterNode):
         else:
             # Fall back on N1
             self.array = eng_n1.array > 10
-            # TODO: extend to NP for props
 
 
 class Eng_AnyRunning(MultistateDerivedParameterNode):
@@ -739,14 +678,18 @@ class Eng_AnyRunning(MultistateDerivedParameterNode):
     def can_operate(cls, available):
         return 'Eng (*) N1 Max' in available or \
                'Eng (*) N2 Max' in available or \
+               'Eng (*) Np Max' in available or \
                'Eng (*) Fuel Flow Max' in available
 
     def derive(self,
                eng_n1=P('Eng (*) N1 Max'),
                eng_n2=P('Eng (*) N2 Max'),
+               eng_np=P('Eng (*) Np Max'),
                fuel_flow=P('Eng (*) Fuel Flow Max')):
 
-        if eng_n2 or fuel_flow:
+        if eng_np:
+            self.array = eng_np.array > 10
+        elif eng_n2 or fuel_flow:
             # TODO: move values to settings
             n2_running = eng_n2.array > 10 if eng_n2 \
                 else np.ones_like(fuel_flow.array, dtype=bool)
@@ -757,17 +700,16 @@ class Eng_AnyRunning(MultistateDerivedParameterNode):
         else:
             # Only have N1 available
             self.array = eng_n1.array > 10
-            # TODO: extend to NP for props
 
 
-class EngThrustModeRequired(MultistateDerivedParameterNode):
+class ThrustModeSelected(MultistateDerivedParameterNode):
     '''
-    Combines Eng Thrust Mode Required parameters.
+    Combines Thrust Mode Selected parameters.
     '''
 
     values_mapping = {
         0: '-',
-        1: 'Required',
+        1: 'Selected',
     }
 
     @classmethod
@@ -775,15 +717,11 @@ class EngThrustModeRequired(MultistateDerivedParameterNode):
         return any_of(cls.get_dependency_names(), available)
 
     def derive(self,
-               thrust1=P('Eng (1) Thrust Mode Required'),
-               thrust2=P('Eng (2) Thrust Mode Required'),
-               thrust3=P('Eng (3) Thrust Mode Required'),
-               thrust4=P('Eng (4) Thrust Mode Required')):
+               thrust_l=P('Thrust Mode Selected (L)'),
+               thrust_r=P('Thrust Mode Selected (R)')):
 
-        thrusts = [thrust for thrust in [thrust1,
-                                         thrust2,
-                                         thrust3,
-                                         thrust4] if thrust]
+        thrusts = [thrust for thrust in [thrust_l,
+                                         thrust_r] if thrust]
 
         if len(thrusts) == 1:
             self.array = thrusts[0].array
@@ -794,7 +732,7 @@ class EngThrustModeRequired(MultistateDerivedParameterNode):
         masks = []
         for thrust in thrusts:
             masks.append(thrust.array.mask)
-            array[thrust.array == 'Required'] = 'Required'
+            array[thrust.array == 'Selected'] = 'Selected'
 
         array.mask = merge_masks(masks)
         self.array = array
@@ -876,7 +814,7 @@ class Flap(MultistateDerivedParameterNode):
 
             # Assume 50% from 2000 to 1000ft, and 100% thereafter on the approach.
             _, apps = slices_from_to(alt_aal.array, 2000.0, 0.0)
-            flap_herc[apps[-1].start:] = np.ma.where(alt_aal.array[apps[-1].start:]>1000.0,50.0,100.0)
+            flap_herc[apps[-1].start:] = np.ma.where(alt_aal.array[apps[-1].start:] > 1000.0, 50.0, 100.0)
 
             self.array = np.ma.array(flap_herc)
             self.frequency, self.offset = alt_aal.frequency, alt_aal.offset
@@ -1022,17 +960,17 @@ class FlapLeverSynthetic(MultistateDerivedParameterNode):
                 return False
         
         can_operate = True
-        
-        slat_required = any(slat is not None for slat, flap, flaperon in 
+
+        slat_required = any(slat is not None for slat, flap, flaperon in
                             angles.values())
         if slat_required:
             can_operate = can_operate and 'Slat' in available
-        
+
         flaperon_required = any(flaperon is not None for slat, flap, flaperon in
                                 angles.values())
         if flaperon_required:
             can_operate = can_operate and 'Flaperon' in available
-        
+
         return can_operate
 
     def derive(self, flap=M('Flap'), slat=M('Slat'), flaperon=M('Flaperon'),
@@ -1097,7 +1035,7 @@ class Flaperon(MultistateDerivedParameterNode):
         try:
             at.get_aileron_map(model.value, series.value, family.value)
         except KeyError:
-            cls.debug("No aileron mapping available for '%s', '%s', '%s'.",
+            cls.debug("No aileron/flaperon mapping available for '%s', '%s', '%s'.",
                       model.value, series.value, family.value)
             return False
 
@@ -1131,11 +1069,11 @@ class FuelQty_Low(MultistateDerivedParameterNode):
         return any_of(('Fuel Qty Low', 'Fuel Qty (L) Low', 'Fuel Qty (R) Low'),
                       available)
 
-    def derive(self, fqty = M('Fuel Qty Low'),
-               fqty1 = M('Fuel Qty (L) Low'),
-               fqty2 = M('Fuel Qty (R) Low')):
+    def derive(self, fqty=M('Fuel Qty Low'),
+               fqty1=M('Fuel Qty (L) Low'),
+               fqty2=M('Fuel Qty (R) Low')):
         warning = vstack_params_where_state(
-            (fqty,  'Warning'),
+            (fqty, 'Warning'),
             (fqty1, 'Warning'),
             (fqty2, 'Warning'),
         )
@@ -1163,12 +1101,15 @@ class GearDown(MultistateDerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
         # Can operate with a any combination of parameters available
-        return any_of(cls.get_dependency_names(), available)
+        gear_downs = ('Gear (L) Down', 'Gear (N) Down', 'Gear (R) Down', 'Gear Down Selected')
+        return any_of(gear_downs, available) or all_of(('Gear Up', 'Gear In Transit'), available)
 
     def derive(self,
                gl=M('Gear (L) Down'),
                gn=M('Gear (N) Down'),
                gr=M('Gear (R) Down'),
+               gear_up=M('Gear Up'),
+               gear_transit=M('Gear In Transit'),
                gear_sel=M('Gear Down Selected')):
         # Join all available gear parameters and use whichever are available.
         if gl or gn or gr:
@@ -1177,8 +1118,114 @@ class GearDown(MultistateDerivedParameterNode):
                 (gn, 'Down'),
                 (gr, 'Down'),
             ).any(axis=0)
-        else:
+        elif gear_up and gear_transit:
+            not_up = vstack_params_where_state(
+                (gear_up, 'Up'),
+                (gear_transit, 'In Transit'),
+            ).any(axis=0)
+            self.array = ~not_up
+        else:  # gear_sel
             self.array = gear_sel.array
+
+
+class GearUp(MultistateDerivedParameterNode):
+    '''
+    This Multi-State parameter uses "majority voting" to decide whether the
+    gear is up or down.
+    '''
+
+    align = False
+    values_mapping = {
+        0: 'Down',
+        1: 'Up',
+    }
+
+    @classmethod
+    def can_operate(cls, available):
+        # Can operate with a any combination of parameters available
+        merge_gear_up = any_of(('Gear (L) Up', 'Gear (N) Up', 'Gear (R) Up'), available)
+        calc_gear_up = all_of(('Gear Up Selected', 'Gear (*) Red Warning'), available)
+        return merge_gear_up or calc_gear_up
+
+    def derive(self,
+               gl=M('Gear (L) Up'),
+               gn=M('Gear (N) Up'),
+               gr=M('Gear (R) Up'),
+               gear_up_sel=M('Gear Up Selected'),
+               gear_warn=M('Gear (*) Red Warning')):
+
+        if gl or gn or gr:
+            # Join all available gear parameters and use whichever are available.
+            self.array = vstack_params_where_state(
+                (gl, 'Up'),
+                (gn, 'Up'),
+                (gr, 'Up'),
+            ).any(axis=0)
+        else:
+            # we need to align the gear down and gear red warnings parameters
+            # before we continue
+            if gear_up_sel.frequency > gear_warn.frequency:
+                gear_warn = gear_warn.get_aligned(gear_up_sel)
+            else:
+                gear_up_sel = gear_up_sel.get_aligned(gear_warn)
+            self.frequency = gear_up_sel.frequency
+            self.offset = gear_up_sel.offset
+            self.array = np.zeros_like(gear_up_sel.array, dtype=np.short)
+            self.array[gear_up_sel.array == 'Up'] = 'Up'
+            # Calculate gear up from gear down and gear red warnings.
+            # We use up to 10s of `Gear (*) Red Warning` == 'Warning'
+            # preceeding the actual gear position change state to define the
+            # gear transition.
+            start_end_warnings = find_edges_on_state_change(
+                'Warning', gear_warn.array, change='entering_and_leaving')
+            starts = start_end_warnings[::2]
+            ends = start_end_warnings[1::2]
+            start_end_warnings = zip(starts, ends)
+
+            for start, end in start_end_warnings:
+                # for clarity, we're only interested in the end of the
+                # transition - so ceiling finds the end
+                start = math.ceil(start)
+                end = math.ceil(end)
+                if (end - start) / self.frequency > 10:
+                    # we are only using 10s gear transitions
+                    end = start + 10 * self.frequency
+
+                # look for state before gear started moving (back one sample)
+                if gear_up_sel.array[start - 1] == 'Down':
+                    # Prepend the warning to the gear position to define the
+                    # selection
+                    self.array[start:end + 1] = 'Down'
+            self.array.mask = gear_up_sel.array.mask
+
+
+class GearInTransit(MultistateDerivedParameterNode):
+    '''
+    This Multi-State parameter uses "majority voting" to decide whether the
+    gear is in transit.
+    '''
+
+    align = False
+    values_mapping = {
+        0: '-',
+        1: 'In Transit',
+    }
+
+    @classmethod
+    def can_operate(cls, available):
+        # Can operate with a any combination of parameters available
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               gl=M('Gear (L) In Transit'),
+               gn=M('Gear (N) In Transit'),
+               gr=M('Gear (R) In Transit')):
+
+        self.array = vstack_params_where_state(
+            (gl, 'In Transit'),
+            (gn, 'In Transit'),
+            (gr, 'In Transit'),
+        ).any(axis=0)
 
 
 class GearOnGround(MultistateDerivedParameterNode):
@@ -1252,7 +1299,7 @@ class GearDownSelected(MultistateDerivedParameterNode):
                gear_down=M('Gear Down'),
                gear_warn=M('Gear (*) Red Warning')):
 
-        self.array = np.ma.zeros(gear_down.array.size, dtype=np.short)
+        self.array = np.zeros_like(gear_down.array, dtype=np.short)
         self.array[gear_down.array == 'Down'] = 'Down'
         if gear_warn:
             # We use up to 10s of `Gear (*) Red Warning` == 'Warning'
@@ -1449,7 +1496,6 @@ class KeyVHFFO(MultistateDerivedParameterNode):
         ).any(axis=0)
 
 
-
 class MasterCaution(MultistateDerivedParameterNode):
     '''
     Combine Master Caution for captain and first officer.
@@ -1510,11 +1556,11 @@ class PackValvesOpen(MultistateDerivedParameterNode):
         '''
         '''
         # Works with both 'ECS Pack (1) On' and 'ECS Pack (2) On' ECS Pack High Flows are optional
-        return all_of(['ECS Pack (1) On', 'ECS Pack (2) On' ], available)
+        return all_of(['ECS Pack (1) On', 'ECS Pack (2) On'], available)
 
     def derive(self,
-            p1=M('ECS Pack (1) On'), p1h=M('ECS Pack (1) High Flow'),
-            p2=M('ECS Pack (2) On'), p2h=M('ECS Pack (2) High Flow')):
+               p1=M('ECS Pack (1) On'), p1h=M('ECS Pack (1) High Flow'),
+               p2=M('ECS Pack (2) On'), p2h=M('ECS Pack (2) High Flow')):
         '''
         '''
         # TODO: account properly for states/frame specific fixes
@@ -1522,8 +1568,7 @@ class PackValvesOpen(MultistateDerivedParameterNode):
         # each side.
         flow = p1.array.raw + p2.array.raw
         if p1h and p2h:
-            flow = p1.array.raw * (1 + p1h.array.raw) \
-                 + p2.array.raw * (1 + p2h.array.raw)
+            flow = p1.array.raw * (1 + p1h.array.raw) + p2.array.raw * (1 + p2h.array.raw)
         self.array = flow
         self.offset = offset_select('mean', [p1, p1h, p2, p2h])
 
@@ -1555,8 +1600,10 @@ class PilotFlying(MultistateDerivedParameterNode):
             # defined to work over a window and it doesn't affect the result as
             # the arrays are altered in the same way and are still comparable.
             window = 61 * self.hz  # Use 61 seconds for 30 seconds either side.
-            angle_capt = moving_average(stick_capt.array, window)
-            angle_fo = moving_average(stick_fo.array, window)
+            if not window % 2:
+                window += 1
+            angle_capt = moving_average(np.ma.abs(stick_capt.array), window)
+            angle_fo = moving_average(np.ma.abs(stick_fo.array), window)
             # Repair the array as the moving average is padded with masked
             # zeros
             angle_capt = repair_mask(angle_capt, repair_duration=31,
@@ -1706,11 +1753,9 @@ class StickPusher(MultistateDerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available):
-        return any_of(('Stick Pusher (L)',
-                       'Stick Pusher (R)'
-                       ),available)
+        return any_of(('Stick Pusher (L)', 'Stick Pusher (R)'), available)
 
-    def derive(self, spl = M('Stick Pusher (L)'),
+    def derive(self, spl=M('Stick Pusher (L)'),
                spr=M('Stick Pusher (R)')):
 
         available = [par for par in [spl, spr] if par]
@@ -1739,32 +1784,25 @@ class StickShaker(MultistateDerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available):
-        return any_of(('Stick Shaker (L)',
-                       'Stick Shaker (R)',
-                       'Stick Shaker (1)',
-                       'Stick Shaker (2)',
-                       'Stick Shaker (3)',
-                       'Stick Shaker (4)',
-                       #'Stick Shaker (L) (1)',
-                       #'Stick Shaker (L) (2)',
-                       #'Stick Shaker (R) (1)',
-                       #'Stick Shaker (R) (2)',
-                       ),available)
+        return any_of((
+            'Stick Shaker (L)',
+            'Stick Shaker (R)',
+            'Stick Shaker (1)',
+            'Stick Shaker (2)',
+            'Stick Shaker (3)',
+            'Stick Shaker (4)',
+        ), available)
 
-    def derive(self, ssl = M('Stick Shaker (L)'),
+    def derive(self, ssl=M('Stick Shaker (L)'),
                ssr=M('Stick Shaker (R)'),
                ss1=M('Stick Shaker (1)'),
                ss2=M('Stick Shaker (2)'),
                ss3=M('Stick Shaker (3)'),
                ss4=M('Stick Shaker (4)'),
                frame=A('Frame'),
-               #b777_L1=M('Stick Shaker (L) (1)'),
-               #b777_L2=M('Stick Shaker (L) (2)'),
-               #b777_R1=M('Stick Shaker (R) (1)'),
-               #b777_R2=M('Stick Shaker (R) (2)'),
                ):
 
-        if frame and frame.value =='B777':
+        if frame and frame.value == 'B777':
             #Provision has been included for Boeing 777 type, but until this has been
             #evaluated in detail it raises an exception because there are two bits per
             #shaker, and their operation is not obvious from the documentation.
@@ -1776,11 +1814,43 @@ class StickShaker(MultistateDerivedParameterNode):
         if len(available) > 1:
             self.array = merge_sources(*[a.array for a in available])
             self.offset = min([a.offset for a in available])
-            self.frequency = available[0].frequency*len(available)
+            self.frequency = available[0].frequency * len(available)
         elif len(available) == 1:
             self.array = available[0].array
             self.offset = available[0].offset
             self.frequency = available[0].frequency
+
+
+class SpeedbrakeDeployed(MultistateDerivedParameterNode):
+    '''
+    '''
+    values_mapping = {
+        0: '-',
+        1: 'Deployed',
+    }
+
+    @classmethod
+    def can_operate(cls, available):
+        simple = ('Spoiler (L) Deployed', 'Spoiler (R) Deployed')
+        in_out = ('Spoiler (L) Outboard Deployed',
+                  'Spoiler (R) Outboard Deployed')
+        return all_of(simple, available) or all_of(in_out, available)
+
+    def derive(self, deployed_l=M('Spoiler (L) Deployed'),
+               deployed_r=M('Spoiler (R) Deployed'),
+               deployed_l_out=M('Spoiler (L) Outboard Deployed'),
+               deployed_r_out=M('Spoiler (R) Outboard Deployed')):
+
+        deployed_params = (deployed_l, deployed_r, deployed_l_out, deployed_r_out)
+        deployed_stack = vstack_params_where_state(*[(d, 'Deployed') for d in deployed_params])
+
+        array = np_ma_zeros_like(deployed_stack[0], dtype=np.short)
+        array = np.ma.where(deployed_stack.all(axis=0), 1, array)
+
+        # mask indexes with greater than 50% masked values
+        mask = np.ma.where(deployed_stack.mask.sum(axis=0).astype(float) / len(deployed_stack) * 100 > 50, 1, 0)
+        self.array = array
+        self.array.mask = mask
 
 
 class SpeedbrakeSelected(MultistateDerivedParameterNode):
@@ -1807,9 +1877,12 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         x = available
         if family and family.value == 'BD-100':
             return 'Speedbrake Handle' in x and 'Spoiler Ground Armed' in x
-        elif family and family.value in ['Global', 'CRJ 100/200', 'ERJ-135/145',
-                                         'B777']:
+        elif family and family.value == 'Global':
+            return any_of(('Speedbrake', 'Speedbrake Handle'), available)
+        elif family and family.value in ('CRJ 100/200', 'B777'):
             return 'Speedbrake Handle' in x
+        elif family and family.value in ('A319', 'A320', 'A321'):
+            return 'Speedbrake' in x and 'Speedbrake Armed' in x
         else:
             return ('Speedbrake Deployed' in x or
                     ('Family' in x and 'Speedbrake Switch' in x) or
@@ -1898,26 +1971,6 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
             raise ValueError("Can't work without either Speedbrake or Handle")
         return array
 
-    @staticmethod
-    def b757_767_speedbrake(handle):
-        '''
-        Speedbrake Handle Positions for 757 & 767:
-
-            ========    ============
-              %           Notes
-            ========    ============
-               0.0        Full Forward
-              15.0        Armed
-             100.0        Full Up
-            ========    ============
-        '''
-        # Speedbrake Handle only
-        armed = np.ma.where((12.0 < handle.array) & (handle.array < 25.0),
-                            'Armed/Cmd Dn', 'Stowed')
-        array = np.ma.where(handle.array >= 25.0,
-                            'Deployed/Cmd Up', armed)
-        return array
-
     @classmethod
     def bd100_speedbrake(cls, handle_array, spoiler_gnd_armed_array):
         '''
@@ -1963,9 +2016,9 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         '''
         switch = spdsw.array
         speedbrake = np.ma.zeros(len(switch), dtype=np.short)
-        speedbrake = np.ma.where(switch=='Retract', 'Stowed',
+        speedbrake = np.ma.where(switch == 'Retract', 'Stowed',
                                  'Deployed/Cmd Up')
-        speedbrake = np.ma.where(switch=='Armed', 'Armed/Cmd Dn',
+        speedbrake = np.ma.where(switch == 'Armed', 'Armed/Cmd Dn',
                                  speedbrake)
         return speedbrake
 
@@ -1995,13 +2048,18 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         elif 'B737' in family_name:
             self.array = self.b737_speedbrake(spdbrk, handle)
 
-        elif family_name in ['B757', 'B767']:
-            self.array = self.b757_767_speedbrake(handle)
-        
+        elif family_name == 'B757':
+            self.array = self.derive_from_handle(handle.array, deployed=25,
+                                                 armed=12)
+
+        elif family_name == 'B767':
+            self.array = self.derive_from_handle(handle.array, deployed=45,
+                                                 armed=12)
+
         elif family_name == 'B777':
             self.array = self.derive_from_handle(handle.array, deployed=10,
                                                  armed=0, mask_below_armed=True)
-        
+
         elif family_name == 'B787':
             self.array = self.b787_speedbrake(handle)
 
@@ -2031,7 +2089,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
             self.array = np.ma.where(spdbrk.array < 2.0,
                                      'Stowed',
                                      'Deployed/Cmd Up')
-            
+
         elif family_name in ['ERJ-170/175', 'ERJ-190/195'] and handle:
             self.array = np.ma.where(handle.array < -15.0,
                                      'Stowed',
@@ -2049,8 +2107,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
             self.array = self.bd100_speedbrake(handle.array,
                                                spoiler_gnd_armed.array)
         else:
-            raise NotImplementedError("No Speedbrake mapping for '%s'" % \
-                                      family_name)
+            raise NotImplementedError("No Speedbrake mapping for '%s'" % family_name)
 
 
 class StableApproach(MultistateDerivedParameterNode):
@@ -2114,7 +2171,7 @@ class StableApproach(MultistateDerivedParameterNode):
                 #'Vapp',
                 ]
         return all_of(deps, available) and (
-            'Eng (*) N1 Min For 5 Sec' in available or \
+            'Eng (*) N1 Min For 5 Sec' in available or
             'Eng (*) EPR Min For 5 Sec' in available)
 
     def derive(self,
@@ -2163,7 +2220,7 @@ class StableApproach(MultistateDerivedParameterNode):
             glideslope = repair(gdev.array, _slice) if gdev else None  # optional
             localizer = repair(ldev.array, _slice) if ldev else None  # optional
             # apply quite a large moving average to smooth over peaks and troughs
-            vertical_speed = moving_average(repair(vspd.array, _slice), 10)
+            vertical_speed = moving_average(repair(vspd.array, _slice), 11)
             if eng_epr:
                 # use EPR if available
                 engine = repair(eng_epr.array, _slice)
@@ -2257,7 +2314,7 @@ class StableApproach(MultistateDerivedParameterNode):
             self.array[_slice][stable] = 8
             # TODO: Patch this value depending upon aircraft type
             if family and family.value == 'B787':
-                STABLE_N1_MIN = 35 # %
+                STABLE_N1_MIN = 35  # %
             else:
                 STABLE_N1_MIN = 45  # %
             STABLE_EPR_MIN = 1.1
@@ -2318,6 +2375,7 @@ class StickShaker(MultistateDerivedParameterNode):
             raise NotImplementedError
 """
 
+
 class ThrustReversers(MultistateDerivedParameterNode):
     '''
     A single parameter with multi-state mapping as below.
@@ -2360,36 +2418,36 @@ class ThrustReversers(MultistateDerivedParameterNode):
         ), available)
 
     def derive(self,
-            e1_dep_all=M('Eng (1) Thrust Reverser Deployed'),
-            e1_dep_lft=M('Eng (1) Thrust Reverser (L) Deployed'),
-            e1_dep_rgt=M('Eng (1) Thrust Reverser (R) Deployed'),
-            e1_ulk_all=M('Eng (1) Thrust Reverser Unlocked'),
-            e1_ulk_lft=M('Eng (1) Thrust Reverser (L) Unlocked'),
-            e1_ulk_rgt=M('Eng (1) Thrust Reverser (R) Unlocked'),
-            e1_tst_all=M('Eng (1) Thrust Reverser In Transit'),
-            e2_dep_all=M('Eng (2) Thrust Reverser Deployed'),
-            e2_dep_lft=M('Eng (2) Thrust Reverser (L) Deployed'),
-            e2_dep_rgt=M('Eng (2) Thrust Reverser (R) Deployed'),
-            e2_ulk_all=M('Eng (2) Thrust Reverser Unlocked'),
-            e2_ulk_lft=M('Eng (2) Thrust Reverser (L) Unlocked'),
-            e2_ulk_rgt=M('Eng (2) Thrust Reverser (R) Unlocked'),
-            e2_tst_all=M('Eng (2) Thrust Reverser In Transit'),
-            e3_dep_all=M('Eng (3) Thrust Reverser Deployed'),
-            e3_dep_lft=M('Eng (3) Thrust Reverser (L) Deployed'),
-            e3_dep_rgt=M('Eng (3) Thrust Reverser (R) Deployed'),
-            e3_ulk_all=M('Eng (3) Thrust Reverser Unlocked'),
-            e3_ulk_lft=M('Eng (3) Thrust Reverser (L) Unlocked'),
-            e3_ulk_rgt=M('Eng (3) Thrust Reverser (R) Unlocked'),
-            e3_tst_all=M('Eng (3) Thrust Reverser In Transit'),
-            e4_dep_all=M('Eng (4) Thrust Reverser Deployed'),
-            e4_dep_lft=M('Eng (4) Thrust Reverser (L) Deployed'),
-            e4_dep_rgt=M('Eng (4) Thrust Reverser (R) Deployed'),
-            e4_ulk_all=M('Eng (4) Thrust Reverser Unlocked'),
-            e4_ulk_lft=M('Eng (4) Thrust Reverser (L) Unlocked'),
-            e4_ulk_rgt=M('Eng (4) Thrust Reverser (R) Unlocked'),
-            e4_tst_all=M('Eng (4) Thrust Reverser In Transit'),
-            e1_status =M('Eng (1) Thrust Reverser'),
-            e2_status =M('Eng (2) Thrust Reverser'),):
+               e1_dep_all=M('Eng (1) Thrust Reverser Deployed'),
+               e1_dep_lft=M('Eng (1) Thrust Reverser (L) Deployed'),
+               e1_dep_rgt=M('Eng (1) Thrust Reverser (R) Deployed'),
+               e1_ulk_all=M('Eng (1) Thrust Reverser Unlocked'),
+               e1_ulk_lft=M('Eng (1) Thrust Reverser (L) Unlocked'),
+               e1_ulk_rgt=M('Eng (1) Thrust Reverser (R) Unlocked'),
+               e1_tst_all=M('Eng (1) Thrust Reverser In Transit'),
+               e2_dep_all=M('Eng (2) Thrust Reverser Deployed'),
+               e2_dep_lft=M('Eng (2) Thrust Reverser (L) Deployed'),
+               e2_dep_rgt=M('Eng (2) Thrust Reverser (R) Deployed'),
+               e2_ulk_all=M('Eng (2) Thrust Reverser Unlocked'),
+               e2_ulk_lft=M('Eng (2) Thrust Reverser (L) Unlocked'),
+               e2_ulk_rgt=M('Eng (2) Thrust Reverser (R) Unlocked'),
+               e2_tst_all=M('Eng (2) Thrust Reverser In Transit'),
+               e3_dep_all=M('Eng (3) Thrust Reverser Deployed'),
+               e3_dep_lft=M('Eng (3) Thrust Reverser (L) Deployed'),
+               e3_dep_rgt=M('Eng (3) Thrust Reverser (R) Deployed'),
+               e3_ulk_all=M('Eng (3) Thrust Reverser Unlocked'),
+               e3_ulk_lft=M('Eng (3) Thrust Reverser (L) Unlocked'),
+               e3_ulk_rgt=M('Eng (3) Thrust Reverser (R) Unlocked'),
+               e3_tst_all=M('Eng (3) Thrust Reverser In Transit'),
+               e4_dep_all=M('Eng (4) Thrust Reverser Deployed'),
+               e4_dep_lft=M('Eng (4) Thrust Reverser (L) Deployed'),
+               e4_dep_rgt=M('Eng (4) Thrust Reverser (R) Deployed'),
+               e4_ulk_all=M('Eng (4) Thrust Reverser Unlocked'),
+               e4_ulk_lft=M('Eng (4) Thrust Reverser (L) Unlocked'),
+               e4_ulk_rgt=M('Eng (4) Thrust Reverser (R) Unlocked'),
+               e4_tst_all=M('Eng (4) Thrust Reverser In Transit'),
+               e1_status=M('Eng (1) Thrust Reverser'),
+               e2_status=M('Eng (2) Thrust Reverser'),):
 
         deployed_params = (e1_dep_all, e1_dep_lft, e1_dep_rgt, e2_dep_all,
                            e2_dep_lft, e2_dep_rgt, e3_dep_all, e3_dep_lft,
@@ -2403,7 +2461,7 @@ class ThrustReversers(MultistateDerivedParameterNode):
                            e3_ulk_rgt, e4_ulk_all, e4_ulk_lft, e4_ulk_rgt)
 
         array = np_ma_zeros_like(deployed_stack[0], dtype=np.short)
-        stacks = [deployed_stack,]
+        stacks = [deployed_stack]
 
         if any(unlocked_params):
             unlocked_stack = vstack_params_where_state(*[(p, 'Unlocked') for p in unlocked_params])
@@ -2418,7 +2476,7 @@ class ThrustReversers(MultistateDerivedParameterNode):
             transit_stack = vstack_params_where_state(
                 (e1_tst_all, 'In Transit'), (e2_tst_all, 'In Transit'),
                 (e3_tst_all, 'In Transit'), (e4_tst_all, 'In Transit'),
-                (e1_status, 'In Transit'),  (e2_status, 'In Transit'),
+                (e1_status, 'In Transit'), (e2_status, 'In Transit'),
             )
             array = np.ma.where(transit_stack.any(axis=0), 1, array)
             stacks.append(transit_stack)
@@ -2426,7 +2484,7 @@ class ThrustReversers(MultistateDerivedParameterNode):
         mask_stack = np.ma.concatenate(stacks, axis=0)
 
         # mask indexes with greater than 50% masked values
-        mask = np.ma.where(mask_stack.mask.sum(axis=0).astype(float)/len(mask_stack)*100 > 50, 1, 0)
+        mask = np.ma.where(mask_stack.mask.sum(axis=0).astype(float) / len(mask_stack) * 100 > 50, 1, 0)
         self.array = array
         self.array.mask = mask
 
@@ -2602,8 +2660,8 @@ class TakeoffConfigurationWarning(MultistateDerivedParameterNode):
             (parking_brake, 'Warning'),
             (flap, 'Warning'),
             (gear, 'Warning'),
-            (ap,'Warning'),
-            (ail,'Warning'),
+            (ap, 'Warning'),
+            (ail, 'Warning'),
             (rudder, 'Warning'),
             (spoiler, 'Warning'))
         self.array = params_state.any(axis=0)

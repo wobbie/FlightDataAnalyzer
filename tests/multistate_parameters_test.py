@@ -38,7 +38,7 @@ from analysis_engine.multistate_parameters import (
     Configuration,
     Daylight,
     DualInputWarning,
-    EngThrustModeRequired,
+    ThrustModeSelected,
     Eng_1_Fire,
     Eng_2_Fire,
     Eng_3_Fire,
@@ -55,7 +55,9 @@ from analysis_engine.multistate_parameters import (
     FuelQty_Low,
     GearDown,
     GearDownSelected,
+    GearInTransit,
     GearOnGround,
+    GearUp,
     GearUpSelected,
     Gear_RedWarning,
     KeyVHFCapt,
@@ -68,6 +70,7 @@ from analysis_engine.multistate_parameters import (
     SlatExcludingTransition,
     SlatIncludingTransition,
     SpeedControl,
+    SpeedbrakeDeployed,
     SpeedbrakeSelected,
     StableApproach,
     StickPusher,
@@ -909,6 +912,7 @@ class TestEng_AllRunning(unittest.TestCase, NodeTest):
         self.node_class = Eng_AllRunning
         self.operational_combinations = [
             ('Eng (*) N1 Min',),
+            ('Eng (*) Np Min',),
             ('Eng (*) N2 Min',), ('Eng (*) Fuel Flow Min',),
             ('Eng (*) N2 Min', 'Eng (*) Fuel Flow Min'),
         ]
@@ -918,7 +922,7 @@ class TestEng_AllRunning(unittest.TestCase, NodeTest):
         n2 = P('Eng (*) N2 Min', array=n2_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(None, n2, None)
+        node.derive(None, n2, None, None)
         self.assertEqual(node.array.raw.tolist(), expected)
 
     def test_derive_ff_only(self):
@@ -926,7 +930,7 @@ class TestEng_AllRunning(unittest.TestCase, NodeTest):
         ff = P('Eng (*) Fuel Flow Min', array=ff_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(None, None, ff)
+        node.derive(None, None, None, ff)
         self.assertEqual(node.array.raw.tolist(), expected)
 
     def test_derive_n2_ff(self):
@@ -936,7 +940,7 @@ class TestEng_AllRunning(unittest.TestCase, NodeTest):
         ff = P('Eng (*) Fuel Flow Min', array=ff_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(None, n2, ff)
+        node.derive(None, n2, None, ff)
         self.assertEqual(node.array.raw.tolist(), expected)
 
     def test_derive_n1_only(self):
@@ -945,7 +949,16 @@ class TestEng_AllRunning(unittest.TestCase, NodeTest):
         n1 = P('Eng (*) N2 Min', array=n1_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(None, n1, None)
+        node.derive(None, n1, None, None)
+        self.assertEqual(node.array.raw.tolist(), expected)
+
+    def test_derive_np_only(self):
+        # Propellors 
+        np_array = np.ma.array([0, 5, 10, 15, 11, 5, 0])
+        eng_np = P('Eng (*) Np Min', array=np_array)
+        expected = [False, False, False, True, True, False, False]
+        node = self.node_class()
+        node.derive(None, None, eng_np , None)
         self.assertEqual(node.array.raw.tolist(), expected)
 
 
@@ -957,6 +970,7 @@ class TestEng_AnyRunning(unittest.TestCase, NodeTest):
         self.node_class = Eng_AnyRunning
         self.operational_combinations = [
             ('Eng (*) N1 Max',),
+            ('Eng (*) Np Max',),
             ('Eng (*) N2 Max',), ('Eng (*) Fuel Flow Max',),
             ('Eng (*) N2 Max', 'Eng (*) Fuel Flow Max'),
         ]
@@ -966,7 +980,7 @@ class TestEng_AnyRunning(unittest.TestCase, NodeTest):
         n2 = P('Eng (*) N2 Max', array=n2_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(None, n2, None)
+        node.derive(None, n2, None, None)
         self.assertEqual(node.array.raw.tolist(), expected)
 
     def test_derive_ff_only(self):
@@ -974,7 +988,7 @@ class TestEng_AnyRunning(unittest.TestCase, NodeTest):
         ff = P('Eng (*) Fuel Flow Max', array=ff_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(None, None, ff)
+        node.derive(None, None, None, ff)
         self.assertEqual(node.array.raw.tolist(), expected)
 
     def test_derive_n2_ff(self):
@@ -984,7 +998,7 @@ class TestEng_AnyRunning(unittest.TestCase, NodeTest):
         ff = P('Eng (*) Fuel Flow Max', array=ff_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(None, n2, ff)
+        node.derive(None, n2, None, ff)
         self.assertEqual(node.array.raw.tolist(), expected)
 
     def test_derive_n1_only(self):
@@ -993,7 +1007,16 @@ class TestEng_AnyRunning(unittest.TestCase, NodeTest):
         n1 = P('Eng (*) N1 Max', array=n1_array)
         expected = [False, False, False, True, True, False, False]
         node = self.node_class()
-        node.derive(n1, None, None)
+        node.derive(n1, None, None, None)
+        self.assertEqual(node.array.raw.tolist(), expected)
+
+    def test_derive_np_only(self):
+        # Propellors 
+        np_array = np.ma.array([0, 5, 10, 15, 11, 5, 0])
+        eng_np = P('Eng (*) Np Min', array=np_array)
+        expected = [False, False, False, True, True, False, False]
+        node = self.node_class()
+        node.derive(None, None, eng_np , None)
         self.assertEqual(node.array.raw.tolist(), expected)
 
 
@@ -1027,22 +1050,17 @@ class TestEng_Oil_Press_Warning(unittest.TestCase):
 
 class TestEngThrustModeRequired(unittest.TestCase):
     def test_can_operate(self):
-        opts = EngThrustModeRequired.get_operational_combinations()
-        self.assertTrue(('Eng (1) Thrust Mode Required',) in opts)
-        self.assertTrue(('Eng (2) Thrust Mode Required',) in opts)
-        self.assertTrue(('Eng (3) Thrust Mode Required',) in opts)
-        self.assertTrue(('Eng (4) Thrust Mode Required',) in opts)
-        self.assertTrue(('Eng (1) Thrust Mode Required',
-                         'Eng (2) Thrust Mode Required',
-                         'Eng (3) Thrust Mode Required',
-                         'Eng (4) Thrust Mode Required',) in opts)
+        opts = ThrustModeSelected.get_operational_combinations()
+        self.assertTrue(('Thrust Mode Selected (L)',) in opts)
+        self.assertTrue(('Thrust Mode Selected (R)',) in opts)
+        self.assertTrue(('Thrust Mode Selected (L)', 'Thrust Mode Selected (R)') in opts)
 
     def test_derive_one_param(self):
         thrust_array = np.ma.array([0, 0, 1, 0])
-        thrust = M('Eng (2) Thrust Mode Required', array=thrust_array,
-                   values_mapping=EngThrustModeRequired.values_mapping)
-        node = EngThrustModeRequired()
-        node.derive(None, thrust, None, None)
+        thrust = M('Thrust Mode Selected (R)', array=thrust_array,
+                   values_mapping=ThrustModeSelected.values_mapping)
+        node = ThrustModeSelected()
+        node.derive(None, thrust)
         self.assertEqual(thrust.array.raw.tolist(), thrust_array.tolist())
 
     def test_derive_four_params(self):
@@ -1050,24 +1068,18 @@ class TestEngThrustModeRequired(unittest.TestCase):
                                     mask=[False, False, True, False])
         thrust_array2 = np.ma.array([1, 0, 0, 0],
                                     mask=[True, False, False, False])
-        thrust_array3 = np.ma.array([0, 1, 0, 0])
-        thrust_array4 = np.ma.array([0, 0, 1, 0])
-        thrust1 = M('Eng (1) Thrust Mode Required', array=thrust_array1,
-                    values_mapping=EngThrustModeRequired.values_mapping)
-        thrust2 = M('Eng (2) Thrust Mode Required', array=thrust_array2,
-                    values_mapping=EngThrustModeRequired.values_mapping)
-        thrust3 = M('Eng (3) Thrust Mode Required', array=thrust_array3,
-                    values_mapping=EngThrustModeRequired.values_mapping)
-        thrust4 = M('Eng (4) Thrust Mode Required', array=thrust_array4,
-                    values_mapping=EngThrustModeRequired.values_mapping)
-        node = EngThrustModeRequired()
-        node.derive(thrust1, thrust2, thrust3, thrust4)
+        thrust1 = M('Thrust Mode Selected (L)', array=thrust_array1,
+                    values_mapping=ThrustModeSelected.values_mapping)
+        thrust2 = M('Thrust Mode Selected (R)', array=thrust_array2,
+                    values_mapping=ThrustModeSelected.values_mapping)
+        node = ThrustModeSelected()
+        node.derive(thrust1, thrust2)
 
         self.assertEqual(
             node.array.tolist(),
-            MappedArray([1, 1, 1, 0],
+            MappedArray([1, 0, 1, 0],
                         mask=[True, False, True, False],
-                        values_mapping=EngThrustModeRequired.values_mapping).tolist())
+                        values_mapping=ThrustModeSelected.values_mapping).tolist())
 
 
 class TestFlap(unittest.TestCase, NodeTest):
@@ -1545,6 +1557,7 @@ class TestGearDown(unittest.TestCase, NodeTest):
             ('Gear (R) Down',),
             ('Gear (L) Down', 'Gear (R) Down'),
             ('Gear (L) Down', 'Gear (N) Down', 'Gear (R) Down'),
+            ('Gear Up', 'Gear In Transit'),
             ('Gear Down Selected',),
         ]
 
@@ -1554,9 +1567,63 @@ class TestGearDown(unittest.TestCase, NodeTest):
             1: 'Down',
         })
         down = GearDown()
-        down.derive(None, None, None, sel_down)
+        down.derive(None, None, None, None, None, sel_down)
         self.assertEqual(list(down.array),
                          ['Down', 'Up', 'Up', 'Down', 'Down'])
+
+    def test_derive_from_up_intransit(self):
+        up = M(array=np.ma.array([0,0,0,0,1,1,0,0,0,0]), values_mapping={
+            1: 'Up',
+            0: 'Down',
+        })
+        in_transit = M(array=np.ma.array([0,0,0,1,0,0,1,1,0,0]), values_mapping={
+            1: 'In Transit',
+            0: '-',
+        })
+        node = self.node_class()
+        node.derive(None, None, None, up, in_transit, None)
+        self.assertEqual(list(node.array),
+                 ['Down', 'Down', 'Down', 'Up', 'Up', 'Up', 'Up', 'Up', 'Down', 'Down'])
+
+class TestGearUp(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = GearUp
+        self.operational_combinations = [
+            ('Gear (L) Up',),
+            ('Gear (R) Up',),
+            ('Gear (L) Up', 'Gear (R) Up'),
+            ('Gear (L) Up', 'Gear (N) Up', 'Gear (R) Up'),
+            ('Gear Up Selected', 'Gear (*) Red Warning'),
+        ]
+
+    def test_derive__calc_gear_up(self):
+        gear_down_array = np.ma.array([1]*20 + [0]*60 + [1]*20, dtype=int)
+        gear_down = M('Gear  Up Selected', gear_down_array,
+                      values_mapping={0: 'Up',1: 'Down'})
+        gear_red_warn_array = np.ma.array([0]*20 + [1]*15 + [0]*30 + [1]*15 + [0]*20, dtype=int)
+        gear_red_warn = M('Gear (*) Red Warning', gear_red_warn_array,
+                          values_mapping = {0: '-', 1: 'Warning'})
+
+        node = self.node_class()
+        node.derive(None, None, None, gear_down, gear_red_warn)
+
+        expected = M('Gear Up', np.ma.array([0]*31 + [1]*49 + [0]*20, dtype=int),
+                     values_mapping={0: 'Down',1: 'Up'})
+        np.testing.assert_array_equal(node.array.data,  expected.array.data)
+
+
+class TestGearInTransit(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = GearInTransit
+        self.operational_combinations = [
+            ('Gear (L) In Transit',),
+            ('Gear (R) In Transit',),
+            ('Gear (L) In Transit', 'Gear (R) In Transit'),
+            ('Gear (L) In Transit', 'Gear (N) In Transit', 'Gear (R) In Transit'),
+        ]
+
 
 
 class TestGearUpSelected(unittest.TestCase):
@@ -1984,6 +2051,48 @@ class TestSlatIncludingTransition(unittest.TestCase, NodeTest):
         self.assertIsInstance(node.array, MappedArray)
         values = unique_values(node.array.astype(int))
         self.assertEqual(values, {0: 6, 16: 16, 25: 33})
+
+
+class TestSpeedbrakeDeployed(unittest.TestCase):
+
+    def test_can_operate(self):
+        node = self.node_class()
+        operational_combinations = node.get_operational_combinations()
+        self.assertTrue(('Spoiler (L) Deployed', 'Spoiler (R) Deployed') in operational_combinations)
+        self.assertTrue(('Spoiler (L) Outboard Deployed',
+                          'Spoiler (R) Outboard Deployed') in operational_combinations)
+
+    def setUp(self):
+        deployed_l_array = [ 0,  0,  0,  0,  0,  1,  1,  0,  0,  0]
+        deployed_r_array = [ 0,  0,  0,  0,  1,  1,  1,  0,  0,  0]
+
+        self.deployed_l = M(name='Spoiler (L) Deployed', array=np.ma.array(deployed_l_array), values_mapping={1:'Deployed'})
+        self.deployed_r = M(name='Spoiler (R) Deployed', array=np.ma.array(deployed_r_array), values_mapping={1:'Deployed'})
+        self.node_class = SpeedbrakeDeployed
+
+    def test_derive(self):
+        result = [ 0,  0,  0,  0,  0,  1,  1,  0,  0,  0]
+        node = self.node_class()
+        node.derive(self.deployed_l,
+                    self.deployed_r,
+                    None,
+                    None,)
+        np.testing.assert_equal(node.array.data, result)
+
+    def test_derive_masked_value(self):
+        self.deployed_l.array.mask = [ 0,  0,  0,  1,  0,  1,  0,  0,  1,  0]
+        self.deployed_r.array.mask = [ 0,  0,  0,  0,  0,  1,  0,  0,  1,  0]
+
+        result_array = [ 0,  0,  0,  0,  0,  0,  1,  0,  0,  0]
+        result_mask =  [ 0,  0,  0,  0,  0,  1,  0,  0,  1,  0]
+
+        node = self.node_class()
+        node.derive(self.deployed_l,
+                    self.deployed_r,
+                    None,
+                    None,)
+        np.testing.assert_equal(node.array.data, result_array)
+        np.testing.assert_equal(node.array.mask, result_mask)
 
 
 class TestSpeedbrakeSelected(unittest.TestCase):

@@ -3,6 +3,7 @@
 
 import os
 import logging
+import pytz
 import numpy as np
 
 from datetime import datetime, timedelta
@@ -29,6 +30,7 @@ logger = logging.getLogger(name=__name__)
 class AircraftMismatch(ValueError):
     pass
 
+
 class TimebaseError(ValueError):
     pass
 
@@ -42,7 +44,7 @@ def validate_aircraft(aircraft_info, hdf):
     if True:
         return True
     else:
-        raise AircraftMismatch("Tail does not match identification %s" % \
+        raise AircraftMismatch("Tail does not match identification %s" %
                                aircraft_info['Tail Number'])
 
 
@@ -57,8 +59,8 @@ def _segment_type_and_slice(airspeed_array, airspeed_frequency, heading_array,
     the aircraft is in flight; however the aircraft is rarely moved and the
     heading sensor is a good indication that this is a hanger test.
 
-    GROUND_ONLY: If the heading changed, the airspeed needs to have been above the
-    threshold speed for flight for a minimum amount of time, currently 3
+    GROUND_ONLY: If the heading changed, the airspeed needs to have been above
+    the threshold speed for flight for a minimum amount of time, currently 3
     minutes to determine. If not, this segment is identified as GROUND_ONLY,
     probably taxiing, repositioning on the ground or a rejected takeoff.
 
@@ -84,11 +86,11 @@ def _segment_type_and_slice(airspeed_array, airspeed_frequency, heading_array,
     airspeed_start = start * airspeed_frequency
     airspeed_stop = stop * airspeed_frequency
     airspeed_array = airspeed_array[airspeed_start:airspeed_stop]
-    
+
     heading_start = start * heading_frequency
     heading_stop = stop * heading_frequency
     heading_array = heading_array[heading_start:heading_stop]
-    
+
     try:
         unmasked_start, unmasked_stop = \
             np.ma.flatnotmasked_edges(airspeed_array)
@@ -115,15 +117,16 @@ def _segment_type_and_slice(airspeed_array, airspeed_frequency, heading_array,
     if not heading_change:
         logger.debug("Heading did not change, aircraft did not move.")
         #TODO: support "No Movement" type
-        ##segment_type = 'NO_MOVEMENT'  # e.g. hanger tests, esp. if airspeed changes!
-        segment_type = 'GROUND_ONLY'  #Temporary: leave as Ground Only
+        ##segment_type = 'NO_MOVEMENT'
+        # e.g. hanger tests, esp. if airspeed changes!
+        segment_type = 'GROUND_ONLY'  # Temporary: leave as Ground Only
     elif not fast_for_long:
         logger.debug("Airspeed was below threshold.")
         segment_type = 'GROUND_ONLY'  # e.g. RTO, re-positioning A/C
         #Q: report a go_fast?
     elif slow_start and slow_stop:
-        logger.debug("Airspeed started below threshold, rose above and stopped "
-                     "below.")
+        logger.debug(
+            "Airspeed started below threshold, rose above and stopped below.")
         segment_type = 'START_AND_STOP'
     elif slow_start:
         logger.debug("Airspeed started below threshold and stopped above.")
@@ -135,18 +138,19 @@ def _segment_type_and_slice(airspeed_array, airspeed_frequency, heading_array,
         logger.debug("Airspeed started and stopped above threshold.")
         segment_type = 'MID_FLIGHT'
     logger.info("Segment type is '%s' between '%s' and '%s'.",
-                 segment_type, start, stop)
+                segment_type, start, stop)
     return segment_type, slice(start, stop)
 
 
 def _get_normalised_split_params(hdf):
     '''
-    Get split parameters (currently engine power and Groundspeed) from hdf, normalise
-    them on a scale from 0-1.0 and return the minimum.
+    Get split parameters (currently engine power and Groundspeed) from hdf,
+    normalise them on a scale from 0-1.0 and return the minimum.
 
     :param hdf: hdf_file object.
     :type hdf: hdfaccess.file.hdf_file
-    :returns: Minimum of normalised split parameters along with its frequency. Will return None, None if no split parameters are available.
+    :returns: Minimum of normalised split parameters along with its frequency.
+        Will return None, None if no split parameters are available.
     :rtype: (None, None) or (np.ma.masked_array, float)
     '''
     params = []
@@ -160,7 +164,8 @@ def _get_normalised_split_params(hdf):
         except KeyError:
             continue
         if first_split_param:
-            # Align all other parameters to first available.  #Q: Why not force to 1Hz?
+            # Align all other parameters to first available.  #Q: Why not force
+            # to 1Hz?
             param.array = align(param, first_split_param)
         else:
             first_split_param = param
@@ -205,7 +210,8 @@ def _split_on_eng_params(slice_start_secs, slice_stop_secs,
     :type split_params_min: np.ma.MaskedArray
     :param split_params_frequency: Frequency of split_params_min.
     :type split_params_frequency: int or float
-    :returns: Split index in seconds and value of split_params_min at this index.
+    :returns: Split index in seconds and value of split_params_min at this
+        index.
     :rtype: (int or float, int or float)
     '''
     slice_start = slice_start_secs * split_params_frequency
@@ -213,14 +219,14 @@ def _split_on_eng_params(slice_start_secs, slice_stop_secs,
     split_params_slice = slice(slice_start, slice_stop)
     split_index, split_value = min_value(split_params_min,
                                          _slice=split_params_slice)
-    
+
     if split_index is None:
         return split_index, split_value
-    
+
     matching_indices = np.ma.where(
         split_params_min[split_params_slice] == split_value)[0]
     split_index = matching_indices[len(matching_indices) / 2] + slice_start
-    
+
     split_index = round(split_index / split_params_frequency)
     return split_index, split_value
 
@@ -242,11 +248,12 @@ def _split_on_dfc(slice_start_secs, slice_stop_secs, dfc_frequency,
     :type dfc_diff: np.ma.MaskedArray
     :param eng_split_index: Split index based on minimum of engine parameters.
     :type eng_split_index: int or float
-    :returns: Split index based on 'Frame Counter' jumps or None if no jumps occur.
+    :returns: Split index based on 'Frame Counter' jumps or None if no jumps
+        occur.
     :rtype: int or float or None
     '''
     dfc_slice = slice(slice_start_secs * dfc_frequency,
-                      floor(slice_stop_secs * dfc_frequency)+1)
+                      floor(slice_stop_secs * dfc_frequency) + 1)
     unmasked_edges = np.ma.flatnotmasked_edges(dfc_diff[dfc_slice])
     if unmasked_edges is None:
         return None
@@ -306,9 +313,12 @@ def split_segments(hdf):
     TODO: DJ suggested not to use decaying engine oil temperature.
 
     Notes:
-     * We do not want to split on masked superframe data if mid-flight (e.g. short section of corrupt data) - repair_mask without defining repair_duration should fix that.
+     * We do not want to split on masked superframe data if mid-flight (e.g.
+       short section of corrupt data) - repair_mask without defining
+       repair_duration should fix that.
      * Use turning alongside engine parameters to ensure there is no movement?
-     XXX: Beware of pre-masked minimums to ensure we don't split on padded superframes
+     XXX: Beware of pre-masked minimums to ensure we don't split on padded
+     superframes
 
     TODO: Use L3UQAR num power ups for difficult cases?
     '''
@@ -351,18 +361,18 @@ def split_segments(hdf):
 
     rate_of_turn = _rate_of_turn(heading)
 
-    split_params_min, \
-    split_params_frequency = _get_normalised_split_params(hdf)
+    split_params_min, split_params_frequency \
+        = _get_normalised_split_params(hdf)
 
     if hdf.reliable_frame_counter:
         dfc = hdf['Frame Counter']
         dfc_diff = np.ma.diff(dfc.array)
         # Mask 'Frame Counter' incrementing by 1.
         dfc_diff = np.ma.masked_equal(dfc_diff, 1)
-        # Mask 'Frame Counter' overflow where the Frame Counter transitions from
-        # 4095 to 0.
-        # Q: This used to be 4094, are there some Frame Counters which increment
-        # from 1 rather than 0 or something else?
+        # Mask 'Frame Counter' overflow where the Frame Counter transitions
+        # from 4095 to 0.
+        # Q: This used to be 4094, are there some Frame Counters which
+        # increment from 1 rather than 0 or something else?
         dfc_diff = np.ma.masked_equal(dfc_diff, -4095)
         # Gap between difference values.
         dfc_half_period = (1 / dfc.frequency) / 2
@@ -383,9 +393,10 @@ def split_segments(hdf):
         if slow_slice.stop == len(airspeed_array):
             # After the loop we will add the remaining data to a segment.
             break
-        
+
         if last_fast_index is not None:
-            fast_duration = (slow_slice.start - last_fast_index) / airspeed.frequency
+            fast_duration = (slow_slice.start -
+                             last_fast_index) / airspeed.frequency
             if fast_duration < settings.MINIMUM_FAST_DURATION:
                 logger.info("Disregarding short period of fast airspeed %s",
                             fast_duration)
@@ -402,7 +413,7 @@ def split_segments(hdf):
                         "('%s').", settings.AIRSPEED_THRESHOLD, slow_duration,
                         settings.MINIMUM_SPLIT_DURATION)
             continue
-        
+
         last_fast_index = slow_slice.stop
 
         # Find split based on minimum of engine parameters.
@@ -496,7 +507,7 @@ def _mask_invalid_years(array, latest_year):
     array[(array >= 100) & (array < 1960)] = np.ma.masked
     # mask out any 2 digit years in future
     two_digits = (array >= 0) & (array < 100)
-    in_future = two_digits & (array > latest_year%100)
+    in_future = two_digits & (array > latest_year % 100)
     array[in_future] = np.ma.masked
     return array
 
@@ -507,7 +518,8 @@ def _calculate_start_datetime(hdf, fallback_dt=None):
 
     :param hdf: Flight data HDF file
     :type hdf: hdf_access object
-    :param fallback_dt: Used to replace elements of datetimes which are not available in the hdf file (e.g. YEAR not being recorded)
+    :param fallback_dt: Used to replace elements of datetimes which are not
+        available in the hdf file (e.g. YEAR not being recorded)
     :type fallback_dt: datetime
 
     HDF params used:
@@ -521,13 +533,18 @@ def _calculate_start_datetime(hdf, fallback_dt=None):
     If required parameters are not available and fallback_dt is not provided,
     a TimebaseError is raised
     """
-    now = datetime.now()
+    now = datetime.utcnow().replace(tzinfo=pytz.utc)
+
     if fallback_dt is not None:
-        assert fallback_dt < now, \
-               ("Fallback time '%s' in the future is not allowed. Current time "
-                "is '%s'." % (fallback_dt, now))
+        if (fallback_dt.tzinfo is None or
+                fallback_dt.tzinfo.utcoffset(fallback_dt) is None):
+            # Assume fallback_dt is UTC.
+            fallback_dt = fallback_dt.replace(tzinfo=pytz.utc)
+        assert fallback_dt < now, (
+            "Fallback time '%s' in the future is not allowed. Current time "
+            "is '%s'." % (fallback_dt, now))
     # align required parameters to 1Hz
-    onehz = P(frequency = 1)
+    onehz = P(frequency=1)
     dt_arrays = []
     for name in ('Year', 'Month', 'Day', 'Hour', 'Minute', 'Second'):
         param = hdf.get(name)
@@ -537,7 +554,8 @@ def _calculate_start_datetime(hdf, fallback_dt=None):
                 param.array = _mask_invalid_years(param.array, year)
             # do not interpolate date/time parameters to avoid rollover issues
             array = align(param, onehz, interpolate=False)
-            if len(array) == 0 or np.ma.count(array) == 0 or np.ma.all(array == 0):
+            if len(array) == 0 or np.ma.count(array) == 0 \
+                    or np.ma.all(array == 0):
                 # Other than the year 2000 or possibly 2100, no date values
                 # can be all 0's
                 logger.warning("No valid values returned for %s", name)
@@ -548,7 +566,7 @@ def _calculate_start_datetime(hdf, fallback_dt=None):
         if fallback_dt:
             array = [getattr(fallback_dt, name.lower())]
             logger.warning("%s not available, using %d from fallback_dt %s",
-                         name, array[0], fallback_dt)
+                           name, array[0], fallback_dt)
             dt_arrays.append(array)
             continue
         else:
@@ -584,14 +602,17 @@ def _calculate_start_datetime(hdf, fallback_dt=None):
             # in a futuristic date.
             a_day_before = timebase - relativedelta(days=1)
             if a_day_before < now:
-                logger.info("Timebase was in the future, using a day before satisfies requirements")
+                logger.info(
+                    "Timebase was in the future, using a DAY before "
+                    "satisfies requirements: %s", a_day_before)
                 return a_day_before
             # continue to take away a Year
         if 'Year' not in hdf:
             # remove a year from the timebase
             a_year_before = timebase - relativedelta(years=1)
             if a_year_before < now:
-                logger.info("Timebase was in the future, using a day before satisfies requirements")
+                logger.info("Timebase was in the future, using a YEAR before "
+                            "satisfies requirements: %s", a_year_before)
                 return a_year_before
 
         raise TimebaseError("Timebase '%s' is in the future.", timebase)
@@ -621,9 +642,11 @@ def append_segment_info(hdf_segment_path, segment_type, segment_slice, part,
     :type hdf_segment_path: string
     :param segment_slice: Slice of this segment relative to original file.
     :type segment_slice: slice
-    :param part: Numeric part this segment was in the original data file (1 indexed)
+    :param part: Numeric part this segment was in the original data file (1
+        indexed)
     :type part: Integer
-    :param fallback_dt: Used to replace elements of datetimes which are not available in the hdf file (e.g. YEAR not being recorded)
+    :param fallback_dt: Used to replace elements of datetimes which are not
+        available in the hdf file (e.g. YEAR not being recorded)
     :type fallback_dt: datetime
     :returns: Segment named tuple
     :rtype: Segment
@@ -632,14 +655,14 @@ def append_segment_info(hdf_segment_path, segment_type, segment_slice, part,
     with hdf_file(hdf_segment_path) as hdf:
         airspeed = hdf['Airspeed']
         duration = hdf.duration
-        # For now, raise TimebaseError up rather than using EPOCH
-        # TODO: Review whether to revert to epoch again.
-        ##try:
-        start_datetime = _calculate_start_datetime(hdf, fallback_dt)
-        ##except TimebaseError:
-            ##logger.warning("Unable to calculate timebase, using epoch "
-                           ##"1.1.1970!")
-            ##start_datetime = datetime.fromtimestamp(0)
+        try:
+            start_datetime = _calculate_start_datetime(hdf, fallback_dt)
+        except TimebaseError:
+            # Warn the user and store the fake datetime. The code on the other
+            # side should check the datetime and avoid processing this file
+            logger.warning('Unable to calculate timebase, using '
+                           '1970-01-01 00:00:00+0000!')
+            start_datetime = datetime.utcfromtimestamp(0).replace(tzinfo=pytz.utc)
         stop_datetime = start_datetime + timedelta(seconds=duration)
         hdf.start_datetime = start_datetime
 
@@ -663,8 +686,16 @@ def append_segment_info(hdf_segment_path, segment_type, segment_slice, part,
         go_fast_datetime = None
         # if not go_fast, create hash from entire file
         airspeed_hash = sha_hash_file(hdf_segment_path)
-    #                ('slice         type          part  path              hash           start_dt        go_fast_dt        stop_dt')
-    segment = Segment(segment_slice, segment_type, part, hdf_segment_path, airspeed_hash, start_datetime, go_fast_datetime, stop_datetime)
+    segment = Segment(
+        segment_slice,
+        segment_type,
+        part,
+        hdf_segment_path,
+        airspeed_hash,
+        start_datetime,
+        go_fast_datetime,
+        stop_datetime
+    )
     return segment
 
 
@@ -676,9 +707,12 @@ def split_hdf_to_segments(hdf_path, aircraft_info, fallback_dt=None,
 
     :param hdf_path: path to HDF file
     :type hdf_path: string
-    :param aircraft_info: Information which identify the aircraft, specfically with the keys 'Tail Number', 'MSN'...
+    :param aircraft_info: Information which identify the aircraft, specfically
+        with the keys 'Tail Number', 'MSN'...
     :type aircraft_info: Dict
-    :param fallback_dt: A datetime which is as close to the end of the data file as possible. Used to replace elements of datetimes which are not available in the hdf file (e.g. YEAR not being recorded)
+    :param fallback_dt: A datetime which is as close to the end of the data
+        file as possible. Used to replace elements of datetimes which are not
+        available in the hdf file (e.g. YEAR not being recorded)
     :type fallback_dt: datetime
     :param draw: Whether to use matplotlib to plot the flight
     :type draw: Boolean
@@ -707,7 +741,7 @@ def split_hdf_to_segments(hdf_path, aircraft_info, fallback_dt=None,
         # now we know the Aircraft is correct, go and do the PRE FILE ANALYSIS
         if hooks.PRE_FILE_ANALYSIS:
             logger.info("Performing PRE_FILE_ANALYSIS analysis: %s",
-                         hooks.PRE_FILE_ANALYSIS.func_name)
+                        hooks.PRE_FILE_ANALYSIS.func_name)
             hooks.PRE_FILE_ANALYSIS(hdf, aircraft_info)
         else:
             logger.info("No PRE_FILE_ANALYSIS actions to perform")
@@ -719,7 +753,8 @@ def split_hdf_to_segments(hdf_path, aircraft_info, fallback_dt=None,
             secs = hdf.duration
             fallback_dt -= timedelta(seconds=secs)
             logger.info("Reduced fallback_dt by %ddays %dhr %dmin to %s",
-               secs//86400, secs%86400//3600, secs%86400%3600//60, fallback_dt)
+                        secs // 86400, secs % 86400 // 3600,
+                        secs % 86400 % 3600 // 60, fallback_dt)
 
     # process each segment (into a new file) having closed original hdf_path
     segments = []
@@ -731,13 +766,19 @@ def split_hdf_to_segments(hdf_path, aircraft_info, fallback_dt=None,
         dest_basename = os.path.splitext(basename)[0] + '.%03d.hdf5' % part
         dest_path = os.path.join(dest_dir, dest_basename)
         logger.debug("Writing segment %d: %s", part, dest_path)
+
+        # ARINC 717 data has frames or superframes. ARINC 767 will be split
+        # on a minimum boundary of 4 seconds for the analyser.
+        boundary = 64 if superframe_present else 4
+
         write_segment(hdf_path, segment_slice, dest_path,
-                      supf_boundary=superframe_present)
+                      boundary=boundary)
         segment = append_segment_info(dest_path, segment_type, segment_slice,
                                       part, fallback_dt=fallback_dt)
 
         if previous_stop_dt and segment.start_dt < previous_stop_dt:
-            # In theory, this should not happen - but be warned of superframe padding?
+            # In theory, this should not happen - but be warned of superframe
+            # padding?
             logger.warning(
                 "Segment start_dt '%s' comes before the previous segment "
                 "ended '%s'", segment.start_dt, previous_stop_dt)
@@ -794,9 +835,9 @@ def parse_cmdline():
 
     if args.fallback_datetime:
         args.fallback_datetime = datetime.strptime(
-            args.fallback_datetime, '%Y-%m-%d %H:%M')
+            args.fallback_datetime, '%Y-%m-%d %H:%M').replace(tzinfo=pytz.utc)
     else:
-        args.fallback_datetime = datetime.now()
+        args.fallback_datetime = datetime.utcnow().replace(tzinfo=pytz.utc)
 
     return args, parser
 

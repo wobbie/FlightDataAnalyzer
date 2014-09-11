@@ -50,6 +50,7 @@ from analysis_engine.settings import (
     ILS_CAPTURE,
     INITIAL_CLIMB_THRESHOLD,
     KTS_TO_MPS,
+    LANDING_ROLL_END_SPEED,
     LANDING_THRESHOLD_HEIGHT,
     RATE_OF_TURN_FOR_FLIGHT_PHASES,
     RATE_OF_TURN_FOR_TAXI_TURNS,
@@ -628,9 +629,9 @@ class GearRetracting(FlightPhaseNode):
     '''
 
     def derive(self, gear_up_selected=M('Gear Up Selected'),
-               gear_down=M('Gear Down'), airs=S('Airborne')):
-        
-        in_transit = (gear_up_selected.array == 'Up') & (gear_down.array != 'Up')
+               gear_up=M('Gear Up'), airs=S('Airborne')):
+
+        in_transit = (gear_up_selected.array == 'Up') & (gear_up.array != 'Up')
         gear_retracting = slices_and(runs_of_ones(in_transit), airs.get_slices())
         self.create_phases(gear_retracting)
 
@@ -639,9 +640,8 @@ class GearRetracted(FlightPhaseNode):
     '''
     Simple phase translation of the Gear Down parameter to show gear Up.
     '''
-    def derive(self, gear_down=M('Gear Down')):
-        #TODO: self = 1 - 'Gear Extended'
-        repaired = repair_mask(gear_down.array, gear_down.frequency, 
+    def derive(self, gear_up=M('Gear Up')):
+        repaired = repair_mask(gear_up.array, gear_up.frequency,
                                repair_duration=120, extrapolate=True,
                                method='fill_start')
         gear_up = runs_of_ones(repaired == 'Up')
@@ -986,12 +986,19 @@ class Grounded(FlightPhaseNode):
 
 class Taxiing(FlightPhaseNode):
     '''
-    TODO: Update docstring.
-    
     This finds the first and last signs of movement to provide endpoints to
     the taxi phases. As Rate Of Turn is derived directly from heading, this
     phase is guaranteed to be operable for very basic aircraft.
+    
+    If groundspeed is available, only periods where the groundspeed is over
+    5kts are considered taxiing.
+    
+    With all mobile and moving periods identified, we then remove all the
+    periods where the aircraft is either airborne, taking off, landing or
+    carrying out a rejected takeoff. What's left are the taxiing on the
+    ground periods.
     '''
+
     @classmethod
     def can_operate(cls, available):
         constraint = (all_of(('Takeoff', 'Landing'), available) or 
@@ -1000,6 +1007,7 @@ class Taxiing(FlightPhaseNode):
     
     def derive(self, mobiles=S('Mobile'), gspd=P('Groundspeed'),
                toffs=S('Takeoff'), lands=S('Landing'),
+               rtos = S('Rejected Takeoff'), 
                airs=S('Airborne')):
         # XXX: There should only be one Mobile slice.
         if gspd:
@@ -1010,20 +1018,16 @@ class Taxiing(FlightPhaseNode):
             taxiing_slices = slices_and(mobiles.get_slices(), taxiing_slices)
         else:
             taxiing_slices = mobiles.get_slices()
-        
-        if toffs and lands:
-            # Exclude Takeoffs and Landings.
-            flight_slice = slice(toffs.get_first().slice.start,
-                                 lands.get_last().slice.stop)
-        elif airs:
-            # Exclude Airbornes.
-            flight_slice = slice(airs.get_first().slice.start,
-                                 airs.get_last().slice.stop)
-        else:
-            # Incomplete flight?
-            return
-        
-        taxiing_slices = slices_and_not(taxiing_slices, [flight_slice])
+
+        if toffs:
+            taxiing_slices = slices_and_not(taxiing_slices, toffs.get_slices())
+        if lands:
+            taxiing_slices = slices_and_not(taxiing_slices, lands.get_slices())
+        if rtos:
+            taxiing_slices = slices_and_not(taxiing_slices, rtos.get_slices())
+        if airs:
+            taxiing_slices = slices_and_not(taxiing_slices, airs.get_slices())
+            
         self.create_phases(taxiing_slices)
 
 
@@ -1154,7 +1158,7 @@ class LandingRoll(FlightPhaseNode):
             speed = aspd.array
         for land in lands:
             # Airspeed True on some aircraft do not record values below 61
-            end = index_at_value(speed, 65.0, land.slice)
+            end = index_at_value(speed, LANDING_ROLL_END_SPEED, land.slice)
             if end is None:
                 # due to masked values, use the land.stop rather than
                 # searching from the end of the data
@@ -1179,32 +1183,40 @@ class RejectedTakeoff(FlightPhaseNode):
     
     def derive(self, accel_lon=P('Acceleration Longitudinal Offset Removed'),
                groundeds=S('Grounded')):
-        accel_lon_smoothed = moving_average(accel_lon.array)
-        
-        accel_lon_masked = np.ma.copy(accel_lon_smoothed)
-        accel_lon_masked.mask |= accel_lon_masked <= TAKEOFF_ACCELERATION_THRESHOLD
-        
+        accel_lon_masked = moving_average(accel_lon.array)
+        accel_lon_masked.mask |= \
+            accel_lon_masked <= TAKEOFF_ACCELERATION_THRESHOLD
+
         accel_lon_slices = np.ma.clump_unmasked(accel_lon_masked)
-        
+
         potential_rtos = []
         for grounded in groundeds:
             for accel_lon_slice in accel_lon_slices:
-                if is_index_within_slice(accel_lon_slice.start, grounded.slice) and \
-                   is_index_within_slice(accel_lon_slice.stop, grounded.slice):
+                is_in = (
+                    is_index_within_slice(
+                        accel_lon_slice.start, grounded.slice)
+                    and is_index_within_slice(
+                        accel_lon_slice.stop, grounded.slice)
+                )
+                if is_in:
                     potential_rtos.append(accel_lon_slice)
             
         for next_index, potential_rto in enumerate(potential_rtos, start=1):
             # we get the min of the potential rto stop and the end of the
             # data for cases where the potential rto is detected close to the
             # end of the data
-            check_grounded_idx = min(potential_rto.stop + (60 * self.frequency),
-                                     len(accel_lon.array) - 1)
+            check_grounded_idx = min(
+                potential_rto.stop + (60 * self.frequency),
+                len(accel_lon.array) - 1
+            )
             if is_index_within_slices(check_grounded_idx,
                                       groundeds.get_slices()):
                 # if soon after potential rto and still grounded we have a
                 # rto, otherwise we continue to takeoff
                 duration = (potential_rto.stop - potential_rto.start) / self.hz
-                if duration >= 2:
+                # Note: A duration of 2 seconds was detecting enthusiastic
+                # taxiing as RTO's and a duration of 5 seconds missed a genuine RTO
+                if duration >= 3.5:
                     start = max(potential_rto.start - (10 * self.hz), 0)
                     stop = min(potential_rto.stop + (30 * self.hz),
                                len(accel_lon.array))
@@ -1256,8 +1268,8 @@ class Takeoff(FlightPhaseNode):
             # the 5 minute window of the array. Shifting the index manually
             # will be less pretty than using index_at_value.
             head_abs_array = np.ma.abs(repair_mask(
-                head.array, frequency=head.frequency, repair_duration=30))
-            takeoff_begin = index_at_value(head_abs_array - datum,
+                head.array, frequency=head.frequency, repair_duration=30) - datum)
+            takeoff_begin = index_at_value(head_abs_array,
                                            HEADING_TURN_ONTO_RUNWAY,
                                            slice(takeoff_run, first, -1))
 
@@ -1318,6 +1330,16 @@ class TakeoffRoll(FlightPhaseNode):
                 self.create_phase(slice(begin, roll_end))
             else:
                 self.create_phase(chunk)
+
+
+class TakeoffRollOrRejectedTakeoff(FlightPhaseNode):
+    '''
+    For monitoring configuration warnings especially, this combines actual
+    and rejected takeoffs into a single phase node for convenience.
+    '''
+    def derive(self, trolls=S('Takeoff Roll'), rtoffs=S('Rejected Takeoff')):
+        self.create_phases([s.slice for s in trolls + rtoffs], 
+                           name= "Takeoff Roll Or Rejected Takeoff")
 
 
 class TakeoffRotation(FlightPhaseNode):

@@ -62,7 +62,8 @@ class InvalidAPIInputError(APIError):
 
 class IncompleteEntryError(APIError):
     '''
-    An exception to be raised when and entry does not contain all required data.
+    An exception to be raised when and entry does not contain all required
+    data.
     '''
     pass
 
@@ -132,7 +133,7 @@ class APIHandlerHTTP(object):
             timeout=timeout,
             proxy_info=settings.API_PROXY_INFO,
         )
-        
+
         # Attempt to make the API request:
         socket_timeout = socket.getdefaulttimeout()
         socket.setdefaulttimeout(timeout)

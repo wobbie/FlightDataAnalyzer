@@ -6,12 +6,15 @@ from analysis_engine.library import (all_of,
                                      coreg,
                                      find_edges_on_state_change,
                                      find_toc_tod,
+                                     first_valid_sample,
                                      hysteresis,
                                      index_at_value,
+                                     last_valid_sample,
                                      max_value,
                                      minimum_unmasked,
                                      np_ma_masked_zeros_like,
                                      peak_curvature,
+                                     rate_of_change,
                                      repair_mask,
                                      runs_of_ones,
                                      slices_and,
@@ -22,7 +25,8 @@ from analysis_engine.node import A, M, P, S, KTI, KeyTimeInstanceNode
 
 from settings import (CLIMB_THRESHOLD,
                       HYSTERESIS_ENG_START_STOP,
-                      MIN_CORE_SUSTAINABLE,
+                      CORE_START_SPEED,
+                      CORE_STOP_SPEED,
                       MIN_FAN_RUNNING,
                       NAME_VALUES_CLIMB,
                       NAME_VALUES_DESCENT,
@@ -232,6 +236,94 @@ class ClimbStart(KeyTimeInstanceNode):
                 self.create_kti(index)
 
 
+class ClimbAccelerationStart(KeyTimeInstanceNode):
+    '''
+    Creates KTI on first change in Airspeed Selected during initial climb to
+    indicate the start of the acceleration phase of climb
+    
+    Alignment is performed manually because Airspeed Selected can be recorded at
+    a very low frequency and interpolation will render the find_edges algorithm
+    useless.
+    
+    Dynamically create rate_of_change width from the parameter's frequency to 
+    avoid errors. Larger widths flatten the rate of change result.
+    '''
+    align = False
+    
+    @classmethod
+    def can_operate(cls, available, eng_type=A('Engine Propulsion')):
+        spd_sel = all_of(('Airspeed Selected', 'Initial Climb'), available)
+        jet = (eng_type and eng_type.value == 'JET' and
+               'Throttle Levers' in available)
+        prop = (eng_type and eng_type.value == 'PROP' and
+               'Eng (*) Np Max' in available)
+        alt = all_of(('Engine Propulsion', 'Altitude AAL'), available)
+        return spd_sel or jet or prop or alt
+    
+    def derive(self, alt_aal=P('Altitude AAL'),
+               initial_climbs=S('Initial Climb'),
+               spd_sel=P('Airspeed Selected'),
+               eng_type=A('Engine Propulsion'),
+               eng_np=P('Eng (*) Np Max'),
+               throttle=P('Throttle Levers')):
+        #_slice = initial_climbs.get_first().slice if initial_climbs else None
+        if spd_sel and spd_sel.frequency >= 0.125 and initial_climbs:
+            # Use first Airspeed Selected change in Initial Climb.
+            _slice = initial_climbs.get_aligned(spd_sel).get_first().slice
+            spd_sel.array = spd_sel.array[_slice]
+            spd_sel_threshold = 5 / spd_sel.frequency
+            spd_sel_roc = rate_of_change(spd_sel, 2 * (1 / spd_sel.frequency))
+            index = index_at_value(spd_sel_roc, spd_sel_threshold)
+            if index:
+                self.frequency = spd_sel.frequency
+                self.offset = spd_sel.offset
+                self.create_kti(index + (_slice.start or 0))
+                return
+        
+        if eng_type:
+            if eng_type.value == 'JET':
+                if throttle and initial_climbs:
+                    # Align to throttle.
+                    _slice = initial_climbs.get_aligned(throttle).get_first().slice
+                    # Base on first engine throttle change after liftoff.
+                    # XXX: Width is too small for low frequency params.
+                    throttle.array = throttle.array[_slice]
+                    throttle_threshold = 2 / throttle.frequency
+                    throttle_roc = np.ma.abs(rate_of_change(throttle, 2 * (1 / throttle.frequency)))
+                    index = index_at_value(throttle_roc, throttle_threshold)
+                    if index:
+                        self.frequency = throttle.frequency
+                        self.offset = throttle.offset
+                        self.create_kti(index + (_slice.start or 0))
+                        return
+                
+                alt = 800
+                
+            elif eng_type.value == 'PROP':
+                if eng_np and initial_climbs:
+                    # Align to Np.
+                    _slice = initial_climbs.get_aligned(eng_np).get_first().slice
+                    # Base on first Np drop after liftoff.
+                    # XXX: Width is too small for low frequency params.
+                    eng_np.array = eng_np.array[_slice]
+                    eng_np_threshold = -0.5 / eng_np.frequency
+                    eng_np_roc = rate_of_change(eng_np, 2 * (1 / eng_np.frequency))
+                    index = index_at_value(eng_np_roc, eng_np_threshold)
+                    if index:
+                        self.frequency = eng_np.frequency
+                        self.offset = eng_np.offset
+                        self.create_kti(index + (_slice.start or 0))
+                        return
+                
+                alt = 400
+            
+            # Base on crossing altitude threshold.
+            if alt_aal:
+                self.frequency = alt_aal.frequency
+                self.offset = alt_aal.offset
+                self.create_kti(index_at_value(alt_aal.array, alt))
+
+
 class ClimbThrustDerateDeselected(KeyTimeInstanceNode):
     '''
     Creates KTIs where both climb thrust derates are deselected.
@@ -250,7 +342,7 @@ class ClimbThrustDerateDeselected(KeyTimeInstanceNode):
 class EngStart(KeyTimeInstanceNode):
     '''
     Records the moment of engine start for each engine in turn.
-    
+
     Engines running at the start of the valid data are assumed to start when
     the data starts.
     '''
@@ -260,42 +352,55 @@ class EngStart(KeyTimeInstanceNode):
 
     @classmethod
     def can_operate(cls, available):
-        return any_of(('Eng (%d) N1' % n for n in range(1, 3)), available) or \
-               any_of(('Eng (%d) N2' % n for n in range(1, 5)), available) or \
-               any_of(('Eng (%d) N3' % n for n in range(1, 5)), available)
+        return (
+            any_of(('Eng (%d) N1' % n for n in range(1, 5)), available) or
+            any_of(('Eng (%d) N2' % n for n in range(1, 5)), available) or
+            any_of(('Eng (%d) N3' % n for n in range(1, 5)), available) or
+            any_of(('Eng (%d) Ng' % n for n in range(1, 5)), available)
+        )
 
     def derive(self,
                eng_1_n1=P('Eng (1) N1'),
                eng_2_n1=P('Eng (2) N1'),
                eng_3_n1=P('Eng (3) N1'),
                eng_4_n1=P('Eng (4) N1'),
-               
+
                eng_1_n2=P('Eng (1) N2'),
                eng_2_n2=P('Eng (2) N2'),
                eng_3_n2=P('Eng (3) N2'),
                eng_4_n2=P('Eng (4) N2'),
-               
+
                eng_1_n3=P('Eng (1) N3'),
                eng_2_n3=P('Eng (2) N3'),
                eng_3_n3=P('Eng (3) N3'),
-               eng_4_n3=P('Eng (4) N3')):
-        
+               eng_4_n3=P('Eng (4) N3'),
+
+               eng_1_ng=P('Eng (1) Ng'),
+               eng_2_ng=P('Eng (2) Ng'),
+               eng_3_ng=P('Eng (3) Ng'),
+               eng_4_ng=P('Eng (4) Ng')):
+
         if eng_1_n3 or eng_2_n3:
             # This aircraft has 3-spool engines
             eng_nx_list = (eng_1_n3, eng_2_n3, eng_3_n3, eng_4_n3)
-            limit = MIN_CORE_SUSTAINABLE
+            limit = CORE_START_SPEED
         elif eng_1_n2 or eng_2_n2:
             # The engines are 2-spool engines
             eng_nx_list = (eng_1_n2, eng_2_n2, eng_3_n2, eng_4_n2)
-            limit = MIN_CORE_SUSTAINABLE
+            limit = CORE_START_SPEED
+        elif eng_1_ng or eng_2_ng:
+            # The engines have gas generator second stages
+            eng_nx_list = (eng_1_ng, eng_2_ng, eng_3_ng, eng_4_ng)
+            limit = CORE_START_SPEED
         else:
             eng_nx_list = (eng_1_n1, eng_2_n1, eng_3_n1, eng_4_n1)
             limit = MIN_FAN_RUNNING
-        
+
         for number, eng_nx in enumerate(eng_nx_list, start=1):
             if not eng_nx:
                 continue
-            
+
+            started = False
             # Repair 30 seconds of masked data when detecting engine starts.
             array = hysteresis(
                 repair_mask(eng_nx.array,
@@ -303,18 +408,28 @@ class EngStart(KeyTimeInstanceNode):
                             extrapolate=True),
                 HYSTERESIS_ENG_START_STOP)
             below_slices = runs_of_ones(array < limit)
-            
+
             for below_slice in below_slices:
-                
+
                 if ((below_slice.start != 0 and
-                     slice_duration(below_slice, self.hz) < 6) or 
-                    below_slice.stop == len(array) or 
-                    eng_nx.array[below_slice.stop] is np.ma.masked):
+                        slice_duration(below_slice, self.hz) < 6) or
+                        below_slice.stop == len(array) or
+                        eng_nx.array[below_slice.stop] is np.ma.masked):
                     # Small dip or reached the end of the array.
                     continue
-                
+
+                started = True
                 self.create_kti(below_slice.stop,
                                 replace_values={'number': number})
+
+            if not started:
+                i, v = first_valid_sample(eng_nx.array)
+                if i is not None and v >= limit:
+                    self.warning(
+                        'Eng (%d) Start: `%s` spin up not detected, '
+                        'sampling at the end beginning the data.' %
+                        (number, eng_nx.name))
+                    self.create_kti(i, replace_values={'number': number})
 
 
 class FirstEngStartBeforeLiftoff(KeyTimeInstanceNode):
@@ -322,7 +437,7 @@ class FirstEngStartBeforeLiftoff(KeyTimeInstanceNode):
     Check for the first engine start before liftoff. The index will be the first
     time an engine is started and remains on before liftoff.
     '''
-    
+
     def derive(self, eng_starts=KTI('Eng Start'), eng_count=A('Engine Count'),
                liftoffs=KTI('Liftoff')):
         if not liftoffs:
@@ -349,8 +464,8 @@ class EngStop(KeyTimeInstanceNode):
     '''
     Monitors the engine stop time. Engines still running at the end of the
     data are assumed to stop at the end of the data recording.
-    
-    We use MIN_CORE_SUSTAINABLE/2 to make sure the engine truly is stopping,
+
+    We use CORE_STOP_SPEED to make sure the engine truly is stopping,
     and not just running freakishly slow.
     '''
 
@@ -359,33 +474,44 @@ class EngStop(KeyTimeInstanceNode):
 
     @classmethod
     def can_operate(cls, available):
-        return any_of(('Eng (%d) N1' % n for n in range(1, 5)), available) or \
-               any_of(('Eng (%d) N2' % n for n in range(1, 5)), available)
+        return (
+            any_of(('Eng (%d) N1' % n for n in range(1, 5)), available) or
+            any_of(('Eng (%d) N2' % n for n in range(1, 5)), available)
+        )
 
     def derive(self,
                eng_1_n1=P('Eng (1) N1'),
                eng_2_n1=P('Eng (2) N1'),
                eng_3_n1=P('Eng (3) N1'),
                eng_4_n1=P('Eng (4) N1'),
-    
+
                eng_1_n2=P('Eng (1) N2'),
                eng_2_n2=P('Eng (2) N2'),
                eng_3_n2=P('Eng (3) N2'),
                eng_4_n2=P('Eng (4) N2'),
-               
+
                eng_1_n3=P('Eng (1) N3'),
                eng_2_n3=P('Eng (2) N3'),
                eng_3_n3=P('Eng (3) N3'),
-               eng_4_n3=P('Eng (4) N3')):
+               eng_4_n3=P('Eng (4) N3'),
+
+               eng_1_ng=P('Eng (1) Ng'),
+               eng_2_ng=P('Eng (2) Ng'),
+               eng_3_ng=P('Eng (3) Ng'),
+               eng_4_ng=P('Eng (4) Ng')):
 
         if eng_1_n3 or eng_2_n3:
             # This aircraft has 3-spool engines
             eng_nx_list = (eng_1_n3, eng_2_n3, eng_3_n3, eng_4_n3)
-            limit = MIN_CORE_SUSTAINABLE
+            limit = CORE_STOP_SPEED
         elif eng_1_n2 or eng_2_n2:
             # The engines are 2-spool engines
             eng_nx_list = (eng_1_n2, eng_2_n2, eng_3_n2, eng_4_n2)
-            limit = MIN_CORE_SUSTAINABLE
+            limit = CORE_STOP_SPEED
+        elif eng_1_ng or eng_2_ng:
+            # The engines have gas generator second stages
+            eng_nx_list = (eng_1_ng, eng_2_ng, eng_3_ng, eng_4_ng)
+            limit = CORE_STOP_SPEED
         else:
             eng_nx_list = (eng_1_n1, eng_2_n1, eng_3_n1, eng_4_n1)
             limit = MIN_FAN_RUNNING
@@ -393,7 +519,8 @@ class EngStop(KeyTimeInstanceNode):
         for number, eng_nx in enumerate(eng_nx_list, start=1):
             if not eng_nx:
                 continue
-            
+
+            stopped = False
             # Repair 30 seconds of masked data when detecting engine stops.
             array = hysteresis(
                 repair_mask(eng_nx.array,
@@ -401,18 +528,26 @@ class EngStop(KeyTimeInstanceNode):
                             extrapolate=True),
                 HYSTERESIS_ENG_START_STOP)
             below_slices = runs_of_ones(array < limit)
-            
+
             for below_slice in below_slices:
-                
                 if (below_slice.start == 0 or
-                    slice_duration(below_slice, self.hz) < 6 or
-                    eng_nx.array[below_slice.start - 1] is np.ma.masked):
-                    # Small dip, reached the end of the array or 
+                        slice_duration(below_slice, self.hz) < 6 or
+                        eng_nx.array[below_slice.start - 1] is np.ma.masked):
+                    # Small dip, reached the end of the array or
                     # following masked data.
                     continue
-                
+
+                stopped = True
                 self.create_kti(below_slice.start,
                                 replace_values={'number': number})
+            if not stopped:
+                i, v = last_valid_sample(eng_nx.array)
+                if i is not None and v >= limit:
+                    self.warning(
+                        'Eng (%d) Stop: `%s` spin down not detected, '
+                        'sampling at the end of the data.' % (number,
+                                                              eng_nx.name))
+                    self.create_kti(i-1, replace_values={'number': number})
 
 
 class LastEngStopAfterTouchdown(KeyTimeInstanceNode):
@@ -868,7 +1003,7 @@ class TakeoffAccelerationStart(KeyTimeInstanceNode):
         return 'Airspeed' in available and 'Takeoff' in available
 
     def derive(self, speed=P('Airspeed'), takeoffs=S('Takeoff'),
-               accel=P('Acceleration Longitudinal')):
+               accel=P('Acceleration Longitudinal Offset Removed')):
         for takeoff in takeoffs:
             start_accel = None
             if accel:
@@ -953,7 +1088,7 @@ class Liftoff(KeyTimeInstanceNode):
                vert_spd=P('Vertical Speed Inertial'),
                acc_norm=P('Acceleration Normal Offset Removed'),
                vert_spd_baro=P('Vertical Speed'),
-               alt_rad=P('Altitude Radio'),
+               alt_rad=P('Altitude Radio Offset Removed'),
                gog=M('Gear On Ground'),
                airs=S('Airborne'),
                frame=A('Frame')):
@@ -963,13 +1098,13 @@ class Liftoff(KeyTimeInstanceNode):
             index_air = air.start_edge
             if index_air == None:
                 continue
-            back_3 = (air.slice.start - 3.0*self.frequency)
-            if back_3 < 0:
+            back_6 = (air.slice.start - 6.0*self.frequency)
+            if back_6 < 0:
                 # unlikely to have lifted off within 3 seconds of data start
                 # STOP ONLY slice without a liftoff in this Airborne section
                 continue
-            on_3 = (air.slice.start + 3.0*self.frequency) + 1 # For indexing
-            to_scan = slice(back_3, on_3)
+            on_6 = (air.slice.start + 6.0*self.frequency) + 1 # For indexing
+            to_scan = slice(back_6, on_6)
 
             if vert_spd:
                 index_vs = index_at_value(vert_spd.array,
@@ -984,7 +1119,7 @@ class Liftoff(KeyTimeInstanceNode):
                 if acc_norm:
                     idx = np.ma.argmax(acc_norm.array[to_scan])
                     if acc_norm.array[to_scan][idx]>1.2:
-                        index_acc=idx+back_3
+                        index_acc=idx+back_6
             
             if alt_rad:
                 index_rad = index_at_value(alt_rad.array, 0.0, to_scan)
@@ -995,7 +1130,7 @@ class Liftoff(KeyTimeInstanceNode):
                     'Ground', gog.array[to_scan], change='leaving')
                 if edges:
                     # use the last liftoff point
-                    index = edges[-1] + back_3
+                    index = edges[-1] + back_6
                     # Check we were within 5ft of the ground when the switch triggered.
                     if alt_rad == None:
                         index_gog = index
@@ -1243,7 +1378,8 @@ class Touchdown(KeyTimeInstanceNode):
                 for i in range(1, len(bump)-1):
                     bump[i-1]=lift[i]*lift[i+1]
                 peak_az = np.max(bump)
-                index_az = np.argmax(bump)+index_ref-dt_pre*hz
+                if peak_az > 0.01:
+                    index_az = np.argmax(bump)+index_ref-dt_pre*hz
             
                 # The first real contact is indicated by an increase in g of
                 # more than 0.075, but this must be positive (hence the
@@ -1254,7 +1390,12 @@ class Touchdown(KeyTimeInstanceNode):
                         if delta > 0.1:
                             index_daz = i+1+index_ref-dt_pre*hz
                             break
-                
+                        
+            '''
+            open("touchdown_test","a").write(str([index_alt, index_gog, index_ax, index_dax, index_daz, index_az]))
+            open("touchdown_test","a").write("\n")
+            '''
+
             # Pick the first of the two normal accelerometer measures to
             # avoid triggering a touchdown from a single faulty sensor:
             index_z_list = [x for x in index_az, index_daz if x is not None]
@@ -1274,16 +1415,18 @@ class Touchdown(KeyTimeInstanceNode):
                 index_tdn = index_list[1]
             else:
                 index_tdn = index_list[0]
-            # but in any case, if we have a gear on ground signal which goes
-            # off first, adopt that.
-            if index_gog and index_gog<index_tdn:
-                index_tdn = index_gog
+            
+            ### but in any case, if we have a gear on ground signal which goes
+            ### off first, adopt that.
+            ##if index_gog and index_gog<index_tdn:
+                ##index_tdn = index_gog
             
             self.create_kti(index_tdn)
 
             '''
             # Plotting process to view the results in an easy manner.
             import matplotlib.pyplot as plt
+            import os
             name = 'Touchdown with values Ax=%.4f, Az=%.4f and dAz=%.4f' %(peak_ax, peak_az, delta)
             self.info(name)
             timebase=np.linspace(-dt_pre*hz, dt_pre*hz, 2*dt_pre*hz+1)
@@ -1292,29 +1435,30 @@ class Touchdown(KeyTimeInstanceNode):
             if alt:
                 plt.plot(timebase, alt.array[plot_period], 'o-r')
             if acc_long:
-                plt.plot(timebase, acc_long.array[plot_period]*200, 'o-m')
+                plt.plot(timebase, acc_long.array[plot_period]*20, 'o-m')
             if acc_norm:
-                plt.plot(timebase, acc_norm.array[plot_period]*100, 'o-g')
+                plt.plot(timebase, acc_norm.array[plot_period]*10, 'o-g')
             if gog:
-                plt.plot(timebase, gog.array[plot_period]*100, 'o-k')
+                plt.plot(timebase, gog.array[plot_period]*10, 'o-k')
             if index_gog:
-                plt.plot(index_gog-index_ref, 20.0,'ok', markersize=8)
+                plt.plot(index_gog-index_ref, 2.0,'ok', markersize=8)
             if index_ax:
-                plt.plot(index_ax-index_ref, 30.0,'om', markersize=8)
+                plt.plot(index_ax-index_ref, 3.0,'om', markersize=8)
             if index_az:
-                plt.plot(index_az-index_ref, 40.0,'og', markersize=8)
+                plt.plot(index_az-index_ref, 4.0,'og', markersize=8)
             if index_dax:
-                plt.plot(index_dax-index_ref, 55.0,'dm', markersize=8)
+                plt.plot(index_dax-index_ref, 5.5,'dm', markersize=8)
             if index_daz:
-                plt.plot(index_daz-index_ref, 50.0,'dg', markersize=8)
+                plt.plot(index_daz-index_ref, 5.0,'dg', markersize=8)
             if index_alt:
-                plt.plot(index_alt-index_ref, 10.0,'or', markersize=8)
+                plt.plot(index_alt-index_ref, 1.0,'or', markersize=8)
             if index_tdn:
-                plt.plot(index_tdn-index_ref, -20.0,'db', markersize=10)
+                plt.plot(index_tdn-index_ref, -2.0,'db', markersize=10)
             plt.title(name)
             plt.grid()
             filename = name
             print name
+            WORKING_DIR = "C:\Temp"
             output_dir = os.path.join(WORKING_DIR, 'Touchdown_graphs')
             if not os.path.exists(output_dir):
                 os.mkdir(output_dir)
@@ -1559,18 +1703,18 @@ class GlideslopeEstablishedEnd(KeyTimeInstanceNode):
             self.create_kti(ils.slice.stop)
 
 
-class VNAVModeAndEngThrustModeRequired(KeyTimeInstanceNode):
+class APVNAVModeAndThrustModeSelected(KeyTimeInstanceNode):
     '''
     Will create a KTI at the point where both discretes are enabled.
     '''
     
-    name = 'VNAV Mode And Eng Thrust Mode Required'
+    name = 'AP VNAV Mode And Thrust Mode Selected'
     
     def derive(self,
-               vnav_mode=P('VNAV Mode'),
-               thrust=P('Eng Thrust Mode Required')):
+               vnav_mode=P('AP VNAV'),
+               thrust=P('Thrust Mode Selected')):
         
-        combined = ((thrust.array == 'Required') &
+        combined = ((thrust.array == 'Selected') &
                     (vnav_mode.array == 'Engaged'))
         slices = np.ma.clump_unmasked(np.ma.masked_where(combined == False,
                                                          combined))

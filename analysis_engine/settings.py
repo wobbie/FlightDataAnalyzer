@@ -122,6 +122,10 @@ ALTITUDE_AAL_LAG_TC = 3.0
 # climbing above 15000 ft and below 10000 ft.
 ALTITUDE_FOR_CLB_CRU_DSC = 12500
 
+# The maximum radio altimeter offset we are able to compensate for.
+# NB: Negative offsets are not corrected, assumed to be from oleo compression.
+ALTITUDE_RADIO_OFFSET_LIMIT = 10.0
+
 # Minimum descent height range for an approach and landing phase.
 APPROACH_MIN_DESCENT = 500
 
@@ -195,7 +199,6 @@ HEADING_RATE_FOR_MOBILE = 2.0  # deg/sec
 HEADING_RATE_FOR_STRAIGHT_FLIGHT = 1.0 # deg/sec
 
 # Threshold for turn onto runway at start of takeoff.
-# This will usually be overwritten by the peak curvature test.
 HEADING_TURN_ONTO_RUNWAY = 15.0  # deg
 
 #Threshold for turn off runway at end of takeoff. This allows for turning
@@ -279,6 +282,9 @@ LANDING_ACCELERATION_THRESHOLD = -0.1  # g
 # Threshold for start of landing phase
 LANDING_THRESHOLD_HEIGHT = 50  # (Radio, where available)
 
+# Speed for end of landing roll (Groundspeed where available, else TAS)
+LANDING_ROLL_END_SPEED = 65.0
+
 # Level flight minimum duration
 LEVEL_FLIGHT_MIN_DURATION = 60  # sec
 
@@ -296,12 +302,15 @@ METRES_TO_FEET = 1000/25.4/12
 # Conversion from metres to nautical miles.
 METRES_TO_NM = 1852.0
 
-# Minimum core speed for engine to sustain operation. 
+# Engine core speed for engine starting.
+CORE_START_SPEED = 35.0  # %
+
+# Engine core speed for engine to stopping.
 # Note: Challenger 300 reports 49.5% after engine start.
-MIN_CORE_SUSTAINABLE = 49.0 # %
+CORE_STOP_SPEED = 35.0  # %
 
 # Minimum fan speed at idle for engines where N2/N3 not recorded.
-MIN_FAN_RUNNING = 5.0 # %
+MIN_FAN_RUNNING = 5.0  # %
 
 # Threshold for Longitudinal Acceleration Offset Removed dropping to after
 # a Takeoff Acceleration Start.
@@ -358,7 +367,8 @@ REVERSE_THRUST_EFFECTIVE_N1 = 65 # %N1
 SPOILER_DEPLOYED = 5.0 # deg
 
 # Acceleration forwards at the start of the takeoff roll.
-TAKEOFF_ACCELERATION_THRESHOLD = 0.1  # g
+# Was 0.1g, but increased to avoid nuisance triggers during enthusiastic taxiing.
+TAKEOFF_ACCELERATION_THRESHOLD = 0.15  # g
 
 # Height in ft where Altitude AAL switches between Radio and STD sources.
 TRANSITION_ALT_RAD_TO_STD = 100

@@ -1,6 +1,7 @@
 import mock
 import numpy as np
 import os.path
+import pytz
 import unittest
 
 from datetime import datetime
@@ -454,7 +455,7 @@ class TestSegmentInfo(unittest.TestCase):
         # Raising exception is more pythonic
         self.assertRaises(TimebaseError, append_segment_info,
                           'old timestamps', 'START_AND_STOP', slice(10,1000), 
-                          4, fallback_dt=datetime(2012,12,12,0,0,0))  
+                          4, fallback_dt=datetime(2012,12,12,0,0,0, tzinfo=pytz.utc))
 
 
     @mock.patch('analysis_engine.split_hdf_to_segments.sha_hash_file')
@@ -465,10 +466,10 @@ class TestSegmentInfo(unittest.TestCase):
         ### example where it goes fast
         seg = append_segment_info('future timestamps', 'START_AND_STOP', 
                                   slice(10,1000), 4,
-                                  fallback_dt=datetime(2012,12,12,0,0,0))
-        self.assertEqual(seg.start_dt, datetime(2012,12,25,0,0,0))
-        self.assertEqual(seg.go_fast_dt, datetime(2012,12,25,0,6,52))
-        self.assertEqual(seg.stop_dt, datetime(2012,12,25,11,29,56))
+                                  fallback_dt=datetime(2012,12,12,0,0,0, tzinfo=pytz.utc))
+        self.assertEqual(seg.start_dt, datetime(2012,12,25,0,0,0, tzinfo=pytz.utc))
+        self.assertEqual(seg.go_fast_dt, datetime(2012,12,25,0,6,52, tzinfo=pytz.utc))
+        self.assertEqual(seg.stop_dt, datetime(2012,12,25,11,29,56, tzinfo=pytz.utc))
         # This was true, but now we invalidate the Year component!
         ### Raising exception is more pythonic
         ##self.assertRaises(TimebaseError, append_segment_info,
@@ -486,9 +487,9 @@ class TestSegmentInfo(unittest.TestCase):
         self.assertEqual(seg.path, 'fast')
         self.assertEqual(seg.part, 4)
         self.assertEqual(seg.type, 'START_AND_STOP')   
-        self.assertEqual(seg.start_dt, datetime(2012,12,25,0,0,0))
-        self.assertEqual(seg.go_fast_dt, datetime(2012,12,25,0,6,52))
-        self.assertEqual(seg.stop_dt, datetime(2012,12,25,11,29,56))
+        self.assertEqual(seg.start_dt, datetime(2012,12,25,0,0,0, tzinfo=pytz.utc))
+        self.assertEqual(seg.go_fast_dt, datetime(2012,12,25,0,6,52, tzinfo=pytz.utc))
+        self.assertEqual(seg.stop_dt, datetime(2012,12,25,11,29,56, tzinfo=pytz.utc))
     
     
     @mock.patch('analysis_engine.split_hdf_to_segments.sha_hash_file')
@@ -501,11 +502,11 @@ class TestSegmentInfo(unittest.TestCase):
         seg = append_segment_info('slow', 'GROUND_ONLY', slice(10,110), 1)
         self.assertEqual(seg.path, 'slow')
         self.assertEqual(seg.go_fast_dt, None) # didn't go fast
-        self.assertEqual(seg.start_dt, datetime(2012,12,25,0,0,0)) # still has a start
+        self.assertEqual(seg.start_dt, datetime(2012,12,25,0,0,0, tzinfo=pytz.utc)) # still has a start
         self.assertEqual(seg.part, 1)
         self.assertEqual(seg.type, 'GROUND_ONLY')
         self.assertEqual(seg.hash, 'ABCDEFG') # taken from the "file"
-        self.assertEqual(seg.stop_dt, datetime(2012,12,25,0,0,50)) # +50 seconds of airspeed
+        self.assertEqual(seg.stop_dt, datetime(2012,12,25,0,0,50, tzinfo=pytz.utc)) # +50 seconds of airspeed
     
     
     @mock.patch('analysis_engine.split_hdf_to_segments.sha_hash_file')
@@ -530,38 +531,38 @@ class TestSegmentInfo(unittest.TestCase):
             'Minute':P('Minute',np.ma.array([11])),
             'Second':P('Second',np.ma.array([11]))
         }
-        dt = datetime(2012,12,12,12,12,12)
+        dt = datetime(2012,12,12,12,12,12, tzinfo=pytz.utc)
         # test with all params
         res = _calculate_start_datetime(hdf, dt)
-        self.assertEqual(res, datetime(2011,11,11,11,11,11))
+        self.assertEqual(res, datetime(2011,11,11,11,11,11, tzinfo=pytz.utc))
         # test without Year
         del hdf['Year']
         res = _calculate_start_datetime(hdf, dt)
-        self.assertEqual(res, datetime(2012,11,11,11,11,11))
+        self.assertEqual(res, datetime(2012,11,11,11,11,11, tzinfo=pytz.utc))
         # test without Month
         del hdf['Month']
         res = _calculate_start_datetime(hdf, dt)
-        self.assertEqual(res, datetime(2012,12,11,11,11,11))
+        self.assertEqual(res, datetime(2012,12,11,11,11,11, tzinfo=pytz.utc))
         # test without Day
         del hdf['Day']
         res = _calculate_start_datetime(hdf, dt)
-        self.assertEqual(res, datetime(2012,12,12,11,11,11))
+        self.assertEqual(res, datetime(2012,12,12,11,11,11, tzinfo=pytz.utc))
         # test without Hour
         del hdf['Hour']
         res = _calculate_start_datetime(hdf, dt)
-        self.assertEqual(res, datetime(2012,12,12,12,11,11))
+        self.assertEqual(res, datetime(2012,12,12,12,11,11, tzinfo=pytz.utc))
         # test without Minute
         del hdf['Minute']
         res = _calculate_start_datetime(hdf, dt)
-        self.assertEqual(res, datetime(2012,12,12,12,12,11))
+        self.assertEqual(res, datetime(2012,12,12,12,12,11, tzinfo=pytz.utc))
         # test without Second
         del hdf['Second']
         res = _calculate_start_datetime(hdf, dt)
-        self.assertEqual(res, datetime(2012,12,12,12,12,12))
+        self.assertEqual(res, datetime(2012,12,12,12,12,12, tzinfo=pytz.utc))
         
     def test_empty_year_no_seconds(self):
         # NB: 12's are the fallback_dt, 11's are the recorded time parameters
-        dt = datetime(2012,12,12,12,12,10)
+        dt = datetime(2012,12,12,12,12,10, tzinfo=pytz.utc)
         # Test only without second and empty year
         hdf = {
                'Month': P('Month',np.ma.array([11, 11, 11,11])),
@@ -571,13 +572,13 @@ class TestSegmentInfo(unittest.TestCase):
                }
         res = _calculate_start_datetime(hdf, dt)
         # 9th second as the first sample (10th second) was masked
-        self.assertEqual(res, datetime(2012,11,12,11,11,9))
+        self.assertEqual(res, datetime(2012,11,12,11,11,9, tzinfo=pytz.utc))
 
     def test_year_00_uses_fallback_year(self):
         # Ensure that a timebase error is not raised due to old date!
         #Other than the year 2000 or possibly 2100, no date values
         # can be all 0's        
-        dt = datetime(2012,12,12,12,12,10)
+        dt = datetime(2012,12,12,12,12,10, tzinfo=pytz.utc)
         # Test only without second and empty year
         hdf = {'Year':  P('Year',np.ma.array([0, 0, 0, 0])),
                'Month': P('Month',np.ma.array([11, 11, 11,11])),
@@ -589,7 +590,7 @@ class TestSegmentInfo(unittest.TestCase):
         hdf['Year'].array[2] = 50
         hdf['Year'].array[2] = np.ma.masked
         res = _calculate_start_datetime(hdf, dt)
-        self.assertEqual(res, datetime(2012,11,11,11,11,9))
+        self.assertEqual(res, datetime(2012,11,11,11,11,9, tzinfo=pytz.utc))
         
         
     def test_no_year_with_a_very_recent_fallback(self):
@@ -603,7 +604,7 @@ class TestSegmentInfo(unittest.TestCase):
         as you get.
         """
         # ensure current datetime is very recent
-        dt = datetime.now()
+        dt = datetime.utcnow().replace(tzinfo=pytz.utc)
         # Year is not recorded, and the data is for the very end of the
         # previous year. NB: This test could fail if ran on the very last day
         # of the month!

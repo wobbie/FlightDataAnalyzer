@@ -8,18 +8,166 @@ You can view the differences in tagged versions as follows:
 
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
-v0.10.2
+
+V0.13.3
 -------
- - Splitting algorithm improved to not split flights based on insignificant sections of high airspeed.
+
+ - Imprevements
+   - Turbulence RMSG can now operate at 1hz
+   - Rate of Climb below 10,000ft amended to remove spurious values triggered on the ground
+   - Rate of Climb below 10,000ft (CAA KPV) amended to provide a single KPV per flight.
+   - Rate of Descent below 10,000 ft (CAA KPV) amended to provide single value per flight.
+   - Fixed frequency issue with gear up also changed to using Gear Up Selected to improve accuracy at gear extention.
+   - Stick Shaker KPVs not created for segments less than one second.
+   - Engine Start and Stop now work with Eng (*) Ng where available. 
+ - Fixes:
+   - Fixes to Gear parameters to correct Gear Retracting and prevent Gear Retracting
+     and Gear Retracted phases overlapping
+   - Split segments datetime correction logging
+   - Correction to Takeoff Roll Or Rejected Takeoff phase
+   - Groundspeed With Thrust Reversers Deployed Min to handle difference in frequencies
+
+
+V0.13.2
+-------
+
+ - Imprevements
+   - Fix to align now retains the data type of multistate parameter instead of forcing to int
+   - changed speedbrake deployed to only use outboard spoilers
+   - speedbrake fixes for ERJ-135 and Challenger 850
+   - FlapAngle: Removed 787 combining slat
+   - closest_unmasked_value: Always return 2 args
+   - Handle Airspeed Selected being masked during t/off
+   - consistent return type from step_values
+ - KPVs Added
+   - Airspeed Minus Flap Manoeuvre Speed For 3 Sec With Flap During Descent Min
+   - Acceleration Lateral While Airborne Max
+
+
+V0.13.1
+-------
+
+Flight Data Converter has been made timezone aware
+
+ - Imprevements
+   - Touchdown:
+      - better handling when no clear normal acceleration in period tested
+      - removed bias towards Gear On Ground
+   - Taxiing: now takes into account rejected takeoffs
+   - Libary slices: improved handling of floating point start and stops
+   - Speedbrake Selected: Globals can process with eiter speedbrake or handle
+   - ILS Localizer/Glideslope: added extra sources
+   - V2 related nodes: Better handling of different frequencies encountered
+   - Takeoff acceleration threshold increased to 0.15g to avoid enthusiastic 
+       taxiing being identified as a takeoff start.
+   - Moving Average function reworked to operate better with masked data.
+   - Airspeed relative now includes V2 comparison during takeoff phase.
+   - Flap Manoeuvre Speed: now includes values for Climb
+   - Gear Down Selected: retain gear down mask
+ - Derived Parameters Added;
+   - Brake Temperature Min/Max/Avg.
+   - Speedbrake Deployed (Multistate).
+   - Gear Up (Multistate).
+   - Gear In Transition (Multistate).
+   - Altitude Radio Offset Removed.
+   - Kinetic Energy
+   - Potential Energy
+   - Aircraft Energy
+ - KPVs Added
+   - Throttle Lever at Liftoff
+   - Brake Temp During Taxi In Max
+   - Brake Temp After Touchdown Delta
+   - V2 At Liftoff
+   - V2 Lookup At Liftoff
+   - Airspeed Selected At Liftoff
+   - Airspeed Selected FMC Minus Flap Manoeuvre Speed 1000 to 5000 Ft Min
+   - Kinetic Energy At Runway Turnoff
+   - Aircraft Energy When Descending
+ - Phases Added:
+   - Takeoff Roll Or Rejected Takeoff
+ - Fixes:
+   - Parameter renames:
+     - Airspeed Selected (MCP)
+     - AP VNAV
+     - Thrust Mode Selected
+ - Derived Parameters Removed;
+   - V2
+   - V2 Lookup
+
+
+V0.12.4
+-------
+
+ - Added (KPV): Pitch35ToClimbAccelerationStartMax/Min
+ - Added (KPV): airspeed minus V2 35 ft to climb acceleration start KVPs
+ - Improvement: _value min/max/max abs values to better handle start and stop edges
+ - Improvement: Speedbrake Selected - Check if Speedbrake Armed is available for Airbuses
+ - Improvement: ClimbAccelerationStart multiple
+   - AAL first dep for freq
+   - Manually aligns parameters 
+   - Fixed last freq divide
+   - Support for analog spd_sel
+   - Fix for low hz parameters
+ - Fixed: AltitudeAAL bounced_sections alt comparison
+ - Fixed: landing runway for parallel runways when ils established at start of approach
+ - Fixed: most_common_value ignore negative values
+
+
+V0.12.3
+-------
+
+ - ClimbAccelerationStart Throttle Lever and Np fallback, align to Altitude
+   AAL.
+
+
+V0.12.2
+-------
+
+ - ClimbAccelerationStart jet and prop alt fallbacks
+
+V0.12.1
+-------
+
+ - Added ClimbAccelerationStart KTI
+ - Optimisation: Replaced interp1d
+ - Added Airspeed Selected blending parameter
+ - library: Added power_floor function
+ - Fixes for RejectedTakeoff
+ - `copy` option for moving_average
+ - Changed AirspeedMinusV2 to use Airspeed Selected
+ - APVerticalMode: AT Active & Climb Mode Active
+ - process_flight(): save the start_datetime to the HDF5
+ - step_values: Improved mask handling
+ - slices_from_to: trigger on dips and peaks
+ - SpeedbrakeSelected: 757+767 handle algo changed
+ - Don't break on time base errors, pass it back for the segments to be created
+   in a database
+ - Handle index == len(array) in closest_unmasked_val
+ - Floor closest_unmasked_index values
+ - Fix to takeoff following recent change
+
+V0.11.3
+-------
+ - Fix to closest_unmasked_index to resolve problems with low frequency and
+   high offset parameters creating KPV's ouside of segment slice.
+
+v0.11.1
+-------
+ - Splitting algorithm improved to not split flights based on insignificant
+   sections of high airspeed.
  - Detection of turning onto the runway improved to handle invalid data.
  - Derived Fuel Qty parameter now includes Fuel Qty (Tail) in aggregation.
  - Speedbrake parameter improved to support Global and G-IV aircraft families.
  - Speedbrake Selected parameter improved to support G-IV aircraft family.
- - blend_two_parameters amended to return a result of the correct sample rate if one parameter is faulty.
- - Flap and Flap Lever algorithm improved to handle masked sections of data between flap changes.
+ - blend_two_parameters amended to return a result of the correct sample rate
+   if one parameter is faulty.
+ - Flap and Flap Lever algorithm improved to handle masked sections of data
+   between flap changes.
  - closest_unmasked_value rewritten to provide more consistent results.
- - Repairing sections of invalid data has been improved to support fill_start and fill_stop methods along with the default of interpolation.
- - ILS established below 0.8 dots to avoid transient events as the localizer falls below the event threshold.
+ - Repairing sections of invalid data has been improved to support fill_start
+   and fill_stop methods along with the default of interpolation.
+ - ILS established below 0.8 dots to avoid transient events as the localizer
+   falls below the event threshold.
 
 
 v0.10.1

@@ -15,10 +15,12 @@ from analysis_engine.key_time_instances import (
     AltitudeWhenDescending,
     APDisengagedSelection,
     APEngagedSelection,
+    APVNAVModeAndThrustModeSelected,
     ATDisengagedSelection,
     ATEngagedSelection,
     Autoland,
     BottomOfDescent,
+    ClimbAccelerationStart,
     ClimbStart,
     ClimbThrustDerateDeselected,
     EngFireExtinguisher,
@@ -63,7 +65,6 @@ from analysis_engine.key_time_instances import (
     TouchAndGo,
     Touchdown,
     Transmit,
-    VNAVModeAndEngThrustModeRequired,
 )
 
 from flight_phase_test import buildsection, buildsections
@@ -199,6 +200,97 @@ class TestClimbStart(unittest.TestCase):
         kti.derive(alt_aal, liftoffs, tocs)
         self.assertEqual(len(kti), 1)
         self.assertAlmostEqual(kti[0].index, 1384, 0)
+
+
+class TestClimbAccelerationStart(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = ClimbAccelerationStart
+
+    def test_can_operate(self):
+        opts = self.node_class.get_operational_combinations()
+        self.assertTrue(self.node_class.can_operate(('Airspeed Selected',
+                                                     'Initial Climb')))
+        self.assertTrue(self.node_class.can_operate(('Altitude AAL',
+                                                     'Engine Propulsion')))
+        jet = A('Engine Propulsion', 'JET')
+        self.assertTrue(self.node_class.can_operate(('Throttle Levers',),
+                                                    eng_type=jet))
+        prop = A('Engine Propulsion', 'PROP')
+        self.assertTrue(self.node_class.can_operate(('Eng (*) Np Max',),
+                                                    eng_type=prop))
+
+    def test_derive_basic(self):
+        array = np.ma.concatenate(([110]*15, [180]*20))
+        spd_sel = Parameter('Airspeed Selected', array=array)
+        init_climbs = buildsection('Initial Climb', 5, 29)
+        node = self.node_class()
+        node.derive(None, init_climbs, spd_sel, None, None, None)
+        self.assertEqual(len(node), 1)
+        self.assertAlmostEqual(node[0].index, 13.1, places=1)
+    
+    def test_derive_spd_analog(self):
+        spd_sel = load(os.path.join(test_data_path, 'climb_acceleration_start_spd_sel_analog.nod'))
+        init_climbs = buildsection('Initial Climb', 714, 761)
+        node = self.node_class()
+        node.derive(None, init_climbs, spd_sel, None, None, None)
+        self.assertEqual(len(node), 1)
+        self.assertAlmostEqual(node[0].index, 1459, places=0)
+
+
+    def test_derive_spd_unchanged(self):
+        array = np.ma.array([155]*35)
+        spd_sel = Parameter('Airspeed Selected', array=array)
+        init_climbs = buildsection('Initial Climb', 5, 29)
+        node = self.node_class()
+        node.derive(None, init_climbs, spd_sel, None, None, None)
+        self.assertEqual(len(node), 0)
+
+    def test_derive_spd_masked(self):
+        array = np.ma.concatenate(([155]*15, [180]*20))
+        array[5:30] = np.ma.masked
+        spd_sel = Parameter('Airspeed Selected', array=array)
+        init_climbs = buildsection('Initial Climb', 5, 29)
+        node = self.node_class()
+        node.derive(None, init_climbs, spd_sel, None, None, None)
+        self.assertEqual(len(node), 0)
+    
+    def test_derive_engine_propulsion(self):
+        jet = A('Engine Propulsion', value='JET')
+        alt_aal = P('Altitude AAL', array=np.ma.arange(1000))
+        node = self.node_class()
+        node.derive(alt_aal, None, None, jet, None, None)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 800)
+        prop = A('Engine Propulsion', value='PROP')
+        node = self.node_class()
+        node.derive(alt_aal, None, None, prop, None, None)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 400)
+    
+    def test_derive_eng_np(self):
+        initial_climbs = buildsection('Initial Climb', 887, 926)
+        initial_climbs.frequency = 0.5
+        prop = A('Engine Propulsion', value='PROP')
+        eng_np = load(os.path.join(
+            test_data_path, 'climb_acceleration_start_eng_np.nod'))
+        node = self.node_class()
+        node.derive(None, initial_climbs, None, prop, eng_np, None)
+        self.assertEqual(len(node), 1)
+        self.assertAlmostEqual(node[0].index, 917, places=0)
+    
+    def test_derive_throttle_levers_fallback(self):
+        initial_climbs = buildsection('Initial Climb', 511, 531)
+        jet = A('Engine Propulsion', value='JET')
+        alt_aal = load(os.path.join(
+            test_data_path, 'climb_acceleration_start_alt_aal_fallback.nod'))
+        throttle_levers = load(os.path.join(
+            test_data_path, 'climb_acceleration_start_throttle_levers_fallback.nod'))
+        node = self.node_class()
+        node.derive(alt_aal, initial_climbs, None, jet, None, throttle_levers)
+        self.assertEqual(len(node), 1)
+        # Falls back to 800 Ft
+        self.assertAlmostEqual(node[0].index, 527, places=0)
 
 
 class TestClimbThrustDerateDeselected(unittest.TestCase):
@@ -487,8 +579,8 @@ class TestLandingTurnOffRunway(unittest.TestCase):
     def test_landing_turn_off_runway_basic(self):
         instance = LandingTurnOffRunway()
         head = P('Heading Continuous', np.ma.array([0]*30))
-        fast = buildsection('Fast', 0, 20)
-        land = buildsection('Landing', 10, 26)
+        fast = buildsection('Fast', 0, 19)
+        land = buildsection('Landing', 10, 25)
         instance.derive(head, land, fast)
         expected = [KeyTimeInstance(index=26, name='Landing Turn Off Runway')]
         self.assertEqual(instance, expected)
@@ -496,8 +588,8 @@ class TestLandingTurnOffRunway(unittest.TestCase):
     def test_landing_turn_off_runway_curved(self):
         instance = LandingTurnOffRunway()
         head = P('Heading Continuous',np.ma.array([0]*70+range(20)))
-        fast = buildsection('Fast',0,65)
-        land = buildsection('Landing',60,87)
+        fast = buildsection('Fast',0,64)
+        land = buildsection('Landing',60,86)
         instance.derive(head, land, fast)
         expected = [KeyTimeInstance(index=73, name='Landing Turn Off Runway')]
         self.assertEqual(instance, expected)
@@ -505,8 +597,8 @@ class TestLandingTurnOffRunway(unittest.TestCase):
     def test_landing_turn_off_runway_curved_left(self):
         instance = LandingTurnOffRunway()
         head = P('Heading Continuous',np.ma.array([0]*70+range(20))*-1.0)
-        fast = buildsection('Fast',0,65)
-        land = buildsection('Landing',60,87)
+        fast = buildsection('Fast',0,64)
+        land = buildsection('Landing',60,86)
         instance.derive(head, land, fast)
         expected = [KeyTimeInstance(index=73, name='Landing Turn Off Runway')]
         self.assertEqual(instance, expected)
@@ -668,7 +760,7 @@ class TestTopOfClimb(unittest.TestCase):
 
     def test_top_of_climb_basic(self):
         alt_data = np.ma.array(range(0,800,100)+[800]*5+range(800,0,-100))
-        alt = Parameter('Altitude STD', np.ma.array(alt_data))
+        alt = Parameter('Altitude STD Smoothed', np.ma.array(alt_data))
         phase = TopOfClimb()
         in_air = buildsection('Climb Cruise Descent',0,len(alt.array))
         phase.derive(alt, in_air)
@@ -677,7 +769,7 @@ class TestTopOfClimb(unittest.TestCase):
 
     def test_top_of_climb_truncated_start(self):
         alt_data = np.ma.array([800]*5+range(800,0,-100))
-        alt = Parameter('Altitude STD', np.ma.array(alt_data))
+        alt = Parameter('Altitude STD Smoothed', np.ma.array(alt_data))
         phase = TopOfClimb()
         in_air = buildsection('Climb Cruise Descent',0,len(alt.array))
         phase.derive(alt, in_air)
@@ -687,7 +779,7 @@ class TestTopOfClimb(unittest.TestCase):
 
     def test_top_of_climb_truncated_end(self):
         alt_data = np.ma.array(range(0,800,100)+[800]*5)
-        alt = Parameter('Altitude STD', np.ma.array(alt_data))
+        alt = Parameter('Altitude STD Smoothed', np.ma.array(alt_data))
         phase = TopOfClimb()
         in_air = buildsection('Climb Cruise Descent',0,len(alt.array))
         phase.derive(alt, in_air)
@@ -706,7 +798,7 @@ class TestTopOfDescent(unittest.TestCase):
 
     def test_top_of_descent_basic(self):
         alt_data = np.ma.array(range(0,800,100)+[800]*5+range(800,0,-100))
-        alt = Parameter('Altitude STD', np.ma.array(alt_data))
+        alt = Parameter('Altitude STD Smoothed', np.ma.array(alt_data))
         phase = TopOfDescent()
         in_air = buildsection('Climb Cruise Descent',0,len(alt.array))
         phase.derive(alt, in_air)
@@ -715,7 +807,7 @@ class TestTopOfDescent(unittest.TestCase):
 
     def test_top_of_descent_truncated_start(self):
         alt_data = np.ma.array([800]*5+range(800,0,-100))
-        alt = Parameter('Altitude STD', np.ma.array(alt_data))
+        alt = Parameter('Altitude STD Smoothed', np.ma.array(alt_data))
         phase = TopOfDescent()
         in_air = buildsection('Climb Cruise Descent',0,len(alt.array))
         phase.derive(alt, in_air)
@@ -725,9 +817,9 @@ class TestTopOfDescent(unittest.TestCase):
 
     def test_top_of_descent_truncated_end(self):
         alt_data = np.ma.array(range(0,800,100)+[800]*5)
-        alt = Parameter('Altitude STD', np.ma.array(alt_data))
+        alt = Parameter('Altitude STD Smoothed', np.ma.array(alt_data))
         phase = TopOfDescent()
-        in_air = buildsection('Climb Cruise Descent',0,len(alt.array))
+        in_air = buildsection('Climb Cruise Descent',0,len(alt.array)-1)
         phase.derive(alt, in_air)
         expected = []
         self.assertEqual(phase, expected)
@@ -1310,7 +1402,7 @@ class TestFlapRetractionWhileAirborne(unittest.TestCase, NodeTest):
         self.flap_synth = M(name='Flap Lever (Synthetic)', array=array, values_mapping=mapping)
 
     def test_derive(self):
-        airborne = buildsection('Airborne', 2, 12)
+        airborne = buildsection('Airborne', 2, 11)
         name = self.node_class.get_name()
         node = self.node_class()
         node.derive(self.flap_lever, None, airborne)
@@ -1351,7 +1443,7 @@ class TestFlapRetractionDuringGoAround(unittest.TestCase, NodeTest):
         self.flap_synth = M(name='Flap Lever (Synthetic)', array=array, values_mapping=mapping)
 
     def test_derive(self):
-        airborne = buildsection('Go Around', 2, 12)
+        airborne = buildsection('Go Around', 2, 11)
         name = self.node_class.get_name()
         node = self.node_class()
         node.derive(self.flap_lever, None, airborne)
@@ -1463,7 +1555,7 @@ class TestLocalizerEstablishedEnd(unittest.TestCase):
             LocalizerEstablishedEnd.get_operational_combinations())
 
     def test_derive(self):
-        ils = buildsection('ILS Localizer Established', 10, 20)
+        ils = buildsection('ILS Localizer Established', 10, 19)
         expected = [
             KeyTimeInstance(index=20, name='Localizer Established End')]
         les = LocalizerEstablishedEnd()
@@ -1653,28 +1745,28 @@ class TestTransmit(unittest.TestCase):
         self.assertEqual(tr, expected)
 
 
-class TestVNAVModeAndEngThrustModeRequired(unittest.TestCase, NodeTest):
+class TestAPVNAVModeAndThrustModeSelected(unittest.TestCase, NodeTest):
 
     def setUp(self):
-        self.node_class = VNAVModeAndEngThrustModeRequired
-        self.operational_combinations = [('VNAV Mode', 'Eng Thrust Mode Required')]
+        self.node_class = APVNAVModeAndThrustModeSelected
+        self.operational_combinations = [('AP VNAV', 'Thrust Mode Selected')]
     
     def test_derive_basic(self):
         vnav_mode = M(
-            name='VNAV Mode',
+            name='AP VNAV',
             array=np.ma.array([1, 0, 1, 0, 1, 1, 0]),
             values_mapping={0: '-', 1: 'Engaged'},
         )
         thrust = M(
-            name='Eng Thrust Mode Required',
+            name='Thrust Mode Selected',
             array=np.ma.array([0, 0, 1, 1, 1, 1, 0]),
-            values_mapping={0: '-', 1: 'Required'},
+            values_mapping={0: '-', 1: 'Selected'},
         )
         node = self.node_class()
         node.derive(vnav_mode, thrust)
         self.assertEqual(node, [
-            KeyTimeInstance(index=2, name='VNAV Mode And Eng Thrust Mode Required'),
-            KeyTimeInstance(index=4, name='VNAV Mode And Eng Thrust Mode Required'),
+            KeyTimeInstance(index=2, name='AP VNAV Mode And Thrust Mode Selected'),
+            KeyTimeInstance(index=4, name='AP VNAV Mode And Thrust Mode Selected'),
         ])
 
 class TestOffBlocks(unittest.TestCase):

@@ -1,11 +1,13 @@
 import logging
+import pytz
 import numpy as np
+import math
 
 from collections import OrderedDict, namedtuple
 from datetime import datetime, timedelta
 from hashlib import sha256
 from itertools import izip, izip_longest
-from math import asin, atan2, ceil, cos, degrees, floor, radians, sin, sqrt
+from math import asin, atan2, ceil, cos, degrees, floor, log, radians, sin, sqrt
 from scipy import interpolate as scipy_interpolate, optimize
 
 from hdfaccess.parameter import MappedArray
@@ -277,7 +279,7 @@ def align(slave, master, interpolate=True):
         # force disable interpolate!
         slave_array = slave_array.raw
         interpolate = False
-        _dtype = int
+        _dtype = slave_array.dtype
     elif isinstance(slave_array, np.ma.MaskedArray):
         _dtype = float
     else:
@@ -578,7 +580,7 @@ def calculate_timebase(years, months, days, hours, mins, secs):
     # Calculate current year here and pass into
     # convert_two_digit_to_four_digit_year to save calculating year for every
     # second of flight
-    current_year = str(datetime.now().year)
+    current_year = str(datetime.utcnow().year)
     # OrderedDict so if all values are the same, max will consistently take the
     # first val on repeated runs
     clock_variation = OrderedDict()
@@ -599,7 +601,7 @@ def calculate_timebase(years, months, days, hours, mins, secs):
             yr = convert_two_digit_to_four_digit_year(yr, current_year)
 
         try:
-            dt = datetime(int(yr), int(mth), int(day), int(hr), int(mn), int(sc))
+            dt = datetime(int(yr), int(mth), int(day), int(hr), int(mn), int(sc), tzinfo=pytz.utc)
         except (ValueError, TypeError, np.ma.core.MaskError):
             # ValueError is raised if values are out of range, e.g. 0..59.
             # Q: Should we validate these parameters and switch to fallback_dt
@@ -1212,8 +1214,17 @@ def positive_index(container, index):
     
     if index < 0:
         index += len(container)
+    elif index >= len(container):
+        index = len(container) - 1
     
     return index
+
+
+def power_floor(x):
+    '''
+    :returns: The closest power of 2 less than or equal to x.
+    '''
+    return int(2**(floor(log(x, 2))))
 
 
 def next_unmasked_value(array, index, stop_index=None):
@@ -1288,7 +1299,12 @@ def closest_unmasked_value(array, index, start_index=None, stop_index=None):
     index = positive_index(array, index)
     
     if not array.mask[index]:
-        return Value(index, array[index])
+        return Value(floor(index), array[index])
+    
+    if start_index and stop_index:
+        # Fix invalid index ranges, I assume slice.step was -1.
+        start_index = min(start_index, stop_index)
+        stop_index = max(start_index, stop_index)
     
     # Normalise indices.
     start_index = positive_index(array, start_index)
@@ -1306,7 +1322,7 @@ def closest_unmasked_value(array, index, start_index=None, stop_index=None):
     elif next_value:
         return next_value
     else:
-        return None
+        return None, None
 
 
 def clump_multistate(array, state, _slices=[slice(None)], condition=True):
@@ -1373,8 +1389,8 @@ def unique_values(array):
 
 def most_common_value(array):
     '''
-    Find the most repeating valid value within an array. Works with mapped
-    arrays too.
+    Find the most repeating non-negative valid value within an array. Works
+    with mapped arrays too.
 
     Hint: If you get "TypeError: array cannot be safely cast to required type"
     and your data is integer type, try casting it to int type:
@@ -1382,13 +1398,14 @@ def most_common_value(array):
     most_common_value(array.astype(int))
 
     :param array: Array to count occurrences of values within
-    :type array: np.array
+    :type array: np.ma.array
     :returns: [(val, count), (val2, count2)]
     :rtype: List of tuples
     '''
     if not np.ma.count(array):
         # no valid data
         return None
+    array[array < 0] = np.ma.masked
     counts = np.bincount(array.compressed())
     key = counts.argmax()
     if hasattr(array, 'values_mapping'):
@@ -1808,8 +1825,11 @@ def find_edges_on_state_change(state, array, change='entering', phase=None, min_
         offset = _slice.start - 0.5
         state_periods = np.ma.clump_unmasked(
             np.ma.masked_not_equal(array[_slice], array.state[state]))
-        # ignore small periods where slice is in state, then remove small gaps where slices are not in state
-        state_periods = slices_remove_small_slices(state_periods, count=min_samples)
+        # ignore small periods where slice is in state, then remove small
+        # gaps where slices are not in state
+        # we are taking 1 away from min_samples here as
+        # slices_remove_small_slices removes slices of less than count
+        state_periods = slices_remove_small_slices(state_periods, count=min_samples - 1)
         state_periods = slices_remove_small_gaps(state_periods, count=min_samples)
         edge_list = []
         for period in state_periods:
@@ -3556,7 +3576,7 @@ def slices_remove_small_gaps(slice_list, time_limit=10, hz=1, count=None):
     
     :returns: slice list.
     '''
-    if count:
+    if count is not None:
         sample_limit = count
     else:
         sample_limit = time_limit * hz
@@ -3589,7 +3609,7 @@ def slices_remove_small_slices(slice_list, time_limit=10, hz=1, count=None):
 
     :returns: slice list.
     '''
-    if count:
+    if count is not None:
         sample_limit = count
     else:
         sample_limit = time_limit * hz
@@ -3727,7 +3747,14 @@ def mask_inside_slices(array, slices):
     '''
     mask = np.zeros(len(array), dtype=np.bool_) # Create a mask of False.
     for slice_ in slices:
-        mask[slice_] = True
+        start_ = math.floor(slice_.start or 0)
+        if slice_.stop:
+            stop_ = math.ceil(slice_.stop) + 1
+        else:
+            stop_ = None
+        mask[slice(start_, stop_)] = True
+        # Original version below did not operate correctly with floating point slice ends. Amended temporarily until more comprehensive solution available.
+        # Was: mask[slice_] = True
     return np.ma.array(array, mask=np.ma.mask_or(mask, array.mask))
 
 
@@ -3744,7 +3771,11 @@ def mask_outside_slices(array, slices):
     '''
     mask = np.ones(len(array), dtype=np.bool_) # Create a mask of True.
     for slice_ in slices:
-        mask[slice_] = False
+        start_ = math.ceil(slice_.start or 0)
+        stop_ = math.floor(slice_.stop or -1)
+        mask[slice(start_, stop_)] = False
+        # Original version below did not operate correctly with floating point slice ends. Amended temporarily until more comprehensive solution available.
+        # Was: mask[slice_] = False
     return np.ma.array(array, mask=np.ma.mask_or(mask, array.mask))
 
 
@@ -3814,18 +3845,12 @@ def max_abs_value(array, _slice=slice(None), start_edge=None, stop_edge=None):
 
     :returns: Value named tuple of index and value.
     """
-    index, value = max_value(np.ma.abs(array), _slice)
-    # If start or stop edges are given, check these extreme (interpolated) values.
-    if start_edge:
-        edge_value = abs(value_at_index(array, start_edge) or 0)
-        if edge_value and edge_value > value:
-            index = start_edge
-            value = edge_value
-    if stop_edge:
-        edge_value = abs(value_at_index(array, stop_edge) or 0)
-        if edge_value and edge_value > value:
-            index = stop_edge
-            value = edge_value
+    #slice_start = start_edge if start_edge is not None else _slice.start
+    #slice_stop = stop_edge if stop_edge is not None else _slice.stop
+    #max_val_slice = slice(slice_start, slice_stop, _slice.step)
+    index, value = max_value(np.ma.abs(array), _slice,
+                          start_edge=start_edge, stop_edge=stop_edge)
+
     if value is None:
         return Value(None, None)
     else:
@@ -3848,18 +3873,12 @@ def max_value(array, _slice=slice(None), start_edge=None, stop_edge=None):
 
     :returns: Value named tuple of index and value.
     """
-    index, value = _value(array, _slice, np.ma.argmax)
-    # If start or stop edges are given, check these extreme (interpolated) values.
-    if start_edge:
-        edge_value = value_at_index(array, start_edge)
-        if edge_value and edge_value > value:
-            index = start_edge
-            value = edge_value
-    if stop_edge:
-        edge_value = value_at_index(array, stop_edge)
-        if edge_value and edge_value > value:
-            index = stop_edge
-            value = edge_value
+    #slice_start = start_edge if start_edge is not None else _slice.start
+    #slice_stop = stop_edge if stop_edge is not None else _slice.stop
+    #max_val_slice = slice(slice_start, slice_stop, _slice.step)
+    index, value = _value(array, _slice, np.ma.argmax,
+                          start_edge=start_edge, stop_edge=stop_edge)
+
     return Value(index, value)
 
 
@@ -3892,18 +3911,12 @@ def min_value(array, _slice=slice(None), start_edge=None, stop_edge=None):
 
     :returns: Value named tuple of index and value.
     """
-    index, value = _value(array, _slice, np.ma.argmin)
-    # If start or stop edges are given, check these extreme (interpolated) values.
-    if start_edge:
-        edge_value = value_at_index(array, start_edge)
-        if edge_value and edge_value < value:
-            index = start_edge
-            value = edge_value
-    if stop_edge:
-        edge_value = value_at_index(array, stop_edge)
-        if edge_value and edge_value < value:
-            index = stop_edge
-            value = edge_value
+    #slice_start = start_edge if start_edge is not None else _slice.start
+    #slice_stop = stop_edge if stop_edge is not None else _slice.stop
+    #min_val_slice = slice(slice_start, slice_stop, _slice.step)
+    index, value = _value(array, _slice, np.ma.argmin,
+                          start_edge=start_edge, stop_edge=stop_edge)
+
     return Value(index, value)
 
 
@@ -4447,52 +4460,54 @@ def most_points_cost(coefs, x, y):
     return np.ma.sum(e)
 
 
-def moving_average(array, window=9, weightings=None, pad=True):
+def moving_average(array, window=9, weightings=None):
     """
     Moving average over an array with window of n samples. Weightings allows
     customisation of the importance of each position's value in the average.
 
-    Recommend odd lengthed moving windows as the result is positioned
+    Requires odd lengthed moving windows so that the result is positioned
     centrally in the window offset.
 
     :param array: Masked Array
     :type array: np.ma.array
     :param window: Size of moving average window to use
     :type window: Integer
-    :param pad: Pad the returned array to the same length of the input, using masked 0's
-    :type pad: Boolean
     :param weightings: Apply uneven weightings across the window - the same length as window.
     :type weightings: array-like object consisting of floats
+    
+    deprecated...
+    :param pad: Pad the returned array to the same length of the input, using masked 0's
+    :type pad: Boolean
 
     Ref: http://argandgahandapandpa.wordpress.com/2011/02/24/python-numpy-moving-average-for-data/
     """
+    # Make sure we are working with a valid window size.
+    assert window%2 == 1, 'Window %d is not an odd number' % window
     if len(array)==0:
         return None
-
+    
     if weightings is None:
         weightings = np.repeat(1.0, window) / window
     elif len(weightings) != window:
         raise ValueError("weightings argument (len:%d) must equal window (len:%d)" % (
             len(weightings), window))
-    # repair mask
-    repaired = repair_mask(array, repair_duration=None,
-                           raise_duration_exceedance=False)
-    # if start of mask, ignore this section and remask at end
-    start, end = np.ma.notmasked_edges(repaired)
-    stop = end+1
-    # slice array with these edges
-    unmasked_data = repaired.data[start:stop]
+    
+    # We repair the mask otherwise masked elements will expand to cover the
+    # whole window dimension.
+    copy_array = np.ma.copy(array) # To avoid corrupting the mask.
+    repaired = repair_mask(copy_array , 
+                           repair_duration=None,
+                           raise_duration_exceedance=False,
+                           extrapolate=True)
+    stretch = int(window/2)
+    stretched_data = np.ma.concatenate([[repaired[0]]*stretch,
+                                        repaired,
+                                        [repaired[-1]]*stretch])
 
-    averaged = np.convolve(unmasked_data, weightings, 'valid')
-    if pad:
-        # mask the new stuff
-        pad_front = np.ma.zeros(window/2 + start)
-        pad_front.mask = True
-        pad_end = np.ma.zeros(len(array)-1 + ceil(window/2.0) - stop)
-        pad_end.mask = True
-        return np.ma.hstack([pad_front, averaged, pad_end])
-    else:
-        return averaged
+    averaged = np.convolve(stretched_data.data, weightings, 'valid')
+    result = np.ma.array(data=averaged, 
+                         mask=np.ma.getmaskarray(array))
+    return result
 
 
 def nearest_neighbour_mask_repair(array, copy=True, repair_gap_size=None, direction='both'):
@@ -4985,6 +5000,7 @@ def peak_curvature(array, _slice=slice(None), curve_sense='Concave',
         # did not find curve in valid data
         return None
 
+
 def peak_index(a):
     '''
     Scans an array and returns the peak, where possible computing the local
@@ -5070,7 +5086,7 @@ def rate_of_change_array(to_diff, hz, width=None, method='two_points'):
         # the preceding technique.
 
         # The fit will be for equi-spaced samples around the midpoint.
-        x = np.arange(-hw,hw+1)
+        x = np.arange(-hw, hw+1)
         # Scaling is given by:
         sx2_hz = np.sum(x*x)/hz
         # We extended data array to allow for convolution overruns.
@@ -5081,6 +5097,7 @@ def rate_of_change_array(to_diff, hz, width=None, method='two_points'):
 
     else:
         raise ValueError('Rate of change called with unrecognised method')
+
 
 def rate_of_change(diff_param, width, method='two_points'):
     '''
@@ -5260,9 +5277,11 @@ def repair_mask(array, frequency=1, repair_duration=REPAIR_DURATION,
             if method == 'interpolate':
                 if (repair_above is None or 
                     (start_value > repair_above and stop_value > repair_above)):
-                    array.data[section] = np.interp(np.arange(length) + 1,
-                                                    [0, length + 1],
-                                                    [start_value, stop_value])
+                    # XXX: Find neater solution, potentially
+                    # scipy.interpolate.InterpolatedUnivariateSpline, as
+                    # optimisation.
+                    array.data[section] = np.linspace(start_value, stop_value,
+                                                      length+2)[1:-1]
                     array.mask[section] = False
             elif method == 'fill_start':
                 array[section] = start_value
@@ -5471,6 +5490,38 @@ def slices_duration(slices, hz):
     :rtype: float
     '''
     return sum([slice_duration(_slice, hz) for _slice in slices])
+
+
+def slices_extend(slices, length):
+    '''
+    :param slices: Slices to extend.
+    :type slices: [slice]
+    :param length: Length of extension in samples.
+    :type length: int or float
+    :returns: Extended slices.
+    :rtype: [slice]
+    '''
+    extended_slices = []
+    for s in slices:
+        extended_slices.append(slice(
+            s.start - length if s.start else None,
+            s.stop + length if s.stop else None,
+        ))
+    return extended_slices
+
+
+def slices_extend_duration(slices, frequency, seconds):
+    '''
+    :param slices: Slices to extend.
+    :type slices: [slice]
+    :param frequency: Frequency of slices.
+    :type frequency: int or float
+    :param seconds: Seconds to extend the slices by.
+    :type seconds: int or float
+    :returns: Extended slices.
+    :rtype: [slice]
+    '''
+    return slices_extend(slices, seconds / float(frequency))
 
 
 def slices_after(slices, index):
@@ -5684,11 +5735,8 @@ def slices_from_to(array, from_, to):
     '''
     Get slices of the array where values are between from_ and to, and either
     ascending or descending depending on whether from_ is greater than or less
-    than to. For instance, slices_from_to(array, 1000, 1500) is ascending and
-    requires will only return slices where values are between 1000 and 1500 if
-    the value in the array at the start of the slice is less than the value at
-    the stop. The opposite condition would be applied if the arguments are
-    descending, e.g. slices_from_to(array, 1500, 1000).
+    than to. Dips and peaks into the range will create slices where the
+    direction of the array matches from_ and to.
 
     :param array:
     :type array: np.ma.masked_array
@@ -5699,33 +5747,91 @@ def slices_from_to(array, from_, to):
     :returns: Slices of the array where values are between from_ and to and either ascending or descending depending on comparing from_ and to.
     :rtype: list of slice
     '''
-
+    
     if from_ == to:
         raise ValueError('From and to values should not be equal.')
-
-    def condition(s):
-        start_v = rep_array[s.start]
-        mid_v = rep_array[(s.start+s.stop)/2]
-        end_v = array[s.stop - 1]
-
-        if len(array[s]) == 1:
-            if s.start:
-                start_v = array[s.start - 1]
-            if s.stop and s.stop < len(array):
-                end_v = array[s.stop]
-
-        if from_ > to:
-            return start_v >= mid_v >= end_v
-        else:
-            return start_v <= mid_v <= end_v
-
-    if len(array) == 0:
+    elif len(array) == 0:
         return array, []
+    
+    # Find the minimum and maximum of the range without knowing direction.
+    range_min = min(from_, to)
+    range_max = max(from_, to)
+    
     rep_array, slices = slices_between(array, from_, to)
-    # Midpoint conditions added to lambda to prevent data that just dips into
-    # a band triggering.
+    rep_array.mask = np.ma.getmaskarray(rep_array)
+    
+    filtered_slices = []
+    for _slice in slices:
+        
+        if len(array[_slice]) == 1:
+            # If only a single sample matches, we must compare the sample
+            # before and after to ascertain direction.
+            test_slice = slice(_slice.start - 1, _slice.stop + 1)
+            if sum(np.invert(rep_array.mask[test_slice])) != 3:
+                # Skip slice without 3 unmasked samples.
+                continue
+        else:
+            test_slice = _slice
+        
+        # Calculate the following variables to work out if _slice is linear,
+        # dip or peak.
+        # Check if the start and stop of the slice are either masked or
+        # at an array boundary.
+        starts_within_range = (test_slice.start == 0 or
+                               rep_array.mask[test_slice.start - 1])
+        stops_within_range = (test_slice.stop == len(array) or
+                              rep_array.mask[test_slice.stop])
+        start_value = array[test_slice.start]
+        stop_value = array[test_slice.stop - 1]
+        # Check if the start and stop are in the upper or lower half of the
+        # range to attempt to discern direction.
+        start_max = abs(start_value - range_max) < abs(start_value - range_min)
+        stop_max = abs(stop_value - range_max) < abs(stop_value - range_min)
+        # The section is considered to be linear if it transitions from one
+        # half of the range to the other between the start and stop. Sections
+        # not matching this condition are considered to have no clear direction.
+        linear = sum([start_max, stop_max]) == 1
+        
+        slice_start = _slice.start
+        slice_stop = _slice.stop
+        
+        if starts_within_range and stops_within_range and not linear:
+            # data is curved but does not enter range at start or stop.
+            # we could dissect further, but it's already complicated.
+            continue
+        elif linear:
+            # linear
+            if from_ > to and not start_max:
+                # descending wrong direction
+                continue
+            elif from_ < to and not stop_max:
+                # climbing wrong direction
+                continue
+        elif ((starts_within_range and stop_max) or 
+              (stops_within_range and start_max) or 
+              (start_max and stop_max)):
+            # treat as dip
+            min_index = min_value(rep_array, _slice=test_slice).index
+            if from_ > to:
+                # descending
+                slice_stop = min_index
+            else:
+                # climbing
+                slice_start = min_index
+        elif ((starts_within_range and not stop_max) or
+              (stops_within_range and not start_max) or
+              (not start_max and not stop_max)):
+            # treat as peak
+            max_index = max_value(rep_array, _slice=test_slice).index
+            if from_ > to:
+                # descending
+                slice_start = max_index
+            else:
+                # climbing
+                slice_stop = max_index
 
-    filtered_slices = filter(condition, slices)
+        filtered_slices.append(slice(slice_start, slice_stop))
+    
     return rep_array, filtered_slices
 
 
@@ -6014,7 +6120,7 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
 
     if not transitions:
         logger.warning("No changes between steps could be found in step_values.")
-        return new_array
+        return np.ma.array(new_array)
 
     # sort based on index
     sorted_transitions = sorted(transitions, key=lambda v: v[0])
@@ -6025,12 +6131,17 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
     for prev_midpoint, (flap_midpoint, direction), next_midpoint in izip_longest(
         [0] + flap_changes[0:-1], sorted_transitions, flap_changes[1:]):
         prev_flap = prev_unmasked_value(stepped_array, floor(flap_midpoint),
-                                        start_index=floor(prev_midpoint)).value
+                                        start_index=floor(prev_midpoint))
         stop_index = ceil(next_midpoint) if next_midpoint else None
         next_flap = next_unmasked_value(stepped_array, ceil(flap_midpoint),
                                         stop_index=stop_index).value
         is_masked = (array[floor(flap_midpoint)] is np.ma.masked or
                      array[ceil(flap_midpoint)] is np.ma.masked)
+        
+        if is_masked:
+            new_array[prev_midpoint:prev_flap.index] = prev_flap.value
+            prev_midpoint = prev_flap.index
+        
         if direction == 'increase':
             # looking for where positive change reduces to this value
             roc_to_seek_for = 0.1
@@ -6039,7 +6150,7 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
             roc_to_seek_for = -0.1
 
         # allow a change to be 5% before the flap is reached
-        flap_tolerance = (abs(prev_flap - next_flap) * 0.05)
+        flap_tolerance = (abs(prev_flap.value - next_flap) * 0.05)
 
         if (is_masked and direction == 'decrease'
             or step_at == 'move_start'
@@ -6055,7 +6166,7 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
                 flap_tolerance *= -1
 
             roc_idx = index_at_value(roc, roc_to_seek_for, scan_rev, endpoint='closest')
-            val_idx = index_at_value(array, prev_flap + flap_tolerance, scan_rev, endpoint='closest') #???
+            val_idx = index_at_value(array, prev_flap.value + flap_tolerance, scan_rev, endpoint='closest') #???
             idx = max(val_idx, roc_idx) or flap_midpoint
 
         elif (is_masked and direction == 'increase'
@@ -6474,9 +6585,15 @@ def index_at_value(array, threshold, _slice=slice(None), endpoint='exact'):
             # Rescan the data to find the last point where the array data is
             # closing.
             diff = np.ma.ediff1d(array[_slice])
+            if _slice.step >= 0:
+                start_index = _slice.start
+                stop_index = _slice.stop
+            else:
+                start_index = _slice.stop
+                stop_index = _slice.start
             value = closest_unmasked_value(array, _slice.start or 0,
-                                           start_index=_slice.start,
-                                           stop_index=_slice.stop)
+                                           start_index=start_index,
+                                           stop_index=stop_index)
             if value:
                 value = value.value
             else:
@@ -6550,17 +6667,48 @@ def index_at_value_or_level_off(array, value, _slice, abs_threshold=None):
             return find_toc_tod(array, rev_slice, 1, 'Descent')
 
 
-def _value(array, _slice, operator):
+def _value(array, _slice, operator, start_edge=None, stop_edge=None):
     """
     Applies logic of min_value and max_value across the array slice.
     """
+    start_result = np.nan
+    stop_result = np.nan
+    slice_start = _slice.start
+    slice_stop = _slice.stop
+    start_idx = slice_start
+    stop_idx = slice_stop
+
+    # have we got sections or slices
+    if slice_start and slice_start % 1:
+        start_edge = slice_start
+        slice_start = ceil(slice_start)
+    if slice_stop and slice_stop % 1:
+        stop_edge = slice_stop
+        slice_stop = floor(slice_stop)
+
+    values = []
+
+    search_slice = slice(slice_start, slice_stop, _slice.step)
+
     if _slice.step and _slice.step < 0:
         raise ValueError("Negative step not supported")
-    if np.ma.count(array[_slice]):
+    if np.ma.count(array[search_slice]):
+        # get start_edge and stop_edge values if required
+        if start_edge:
+            start_result = value_at_index(array, start_edge)
+            if start_result is not None and start_result is not np.ma.masked:
+                values.append((start_result, start_edge))
         # floor the start position as it will have been floored during the slice
-        index = operator(array[_slice]) + floor(_slice.start or 0) * (_slice.step or 1)
-        value = array[index]
-        return Value(index, value)
+        value_index = operator(array[search_slice]) + floor(search_slice.start or 0) * (search_slice.step or 1)
+        value = array[value_index]
+        values.append((value, value_index))
+        if stop_edge:
+            stop_result = value_at_index(array, stop_edge)
+            if stop_result is not None and stop_result is not np.ma.masked:
+                values.append((stop_result, stop_edge))
+        result_idx = operator(np.ma.array(values)[:,0])
+        return Value(values[result_idx][1], values[result_idx][0])
+    
     else:
         return Value(None, None)
 
@@ -6676,6 +6824,31 @@ def vstack_params(*params):
     return np.ma.vstack([getattr(p, 'array', p) for p in params if p is not None])
 
 
+def vstack_params_avg(window, *params):
+    '''
+    Create a multi-dimensional masked array with a dimension per param.
+
+    The arrays are averaged in `window` seconds.
+
+    :param params: Parameter arguments as required. Allows some None values.
+    :type params: np.ma.array or Parameter object or None
+    :returns: Each parameter stacked onto a new dimension
+    :rtype: np.ma.array
+    :raises: ValueError if all params are None (concatenation of zero-length sequences is impossible)
+    '''
+    params = [p for p in params if p is not None]
+    window = int(window * params[0].frequency)
+    if not window % 2:
+        window += 1
+
+    if window > 1:
+        arrays = [moving_average(p.array, window) for p in params]
+    else:
+        arrays = [p.array for p in params]
+
+    return np.ma.vstack(arrays)
+
+
 def vstack_params_where_state(*param_states):
     '''
     Create a multi-dimensional masked array with a dimension for each param,
@@ -6708,7 +6881,7 @@ def vstack_params_where_state(*param_states):
     return np.ma.vstack(param_arrays)
 
 
-def second_window(array, frequency, seconds):
+def second_window(array, frequency, seconds, extend_window=False):
     '''
     Only include values which are maintained for a number of seconds, shorter
     exceedances are excluded.
@@ -6718,10 +6891,15 @@ def second_window(array, frequency, seconds):
     e.g. [0, 1, 2, 3, 2, 1, 2, 3] -> [0, 1, 2, 2, 2, 2, 2, 2]
 
     :type array: np.ma.masked_array
+    :param extend_window: Extend window by 1 second if frequency is incompatible.
+    :type extend_window: bool
     '''
     if ((seconds % 2 == 0 and not frequency % 2 == 1) or
         (seconds % 2 == 1 and not frequency % 2 == 0)):
-        raise ValueError('Invalid seconds for frequency')
+        if extend_window:
+            seconds += 1
+        else:
+            raise ValueError('Invalid seconds for frequency')
     
     samples = int(seconds * frequency)
     
@@ -6815,6 +6993,12 @@ def alt2press_ratio(alt_ft):
     return np.ma.where(alt_ft <= H1, \
                        _alt2press_ratio_gradient(alt_ft),
                        _alt2press_ratio_isothermal(alt_ft))
+
+def air_density(alt, sat):
+    pr = alt2press_ratio(alt)
+    tr = (sat+T0-15.0)/T0
+    dr = pr/tr
+    return dr*Rhoref
 
 def cas2dp(cas_kt):
     """

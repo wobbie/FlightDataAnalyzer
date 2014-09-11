@@ -41,6 +41,7 @@ from analysis_engine.flight_phase import (
     Takeoff,
     Takeoff5MinRating,
     TakeoffRoll,
+    TakeoffRollOrRejectedTakeoff,
     TakeoffRotation,
     Taxiing,
     TaxiIn,
@@ -82,7 +83,8 @@ def builditem(name, begin, end):
         if ie < end:
             ie += 1
             '''
-    return Section(name, slice(begin, end, None), begin, end)
+    slice_end = end if end is None else end + 1
+    return Section(name, slice(begin, slice_end, None), begin, end)
 
 
 def buildsection(name, begin, end):
@@ -240,7 +242,7 @@ class TestApproachAndLanding(unittest.TestCase):
             slice(5009.0, 5071.0, None),
             slice(5168.0, 6883.0, None),
             slice(8433.0, 9058.0, None)])
-        landings = buildsection('Landing', 10500, 10750)
+        landings = buildsection('Landing', 10500, 10749)
         app_ldg = ApproachAndLanding()
         app_ldg.derive(alt_aal, level_flights, landings)
         self.assertEqual(len(app_ldg), 4)
@@ -319,21 +321,19 @@ class TestBouncedLanding(unittest.TestCase):
 
     def test_bounce_with_bounce(self):
         fast = buildsection('Fast',2,13)
-        airborne = buildsection('Airborne', 3,8)
+        airborne = buildsection('Airborne', 3,7)
         alt = np.ma.array([0,0,0,2,10,30,10,2,0,3,3,0,0,0])
         bl = BouncedLanding()
         bl.derive(Parameter('Altitude AAL For Flight Phases', alt), airborne, fast)
-        expected = buildsection('Bounced Landing', 9, 11)
-        self.assertEqual(bl, expected)
+        self.assertEqual(bl[0].slice, slice(9, 11))
 
     def test_bounce_with_double_bounce(self):
         fast = buildsection('Fast',2,13)
-        airborne = buildsection('Airborne', 3,8)
+        airborne = buildsection('Airborne', 3,7)
         alt = np.ma.array([0,0,0,2,10,30,10,2,0,3,0,5,0])
         bl = BouncedLanding()
         bl.derive(Parameter('Altitude AAL For Flight Phases', alt), airborne, fast)
-        expected = buildsection('Bounced Landing', 9, 12)
-        self.assertEqual(bl, expected)
+        self.assertEqual(bl[0].slice, slice(9, 12))
 
     def test_bounce_not_detected_with_multiple_touch_and_go(self):
         # test data is a training flight with many touch and go
@@ -395,7 +395,7 @@ class TestILSLocalizerEstablished(unittest.TestCase):
         expected = buildsection('ILS Localizer Established', 7, 10)
         # Slightly daft choice of ils array makes exact equality impossible!
         self.assertAlmostEqual(establish.get_first().start_edge,
-                               expected.get_first().start_edge)
+                               expected.get_first().start_edge, places=0)
 
     def test_ils_localizer_no_frequency(self):
         ils = P('ILS Localizer',np.ma.arange(-3, 0, 0.3))
@@ -425,7 +425,7 @@ class TestILSLocalizerEstablished(unittest.TestCase):
         expected = buildsection('ILS Localizer Established', 20+7, 30)
         # Slightly daft choice of ils array makes exact equality impossible!
         self.assertAlmostEqual(establish.get_first().start_edge,
-                               expected.get_first().start_edge)
+                               expected.get_first().start_edge, places=0)
 
     def test_ils_localizer_established_never_on_loc(self):
         ils = P('ILS Localizer',np.ma.array([3]*10))
@@ -441,7 +441,7 @@ class TestILSLocalizerEstablished(unittest.TestCase):
         establish = ILSLocalizerEstablished()
         establish.derive(ils, alt_aal, app, None)
         expected = buildsection('ILS Localizer Established',2, 9)
-        self.assertEqual(establish, expected)
+        self.assertEqual(establish.get_slices(), expected.get_slices())
 
     def test_ils_localizer_established_only_last_segment(self):
         app = S(items=[Section('Approach', slice(2, 9), 2, 9)])
@@ -450,7 +450,7 @@ class TestILSLocalizerEstablished(unittest.TestCase):
         establish = ILSLocalizerEstablished()
         establish.derive(ils, alt_aal, app, None)
         expected = buildsection('ILS Localizer Established', 7, 9)
-        self.assertEqual(establish, expected)
+        self.assertEqual(establish.get_slices(), expected.get_slices())
 
     def test_ils_localizer_stays_established_with_large_visible_deviations(self):
         app = S(items=[Section('Approach', slice(1, 9), 1, 9)])
@@ -459,7 +459,7 @@ class TestILSLocalizerEstablished(unittest.TestCase):
         establish = ILSLocalizerEstablished()
         establish.derive(ils, alt_aal, app, None)
         expected = buildsection('ILS Localizer Established', 1, 9)
-        self.assertEqual(establish, expected)
+        self.assertEqual(establish.get_slices(), expected.get_slices())
 
     def test_ils_localizer_insensitive_to_few_masked_values(self):
         app = S(items=[Section('Approach', slice(1, 9), 1, 9)])
@@ -469,7 +469,7 @@ class TestILSLocalizerEstablished(unittest.TestCase):
         establish = ILSLocalizerEstablished()
         establish.derive(ils, alt_aal, app, None)
         expected = buildsection('ILS Localizer Established', 1, 9)
-        self.assertEqual(establish, expected)
+        self.assertEqual(establish.get_slices(), expected.get_slices())
 
     def test_ils_localizer_skips_too_many_masked_values(self):
         app = S(items=[Section('Approach', slice(1, 9), 1, 9)])
@@ -509,7 +509,7 @@ class TestILSLocalizerEstablished(unittest.TestCase):
         establish.derive(ils_loc, alt_aal, apps, ils_freq)
         expected = [Section(name='ILS Localizer Established', slice=slice(12215.896484375, 12244.499993651203, None), start_edge=12215.896484375, stop_edge=12244.499993651203),
                     Section(name='ILS Localizer Established', slice=slice(12295, 12363.052624896003, None), start_edge=12295, stop_edge=12363.052624896003)]
-        self.assertEqual(establish, expected)
+        self.assertEqual(establish.get_slices(), expected.get_slices())
 
 
 class TestInitialApproach(unittest.TestCase):
@@ -592,10 +592,9 @@ class TestClimbCruiseDescent(unittest.TestCase):
         testwave = np.ma.array([15000] * 5 + range(15000, 1000, -1000))
         alt_aal = Parameter('Altitude STD Smoothed',
                             np.ma.array(testwave))
-        air=buildsection('Airborne', None, 19)
+        air=buildsection('Airborne', None, 18)
         camel.derive(alt_aal, air)
-        expected = buildsection('Climb Cruise Descent', None, 18)
-        self.assertEqual(list(camel), list(expected))
+        self.assertEqual(camel[0].slice, slice(None, 18))
 
     def test_climb_cruise_descent_end_midflight(self):
         # This test will find out if we can separate the two humps on this camel
@@ -704,11 +703,10 @@ class TestClimbing(unittest.TestCase):
                                     range(-1200,500,100))
         vert_spd = Parameter('Vertical Speed For Flight Phases',
                              np.ma.array(vert_spd_data))
-        air = buildsection('Airborne', 2, 8)
+        air = buildsection('Airborne', 2, 7)
         up = Climbing()
         up.derive(vert_spd, air)
-        expected = buildsection('Climbing', 3, 8)
-        self.assertEqual(up, expected)
+        self.assertEqual(up[0].slice, slice(3,8))
 
 
 class TestCruise(unittest.TestCase):
@@ -731,7 +729,7 @@ class TestCruise(unittest.TestCase):
         alt_p = Parameter('Altitude STD', alt_data)
         # Transform the "recorded" altitude into the CCD input data.
         ccd = ClimbCruiseDescent()
-        ccd.derive(alt_p, buildsection('Airborne', 0, len(alt_data)))
+        ccd.derive(alt_p, buildsection('Airborne', 0, len(alt_data)-1))
         toc = TopOfClimb()
         toc.derive(alt_p, ccd)
         tod = TopOfDescent()
@@ -744,8 +742,8 @@ class TestCruise(unittest.TestCase):
         # With this test waveform, the peak at 31:32 is just flat enough
         # for the climb and descent to be a second apart, whereas the peak
         # at 94 genuinely has no interval with a level cruise.
-        expected = buildsections('Cruise',[31, 32],[94, 95])
-        self.assertEqual(list(test_phase), list(expected))
+        expected = [slice(31, 32),slice(94, 95)]
+        self.assertEqual(test_phase.get_slices(), list(expected))
 
     def test_cruise_truncated_start(self):
         alt_data = np.ma.array([15000]*5+range(15000,2000,-4000))
@@ -761,8 +759,7 @@ class TestCruise(unittest.TestCase):
         test_phase = Cruise()
         test_phase.derive(ccd, toc, tod)
         #===========================================================
-        expected = buildsection('Cruise', None, 5)
-        self.assertEqual(test_phase, expected)
+        self.assertEqual(test_phase[0].slice, slice(None,5))
         self.assertEqual(len(toc), 0)
         self.assertEqual(len(tod), 1)
 
@@ -852,11 +849,10 @@ class TestDescending(unittest.TestCase):
     def test_descending_basic(self):
         vert_spd = Parameter('Vertical Speed For Flight Phases',
                              np.ma.array([0, 1000, -600, -800, 0]))
-        air = buildsection('Airborne',2,8)
+        air = buildsection('Airborne',2,7)
         phase = Descending()
         phase.derive(vert_spd, air)
-        expected = buildsection('Descending', 2, 4)
-        self.assertEqual(phase, expected)
+        self.assertEqual(phase[0].slice, slice(2,4))
 
 
 """
@@ -908,7 +904,7 @@ class TestFast(unittest.TestCase):
             expected = buildsection('Fast', 2, 311)
         if AIRSPEED_THRESHOLD == 70:
             expected = buildsection('Fast', 1, 312)
-        self.assertEqual(phase_fast, expected)
+        self.assertEqual(phase_fast.get_slices(), expected.get_slices())
 
     def test_fast_all_fast(self):
         fast_data = np.ma.array([120] * 10)
@@ -917,7 +913,7 @@ class TestFast(unittest.TestCase):
         phase_fast.derive(ias)
         # Q: Should we really create no fast sections?
         expected = buildsection('Fast', 0, 10)
-        self.assertEqual(phase_fast, expected)
+        self.assertEqual(phase_fast.get_slices(), expected.get_slices())
 
     def test_fast_all_slow(self):
         fast_data = np.ma.array([12] * 10)
@@ -932,7 +928,7 @@ class TestFast(unittest.TestCase):
         phase_fast = Fast()
         phase_fast.derive(ias)
         expected = buildsection('Fast', 0, 4)
-        self.assertEqual(phase_fast, expected)
+        self.assertEqual(phase_fast.get_slices(), expected.get_slices())
 
     def test_fast_speeding_only(self):
         fast_data = np.ma.arange(60, 120, 10)
@@ -940,7 +936,7 @@ class TestFast(unittest.TestCase):
         phase_fast = Fast()
         phase_fast.derive(ias)
         expected = buildsection('Fast', 2, 6)
-        self.assertEqual(phase_fast, expected)
+        self.assertEqual(phase_fast.get_slices(), expected.get_slices())
     
     def test_fast_real_data_1(self):
         airspeed = load(os.path.join(test_data_path, 'Fast_airspeed.nod'))
@@ -985,7 +981,7 @@ class TestGrounded(unittest.TestCase):
         phase_grounded = Grounded()
         phase_grounded.derive(air, ias)
         expected = buildsections('Grounded', [0, 2], [311, 313])
-        self.assertEqual(phase_grounded, expected)
+        self.assertEqual(phase_grounded.get_slices(), expected.get_slices())
 
     def test_grounded_all_fast(self):
         grounded_data = np.ma.array([120] * 10)
@@ -994,7 +990,7 @@ class TestGrounded(unittest.TestCase):
         phase_grounded = Grounded()
         phase_grounded.derive(air, ias)
         expected = buildsection('Grounded', None, None)
-        self.assertEqual(phase_grounded, expected)
+        self.assertEqual(phase_grounded.get_slices(), expected.get_slices())
 
     def test_grounded_all_slow(self):
         grounded_data = np.ma.array([12]*10)
@@ -1002,8 +998,8 @@ class TestGrounded(unittest.TestCase):
         air = buildsection('Airborne', None, None)
         phase_grounded = Grounded()
         phase_grounded.derive(air, ias)
-        expected = buildsection('Grounded', 0, 10)
-        self.assertEqual(phase_grounded.get_first(), expected[0])
+        expected = buildsection('Grounded', 0, 9)
+        self.assertEqual(phase_grounded.get_first().slice, expected[0].slice)
 
     def test_grounded_landing_only(self):
         grounded_data = np.ma.arange(110,60,-10)
@@ -1011,8 +1007,8 @@ class TestGrounded(unittest.TestCase):
         air = buildsection('Airborne',None,4)
         phase_grounded = Grounded()
         phase_grounded.derive(air, ias)
-        expected = buildsection('Grounded',4,5)
-        self.assertEqual(phase_grounded.get_first(), expected[0])
+        expected = buildsection('Grounded',4,4)
+        self.assertEqual(phase_grounded.get_first().slice, expected[0].slice)
 
     def test_grounded_speeding_only(self):
         grounded_data = np.ma.arange(60,120,10)
@@ -1020,8 +1016,8 @@ class TestGrounded(unittest.TestCase):
         air = buildsection('Airborne',2,None)
         phase_grounded = Grounded()
         phase_grounded.derive(air, ias)
-        expected = buildsection('Grounded',0,2)
-        self.assertEqual(phase_grounded.get_first(), expected[0])
+        expected = buildsection('Grounded',0,1)
+        self.assertEqual(phase_grounded.get_first().slice, expected[0].slice)
 
 
 class TestFinalApproach(unittest.TestCase):
@@ -1036,7 +1032,7 @@ class TestFinalApproach(unittest.TestCase):
         expected = buildsection('Final Approach', 18, 31)
         fapp=FinalApproach()
         fapp.derive(alt_aal)
-        self.assertEqual(fapp, expected)
+        self.assertEqual(fapp.get_slices(), expected.get_slices())
 
 
 class TestGearRetracting(unittest.TestCase):
@@ -1046,11 +1042,11 @@ class TestGearRetracting(unittest.TestCase):
     def test_can_operate(self):
         opts = self.node_class.get_operational_combinations()
         self.assertEqual(opts,[
-                         ('Gear Up Selected', 'Gear Down', 'Airborne')])
+                         ('Gear Up Selected', 'Gear Up', 'Airborne')])
 
     def test_derive(self):
-        gear_down = M('Gear Down', np.ma.array([1,1,1,1,0,0,0,0,0,1,1,1]),
-                      values_mapping={0:'Up', 1:'Down'})
+        gear_down = M('Gear Up', np.ma.array([0,0,0,0,1,1,1,1,1,0,0,0]),
+                      values_mapping={0:'Down', 1:'Up'})
         gear_up_sel = M('Gear Up Selected',
                         np.ma.array([0,0,1,1,1,1,1,0,0,0,0,0]),
                         values_mapping={0:'Down', 1:'Up'})
@@ -1060,7 +1056,7 @@ class TestGearRetracting(unittest.TestCase):
         node = self.node_class()
         node.derive(gear_up_sel, gear_down, airs)
         expected=buildsection('Gear Retracting', 2, 4)
-        self.assertEqual(list(node), list(expected))
+        self.assertEqual(node.get_slices(), expected.get_slices())
 
 
 class TestGoAroundAndClimbout(unittest.TestCase):
@@ -1069,6 +1065,41 @@ class TestGoAroundAndClimbout(unittest.TestCase):
         opts = GoAroundAndClimbout.get_operational_combinations()
         self.assertTrue(('Altitude AAL For Flight Phases','Level Flight') in opts)
         self.assertTrue(('Altitude AAL For Flight Phases',) in opts)
+
+    def test_go_around_and_climbout_basic(self):
+        # The Go-Around phase starts 500ft before the minimum altitude is
+        # reached, and ends after 2000ft climb....
+        height = np.ma.array(range(0,40)+
+                             range(40,20,-1)+
+                             range(20,45)+
+                             [45]*5+
+                             range(45,0,-1))*100.0
+        alt = Parameter('Altitude For Flight Phases', height)
+        levels = buildsection('Level Flight', 85, 91)
+        ga_phase = GoAroundAndClimbout()
+        ga_phase.derive(alt, levels)
+        expected = buildsection('Go Around And Climbout', 55, 80)
+        self.assertEqual(len(ga_phase), 1)
+        self.assertEqual(ga_phase.get_first().start_edge, expected[0].start_edge)
+        self.assertEqual(ga_phase.get_first().stop_edge, expected[0].stop_edge)
+
+    def test_go_around_and_climbout_level_off(self):
+        # The Go-Around phase starts 500ft before the minimum altitude is
+        # reached, and ends ... or until level-off.
+        height = np.ma.array(range(0,40)+
+                             range(40,20,-1)+
+                             range(20,30)+
+                             [30]*5+
+                             range(30,0,-1))*100.0
+        alt = Parameter('Altitude For Flight Phases', height)
+        levels = buildsection('Level Flight', 70, 76)
+        ga_phase = GoAroundAndClimbout()
+        ga_phase.derive(alt, levels)
+        # Level flight reached at 70
+        expected = buildsection('Go Around And Climbout', 55, 70)
+        self.assertEqual(len(ga_phase), 1)
+        self.assertEqual(ga_phase.get_first().start_edge, expected[0].start_edge)
+        self.assertEqual(ga_phase.get_first().stop_edge, expected[0].stop_edge)
 
     def test_go_around_and_climbout_phase_not_reaching_2000ft(self):
         '''
@@ -1151,6 +1182,7 @@ class TestGoAroundAndClimbout(unittest.TestCase):
         self.assertAlmostEqual(ga_phase[1].slice.stop, 12737, places=0)
 
 
+
 class TestHolding(unittest.TestCase):
     def test_can_operate(self):
         self.assertEqual(Holding.get_operational_combinations(),
@@ -1176,7 +1208,7 @@ class TestHolding(unittest.TestCase):
         hold=Holding()
         hold.derive(alt, hdg, lat, lon)
         expected=buildsection('Holding',0,3000)
-        self.assertEqual(hold, expected)
+        self.assertEqual(hold.get_slices(), expected.get_slices())
 
     def test_rejected_outside_height_range(self):
         hdg=P('Heading Increasing', np.ma.arange(3000)*(1.1))
@@ -1187,7 +1219,7 @@ class TestHolding(unittest.TestCase):
         hold.derive(alt, hdg, lat, lon)
         # OK - I cheated. Who cares about the odd one sample passing 5000ft :o)
         expected=buildsection('Holding', 1001, 2700)
-        self.assertEqual(list(hold), list(expected))
+        self.assertEqual(hold.get_slices(), expected.get_slices())
 
     def test_hold_detected(self):
         rot=[0]*600+([3]*60+[0]*60)*6+[0]*180+([3]*60+[0]*90)*6+[0]*600
@@ -1238,7 +1270,7 @@ class TestLanding(unittest.TestCase):
                        P('Altitude AAL For Flight Phases',alt_aal),
                        phase_fast)
         expected = buildsection('Landing', 0.75, 9)
-        self.assertEqual(landing, expected)
+        self.assertEqual(landing.get_slices(), expected.get_slices())
 
     def test_landing_turnoff(self):
         head = np.ma.array([20]*15+range(20,0,-2))
@@ -1249,7 +1281,7 @@ class TestLanding(unittest.TestCase):
                        P('Altitude AAL For Flight Phases',alt_aal),
                        phase_fast)
         expected = buildsection('Landing', 0.75, 24)
-        self.assertEqual(landing, expected)
+        self.assertEqual(landing.get_slices(), expected.get_slices())
 
     def test_landing_turnoff_left(self):
         head = np.ma.array([20]*15+range(20,0,-2))*-1.0
@@ -1260,7 +1292,7 @@ class TestLanding(unittest.TestCase):
                        P('Altitude AAL For Flight Phases',alt_aal),
                        phase_fast)
         expected = buildsection('Landing', 0.75, 24)
-        self.assertEqual(landing, expected)
+        self.assertEqual(landing.get_slices(), expected.get_slices())
         
     def test_landing_with_multiple_fast(self):
         # ensure that the result is a single phase!
@@ -1282,7 +1314,7 @@ class TestLanding(unittest.TestCase):
                        P('Altitude AAL For Flight Phases',alt_aal),
                        phase_fast)
         expected = buildsection('Landing', 9, 24)
-        self.assertEqual(list(landing), list(expected))
+        self.assertEqual(landing.get_slices(), expected.get_slices())
 
 
 class TestLandingRoll(unittest.TestCase):
@@ -1316,7 +1348,7 @@ class TestMobile(unittest.TestCase, NodeTest):
         move = Mobile()
         move.derive(P('Rate Of Turn',rot), None)
         expected = buildsection('Mobile', 2, 4)
-        self.assertEqual(move, expected)
+        self.assertEqual(move.get_slices(), expected.get_slices())
 
     def test_gspd_first(self):
         rot = np.ma.array([0,0,0,5,5,0,0])
@@ -1325,7 +1357,7 @@ class TestMobile(unittest.TestCase, NodeTest):
         move.derive(P('Rate Of Turn',rot),
                     P('Groundspeed',gspd))
         expected = buildsection('Mobile', 1, 4)
-        self.assertEqual(move, expected)
+        self.assertEqual(move.get_slices(), expected.get_slices())
 
     def test_gspd_last(self):
         rot = np.ma.array([0,0,5,5,0,0,0])
@@ -1334,7 +1366,7 @@ class TestMobile(unittest.TestCase, NodeTest):
         move.derive(P('Rate Of Turn',rot),
                     P('Groundspeed',gspd))
         expected = buildsection('Mobile', 2, 5)
-        self.assertEqual(move, expected)
+        self.assertEqual(move.get_slices(), expected.get_slices())
 
 
 class TestLevelFlight(unittest.TestCase, NodeTest):
@@ -1408,6 +1440,11 @@ class TestStraightAndLevel(unittest.TestCase, NodeTest):
                          
 
 class TestRejectedTakeoff(unittest.TestCase):
+    '''
+    The test was originally written for an acceleration threshold of 0.1g.
+    This was later increased to 0.15g and the test amended to match that
+    scaling, hence the *1.5 factors.
+    '''
     def test_can_operate(self):
         expected = [('Acceleration Longitudinal Offset Removed', 'Grounded')]
         self.assertEqual(
@@ -1418,7 +1455,7 @@ class TestRejectedTakeoff(unittest.TestCase):
         accel_lon = P('Acceleration Longitudinal Offset Removed',
                       np.ma.array([0] * 3 + [0.02, 0.05, 0.11, 0, -0.17,] + [0] * 7 +
                                   [0.2, 0.4, 0.1] + [0.11] * 4 + [0] * 6 + [-2] +
-                                  [0] * 5 + [0.02, 0.08, 0.08, 0.08, 0.08] + [0] * 20))
+                                  [0] * 5 + [0.02, 0.08, 0.08, 0.08, 0.08] + [0] * 20)*1.5)
         grounded = buildsection('Grounded', 0, len(accel_lon.array))
         
         node = RejectedTakeoff()
@@ -1433,6 +1470,7 @@ class TestRejectedTakeoff(unittest.TestCase):
         accel_lon = load(os.path.join(
             test_data_path,
             'RejectedTakeoff_AccelerationLongitudinalOffsetRemoved_2.nod'))
+        accel_lon.array *= 1.5
         grounded = load(os.path.join(test_data_path,
                                      'RejectedTakeoff_Grounded_2.nod'))
         node = RejectedTakeoff()
@@ -1445,6 +1483,7 @@ class TestRejectedTakeoff(unittest.TestCase):
         accel_lon = load(os.path.join(
             test_data_path,
             'RejectedTakeoff_AccelerationLongitudinalOffsetRemoved_5.nod'))
+        accel_lon.array *= 1.5
         grounded = load(os.path.join(test_data_path,
                                      'RejectedTakeoff_Grounded_5.nod'))
         node = RejectedTakeoff()
@@ -1453,12 +1492,27 @@ class TestRejectedTakeoff(unittest.TestCase):
         self.assertAlmostEqual(node[0].slice.start, 2373, 0)
         self.assertAlmostEqual(node[0].slice.stop, 2435, 0)
     
+    def test_derive_flight_with_rejected_takeoff_short(self):
+        '''
+        test derived from genuine low speed rejected takeoff FDS hash 452728ea2768
+        '''
+        accel_lon = load(os.path.join(
+            test_data_path,
+            'RejectedTakeoff_AccelerationLongitudinalOffsetRemoved_Short.nod'))
+        grounded = buildsections('Grounded', [0, 3796], [23516, 24576])
+        node = RejectedTakeoff(frequency=4)
+        node.derive(accel_lon, grounded)
+        self.assertEqual(len(node), 1)
+        self.assertAlmostEqual(node[0].slice.start, 1878, 0)
+        self.assertAlmostEqual(node[0].slice.stop, 2056, 0)
+
     def test_derive_flight_without_rejected_takeoff_3(self):
         accel_lon = load(os.path.join(
             test_data_path,
             'RejectedTakeoff_AccelerationLongitudinalOffsetRemoved_4.nod'))
         grounded = load(os.path.join(test_data_path,
                                      'RejectedTakeoff_Grounded_4.nod'))
+        accel_lon.array *= 1.5
         node = RejectedTakeoff()
         node.derive(accel_lon, grounded)
         self.assertEqual(len(node), 0)
@@ -1469,6 +1523,7 @@ class TestRejectedTakeoff(unittest.TestCase):
             'RejectedTakeoff_AccelerationLongitudinalOffsetRemoved_1.nod'))
         grounded = load(os.path.join(test_data_path,
                                      'RejectedTakeoff_Grounded_1.nod'))
+        accel_lon.array *= 1.5
         node = RejectedTakeoff()
         node.derive(accel_lon, grounded)
         self.assertEqual(len(node), 0)
@@ -1477,6 +1532,7 @@ class TestRejectedTakeoff(unittest.TestCase):
         accel_lon = load(os.path.join(
             test_data_path,
             'RejectedTakeoff_AccelerationLongitudinalOffsetRemoved_3.nod'))
+        accel_lon.array *= 1.5
         grounded = load(os.path.join(test_data_path,
                                      'RejectedTakeoff_Grounded_3.nod'))
         node = RejectedTakeoff()
@@ -1498,7 +1554,7 @@ class TestTakeoff(unittest.TestCase):
                        P('Altitude AAL For Flight Phases', alt_aal),
                        phase_fast)
         expected = buildsection('Takeoff', 1.5, 9.125)
-        self.assertEqual(takeoff, expected)
+        self.assertEqual(takeoff.get_slices(), expected.get_slices())
 
     def test_takeoff_with_zero_slices(self):
         '''
@@ -1523,22 +1579,22 @@ class TestTaxiOut(unittest.TestCase):
         self.assertEqual(TaxiOut.get_operational_combinations(), expected)
 
     def test_taxi_out(self):
-        gnd = buildsections('Mobile', [0, 2], [3, 9])
-        toff = buildsection('Takeoff', 8, 12)
+        gnd = buildsections('Mobile', [0, 1], [3, 9])
+        toff = buildsection('Takeoff', 8, 11)
         first_eng_starts = KTI(
             'First Eng Start Before Liftoff',
             items=[KeyTimeInstance(2, 'First Eng Start Before Liftoff')])
         tout = TaxiOut()
         tout.derive(gnd, toff, first_eng_starts)
         expected = buildsection('Taxi Out', 4, 7)
-        self.assertEqual(tout, expected)
+        self.assertEqual(tout.get_slices(), expected.get_slices())
         first_eng_starts = KTI(
             'First Eng Start Before Liftoff',
             items=[KeyTimeInstance(5, 'First Eng Start Before Liftoff')])
         tout = TaxiOut()
         tout.derive(gnd, toff, first_eng_starts)
         expected = buildsection('Taxi Out', 5, 7)
-        self.assertEqual(tout, expected)
+        self.assertEqual(tout.get_slices(), expected.get_slices())
 
 
 class TestTaxiIn(unittest.TestCase):
@@ -1547,19 +1603,19 @@ class TestTaxiIn(unittest.TestCase):
         self.assertEqual(TaxiIn.get_operational_combinations(), expected)
 
     def test_taxi_in_1(self):
-        gnd = buildsections('Mobile', [7, 14], [16, 18])
-        landing = buildsection('Landing', 5, 12)
+        gnd = buildsections('Mobile', [7, 13], [16, 17])
+        landing = buildsection('Landing', 5, 11)
         last_eng_stops = KTI(
             'Last Eng Stop After Touchdown',
             items=[KeyTimeInstance(15, 'Last Eng Stop After Touchdown')])
         t_in = TaxiIn()
         t_in.derive(gnd, landing, last_eng_stops)
         expected = buildsection('Taxi In', 12, 14)
-        self.assertEqual(t_in,expected)
+        self.assertEqual(t_in.get_slices(),expected.get_slices())
     
     def test_taxi_in_2(self):
-        gnd = buildsection('Mobile', 488, 7008)
-        landing = buildsection('Landing', 3389, 3438)
+        gnd = buildsection('Mobile', 488, 7007)
+        landing = buildsection('Landing', 3389, 3437)
         last_eng_stops = KTI(
             'Last Eng Stop After Touchdown',
             items=[KeyTimeInstance(3734, 'Last Eng Stop After Touchdown')])
@@ -1584,7 +1640,7 @@ class TestTaxiing(unittest.TestCase):
         mobiles = buildsection('Mobile', 10, 90)
         airs = buildsection('Airborne', 20, 80)
         node = Taxiing()
-        node.derive(mobiles, None, None, None, airs)
+        node.derive(mobiles, None, None, None, None, airs)
         self.assertEqual(len(node), 2)
         self.assertEqual(node[0].slice.start, 10)
         self.assertEqual(node[0].slice.stop, 20)
@@ -1595,15 +1651,16 @@ class TestTaxiing(unittest.TestCase):
         mobiles = buildsection('Mobile', 10, 90)
         toffs = buildsection('Takeoff', 20, 30)
         lands = buildsection('Landing', 70, 80)
+        airs = buildsection('Airborne', 25, 75)
         node = Taxiing()
-        node.derive(mobiles, None, toffs, lands, None)
+        node.derive(mobiles, None, toffs, lands, None, airs)
         self.assertEqual(len(node), 2)
         self.assertEqual(node[0].slice.start, 10)
         self.assertEqual(node[0].slice.stop, 20)
         self.assertEqual(node[1].slice.start, 80)
         self.assertEqual(node[1].slice.stop, 90)
     
-    def test_taxiing_mobile_takeoff_landing(self):
+    def test_taxiing_mobile_takeoff_landing_gspd(self):
         mobiles = buildsection('Mobile', 10, 100)
         gspd_array = np.ma.array([0] * 15 +
                                  [10] * 70 +
@@ -1613,8 +1670,9 @@ class TestTaxiing(unittest.TestCase):
         gspd = P('Groundspeed', array=gspd_array)
         toffs = buildsection('Takeoff', 20, 30)
         lands = buildsection('Landing', 60, 70)
+        airs = buildsection('Airborne', 25, 65)
         node = Taxiing()
-        node.derive(mobiles, gspd, toffs, lands, None)
+        node.derive(mobiles, gspd, toffs, lands, None, airs)
         self.assertEqual(len(node), 3)
         self.assertEqual(node[0].slice.start, 15)
         self.assertEqual(node[0].slice.stop, 20)
@@ -1622,6 +1680,31 @@ class TestTaxiing(unittest.TestCase):
         self.assertEqual(node[1].slice.stop, 85)
         self.assertEqual(node[2].slice.start, 90)
         self.assertEqual(node[2].slice.stop, 95)
+
+    
+    def test_taxiing_including_rejected_takeoff(self):
+        mobiles = buildsection('Mobile', 3, 100)
+        gspd_array = np.ma.array([0] * 10 +
+                                 [10] * 30 +
+                                 [0] * 5 +
+                                 [10] * 50 +
+                                 [0] * 5)
+        gspd = P('Groundspeed', array=gspd_array)
+        toffs = buildsection('Takeoff',  50, 60)
+        lands = buildsection('Landing', 80, 90)
+        airs = buildsection('Airborne', 55, 85)
+        rtos = buildsection('Rejected Takeoff', 20, 30)
+        node = Taxiing()
+        node.derive(mobiles, gspd, toffs, lands, rtos, airs)
+        self.assertEqual(len(node), 4)
+        self.assertEqual(node[0].slice.start, 10)
+        self.assertEqual(node[0].slice.stop, 20)
+        self.assertEqual(node[1].slice.start, 30)
+        self.assertEqual(node[1].slice.stop, 40)
+        self.assertEqual(node[2].slice.start, 45)
+        self.assertEqual(node[2].slice.stop, 50)
+        self.assertEqual(node[3].slice.start, 90)
+        self.assertEqual(node[3].slice.stop, 95)
 
 
 class TestTurningInAir(unittest.TestCase):
@@ -1636,7 +1719,7 @@ class TestTurningInAir(unittest.TestCase):
         turning_in_air = TurningInAir()
         turning_in_air.derive(rate_of_turn, airborne)
         expected = buildsections('Turning In Air',[0, 6],[16,21])
-        self.assertEqual(list(turning_in_air), list(expected))
+        self.assertEqual(turning_in_air.get_slices(), expected.get_slices())
 
     def test_turning_in_air_phase_with_mask(self):
         rate_of_turn_data = np.ma.arange(-4, 4.4, 0.4)
@@ -1647,7 +1730,7 @@ class TestTurningInAir(unittest.TestCase):
         turning_in_air = TurningInAir()
         turning_in_air.derive(rate_of_turn, airborne)
         expected = buildsections('Turning In Air',[0, 6],[16,21])
-        self.assertEqual(turning_in_air, expected)
+        self.assertEqual(turning_in_air.get_slices(), expected.get_slices())
 
 
 class TestTurningOnGround(unittest.TestCase):
@@ -1662,7 +1745,7 @@ class TestTurningOnGround(unittest.TestCase):
         turning_on_ground = TurningOnGround()
         turning_on_ground.derive(rate_of_turn, grounded)
         expected = buildsections('Turning On Ground',[0, 7], [18,24])
-        self.assertEqual(turning_on_ground, expected)
+        self.assertEqual(turning_on_ground.get_slices(), expected.get_slices())
 
     def test_turning_on_ground_phase_with_mask(self):
         rate_of_turn_data = np.ma.arange(-12, 12, 1)
@@ -1676,7 +1759,7 @@ class TestTurningOnGround(unittest.TestCase):
         # is not consistent with TurningInAir test which is inclusive of the
         # start of the range.
         expected = buildsections('Turning On Ground',[0, 7], [18,24])
-        self.assertEqual(turning_on_ground, expected)
+        self.assertEqual(turning_on_ground.get_slices(), expected.get_slices())
 
     def test_turning_on_ground_after_takeoff_inhibited(self):
         rate_of_turn_data = np.ma.arange(-12, 12, 1)
@@ -1687,7 +1770,7 @@ class TestTurningOnGround(unittest.TestCase):
         turning_on_ground = TurningOnGround()
         turning_on_ground.derive(rate_of_turn, grounded)
         expected = buildsections('Turning On Ground',[0, 7])
-        self.assertEqual(turning_on_ground, expected)
+        self.assertEqual(turning_on_ground.get_slices(), expected.get_slices())
 
 
 class TestDescentToFlare(unittest.TestCase):
@@ -1762,14 +1845,14 @@ class TestGearExtending(unittest.TestCase):
         node = self.node_class()
         node.derive(gear_down_sel, gear_down, airs)
         expected=buildsection('Gear Extending', 7, 9)
-        self.assertEqual(list(node), list(expected))
+        self.assertEqual(node.get_slices(), expected.get_slices())
 
 
 class TestGearExtended(unittest.TestCase):
     def test_can_operate(self):
         self.assertEqual(GearExtended.get_operational_combinations(),
                          [('Gear Down',)])
-        
+
     def test_basic(self):
         gear = M(
             name='Gear Down',
@@ -1780,19 +1863,21 @@ class TestGearExtended(unittest.TestCase):
         self.assertEqual(gear_ext[0].slice, slice(0, 5))
         self.assertEqual(gear_ext[1].slice, slice(13,16))
 
+
 class TestGearRetracted(unittest.TestCase):
     def test_can_operate(self):
         self.assertEqual(GearRetracted.get_operational_combinations(),
-                         [('Gear Down',)])
-        
+                         [('Gear Up',)])
+
     def test_basic(self):
         gear = M(
-            name='Gear Down',
-            array=np.ma.array([1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1]),
-            values_mapping={0: 'Up', 1: 'Down'})
+            name='Gear Up',
+            array=np.ma.array([0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0]),
+            values_mapping={0: 'Down', 1: 'Up'})
         gear_ext = GearRetracted()
         gear_ext.derive(gear)
         self.assertEqual(gear_ext[0].slice, slice(5, 14))
+
 
 class TestGoAround5MinRating(unittest.TestCase):
     def test_can_operate(self):
@@ -1838,6 +1923,21 @@ class TestTakeoffRoll(unittest.TestCase):
         self.assertEqual(len(node), 1)
         self.assertAlmostEqual(node[0].slice.start, 967.92, places=1)
         self.assertAlmostEqual(node[0].slice.stop, 990.27, places=1)
+
+
+class TestTakeoffRollOrRejectedTakeoff(unittest.TestCase):
+    def test_can_operate(self):
+        self.assertEqual(TakeoffRollOrRejectedTakeoff.get_operational_combinations(),
+                         [('Takeoff Roll', 'Rejected Takeoff',)])
+
+    def test_derive(self):
+        rolls = buildsections('Takeoff Roll', [5,15], [105.2,115.4])
+        rejs = buildsections('Rejected Takeoff', [50,65])
+        expected = buildsections('Takeoff Roll Or Rejected Takeoff', [5,15], [50,65], [105.2,115.4])
+        phase = TakeoffRollOrRejectedTakeoff()
+        phase.derive(rolls, rejs)
+        self.assertEqual([s.slice for s in sorted(list(expected))],
+                         [s.slice for s in list(expected)])
 
 
 class TestTakeoffRotation(unittest.TestCase):

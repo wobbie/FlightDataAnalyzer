@@ -140,3 +140,12 @@ within the derive method.::
             self.frequency = (a.frequency + b.frequency) / 2
             self.offset = (a.offset + b.offset) / 2
 
+Node naming convention
+~~~~~~~~~~~~~~~~~~~~~~
+
+The following rules should be applied to Node names to ensure consistency:
+
+* During Climb - This refers to any period when the aircraft is Climbing.
+* During Descent - This refers to Descending periods between the Top Of Descent and Landing.
+* While Climbing - This refers to Climbing periods between takeoff and Top Of Climb.
+* While Descending - This refers to any period when the aircraft is Descending.

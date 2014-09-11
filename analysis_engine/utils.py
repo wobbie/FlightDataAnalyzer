@@ -1,7 +1,10 @@
 import argparse
 import logging
 import os
+import re
+import zipfile
 
+from collections import defaultdict
 from datetime import datetime
 from inspect import isclass
 
@@ -10,11 +13,37 @@ from hdfaccess.utils import strip_hdf
 
 from analysis_engine.api_handler import APIError, get_api_handler
 from analysis_engine.dependency_graph import dependencies3, graph_nodes
-from analysis_engine.node import Node, NodeManager
+from analysis_engine.node import load, Node, NodeManager
 from analysis_engine import settings
 
 
 logger = logging.getLogger(__name__)
+
+
+def open_node_container(zip_path):
+    '''
+    Opens a zip file containing nodes.
+    
+    TODO: Do not compress to the current directory.
+    '''
+    with zipfile.ZipFile(zip_path, 'r') as zip_file:
+        filenames = zip_file.namelist()
+        zip_file.extractall('.')
+    
+    nodes = defaultdict(dict)
+    for filename in filenames:
+        match = re.match('^(?P<flight_pk>\d+) - (?P<node_name>[\w\d\s]+).nod$', filename)
+        if not match:
+            print "Skipping invalid filename '%s'"
+            os.remove(filename)
+            continue
+        
+        groupdict = match.groupdict()
+        
+        nodes[groupdict['flight_pk']][groupdict['node_name']] = load(filename)
+        os.remove(filename)
+    
+    return nodes
 
 
 def get_aircraft_info(tail_number):
@@ -242,6 +271,7 @@ if __name__ == '__main__':
     list_parser.add_argument('--filter-nodes', nargs='+', help='Node names')
     list_parser.add_argument('--additional-modules', nargs='+',
                              help='Additional modules')
+    
     #list_parser.add_argument('--list', action='store_true',
                              #help='Output as Python list')
     
