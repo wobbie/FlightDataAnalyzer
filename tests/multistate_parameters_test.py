@@ -2199,21 +2199,21 @@ class TestStableApproach(unittest.TestCase):
         opts = StableApproach.get_operational_combinations()
         combinations = [
             # all
-            ('Approach And Landing', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Min For 5 Sec', 'Altitude AAL', 'Vapp'),
+            ('Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg', 'Altitude AAL', 'Vapp'),
             # exc. Vapp
-            ('Approach And Landing', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Min For 5 Sec', 'Altitude AAL'),
+            ('Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg', 'Altitude AAL'),
             # exc. Airspeed Relative
-            ('Approach And Landing', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Min For 5 Sec', 'Altitude AAL', 'Vapp'),
+            ('Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg', 'Altitude AAL', 'Vapp'),
             # exc. Vapp and Airspeed Relative
-            ('Approach And Landing', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Min For 5 Sec', 'Altitude AAL'),
+            ('Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg', 'Altitude AAL'),
             # exc. ILS Glideslope and Vapp
-            ('Approach And Landing', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Localizer', 'Eng (*) N1 Min For 5 Sec', 'Altitude AAL'),
+            ('Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Localizer', 'Eng (*) N1 Avg', 'Altitude AAL'),
             # exc. ILS Glideslope and ILS Localizer and Vapp
-            ('Approach And Landing', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'Eng (*) N1 Min For 5 Sec', 'Altitude AAL'),
+            ('Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'Eng (*) N1 Avg', 'Altitude AAL'),
             # using EPR and exc. Airspeed Relative
-            ('Approach And Landing', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) EPR Min For 5 Sec', 'Altitude AAL', 'Vapp'),
+            ('Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) EPR Min For 5 Sec', 'Altitude AAL', 'Vapp'),
             # including Family attribute
-            ('Approach And Landing', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) EPR Min For 5 Sec', 'Altitude AAL', 'Vapp', 'Family'),
+            ('Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) EPR Min For 5 Sec', 'Altitude AAL', 'Vapp', 'Family'),
         ]
         for combo in combinations:
             self.assertIn(combo, opts)
@@ -2262,13 +2262,13 @@ class TestStableApproach(unittest.TestCase):
         # == [2000, 1800, 1600, 1400, 1200, 1000, 800, 600, 400, 219, 199, 179, 159, 139, 119, 99, 79, 59, 39, 19]
         alt = P(array=np.ma.array(al))
         # DERIVE without using Vapp (using Vref limits)
-        stable.derive(apps, gear, flap, head, aspd, vert_spd, glide, loc, eng, None, alt, None)
+        stable.derive(apps, gear, flap, head, aspd, None, vert_spd, glide, loc, eng, None, alt, None)
         self.assertEqual(len(stable.array), len(alt.array))
         self.assertEqual(len(stable.array), len(head.array))
 
         self.assertEqual(list(stable.array.data),
         #index: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20
-               [0, 1, 1, 4, 9, 2, 8, 6, 5, 8, 8, 3, 3, 8, 9, 9, 9, 9, 9, 9, 0])
+               [0, 1, 1, 4, 9, 2, 8, 6, 5, 8, 8, 3, 3, 9, 9, 9, 9, 9, 9, 9, 0])
         self.assertEqual(list(stable.array.mask),
                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
 
@@ -2276,19 +2276,19 @@ class TestStableApproach(unittest.TestCase):
         # Test without the use of Glideslope (not on it at 1000ft) therefore
         # instability for index 7-10 is now due to low Engine Power
         glide2 = P(array=np.ma.array([3.5]*20))
-        stable.derive(apps, gear, flap, head, aspd, vert_spd, glide2, loc, eng, None, alt, None)
+        stable.derive(apps, gear, flap, head, aspd, None, vert_spd, glide2, loc, eng, None, alt, None)
         self.assertEqual(list(stable.array.data),
         #index: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20
-               [0, 1, 1, 4, 9, 2, 8, 8, 8, 8, 8, 3, 3, 8, 9, 9, 9, 9, 9, 9, 0])
+               [0, 1, 1, 4, 9, 2, 8, 8, 8, 8, 8, 3, 3, 9, 9, 9, 9, 9, 9, 9, 0])
 
         #========== VERTICAL SPEED ==========
         # Test with a lot of vertical speed (rather than just gusts above)
         v2 = [-1800] * 20
         vert_spd2 = P(array=np.ma.array(v2))
-        stable.derive(apps, gear, flap, head, aspd, vert_spd2, glide2, loc, eng, None, alt, None)
+        stable.derive(apps, gear, flap, head, aspd, None, vert_spd2, glide2, loc, eng, None, alt, None)
         self.assertEqual(list(stable.array.data),
         #index: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20
-               [0, 1, 1, 4, 9, 2, 7, 7, 7, 7, 7, 3, 3, 7, 7, 7, 9, 9, 9, 9, 0])
+               [0, 1, 1, 4, 7, 2, 7, 7, 7, 7, 7, 3, 3, 7, 7, 7, 7, 7, 7, 7, 0])
 
         #========== UNSTABLE GLIDESLOPE JUST ABOVE 200ft ==========
         # Test that with unstable glideslope just before 200ft, this stability
@@ -2298,7 +2298,7 @@ class TestStableApproach(unittest.TestCase):
         g3 = [ 6,  6,  6,  6,  0, .5, .5,-.5,1.2,1.5,1.4,1.3,  0,  0,  0,  0,  0, -2, -2, -2, -2]
         gm = [ 1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0]
         glide3 = P(array=np.ma.array(g3, mask=gm))
-        stable.derive(apps, gear, flap, head, aspd, vert_spd, glide3, loc, eng, None, alt, None)
+        stable.derive(apps, gear, flap, head, aspd, None, vert_spd, glide3, loc, eng, None, alt, None)
         self.assertEqual(list(stable.array.data),
         #index: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20
                [0, 1, 1, 4, 9, 2, 8, 6, 5, 5, 5, 3, 3, 5, 5, 5, 5, 5, 5, 5, 0])
@@ -2353,7 +2353,9 @@ class TestStableApproach(unittest.TestCase):
         self.assertEqual(list(sect[-4:]), ['Stable']*4)
         self.assertEqual(list(sect[0:73]), ['Gear Not Down']*73)
         self.assertEqual(list(sect[74:117]), ['Not Landing Flap']*43)
-        self.assertTrue(np.all(sect[117:] == ['Stable']))
+        # 10 samples above 1000ft where Eng N1 was not yet stable
+        self.assertEqual(list(sect[117:127]), ['Eng N1 Not Stable']*10)
+        self.assertTrue(np.all(sect[127:] == ['Stable']))
 
 
 class TestStickShaker(unittest.TestCase):

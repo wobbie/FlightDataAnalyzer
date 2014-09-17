@@ -2161,7 +2161,7 @@ class StableApproach(MultistateDerivedParameterNode):
     def can_operate(cls, available):
         # Commented out optional dependencies
         # Airspeed Relative, ILS and Vapp are optional
-        deps = ['Approach And Landing', 'Gear Down', 'Flap',
+        deps = ['Combined Descent', 'Gear Down', 'Flap',
                 'Track Deviation From Runway',
                 #'Airspeed Relative For 3 Sec',
                 'Vertical Speed',
@@ -2171,11 +2171,11 @@ class StableApproach(MultistateDerivedParameterNode):
                 #'Vapp',
                 ]
         return all_of(deps, available) and (
-            'Eng (*) N1 Min For 5 Sec' in available or
+            'Eng (*) N1 Avg' in available or
             'Eng (*) EPR Min For 5 Sec' in available)
 
     def derive(self,
-               apps=S('Approach And Landing'),
+               apps=S('Combined Descent'), #-- check!
                gear=M('Gear Down'),
                flap=M('Flap'),
                tdev=P('Track Deviation From Runway'),
@@ -2183,7 +2183,7 @@ class StableApproach(MultistateDerivedParameterNode):
                vspd=P('Vertical Speed'),
                gdev=P('ILS Glideslope'),
                ldev=P('ILS Localizer'),
-               eng_n1=P('Eng (*) N1 Min For 5 Sec'),
+               eng_n1=P('Eng (*) N1 Avg'),
                eng_epr=P('Eng (*) EPR Min For 5 Sec'),
                alt=P('Altitude AAL'),
                vapp=P('Vapp'),
@@ -2216,7 +2216,9 @@ class StableApproach(MultistateDerivedParameterNode):
             gear_down = repair(gear.array, _slice, method='fill_start')
             flap_lever = repair(flap.array, _slice, method='fill_start')
             track_dev = repair(tdev.array, _slice)
+            from analysis_engine.library import second_window
             airspeed = repair(aspd.array, _slice) if aspd else None  # optional
+            ##airspeed = second_window(repair(aspd.array, _slice), 1, 6) if aspd else None  # optional
             glideslope = repair(gdev.array, _slice) if gdev else None  # optional
             localizer = repair(ldev.array, _slice) if ldev else None  # optional
             # apply quite a large moving average to smooth over peaks and troughs
@@ -2225,7 +2227,7 @@ class StableApproach(MultistateDerivedParameterNode):
                 # use EPR if available
                 engine = repair(eng_epr.array, _slice)
             else:
-                engine = repair(eng_n1.array, _slice)
+                engine = second_window(repair(eng_n1.array, _slice), 1, 8)
             altitude = repair(alt.array, _slice)
 
             index_at_50 = index_closest_value(altitude, 50)
@@ -2264,7 +2266,10 @@ class StableApproach(MultistateDerivedParameterNode):
 
             #== 3. Heading ==
             self.array[_slice][stable] = 3
-            STABLE_HEADING = 10  # degrees
+            
+            # TODO: Try 30 degrees for a trial run!!
+            
+            STABLE_HEADING = 15  # degrees - use 15 to allow rolling a little over the 10 degrees when aligning to runway.
             stable_track_dev = abs(track_dev) <= STABLE_HEADING
             stable &= stable_track_dev.filled(True)  # assume stable (on track)
 
@@ -2303,7 +2308,7 @@ class StableApproach(MultistateDerivedParameterNode):
 
             #== 7. Vertical Speed ==
             self.array[_slice][stable] = 7
-            STABLE_VERTICAL_SPEED_MIN = -1000
+            STABLE_VERTICAL_SPEED_MIN = -1100
             STABLE_VERTICAL_SPEED_MAX = -200
             stable_vert = (vertical_speed >= STABLE_VERTICAL_SPEED_MIN) & (vertical_speed <= STABLE_VERTICAL_SPEED_MAX)
             # extend the stability at the end of the altitude threshold through to landing
@@ -2313,14 +2318,13 @@ class StableApproach(MultistateDerivedParameterNode):
             #== 8. Engine Power (N1) ==
             self.array[_slice][stable] = 8
             # TODO: Patch this value depending upon aircraft type
-            if family and family.value == 'B787':
+            if family and family.value in ('B787', 'A319'):
                 STABLE_N1_MIN = 35  # %
             else:
                 STABLE_N1_MIN = 45  # %
-            STABLE_EPR_MIN = 1.1
+            STABLE_EPR_MIN = 1.09
             eng_minimum = STABLE_EPR_MIN if eng_epr else STABLE_N1_MIN
             stable_engine = (engine >= eng_minimum)
-            stable_engine |= (altitude > 1000)  # Only use in altitude band below 1000 feet
             # extend the stability at the end of the altitude threshold through to landing
             stable_engine[altitude < 50] = stable_engine[index_at_50]
             stable &= stable_engine.filled(True)
