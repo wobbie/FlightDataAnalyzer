@@ -5876,7 +5876,7 @@ def slices_from_ktis(kti_1, kti_2):
                 continue
             else:
                 # previous[1] was 0 and item[1] = 1
-                slices.append(slice(previous[0], item[0]))
+                slices.append(slice(previous[0], item[0]+1))
         previous = item
     return slices
 

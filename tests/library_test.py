@@ -5068,7 +5068,7 @@ class TestSlicesFromKtis(unittest.TestCase):
         kti_1 = KTI(items=[KeyTimeInstance(1, 'KTI_1')])
         kti_2 = KTI(items=[KeyTimeInstance(3, 'KTI_2')])
         slices = slices_from_ktis(kti_1, kti_2)
-        self.assertEqual(slices, [slice(1,3)])
+        self.assertEqual(slices, [slice(1,4)])
 
     def test_reverse_order(self):
         kti_1 = KTI(items=[KeyTimeInstance(3, 'KTI_1')])
@@ -5087,7 +5087,7 @@ class TestSlicesFromKtis(unittest.TestCase):
                            KeyTimeInstance(-3, 'KTI_2'),
                            KeyTimeInstance(20, 'KTI_2')])
         slices = slices_from_ktis(kti_1, kti_2)
-        self.assertEqual(slices, [slice(5,8), slice(13,18)])
+        self.assertEqual(slices, [slice(5,9), slice(13,19)])
 
     def test_nones(self):
         kti_1 = KTI(items=[])
@@ -5105,7 +5105,7 @@ class TestSlicesFromKtis(unittest.TestCase):
         kti_1 = KTI(items=[KeyTimeInstance(5, 'KTI_1')])[0]
         kti_2 = KeyTimeInstance(8, 'KTI_2')
         slices = slices_from_ktis(kti_1, kti_2)
-        self.assertEqual(slices, [slice(5,8)])
+        self.assertEqual(slices, [slice(5,9)])
 
 
 class TestSliceMultiply(unittest.TestCase):
