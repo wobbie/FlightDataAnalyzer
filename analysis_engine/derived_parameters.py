@@ -1014,7 +1014,7 @@ class AltitudeRadioOffsetRemoved(DerivedParameterNode):
                                    ##extrapolate=True,
                                    ##raise_entirely_masked=False)
         self.array = alt_rad.array - adjust
-            
+
 
 class AltitudeSTDSmoothed(DerivedParameterNode):
     '''
@@ -1456,8 +1456,8 @@ class DescendForFlightPhases(DerivedParameterNode):
 
 class AOA(DerivedParameterNode):
     '''
-    Angle of Attack - averages Left and Right signals. See Bombardier AOM-1281
-    document.
+    Angle of Attack - averages Left and Right signals to account for side slip.
+    See Bombardier AOM-1281 document for further details.
     '''
 
     name = 'AOA'
@@ -1482,9 +1482,9 @@ class AOA(DerivedParameterNode):
         if family and family.value == 'CL-600':
             # The Angle of Attack recorded in the FDR is "filtered" Body AoA
             # and is not compensated for sideslip, it must be converted back to
-            # Vane before it can be used. See Bombardier AOM-1281
-            # document.
+            # Vane before it can be used. See Bombardier AOM-1281 document.
             self.array = self.array * 1.661 - 1.404
+
 
 
 class ControlColumn(DerivedParameterNode):

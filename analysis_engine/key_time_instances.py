@@ -222,8 +222,8 @@ class Transmit(KeyTimeInstanceNode):
 
 class ClimbStart(KeyTimeInstanceNode):
     '''
-    Creates KTIs where the aircraft tras
-    '''
+    Creates KTIs where the aircraft transitions through %dft
+    ''' % CLIMB_THRESHOLD
     
     def derive(self, alt_aal=P('Altitude AAL'), liftoffs=KTI('Liftoff'),
                tocs=KTI('Top Of Climb')):

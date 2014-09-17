@@ -10192,7 +10192,8 @@ class SpeedbrakeDeployedWithPowerOnDuration(KeyPointValueNode):
     Each time the aircraft is flown with high power and the speedbrakes open,
     something unusual is happening. We record the duration this happened for.
 
-    The threshold for high power is 60% N1. This aligns with the Airbus AFPS.
+    The threshold for high power is 60% N1. This aligns with the Airbus AFPS
+    and other flight data analysis programmes.
     '''
 
     units = ut.SECOND
