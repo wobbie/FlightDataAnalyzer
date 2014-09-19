@@ -29,6 +29,7 @@ from analysis_engine.library import (
     slices_below,
     slices_between,
     slices_from_to,
+    slices_remove_small_gaps,
     value_at_index,
     value_at_time,
 )
@@ -650,7 +651,11 @@ class DerivedParameterNode(Node):
                 if is_index_within_slice(tdwn.index, new_basic):
                     result.append(slice(new_basic.start, tdwn.index))
                     break
-        return result
+            
+        if len(result) > 1:
+            return slices_remove_small_gaps(result, 5, self.frequency)
+        else:
+            return result
 
 
 P = Parameter = DerivedParameterNode # shorthand
