@@ -190,13 +190,16 @@ class EngHotelMode(FlightPhaseNode):
 
     @classmethod
     def can_operate(cls, available, family=A('Family')):
-        return all_of(('Eng (2) Np', 'Eng (1) N1', 'Eng (2) N1', 'Grounded'), available) \
+        return all_of(('Eng (2) Np', 'Eng (1) N1', 'Eng (2) N1', 'Grounded', 'Propeller Brake'), available) \
             and family.value in ('ATR-42', 'ATR-72') # Not all aircraft with Np will have a 'Hotel' mode
         
 
     def derive(self, eng2_np=P('Eng (2) Np'),
-               eng1_n1=P('Eng (1) N1'), eng2_n1=P('Eng (2) N1'), groundeds=S('Grounded')):
-        pos_hotel = (eng2_n1.array > 45) & (eng2_np.array <= 0) & (eng1_n1.array < 40)
+               eng1_n1=P('Eng (1) N1'),
+               eng2_n1=P('Eng (2) N1'),
+               groundeds=S('Grounded'),
+               prop_brake=M('Propeller Brake')):
+        pos_hotel = (eng2_n1.array > 45) & (eng2_np.array <= 0) & (eng1_n1.array < 40) & (prop_brake.array == 'On')
         hotel_mode = slices_and(runs_of_ones(pos_hotel), groundeds.get_slices())
         self.create_phases(hotel_mode)
 
