@@ -1790,12 +1790,12 @@ class TestEngHotelMode(unittest.TestCase):
 
     def test_can_operate(self):
         family = Attribute('Family', value='ATR-42')
-        available = ['Eng (2) Np', 'Eng (1) N1', 'Eng (2) N1', 'Grounded']
+        available = ['Eng (2) Np', 'Eng (1) N1', 'Eng (2) N1', 'Grounded', 'Propeller Brake']
         self.assertTrue(self.node_class.can_operate(available, family=family))
         family.value = 'B737'
         self.assertFalse(self.node_class.can_operate(available, family=family))
 
-    def test_derive(self):
+    def test_derive_basic(self):
         range_array = np.arange(0, 50, 5)
         eng2_n1 = Parameter('Eng (2) N1',
                             array=np.ma.concatenate((
@@ -1814,13 +1814,27 @@ class TestEngHotelMode(unittest.TestCase):
                                 [100] * 20,
                                 [0] * 20,)))
         groundeds = buildsections('Grounded', (0, 22), (38, None))
+        prop_brake_values_mapping = {1: 'On', 0: '-'}
+        prop_brake = M('Propeller Brake', array=np.ma.array([1] * 16 + [0] * 24 + [1] * 20), values_mapping=prop_brake_values_mapping)
 
         node = self.node_class()
-        node.derive(eng2_np, eng1_n1, eng2_n1, groundeds)
+        node.derive(eng2_np, eng1_n1, eng2_n1, groundeds, prop_brake)
 
-        expected = [Section(name='Eng Hotel Mode', slice=slice(10, 18, None), start_edge=10, stop_edge=18),
+        expected = [Section(name='Eng Hotel Mode', slice=slice(10, 16, None), start_edge=10, stop_edge=16),
                     Section(name='Eng Hotel Mode', slice=slice(42, 50, None), start_edge=42, stop_edge=50)]
         self.assertEqual(list(node), expected)
+    
+    def test_derive(self):
+        eng2_np = load(os.path.join(test_data_path, 'eng_hotel_mode_eng2_np.nod'))
+        eng1_n1 = load(os.path.join(test_data_path, 'eng_hotel_mode_eng1_n1.nod'))
+        eng2_n1 = load(os.path.join(test_data_path, 'eng_hotel_mode_eng2_n1.nod'))
+        prop_brake = load(os.path.join(test_data_path, 'eng_hotel_mode_prop_brake.nod'))
+        groundeds = buildsections('Grounded', (0, 9203.6875), (17481.6875, 19011.6875))
+        
+        node = self.node_class()
+        node.derive(eng2_np, eng1_n1, eng2_n1, groundeds, prop_brake)
+        
+        self.assertEqual(node.get_slices(), [slice(7760, 7784), slice(8248, 8632), slice(17696, 17770)])
 
 
 class TestGearExtending(unittest.TestCase):
