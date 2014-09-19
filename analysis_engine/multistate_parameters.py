@@ -2159,32 +2159,28 @@ class StableApproach(MultistateDerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available):
-        # Commented out optional dependencies
-        # Airspeed Relative, ILS and Vapp are optional
+        # Many parameters are optional dependencies
         deps = ['Combined Descent', 'Gear Down', 'Flap',
                 'Track Deviation From Runway',
-                #'Airspeed Relative For 3 Sec',
                 'Vertical Speed',
-                #'ILS Glideslope', 'ILS Localizer',
-                #'Eng (*) N1 Min For 5 Sec',
                 'Altitude AAL',
-                #'Vapp',
                 ]
         return all_of(deps, available) and (
-            'Eng (*) N1 Avg' in available or
-            'Eng (*) EPR Min For 5 Sec' in available)
+            'Eng (*) N1 Avg For 10 Sec' in available or
+            'Eng (*) EPR Avg For 10 Sec' in available)
 
     def derive(self,
                apps=S('Combined Descent'), #-- check!
                gear=M('Gear Down'),
                flap=M('Flap'),
                tdev=P('Track Deviation From Runway'),
-               aspd=P('Airspeed Relative For 3 Sec'),
+               aspd_rel=P('Airspeed Relative For 3 Sec'),
+               aspd_minus_sel=P('Airspeed Minus Airspeed Selected For 3 Sec'),
                vspd=P('Vertical Speed'),
                gdev=P('ILS Glideslope'),
                ldev=P('ILS Localizer'),
-               eng_n1=P('Eng (*) N1 Avg'),
-               eng_epr=P('Eng (*) EPR Min For 5 Sec'),
+               eng_n1=P('Eng (*) N1 Avg For 10 Sec'),
+               eng_epr=P('Eng (*) EPR Avg For 10 Sec'),
                alt=P('Altitude AAL'),
                vapp=P('Vapp'),
                family=A('Family')):
@@ -2216,9 +2212,12 @@ class StableApproach(MultistateDerivedParameterNode):
             gear_down = repair(gear.array, _slice, method='fill_start')
             flap_lever = repair(flap.array, _slice, method='fill_start')
             track_dev = repair(tdev.array, _slice)
-            from analysis_engine.library import second_window
-            airspeed = repair(aspd.array, _slice) if aspd else None  # optional
-            ##airspeed = second_window(repair(aspd.array, _slice), 1, 6) if aspd else None  # optional
+            if aspd_minus_sel:
+                airspeed = repair(aspd_minus_sel.array, _slice)
+            elif aspd_rel:
+                airspeed = repair(aspd_rel.array, _slice)
+            else:
+                airspeed = None
             glideslope = repair(gdev.array, _slice) if gdev else None  # optional
             localizer = repair(ldev.array, _slice) if ldev else None  # optional
             # apply quite a large moving average to smooth over peaks and troughs
@@ -2227,7 +2226,7 @@ class StableApproach(MultistateDerivedParameterNode):
                 # use EPR if available
                 engine = repair(eng_epr.array, _slice)
             else:
-                engine = second_window(repair(eng_n1.array, _slice), 1, 8)
+                engine = repair(eng_n1.array, _slice)
             altitude = repair(alt.array, _slice)
 
             index_at_50 = index_closest_value(altitude, 50)
@@ -2273,16 +2272,20 @@ class StableApproach(MultistateDerivedParameterNode):
             stable_track_dev = abs(track_dev) <= STABLE_HEADING
             stable &= stable_track_dev.filled(True)  # assume stable (on track)
 
-            if aspd:
+            if airspeed is not None:
                 #== 4. Airspeed Relative ==
                 self.array[_slice][stable] = 4
-                if vapp:
+                if aspd_minus_sel:
+                    # Airspeed relative to selected speed
+                    STABLE_AIRSPEED_BELOW_REF = -5
+                    STABLE_AIRSPEED_ABOVE_REF = 10                    
+                elif vapp:
                     # Those aircraft which record a variable Vapp shall have more constraint thresholds
                     STABLE_AIRSPEED_BELOW_REF = -5
                     STABLE_AIRSPEED_ABOVE_REF = 10
                 else:
-                    # Most aircraft records only Vref - as we don't know the wind correction more lenient
-                    STABLE_AIRSPEED_BELOW_REF = 0
+                    # Most aircraft record only Vref - as we don't know the wind correction be more lenient
+                    STABLE_AIRSPEED_BELOW_REF = -5
                     STABLE_AIRSPEED_ABOVE_REF = 30
                 stable_airspeed = (airspeed >= STABLE_AIRSPEED_BELOW_REF) & (airspeed <= STABLE_AIRSPEED_ABOVE_REF)
                 # extend the stability at the end of the altitude threshold through to landing
