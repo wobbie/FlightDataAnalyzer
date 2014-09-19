@@ -7872,7 +7872,7 @@ class TestFuelQtyAtLiftoff(unittest.TestCase):
         fq.derive(fuel_qty, liftoff)
         self.assertEqual(len(fq), 1)
         self.assertEqual(fq[0].index, 54)
-        self.assertEqual(fq[0].value, 105372.5)
+        self.assertAlmostEqual(fq[0].value, 105371, 0)
 
 
 class TestFuelQtyAtTouchdown(unittest.TestCase):
