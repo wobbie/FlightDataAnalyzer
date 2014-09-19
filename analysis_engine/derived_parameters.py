@@ -1976,11 +1976,21 @@ class Eng_EPRMinFor5Sec(DerivedParameterNode):
     align_offset = 0
     units = None
 
-    def derive(self,
-               eng_epr_min=P('Eng (*) EPR Min')):
-
-        #self.array = clip(eng_epr_min.array, 5.0, eng_epr_min.frequency, remove='troughs')
+    def derive(self, eng_epr_min=P('Eng (*) EPR Min')):
         self.array = second_window(eng_epr_min.array, self.frequency, 5)
+
+
+class Eng_EPRAvgFor10Sec(DerivedParameterNode):
+    '''
+    Returns the average EPR for up to four engines over 10 seconds.
+    '''
+
+    name = 'Eng (*) EPR Avg For 10 Sec'
+    align_frequency = 1  # force odd freq for 10 sec window
+    units = None
+
+    def derive(self, eng_epr_avg=P('Eng (*) EPR Avg')):
+        self.array = second_window(eng_epr_avg.array, self.frequency, 10)
 
 
 class EngTPRLimitDifference(DerivedParameterNode):
@@ -2324,6 +2334,19 @@ class Eng_N1Avg(DerivedParameterNode):
 
         engines = vstack_params(eng1, eng2, eng3, eng4)
         self.array = np.ma.average(engines, axis=0)
+
+
+class Eng_N1AvgFor10Sec(DerivedParameterNode):
+    '''
+    Returns the average N1 for up to four engines over 10 seconds.
+    '''
+
+    name = 'Eng (*) N1 Avg For 10 Sec'
+    align_frequency = 1  # force odd freq for 10 sec window
+    units = ut.PERCENT
+
+    def derive(self, eng_n1_avg=P('Eng (*) N1 Avg')):
+        self.array = second_window(eng_n1_avg.array, self.frequency, 10)
 
 
 class Eng_N1Max(DerivedParameterNode):
