@@ -10471,7 +10471,7 @@ class TestTurbulenceDuringApproachMax(unittest.TestCase, CreateKPVsWithinSlicesT
 
     def setUp(self):
         self.node_class = TurbulenceDuringApproachMax
-        self.operational_combinations = [('Turbulence RMS g', 'Approach')]
+        self.operational_combinations = [('Turbulence', 'Approach')]
         self.function = max_value
 
     @unittest.skip('Test Not Implemented')
@@ -10483,7 +10483,7 @@ class TestTurbulenceDuringCruiseMax(unittest.TestCase, CreateKPVsWithinSlicesTes
 
     def setUp(self):
         self.node_class = TurbulenceDuringCruiseMax
-        self.operational_combinations = [('Turbulence RMS g', 'Cruise')]
+        self.operational_combinations = [('Turbulence', 'Cruise')]
         self.function = max_value
 
     @unittest.skip('Test Not Implemented')
@@ -10495,7 +10495,7 @@ class TestTurbulenceDuringFlightMax(unittest.TestCase, CreateKPVsWithinSlicesTes
 
     def setUp(self):
         self.node_class = TurbulenceDuringFlightMax
-        self.operational_combinations = [('Turbulence RMS g', 'Airborne')]
+        self.operational_combinations = [('Turbulence', 'Airborne')]
         self.function = max_value
 
     @unittest.skip('Test Not Implemented')
