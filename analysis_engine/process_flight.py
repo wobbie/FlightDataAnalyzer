@@ -600,7 +600,7 @@ def main():
                         dest='requested', default=[], help='Requested nodes.')
     parser.add_argument('--required', type=str, nargs='+', dest='required',
                         default=[], help='Required nodes.')
-    parser.add_argument('-tail', dest='tail_number',
+    parser.add_argument('-tail', '--tail', dest='tail_number',
                         default='G-FDSL',  # as per flightdatacommunity file
                         help='Aircraft tail number.')
     parser.add_argument('--strip', default=False, action='store_true',
