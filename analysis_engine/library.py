@@ -6,7 +6,7 @@ import math
 from collections import OrderedDict, namedtuple
 from datetime import datetime, timedelta
 from hashlib import sha256
-from itertools import izip, izip_longest
+from itertools import izip, izip_longest, tee
 from math import asin, atan2, ceil, cos, degrees, floor, log, radians, sin, sqrt
 from scipy import interpolate as scipy_interpolate, optimize
 
@@ -3073,6 +3073,16 @@ def index_of_datetime(start_datetime, index_datetime, frequency, offset=0):
     '''
     difference = index_datetime - start_datetime
     return (difference.total_seconds() - offset) * frequency
+
+
+def pairwise(iterable):
+    '''
+    https://docs.python.org/2/library/itertools.html#recipes
+    s -> (s0,s1), (s1,s2), (s2, s3), ...
+    '''
+    a, b = tee(iterable)
+    next(b, None)
+    return izip(a, b)
 
 
 def is_index_within_slice(index, _slice):
