@@ -10287,12 +10287,14 @@ class StallWarningActivatedDuration(KeyPointValueNode):
 
 class OverspeedDuration(KeyPointValueNode):
     '''
+    Duration the Overspeed Warning was active.
     '''
 
     units = ut.SECOND
 
-    def derive(self, overspeed=M('Overspeed Warning')):
-        self.create_kpvs_where(overspeed.array == 'Overspeed', self.frequency)
+    def derive(self, overspeed=M('Overspeed Warning'), airs=S('Airborne')):
+        self.create_kpvs_where(overspeed.array == 'Overspeed', 
+                               self.frequency, phase=airs)
 
 
 ##############################################################################

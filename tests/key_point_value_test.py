@@ -9502,10 +9502,9 @@ class TestStickShakerActivatedDuration(unittest.TestCase, CreateKPVsWhereTest):
 class TestOverspeedDuration(unittest.TestCase, CreateKPVsWhereTest):
     def setUp(self):
         self.param_name = 'Overspeed Warning'
-        self.phase_name = None
+        self.phase_name = 'Airborne'
         self.node_class = OverspeedDuration
         self.values_mapping = {0: '-', 1: 'Overspeed'}
-
         self.basic_setup()
 
 
