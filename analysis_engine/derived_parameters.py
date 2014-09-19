@@ -7256,6 +7256,24 @@ class FlapManoeuvreSpeed(DerivedParameterNode):
 # Relative Airspeeds
 
 
+class AirspeedMinusAirspeedSelectedFor3Sec(DerivedParameterNode):
+    '''
+    Airspeed relative to Airspeed Selected.
+    '''
+
+    align_frequency = 2
+    align_offset = 0
+    units = ut.KT
+
+    @classmethod
+    def can_operate(cls, available):
+        return all_of(('Airspeed', 'Airspeed Selected'), available)
+
+    def derive(self, aspd=P('Airspeed'), aspd_sel=P('Airspeed Selected')):
+        self.array = second_window(aspd.array - aspd_sel.array, 
+                                   self.frequency, 3)
+        
+
 ########################################
 # Airspeed Minus V2
 
@@ -7643,9 +7661,7 @@ class AirspeedRelativeFor3Sec(DerivedParameterNode):
             self.array = combined
         else:
             self.array = app_array
-
-
-##############################################################################
+            
 
 ########################################
 # Aircraft Energy
