@@ -60,6 +60,7 @@ from analysis_engine.library import (ambiguous_runway,
                                      max_abs_value,
                                      max_continuous_unmasked,
                                      max_value,
+                                     median_value,
                                      min_value,
                                      most_common_value,
                                      moving_average,
@@ -1176,8 +1177,7 @@ class Airspeed500To20FtMax(KeyPointValueNode):
 
     units = ut.KT
 
-    def derive(self,
-               air_spd=P('Airspeed'),
+    def derive(self, air_spd=P('Airspeed'),
                alt_aal=P('Altitude AAL For Flight Phases')):
 
         self.create_kpvs_within_slices(
@@ -1195,8 +1195,7 @@ class Airspeed500To20FtMin(KeyPointValueNode):
 
     units = ut.KT
 
-    def derive(self,
-               air_spd=P('Airspeed'),
+    def derive(self, air_spd=P('Airspeed'),
                alt_aal=P('Altitude AAL For Flight Phases')):
 
         self.create_kpvs_within_slices(
@@ -1206,6 +1205,42 @@ class Airspeed500To20FtMin(KeyPointValueNode):
         )
 
 
+class Airspeed500To50FtMedian(KeyPointValueNode):
+    '''
+    Median value of the recorded airspeed from 500ft above the airfield to
+    20ft above the airfield. This can be used to estimate the selected
+    airspeed used during final approach.
+    '''
+
+    units = ut.KT
+
+    def derive(self, air_spd=P('Airspeed'),
+               alt_aal=P('Altitude AAL For Flight Phases')):
+        #TODO: Round to the nearest Integer value if using for Airspeed
+        #Selected (pilots select whole numbers!)
+        self.create_kpvs_within_slices(
+            air_spd.array,
+            alt_aal.slices_from_to(500, 50),
+            median_value,
+        )
+
+
+class Airspeed500To50FtMedianMinusAirspeedSelected(KeyPointValueNode):
+    '''
+    Measurement used for investigation as to whether a flight's airspeed
+    between 500 and 50 feet resembles that of the airspeed selected.
+    '''
+
+    units = ut.KT
+
+    def derive(self, spd_selected=P('Airspeed Selected'),
+               spds_500_to_50=KPV('Airspeed 500 To 50 Ft Median')):
+        for spd_500_to_50 in spds_500_to_50:
+            spd_sel = value_at_index(spd_selected.array, spd_500_to_50.index)
+            self.create_kpv(spd_500_to_50.index, 
+                            spd_500_to_50.value - spd_sel)
+
+
 class AirspeedAtTouchdown(KeyPointValueNode):
     '''
     Airspeed measurement at the point of Touchdown.
@@ -1213,10 +1248,7 @@ class AirspeedAtTouchdown(KeyPointValueNode):
 
     units = ut.KT
 
-    def derive(self,
-               air_spd=P('Airspeed'),
-               touchdowns=KTI('Touchdown')):
-
+    def derive(self, air_spd=P('Airspeed'), touchdowns=KTI('Touchdown')):
         self.create_kpvs_at_ktis(air_spd.array, touchdowns)
 
 
@@ -6579,7 +6611,6 @@ class EngGasTempDuringMaximumContinuousPowerForXMinMax(KeyPointValueNode):
         for minutes in self.NAME_VALUES['minutes']:
             seconds = minutes * 60
             self.create_kpvs_within_slices(
-                ##clip(eng_egt_max.array, minutes * 60, eng_egt_max.hz),
                 second_window(eng_egt_max.array.astype(int), eng_egt_max.hz, seconds),
                 max_cont_rating,
                 max_value,

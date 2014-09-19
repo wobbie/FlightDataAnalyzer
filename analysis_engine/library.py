@@ -3751,6 +3751,26 @@ def max_value(array, _slice=slice(None), start_edge=None, stop_edge=None):
     return Value(index, value)
 
 
+def median_value(array, _slice=None, start_edge=None, stop_edge=None):
+    '''
+    Calculate the median value within an optional slice of the array and return
+    both the endpoint index and the median.
+    
+    :param array: Data to calculate the median value of.
+    :type array: np.ma.masked_array
+    :param _slice: Optional subsection of the data to calculate the average value within.
+    :type _slice: slice
+    :returns: The midpoint index and the average value.
+    :rtype: Value named tuple of index and value.
+    '''
+    start = _slice.start or 0 if _slice else 0
+    stop = _slice.stop or len(array) if _slice else len(array)
+    midpoint = start + ((stop - start) / 2)
+    if _slice:
+        array = array[_slice]
+    return Value(midpoint, np.ma.median(array))
+
+
 def merge_masks(masks, min_unmasked=1):
     '''
     :type masks: [mask]

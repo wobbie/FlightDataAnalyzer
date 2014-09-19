@@ -14,7 +14,7 @@ from flightdatautilities.aircrafttables.interfaces import VelocitySpeed
 from flightdatautilities import masked_array_testutils as ma_test
 from flightdatautilities.geometry import midpoint
 
-from analysis_engine.library import align
+from analysis_engine.library import align, median_value
 from analysis_engine.node import (
     A, App, ApproachItem, KPV, KTI, load, M, P, KeyPointValue,
     MultistateDerivedParameterNode,
@@ -66,6 +66,8 @@ from analysis_engine.key_point_values import (
     Airspeed35To1000FtMin,
     Airspeed5000To3000FtMax,
     Airspeed500To20FtMax,
+    Airspeed500To50FtMedian,
+    Airspeed500To50FtMedianMinusAirspeedSelected,
     Airspeed500To20FtMin,
     Airspeed5000To10000FtMax,
     Airspeed8000To10000FtMax,
@@ -1778,6 +1780,55 @@ class TestAirspeed500To20FtMin(unittest.TestCase, CreateKPVsWithinSlicesTest):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test Not Implemented')
+
+
+class TestAirspeed500To50FtMedian(unittest.TestCase, CreateKPVsWithinSlicesTest):
+
+    def setUp(self):
+        self.node_class = Airspeed500To50FtMedian
+        self.operational_combinations = [('Airspeed', 
+                                          'Altitude AAL For Flight Phases')]
+        self.function = median_value
+        self.second_param_method_calls = [('slices_from_to', (500, 50), {})]
+
+    def test_derive(self):
+        aspd = P('Airspeed', array=np.ma.array([999, 999, 999, 999, 999,
+            145.25,  145.  ,  145.5 ,  146.  ,  146.  ,  145.75,  145.25,
+            145.5 ,  145.  ,  147.5 ,  145.75,  145.25,  145.5 ,  145.75,
+            145.5 ,  145.25,  142.25,  145.  ,  145.  ,  144.25,  145.75,
+            144.5 ,  146.75,  145.75,  146.25,  145.5 ,  144.  ,  142.5 ,
+            143.5 ,  144.5 ,  144.  ,  145.5 ,  144.5 ,  143.  ,  142.75,
+            999, 999, 999, 999, 999]))
+        alt = P('Altitude AAL', array=[502]*5 + range(399, 50, -10) + [0]*5)
+        node = Airspeed500To50FtMedian()
+        node.derive(aspd, alt)
+        self.assertEqual(node,
+                         [KeyPointValue(22, 145.25, 
+                                        name='Airspeed 500 To 50 Ft Median')])
+ 
+ 
+class TestAirspeed500To50FtMedianMinusAirspeedSelected(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = Airspeed500To50FtMedianMinusAirspeedSelected
+        self.operational_combinations = [('Airspeed Selected', 
+                                          'Airspeed 500 To 50 Ft Median')]
+        self.assertEqual(self.node_class.get_name(),
+                        'Airspeed 500 To 50 Ft Median Minus Airspeed Selected')
+
+    def test_derive(self):
+        
+        select_spd = P('Airspeed Selected', array=[
+            145.,  145.,  145.,  145.,  145.,  145.,  145.,  145.,  145.,
+            145.,  145.,  145.,  145.,  145.,  145.,  145.,  145.,  145.,
+            145.,  145.,  145.,  145.,  145.,  145.,  145.,  145.,  145.,
+            145.,  145.,  145.,  145.,  145.,  145.,  145.,  145.])
+        median_spd = Airspeed500To50FtMedian()
+        median_spd.create_kpv(10, 145.25)
+        diff = Airspeed500To50FtMedianMinusAirspeedSelected()
+        diff.derive(select_spd, median_spd)
+        self.assertEqual(diff, [KeyPointValue(10, .25,
+                name='Airspeed 500 To 50 Ft Median Minus Airspeed Selected')])
 
 
 class TestAirspeedAtTouchdown(unittest.TestCase, CreateKPVsAtKTIsTest):

@@ -3080,6 +3080,15 @@ class TestAverageValue(unittest.TestCase):
         array = np.ma.arange(30)
         self.assertEqual(average_value(array), Value(15, 14.5))
 
+         
+class TestMedianValue(unittest.TestCase):
+    def test_median_value(self):
+        array = np.ma.array(range(6) + range(4))
+        self.assertEqual(median_value(array), Value(5, 2))
+        
+        array = np.ma.arange(30)
+        self.assertEqual(median_value(array), Value(15, 14.5))
+
 
 class TestMaxAbsValue(unittest.TestCase):
     def test_max_abs_value(self):
