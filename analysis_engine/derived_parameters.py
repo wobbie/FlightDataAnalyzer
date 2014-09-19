@@ -5311,16 +5311,15 @@ class ThrustAsymmetry(DerivedParameterNode):
         self.array = moving_average(diff, window=window)
 
 
-class TurbulenceRMSG(DerivedParameterNode):
+class Turbulence(DerivedParameterNode):
     '''
-    Simple RMS g measurement of turbulence over a 5-second period.
+    Turbulence is measured as the Root Mean Squared (RMS) of the Vertical
+    Acceleration over a 5-second period.
     '''
 
-    name = 'Turbulence RMS g'
-    units = ut.RMS_G
+    units = ut.G
 
     def derive(self, acc=P('Acceleration Vertical')):
-
         width = int(acc.frequency*5)
         width += 1 - width % 2
         mean = moving_average(acc.array, window=width)

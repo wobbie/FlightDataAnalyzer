@@ -11462,7 +11462,7 @@ class TurbulenceDuringApproachMax(KeyPointValueNode):
     units = ut.G
 
     def derive(self,
-               turbulence=P('Turbulence RMS g'),
+               turbulence=P('Turbulence'),
                approaches=S('Approach')):
 
         self.create_kpvs_within_slices(turbulence.array, approaches, max_value)
@@ -11475,7 +11475,7 @@ class TurbulenceDuringCruiseMax(KeyPointValueNode):
     units = ut.G
 
     def derive(self,
-               turbulence=P('Turbulence RMS g'),
+               turbulence=P('Turbulence'),
                cruises=S('Cruise')):
 
         self.create_kpvs_within_slices(turbulence.array, cruises, max_value)
@@ -11488,9 +11488,9 @@ class TurbulenceDuringFlightMax(KeyPointValueNode):
     units = ut.G
 
     def derive(self,
-               turbulence=P('Turbulence RMS g'),
+               turbulence=P('Turbulence'),
                airborne=S('Airborne')):
-
+        #todo, restrict airborne a little to ensure doesn't trigger at touchdown 
         self.create_kpvs_within_slices(turbulence.array, airborne, max_value)
 
 

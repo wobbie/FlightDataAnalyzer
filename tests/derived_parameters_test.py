@@ -169,7 +169,7 @@ from analysis_engine.derived_parameters import (
     TrackContinuous,
     TrackTrue,
     TrackTrueContinuous,
-    TurbulenceRMSG,
+    Turbulence,
     VerticalSpeedInertial,
     WheelSpeed,
     WheelSpeedLeft,
@@ -4538,13 +4538,13 @@ class TestThrottleLevers(unittest.TestCase):
 
 
 class TestTurbulence(unittest.TestCase):
-    @unittest.skip('Test Not Implemented')
     def test_can_operate(self):
-        self.assertTrue(False, msg='Test not implemented.')
+        opts = Turbulence.get_operational_combinations()
+        self.assertEqual(opts, [('Acceleration Vertical',)])
 
     def test_derive(self):
         accel = np.ma.array([1]*40+[2]+[1]*40)
-        turb = TurbulenceRMSG()
+        turb = Turbulence()
         turb.derive(P('Acceleration Vertical', accel, frequency=8))
         expected = np.array([0]*20+[0.156173762]*41+[0]*20)
         np.testing.assert_array_almost_equal(expected, turb.array.data)
