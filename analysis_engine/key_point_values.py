@@ -3460,7 +3460,8 @@ class BrakePressureInTakeoffRollMax(KeyPointValueNode):
 
     units = None  # FIXME
 
-    def derive(self, bp=P('Brake Pressure'), rolls=S('Takeoff Roll Or Rejected Takeoff')):
+    def derive(self, bp=P('Brake Pressure'), 
+               rolls=S('Takeoff Roll Or Rejected Takeoff')):
 
         self.create_kpvs_within_slices(bp.array, rolls, max_value)
 
@@ -11645,6 +11646,8 @@ class DualInputDuration(KeyPointValueNode):
     We only look for dual input from the start of the first takeoff roll until
     the end of the last landing roll. This KPV is used to detect occurrences of
     dual input by either pilot irrespective of who was flying.
+    
+    This does not include looking at dual inputs during a rejected takeoff.
 
     Reference was made to the following documentation to assist with the
     development of this algorithm:
@@ -11657,7 +11660,7 @@ class DualInputDuration(KeyPointValueNode):
 
     def derive(self,
                dual=M('Dual Input Warning'),
-               takeoff_rolls=S('Takeoff Roll Or Rejected Takeoff'),
+               takeoff_rolls=S('Takeoff Roll'),
                landing_rolls=S('Landing Roll')):
 
         start = takeoff_rolls.get_first().slice.start
