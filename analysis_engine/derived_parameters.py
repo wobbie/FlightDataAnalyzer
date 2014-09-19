@@ -1052,12 +1052,14 @@ class AltitudeSTDSmoothed(DerivedParameterNode):
             # manipulation of the data.
             gauss = [0.054488683, 0.244201343, 0.402619948, 0.244201343, 0.054488683]
             self.array = moving_average(alt.array, window=5, weightings=gauss)
+            return
             
         elif frame_name in ['E135-145']:
             # Here two sources are sampled alternately, so this form of
             # weighting merges the two to create a smoothed average.
             self.array = moving_average(alt.array, window=3,
                                         weightings=[0.25,0.5,0.25])
+            return
 
         elif frame_name.startswith('747-200-') or \
              frame_name in ['A300-203-B4']:
