@@ -2417,10 +2417,7 @@ class Eng_N1MinFor5Sec(DerivedParameterNode):
     align_offset = 0
     units = ut.PERCENT
 
-    def derive(self,
-               eng_n1_min=P('Eng (*) N1 Min')):
-
-        #self.array = clip(eng_n1_min.array, 5.0, eng_n1_min.frequency, remove='troughs')
+    def derive(self, eng_n1_min=P('Eng (*) N1 Min')):
         self.array = second_window(eng_n1_min.array, self.frequency, 5)
 
 
