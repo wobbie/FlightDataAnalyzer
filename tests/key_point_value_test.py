@@ -434,6 +434,7 @@ from analysis_engine.key_point_values import (
     SpeedbrakeDeployedWithConfDuration,
     SpeedbrakeDeployedWithFlapDuration,
     SpeedbrakeDeployedWithPowerOnDuration,
+    StallWarningDuration,
     StickPusherActivatedDuration,
     StickShakerActivatedDuration,
     TAWSAlertDuration,
@@ -9458,6 +9459,14 @@ class TestSpeedbrakeDeployedDuringGoAroundDuration(unittest.TestCase, NodeTest):
 
 ##############################################################################
 # Warnings: Stick Pusher/Shaker
+
+class TestStallWarningDuration(unittest.TestCase, CreateKPVsWhereTest):
+    def setUp(self):
+        self.param_name = 'Stall Warning'
+        self.phase_name = 'Airborne'
+        self.node_class = StallWarningDuration
+        self.values_mapping = {0: '-', 1: 'Warning'}
+        self.basic_setup()
 
 
 class TestStickPusherActivatedDuration(unittest.TestCase, CreateKPVsWhereTest):

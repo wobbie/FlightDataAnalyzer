@@ -10233,7 +10233,18 @@ class SpeedbrakeDeployedDuringGoAroundDuration(KeyPointValueNode):
 
 
 ##############################################################################
-# Warnings: Stick Pusher/Shaker
+# Warnings: Stall, Stick Pusher/Shaker
+
+class StallWarningDuration(KeyPointValueNode):
+    '''
+    Duration the Stall Warning was active while airborne.
+    '''
+
+    units = ut.SECOND
+
+    def derive(self, stall_warning=M('Stall Warning'), airs=S('Airborne')):
+        self.create_kpvs_where(stall_warning.array == 'Warning',
+                               stall_warning.hz, phase=airs)
 
 
 class StickPusherActivatedDuration(KeyPointValueNode):
