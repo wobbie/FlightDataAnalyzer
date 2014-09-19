@@ -291,7 +291,8 @@ def track_to_kml(hdf_path, kti_list, kpv_list, approach_list,
     return dest_path
 
 
-def plot_parameter(array, show=True, label='', marker=None):
+fig = plt.figure() 
+def plot_parameter(array, new_subplot=False, show=True, label='', marker=None):
     """
     For quickly plotting a single parameter to see its shape.
     
@@ -302,18 +303,29 @@ def plot_parameter(array, show=True, label='', marker=None):
     :param show: Whether to display the figure (and block)
     :type show: Boolean
     """
-    try:
-        plt.title("Length: %d | Min: %.2f | Max: %.2f" % (
-            len(array), array.min(), array.max()))
-    except AttributeError:
-        # if a non-np.array is passed in, make do
-        plt.title("Length: %d | Min: %.2f | Max: %.2f" % (
-            len(array), min(array), max(array)))
-    plt.plot(array, marker=marker, label=label)
-    if show:
-        plt.show()
-    return
+    if array is None:
+        print "Cannot plot as array is None!"
+        return
+    n = len(fig.axes)
+    if n:
+        if new_subplot:
+            # resize
+            for i in range(n):
+                fig.axes[i].change_geometry(n+1, 1, i+1)
+            # add the new subplot
+            ax = fig.add_subplot(n+1, 1, n+1, sharex=fig.axes[0])
+        else:
+            # re-use last one
+            ax = fig.axes[-1]
+    else:
+        ax = fig.add_subplot(111)
 
+    # Plot the data
+    label = label or "Length: %d | Min: %.2f | Max: %.2f" % (
+        len(array), array.min(), array.max())
+    ax.plot(array, marker=marker, label=label)
+    plt.show()
+    
 
 def plot_essential(hdf_path):
     """
