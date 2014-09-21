@@ -11488,6 +11488,8 @@ class TouchdownTo60KtsDuration(KeyPointValueNode):
 
 class TurbulenceDuringApproachMax(KeyPointValueNode):
     '''
+    Turbulence, measured as the Root Mean Squared (RMS) of the Vertical
+    Acceleration, during Approach.
     '''
 
     units = ut.G
@@ -11501,6 +11503,8 @@ class TurbulenceDuringApproachMax(KeyPointValueNode):
 
 class TurbulenceDuringCruiseMax(KeyPointValueNode):
     '''
+    Turbulence, measured as the Root Mean Squared (RMS) of the Vertical
+    Acceleration, while in Cruise.
     '''
 
     units = ut.G
@@ -11514,6 +11518,8 @@ class TurbulenceDuringCruiseMax(KeyPointValueNode):
 
 class TurbulenceDuringFlightMax(KeyPointValueNode):
     '''
+    Turbulence, measured as the Root Mean Squared (RMS) of the Vertical
+    Acceleration, while Airborne.
     '''
 
     units = ut.G
@@ -11521,8 +11527,10 @@ class TurbulenceDuringFlightMax(KeyPointValueNode):
     def derive(self,
                turbulence=P('Turbulence'),
                airborne=S('Airborne')):
-        #todo, restrict airborne a little to ensure doesn't trigger at touchdown 
-        self.create_kpvs_within_slices(turbulence.array, airborne, max_value)
+        for air in airborne.get_slices():
+            # Restrict airborne a little to ensure doesn't trigger at touchdown
+            self.create_kpvs_within_slices(
+                turbulence.array, [slice(air.start+5, air.stop-5)], max_value)
 
 
 ##############################################################################
@@ -11736,7 +11744,7 @@ class DualInputAbove200FtDuration(KeyPointValueNode):
                alt_aal=P('Altitude AAL'),
                takeoff_rolls=S('Takeoff Roll'),
                landing_rolls=S('Landing Roll')):
-
+        # Q: Takeoff / Landing Roll should be redundant if over 200ft AAL?!
         start = takeoff_rolls.get_first().slice.start
         stop = landing_rolls.get_last().slice.stop
         phase = slices_and([slice(start, stop)], alt_aal.slices_above(200))
