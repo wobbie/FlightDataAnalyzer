@@ -2267,11 +2267,11 @@ class StableApproach(MultistateDerivedParameterNode):
             runway = approach.runway
             if runway and runway.get('localizer', {}).get('is_offset'):
                 # offset localizer
-                STABLE_HEADING = 25  # degrees
+                STABLE_HEADING = 20  # degrees
             else:
-                # use 15 to allow rolling a little over the 10 degrees when
+                # use 12 to allow rolling a little over the 10 degrees when
                 # aligning to runway.
-                STABLE_HEADING = 15  # degrees
+                STABLE_HEADING = 12  # degrees
             stable_track_dev = abs(track_dev) <= STABLE_HEADING
             stable &= stable_track_dev.filled(True)  # assume stable (on track)
 
