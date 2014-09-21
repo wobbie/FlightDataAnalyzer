@@ -2160,7 +2160,8 @@ class StableApproach(MultistateDerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
         # Many parameters are optional dependencies
-        deps = ['Combined Descent', 'Gear Down', 'Flap',
+        deps = ['Approach Information', 'Combined Descent',
+                'Gear Down', 'Flap',
                 'Track Deviation From Runway',
                 'Vertical Speed',
                 'Altitude AAL',
@@ -2170,7 +2171,8 @@ class StableApproach(MultistateDerivedParameterNode):
             'Eng (*) EPR Avg For 10 Sec' in available)
 
     def derive(self,
-               apps=S('Combined Descent'), #-- check!
+               apps=A('Approach Information'),
+               phases=S('Combined Descent'),
                gear=M('Gear Down'),
                flap=M('Flap'),
                tdev=P('Track Deviation From Runway'),
@@ -2196,7 +2198,10 @@ class StableApproach(MultistateDerivedParameterNode):
         repair = lambda ar, ap, method='interpolate': repair_mask(
             ar[ap], raise_entirely_masked=False, method=method)
 
-        for approach in apps:
+        for approach, phase in zip(apps, phases):
+            # use Combined descent phase slice as it contains all data
+            approach.slice = phase.slice
+            
             # FIXME: approaches shorter than 10 samples will not work due to
             # the use of moving_average with a width of 10 samples.
             if approach.slice.stop - approach.slice.start < 10:
@@ -2266,9 +2271,14 @@ class StableApproach(MultistateDerivedParameterNode):
             #== 3. Heading ==
             self.array[_slice][stable] = 3
             
-            # TODO: Try 30 degrees for a trial run!!
-            
-            STABLE_HEADING = 15  # degrees - use 15 to allow rolling a little over the 10 degrees when aligning to runway.
+            runway = approach.runway
+            if runway and runway.get('localizer', {}).get('is_offset'):
+                # offset localizer
+                STABLE_HEADING = 25  # degrees
+            else:
+                # use 15 to allow rolling a little over the 10 degrees when
+                # aligning to runway.
+                STABLE_HEADING = 15  # degrees
             stable_track_dev = abs(track_dev) <= STABLE_HEADING
             stable &= stable_track_dev.filled(True)  # assume stable (on track)
 
