@@ -1902,6 +1902,7 @@ class TestDerivedParameterNode(unittest.TestCase):
     def test_save_and_load_node(self):
         node = P('Altitude AAL', np.ma.array([0,1,2,3], mask=[0,1,1,0]),
               frequency=2, offset=0.123, data_type='Signed')
+        self.assertEqual(node.data_type, 'Signed')
         dest = os.path.join(test_data_path, 'altitude.nod')
         node.save(dest)
         self.assertTrue(os.path.isfile(dest))
