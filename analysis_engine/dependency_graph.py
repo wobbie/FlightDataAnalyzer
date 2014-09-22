@@ -127,14 +127,16 @@ def dependencies3(di_graph, root, node_mgr):
     :param node_mgr: Node manager which can assess whether nodes are operational with the available dependencies at each layer of the tree.
     :type node_mgr: analysis_engine.node.NodeManager
     '''
+    log_stuff = logger.getEffectiveLevel() >= logging.INFO
     def traverse_tree(node):
         "Begin the recursion at this node's position in the dependency tree"
         if node in path:
             # add node for it to be removed (pop'd) in a moment
             path.append(node)
             # we've met this node before; start of circular dependency?
-            logger.info("Circular dependency avoided at node '%s'. "
-                        "Branch path: %s", node, path)
+            if log_stuff:
+                logger.info("Circular dependency avoided at node '%s'. "
+                            "Branch path: %s", node, path)
             return False  # establishing if available; cannot yet be available
         # we're recursing down
         path.append(node)
@@ -380,27 +382,15 @@ def process_order(gr_all, node_mgr, raise_inoperable_requested=False):
     if inoperable_requested:
         logger.warning("Found %s inoperable requested parameters.",
                         len(inoperable_requested))
-        items = []
-        for n in sorted(inoperable_requested):
-            tree = indent_tree(gr_all, n, recurse_active=False)
-            if tree:
-                items.append('------- INOPERABLE -------')
-                items.extend(tree)
-        logger.debug('\n'+'\n'.join(items))        
-        ##for p in sorted(inoperable_required):
-            ##available = []
-            ##unavailable = []
-            ##for d in sorted(gr_all[p].keys()):
-                ##if d in inactive_nodes:
-                    ##unavailable.append(d)
-                ##else:
-                    ##available.append(d)
-            ##deps_avail = "'%s'\n - Available: %s\n - Unavailable: %s" % (p,
-                ##', '.join(available),
-                ##', '.join(unavailable))
-            ##items.append(deps_avail)
-        ##logger.info("Inoperable required parameters: \n%s",
-                    ##'\n'.join(items))
+        if logging.NOTSET < logger.getEffectiveLevel() <= logging.DEBUG:
+            # only build this massive tree if in debug!
+            items = []
+            for n in sorted(inoperable_requested):
+                tree = indent_tree(gr_all, n, recurse_active=False)
+                if tree:
+                    items.append('------- INOPERABLE -------')
+                    items.extend(tree)
+            logger.debug('\n'+'\n'.join(items))        
         if raise_inoperable_requested:
             raise InoperableDependencies(inoperable_requested)
     

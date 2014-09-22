@@ -60,6 +60,7 @@ from analysis_engine.library import (ambiguous_runway,
                                      max_abs_value,
                                      max_continuous_unmasked,
                                      max_value,
+                                     median_value,
                                      min_value,
                                      most_common_value,
                                      moving_average,
@@ -1176,8 +1177,7 @@ class Airspeed500To20FtMax(KeyPointValueNode):
 
     units = ut.KT
 
-    def derive(self,
-               air_spd=P('Airspeed'),
+    def derive(self, air_spd=P('Airspeed'),
                alt_aal=P('Altitude AAL For Flight Phases')):
 
         self.create_kpvs_within_slices(
@@ -1195,8 +1195,7 @@ class Airspeed500To20FtMin(KeyPointValueNode):
 
     units = ut.KT
 
-    def derive(self,
-               air_spd=P('Airspeed'),
+    def derive(self, air_spd=P('Airspeed'),
                alt_aal=P('Altitude AAL For Flight Phases')):
 
         self.create_kpvs_within_slices(
@@ -1206,6 +1205,42 @@ class Airspeed500To20FtMin(KeyPointValueNode):
         )
 
 
+class Airspeed500To50FtMedian(KeyPointValueNode):
+    '''
+    Median value of the recorded airspeed from 500ft above the airfield to
+    20ft above the airfield. This can be used to estimate the selected
+    airspeed used during final approach.
+    '''
+
+    units = ut.KT
+
+    def derive(self, air_spd=P('Airspeed'),
+               alt_aal=P('Altitude AAL For Flight Phases')):
+        #TODO: Round to the nearest Integer value if using for Airspeed
+        #Selected (pilots select whole numbers!)
+        self.create_kpvs_within_slices(
+            air_spd.array,
+            alt_aal.slices_from_to(500, 50),
+            median_value,
+        )
+
+
+class Airspeed500To50FtMedianMinusAirspeedSelected(KeyPointValueNode):
+    '''
+    Measurement used for investigation as to whether a flight's airspeed
+    between 500 and 50 feet resembles that of the airspeed selected.
+    '''
+
+    units = ut.KT
+
+    def derive(self, spd_selected=P('Airspeed Selected'),
+               spds_500_to_50=KPV('Airspeed 500 To 50 Ft Median')):
+        for spd_500_to_50 in spds_500_to_50:
+            spd_sel = value_at_index(spd_selected.array, spd_500_to_50.index)
+            self.create_kpv(spd_500_to_50.index, 
+                            spd_500_to_50.value - spd_sel)
+
+
 class AirspeedAtTouchdown(KeyPointValueNode):
     '''
     Airspeed measurement at the point of Touchdown.
@@ -1213,10 +1248,7 @@ class AirspeedAtTouchdown(KeyPointValueNode):
 
     units = ut.KT
 
-    def derive(self,
-               air_spd=P('Airspeed'),
-               touchdowns=KTI('Touchdown')):
-
+    def derive(self, air_spd=P('Airspeed'), touchdowns=KTI('Touchdown')):
         self.create_kpvs_at_ktis(air_spd.array, touchdowns)
 
 
@@ -3460,7 +3492,8 @@ class BrakePressureInTakeoffRollMax(KeyPointValueNode):
 
     units = None  # FIXME
 
-    def derive(self, bp=P('Brake Pressure'), rolls=S('Takeoff Roll Or Rejected Takeoff')):
+    def derive(self, bp=P('Brake Pressure'), 
+               rolls=S('Takeoff Roll Or Rejected Takeoff')):
 
         self.create_kpvs_within_slices(bp.array, rolls, max_value)
 
@@ -6578,7 +6611,6 @@ class EngGasTempDuringMaximumContinuousPowerForXMinMax(KeyPointValueNode):
         for minutes in self.NAME_VALUES['minutes']:
             seconds = minutes * 60
             self.create_kpvs_within_slices(
-                ##clip(eng_egt_max.array, minutes * 60, eng_egt_max.hz),
                 second_window(eng_egt_max.array.astype(int), eng_egt_max.hz, seconds),
                 max_cont_rating,
                 max_value,
@@ -8411,9 +8443,9 @@ class FlareDistance20FtToTouchdown(KeyPointValueNode):
                 # value to yield the KTP value.
                 if idx_20:
                     dist = max(integrate(gspd.array[idx_20:tdown.index+1],
-                                         gspd.hz))
+                                         gspd.hz, scale=KTS_TO_MPS))
                     self.create_kpv(tdown.index, dist)
-
+                    
 
 ##############################################################################
 # Fuel Quantity
@@ -10192,7 +10224,8 @@ class SpeedbrakeDeployedWithPowerOnDuration(KeyPointValueNode):
     Each time the aircraft is flown with high power and the speedbrakes open,
     something unusual is happening. We record the duration this happened for.
 
-    The threshold for high power is 60% N1. This aligns with the Airbus AFPS.
+    The threshold for high power is 60% N1. This aligns with the Airbus AFPS
+    and other flight data analysis programmes.
     '''
 
     units = ut.SECOND
@@ -10231,7 +10264,18 @@ class SpeedbrakeDeployedDuringGoAroundDuration(KeyPointValueNode):
 
 
 ##############################################################################
-# Warnings: Stick Pusher/Shaker
+# Warnings: Stall, Stick Pusher/Shaker
+
+class StallWarningDuration(KeyPointValueNode):
+    '''
+    Duration the Stall Warning was active while airborne.
+    '''
+
+    units = ut.SECOND
+
+    def derive(self, stall_warning=M('Stall Warning'), airs=S('Airborne')):
+        self.create_kpvs_where(stall_warning.array == 'Warning',
+                               stall_warning.hz, phase=airs)
 
 
 class StickPusherActivatedDuration(KeyPointValueNode):
@@ -10274,12 +10318,14 @@ class StallWarningActivatedDuration(KeyPointValueNode):
 
 class OverspeedDuration(KeyPointValueNode):
     '''
+    Duration the Overspeed Warning was active.
     '''
 
     units = ut.SECOND
 
-    def derive(self, overspeed=M('Overspeed Warning')):
-        self.create_kpvs_where(overspeed.array == 'Overspeed', self.frequency)
+    def derive(self, overspeed=M('Overspeed Warning'), airs=S('Airborne')):
+        self.create_kpvs_where(overspeed.array == 'Overspeed', 
+                               self.frequency, phase=airs)
 
 
 ##############################################################################
@@ -11442,12 +11488,14 @@ class TouchdownTo60KtsDuration(KeyPointValueNode):
 
 class TurbulenceDuringApproachMax(KeyPointValueNode):
     '''
+    Turbulence, measured as the Root Mean Squared (RMS) of the Vertical
+    Acceleration, during Approach.
     '''
 
     units = ut.G
 
     def derive(self,
-               turbulence=P('Turbulence RMS g'),
+               turbulence=P('Turbulence'),
                approaches=S('Approach')):
 
         self.create_kpvs_within_slices(turbulence.array, approaches, max_value)
@@ -11455,12 +11503,14 @@ class TurbulenceDuringApproachMax(KeyPointValueNode):
 
 class TurbulenceDuringCruiseMax(KeyPointValueNode):
     '''
+    Turbulence, measured as the Root Mean Squared (RMS) of the Vertical
+    Acceleration, while in Cruise.
     '''
 
     units = ut.G
 
     def derive(self,
-               turbulence=P('Turbulence RMS g'),
+               turbulence=P('Turbulence'),
                cruises=S('Cruise')):
 
         self.create_kpvs_within_slices(turbulence.array, cruises, max_value)
@@ -11468,15 +11518,19 @@ class TurbulenceDuringCruiseMax(KeyPointValueNode):
 
 class TurbulenceDuringFlightMax(KeyPointValueNode):
     '''
+    Turbulence, measured as the Root Mean Squared (RMS) of the Vertical
+    Acceleration, while Airborne.
     '''
 
     units = ut.G
 
     def derive(self,
-               turbulence=P('Turbulence RMS g'),
+               turbulence=P('Turbulence'),
                airborne=S('Airborne')):
-
-        self.create_kpvs_within_slices(turbulence.array, airborne, max_value)
+        for air in airborne.get_slices():
+            # Restrict airborne a little to ensure doesn't trigger at touchdown
+            self.create_kpvs_within_slices(
+                turbulence.array, [slice(air.start+5, air.stop-5)], max_value)
 
 
 ##############################################################################
@@ -11644,6 +11698,8 @@ class DualInputDuration(KeyPointValueNode):
     We only look for dual input from the start of the first takeoff roll until
     the end of the last landing roll. This KPV is used to detect occurrences of
     dual input by either pilot irrespective of who was flying.
+    
+    This does not include looking at dual inputs during a rejected takeoff.
 
     Reference was made to the following documentation to assist with the
     development of this algorithm:
@@ -11656,7 +11712,7 @@ class DualInputDuration(KeyPointValueNode):
 
     def derive(self,
                dual=M('Dual Input Warning'),
-               takeoff_rolls=S('Takeoff Roll Or Rejected Takeoff'),
+               takeoff_rolls=S('Takeoff Roll'),
                landing_rolls=S('Landing Roll')):
 
         start = takeoff_rolls.get_first().slice.start
@@ -11688,7 +11744,7 @@ class DualInputAbove200FtDuration(KeyPointValueNode):
                alt_aal=P('Altitude AAL'),
                takeoff_rolls=S('Takeoff Roll'),
                landing_rolls=S('Landing Roll')):
-
+        # Q: Takeoff / Landing Roll should be redundant if over 200ft AAL?!
         start = takeoff_rolls.get_first().slice.start
         stop = landing_rolls.get_last().slice.stop
         phase = slices_and([slice(start, stop)], alt_aal.slices_above(200))

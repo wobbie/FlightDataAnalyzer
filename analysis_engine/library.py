@@ -6,7 +6,7 @@ import math
 from collections import OrderedDict, namedtuple
 from datetime import datetime, timedelta
 from hashlib import sha256
-from itertools import izip, izip_longest
+from itertools import izip, izip_longest, tee
 from math import asin, atan2, ceil, cos, degrees, floor, log, radians, sin, sqrt
 from scipy import interpolate as scipy_interpolate, optimize
 
@@ -456,6 +456,12 @@ def bearing_and_distance(lat1, lon1, lat2, lon2):
     """
     Simplified version of bearings and distances for a single pair of
     locations. Gives bearing and distance of point 2 from point 1.
+    
+    :param lat1, lon1: Latitude/Longitude of starting point in degrees
+    :param lat2, lon2: Latitude/Longitude of ending point in degrees
+    
+    :returns bearing, distance: Bearing in degrees, Distance in metres.
+    :rtype: Two Numpy masked arrays 
     """
     brg, dist = bearings_and_distances(np.ma.array(lat2), np.ma.array(lon2),
                                        {'latitude':lat1, 'longitude':lon1})
@@ -477,7 +483,7 @@ def bearings_and_distances(latitudes, longitudes, reference):
     :type reference: dict with {'latitude': lat, 'longitude': lon} in degrees.
 
     :returns bearings, distances: Bearings in degrees, Distances in metres.
-    :type distances: Two Numpy masked arrays
+    :rtype: Two Numpy masked arrays
 
     Navigation formulae have been derived from the scripts at
     http://www.movable-type.co.uk/scripts/latlong.html
@@ -1065,137 +1071,6 @@ def delay(array, period, hz=1.0):
             return array
         else:
             return result
-
-
-def clip(array, period, hz=1.0, remove='peaks_and_troughs'):
-    '''
-    This function clips the data array such that the
-    values are present (or exceeded) in the original data for the period
-    defined. After processing with this function, the resulting array can be
-    used to detect maxima or minima (in exactly the same way as a non-clipped
-    parameter), however the values will have been met or exceeded in the
-    original data for the given duration.
-
-    :param array: Masked array of floats
-    :type array: Numpy masked array
-    :param period: Time for the output values to be sustained(sec)
-    :type period: int/float
-    :param hz: Frequency of the data_array
-    :type hz: float
-    :param remove: form of clipping required.
-    :type remove: string default is 'peaks_and_troughs', 'peaks' or 'troughs' alternatives.
-    '''
-    # Make a copy of the data to avoid corrupting the input array. This is
-    # especially important for "Eng Oil Temp For X Min Max" where this
-    # function is called repeatedly.
-    array_copy = np.ma.copy(array)
-
-    if remove not in ['peaks_and_troughs', 'peaks', 'troughs']:
-        raise ValueError('Clip called with unrecognised remove argument')
-
-    if hz <= 0.01:
-        raise ValueError('Clip called with sample rate outside permitted range')
-
-    half_width = int(period*hz)/2
-    # Trap low values. This can occur, for an example, where a parameter has
-    # a lower sample rate than expected.
-    if half_width < 1:
-        logger.warning('Clip called with period too short to have an effect')
-        return array_copy
-
-    if np.ma.count(array_copy) == 0:
-        raise ValueError('Clip called with entirely masked data')
-        return array_copy
-
-    # OK - normal operation here. We repair the mask to avoid propogating
-    # invalid samples unreasonably.
-    source = np.ma.array(repair_mask(array_copy, frequency=hz,
-                                     repair_duration=period-(1/hz)))
-
-    if source is None or np.ma.count(source)==0:
-        return np_ma_masked_zeros_like(source)
-
-    # We are going to compute maximum and minimum values with the required
-    # duration, so allocate working spaces...
-    local_max = np_ma_zeros_like(source)
-    local_min = np_ma_zeros_like(source)
-    end = len(source)-half_width
-
-    #...and work out these graphs.
-    for point in range(half_width,end):  # SLOW!
-        local_max[point]=np.ma.max(source[point-half_width:point+half_width+1])
-        local_min[point]=np.ma.min(source[point-half_width:point+half_width+1])
-
-    # For the maxima, find them using the cycle finder and remove the higher
-    # maxima (we are interested in using the lower cycle peaks to replace
-    # trough values).
-    max_index_cycles, max_value_cycles = cycle_finder(local_max, include_ends=False)
-    if len(max_value_cycles)<2:
-        max_indexes = max_index_cycles
-        max_values = max_value_cycles
-    else:
-        if max_value_cycles[1]>max_value_cycles[0]:
-            # Rising initally
-            max_indexes = [i for i in max_index_cycles[0::2]]
-            max_values = [v for v in max_value_cycles[0::2]]
-        else:
-            # Falling initally
-            max_indexes = [m for m in max_index_cycles[1::2]]
-            max_values = [v for v in max_value_cycles[1::2]]
-
-    # Same for minima, which will be used to substitute for peaks.
-    min_index_cycles, min_value_cycles = cycle_finder(local_min, include_ends=False)
-    if len(min_value_cycles)<2:
-        min_indexes = min_index_cycles
-        min_values = min_value_cycles
-    else:
-        if min_value_cycles[1]>min_value_cycles[0]:
-            # Rising initally
-            min_indexes = [i for i in min_index_cycles[1::2]]
-            min_values = [v for v in min_value_cycles[1::2]]
-        else:
-            # Falling initally
-            min_indexes = [i for i in min_index_cycles[0::2]]
-            min_values = [v for v in min_value_cycles[0::2]]
-
-
-    # Now build the final result.
-    result = source
-    # There is a fairly crude technique to find where maxima and minima overlap...
-    overlap_finder = np_ma_zeros_like(source)
-
-    if remove in ['peaks_and_troughs', 'troughs']:
-        for i, index in enumerate(max_indexes):
-            for j in range(index-half_width, index+half_width+1):
-                # Overwrite the local values with the clipped maximum value
-                result[j]=max_values[i]
-                # Record which indexes were overwritten.
-                overlap_finder[j]+=1
-
-    if remove in ['peaks_and_troughs', 'peaks']:
-        for i, index in enumerate(min_indexes):
-            for j in range(index-half_width, index+half_width+1):
-                # Overwrite the local values with the clipped minimum value
-                result[j]=min_values[i]
-                # Record which indexes were overwritten.
-                overlap_finder[j]+=1
-
-    # This is not an ideal solution of how to deal with minima and maxima
-    # that sit close to each other. This may need improving at a later date.
-    overlaps = np.ma.clump_masked(np.ma.masked_greater(overlap_finder,1))
-    for overlap in overlaps:
-        for p in range(max(overlap.start, half_width),
-                       min(overlap.stop, len(source)-half_width)):
-            to_average = source[p-half_width:p+half_width+1]
-            if len(to_average)==0:
-                raise ValueError('Trying to average no data in clip')
-            result[p]=np.ma.average(to_average )
-
-    # Mask the ends as we cannot have long periods at the end of the data.
-    result[:half_width+1] = np.ma.masked
-    result[-half_width-1:] = np.ma.masked
-
-    return result
 
 
 def positive_index(container, index):
@@ -3206,6 +3081,16 @@ def index_of_datetime(start_datetime, index_datetime, frequency, offset=0):
     return (difference.total_seconds() - offset) * frequency
 
 
+def pairwise(iterable):
+    '''
+    https://docs.python.org/2/library/itertools.html#recipes
+    s -> (s0,s1), (s1,s2), (s2, s3), ...
+    '''
+    a, b = tee(iterable)
+    next(b, None)
+    return izip(a, b)
+
+
 def is_index_within_slice(index, _slice):
     '''
     :type index: int or float
@@ -3880,6 +3765,26 @@ def max_value(array, _slice=slice(None), start_edge=None, stop_edge=None):
                           start_edge=start_edge, stop_edge=stop_edge)
 
     return Value(index, value)
+
+
+def median_value(array, _slice=None, start_edge=None, stop_edge=None):
+    '''
+    Calculate the median value within an optional slice of the array and return
+    both the endpoint index and the median.
+    
+    :param array: Data to calculate the median value of.
+    :type array: np.ma.masked_array
+    :param _slice: Optional subsection of the data to calculate the average value within.
+    :type _slice: slice
+    :returns: The midpoint index and the average value.
+    :rtype: Value named tuple of index and value.
+    '''
+    start = _slice.start or 0 if _slice else 0
+    stop = _slice.stop or len(array) if _slice else len(array)
+    midpoint = start + ((stop - start) / 2)
+    if _slice:
+        array = array[_slice]
+    return Value(midpoint, np.ma.median(array))
 
 
 def merge_masks(masks, min_unmasked=1):
@@ -5876,7 +5781,7 @@ def slices_from_ktis(kti_1, kti_2):
                 continue
             else:
                 # previous[1] was 0 and item[1] = 1
-                slices.append(slice(previous[0], item[0]))
+                slices.append(slice(previous[0], item[0]+1))
         previous = item
     return slices
 

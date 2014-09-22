@@ -1014,7 +1014,7 @@ class AltitudeRadioOffsetRemoved(DerivedParameterNode):
                                    ##extrapolate=True,
                                    ##raise_entirely_masked=False)
         self.array = alt_rad.array - adjust
-            
+
 
 class AltitudeSTDSmoothed(DerivedParameterNode):
     '''
@@ -1052,12 +1052,14 @@ class AltitudeSTDSmoothed(DerivedParameterNode):
             # manipulation of the data.
             gauss = [0.054488683, 0.244201343, 0.402619948, 0.244201343, 0.054488683]
             self.array = moving_average(alt.array, window=5, weightings=gauss)
+            return
             
         elif frame_name in ['E135-145']:
             # Here two sources are sampled alternately, so this form of
             # weighting merges the two to create a smoothed average.
             self.array = moving_average(alt.array, window=3,
                                         weightings=[0.25,0.5,0.25])
+            return
 
         elif frame_name.startswith('747-200-') or \
              frame_name in ['A300-203-B4']:
@@ -1456,8 +1458,8 @@ class DescendForFlightPhases(DerivedParameterNode):
 
 class AOA(DerivedParameterNode):
     '''
-    Angle of Attack - averages Left and Right signals. See Bombardier AOM-1281
-    document.
+    Angle of Attack - averages Left and Right signals to account for side slip.
+    See Bombardier AOM-1281 document for further details.
     '''
 
     name = 'AOA'
@@ -1482,9 +1484,9 @@ class AOA(DerivedParameterNode):
         if family and family.value == 'CL-600':
             # The Angle of Attack recorded in the FDR is "filtered" Body AoA
             # and is not compensated for sideslip, it must be converted back to
-            # Vane before it can be used. See Bombardier AOM-1281
-            # document.
+            # Vane before it can be used. See Bombardier AOM-1281 document.
             self.array = self.array * 1.661 - 1.404
+
 
 
 class ControlColumn(DerivedParameterNode):
@@ -1976,11 +1978,21 @@ class Eng_EPRMinFor5Sec(DerivedParameterNode):
     align_offset = 0
     units = None
 
-    def derive(self,
-               eng_epr_min=P('Eng (*) EPR Min')):
-
-        #self.array = clip(eng_epr_min.array, 5.0, eng_epr_min.frequency, remove='troughs')
+    def derive(self, eng_epr_min=P('Eng (*) EPR Min')):
         self.array = second_window(eng_epr_min.array, self.frequency, 5)
+
+
+class Eng_EPRAvgFor10Sec(DerivedParameterNode):
+    '''
+    Returns the average EPR for up to four engines over 10 seconds.
+    '''
+
+    name = 'Eng (*) EPR Avg For 10 Sec'
+    align_frequency = 1  # force odd freq for 10 sec window
+    units = None
+
+    def derive(self, eng_epr_avg=P('Eng (*) EPR Avg')):
+        self.array = second_window(eng_epr_avg.array, self.frequency, 10)
 
 
 class EngTPRLimitDifference(DerivedParameterNode):
@@ -2326,6 +2338,19 @@ class Eng_N1Avg(DerivedParameterNode):
         self.array = np.ma.average(engines, axis=0)
 
 
+class Eng_N1AvgFor10Sec(DerivedParameterNode):
+    '''
+    Returns the average N1 for up to four engines over 10 seconds.
+    '''
+
+    name = 'Eng (*) N1 Avg For 10 Sec'
+    align_frequency = 1  # force odd freq for 10 sec window
+    units = ut.PERCENT
+
+    def derive(self, eng_n1_avg=P('Eng (*) N1 Avg')):
+        self.array = second_window(eng_n1_avg.array, self.frequency, 10)
+
+
 class Eng_N1Max(DerivedParameterNode):
     '''
     This returns the highest N1 in any sample period for up to four engines.
@@ -2392,10 +2417,7 @@ class Eng_N1MinFor5Sec(DerivedParameterNode):
     align_offset = 0
     units = ut.PERCENT
 
-    def derive(self,
-               eng_n1_min=P('Eng (*) N1 Min')):
-
-        #self.array = clip(eng_n1_min.array, 5.0, eng_n1_min.frequency, remove='troughs')
+    def derive(self, eng_n1_min=P('Eng (*) N1 Min')):
         self.array = second_window(eng_n1_min.array, self.frequency, 5)
 
 
@@ -5286,16 +5308,15 @@ class ThrustAsymmetry(DerivedParameterNode):
         self.array = moving_average(diff, window=window)
 
 
-class TurbulenceRMSG(DerivedParameterNode):
+class Turbulence(DerivedParameterNode):
     '''
-    Simple RMS g measurement of turbulence over a 5-second period.
+    Turbulence is measured as the Root Mean Squared (RMS) of the Vertical
+    Acceleration over a 5-second period.
     '''
 
-    name = 'Turbulence RMS g'
-    units = ut.RMS_G
+    units = ut.G
 
     def derive(self, acc=P('Acceleration Vertical')):
-
         width = int(acc.frequency*5)
         width += 1 - width % 2
         mean = moving_average(acc.array, window=width)
@@ -6350,17 +6371,23 @@ class TrackDeviationFromRunway(DerivedParameterNode):
             track = track_mag
 
         self.array = np_ma_masked_zeros_like(track.array)
-
+        to_stop = None
+        if to_rwy:
+            # extend takeoff slice for 5 minutes after
+            to_stop = takeoff[0].slice.stop+300
+            _slice = slice(takeoff[0].slice.start, to_stop)
+            self._track_deviation(track.array, _slice, to_rwy.value, magnetic)
+            
         for app in apps:
             if not app.runway:
                 self.warning("Cannot calculate TrackDeviationFromRunway for "
                              "approach as there is no runway.")
                 continue
-            self._track_deviation(track.array, app.slice, app.runway, magnetic)
+            # extend approach slice up to 15 minutes earlier (or to takeoff)
+            app_start = max(to_stop, app.slice.start-900)
+            _slice = slice(app_start, app.slice.stop)
+            self._track_deviation(track.array, _slice, app.runway, magnetic)
 
-        if to_rwy:
-            self._track_deviation(track.array, takeoff[0].slice, to_rwy.value,
-                                  magnetic)
 
 
 class ElevatorActuatorMismatch(DerivedParameterNode):
@@ -7231,6 +7258,24 @@ class FlapManoeuvreSpeed(DerivedParameterNode):
 # Relative Airspeeds
 
 
+class AirspeedMinusAirspeedSelectedFor3Sec(DerivedParameterNode):
+    '''
+    Airspeed relative to Airspeed Selected.
+    '''
+
+    align_frequency = 2
+    align_offset = 0
+    units = ut.KT
+
+    @classmethod
+    def can_operate(cls, available):
+        return all_of(('Airspeed', 'Airspeed Selected'), available)
+
+    def derive(self, aspd=P('Airspeed'), aspd_sel=P('Airspeed Selected')):
+        self.array = second_window(aspd.array - aspd_sel.array, 
+                                   self.frequency, 3)
+        
+
 ########################################
 # Airspeed Minus V2
 
@@ -7618,9 +7663,7 @@ class AirspeedRelativeFor3Sec(DerivedParameterNode):
             self.array = combined
         else:
             self.array = app_array
-
-
-##############################################################################
+            
 
 ########################################
 # Aircraft Energy

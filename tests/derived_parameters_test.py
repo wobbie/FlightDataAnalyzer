@@ -55,6 +55,7 @@ from analysis_engine.derived_parameters import (
     AimingPointRange,
     AircraftEnergy,
     AirspeedForFlightPhases,
+    AirspeedMinusAirspeedSelectedFor3Sec,
     AirspeedSelected,
     AirspeedTrue,
     AltitudeAAL,
@@ -168,7 +169,7 @@ from analysis_engine.derived_parameters import (
     TrackContinuous,
     TrackTrue,
     TrackTrueContinuous,
-    TurbulenceRMSG,
+    Turbulence,
     VerticalSpeedInertial,
     WheelSpeed,
     WheelSpeedLeft,
@@ -4537,13 +4538,13 @@ class TestThrottleLevers(unittest.TestCase):
 
 
 class TestTurbulence(unittest.TestCase):
-    @unittest.skip('Test Not Implemented')
     def test_can_operate(self):
-        self.assertTrue(False, msg='Test not implemented.')
+        opts = Turbulence.get_operational_combinations()
+        self.assertEqual(opts, [('Acceleration Vertical',)])
 
     def test_derive(self):
         accel = np.ma.array([1]*40+[2]+[1]*40)
-        turb = TurbulenceRMSG()
+        turb = Turbulence()
         turb.derive(P('Acceleration Vertical', accel, frequency=8))
         expected = np.array([0]*20+[0.156173762]*41+[0]*20)
         np.testing.assert_array_almost_equal(expected, turb.array.data)
@@ -6808,6 +6809,21 @@ class TestAirspeedRelativeFor3Sec(unittest.TestCase, NodeTest):
         node.derive(self.v2, None, None)
         ma_test.assert_masked_array_equal(node.array, self.v2.array)
 
+
+
+class TestAirspeedMinusAirspeedSelectedFor3Sec(unittest.TestCase):
+    def test_can_operate(self):
+        o = AirspeedMinusAirspeedSelectedFor3Sec.get_operational_combinations()
+        self.assertEqual([('Airspeed', 'Airspeed Selected')], o)
+         
+    def test_derive(self):
+        aspd = P('Airspeed', array=np.ma.array([256]*250))
+        aspd_sel = P('Airspeed Selected', array=np.ma.array(
+            [999]*10 + [0]*90 + [250]*150))
+        aspd_minus_sel = AirspeedMinusAirspeedSelectedFor3Sec()
+        aspd_minus_sel.get_derived([aspd, aspd_sel])
+        ma_test.assert_array_equal(
+            aspd_minus_sel.array[-150:], np.ma.ones(150)*6)
 
 ##############################################################################
 

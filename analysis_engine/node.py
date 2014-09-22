@@ -29,6 +29,7 @@ from analysis_engine.library import (
     slices_below,
     slices_between,
     slices_from_to,
+    slices_remove_small_gaps,
     value_at_index,
     value_at_time,
 )
@@ -521,7 +522,7 @@ class DerivedParameterNode(Node):
         if not isinstance(self.array, np.ma.MaskedArray):
             self.array = np.ma.array(array, dtype=float)
 
-        if not self.data_type:
+        if data_type:
             self.data_type = data_type
 
         super(DerivedParameterNode, self).__init__(name=name,
@@ -650,7 +651,11 @@ class DerivedParameterNode(Node):
                 if is_index_within_slice(tdwn.index, new_basic):
                     result.append(slice(new_basic.start, tdwn.index))
                     break
-        return result
+            
+        if len(result) > 1:
+            return slices_remove_small_gaps(result, 5, self.frequency)
+        else:
+            return result
 
 
 P = Parameter = DerivedParameterNode # shorthand
@@ -2297,12 +2302,12 @@ class NodeManager(object):
                     attributes.append(self.get_attribute(default.name))
             # can_operate expects attributes.
             res = derived_node.can_operate(available, *attributes)
-            if not res:
-                logger.debug("Derived Node %s cannot operate with available nodes: %s",
-                              name, available)
+            ##if not res:
+                ##logger.debug("Derived Node %s cannot operate with available nodes: %s",
+                              ##name, available)
             return res
         else:
-            logger.debug("Node '%s' is unavailable", name)
+            ##logger.debug("Node '%s' is unavailable", name)
             return False
 
     def node_type(self, node_name):

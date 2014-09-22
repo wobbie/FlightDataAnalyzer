@@ -14,7 +14,7 @@ from flightdatautilities.aircrafttables.interfaces import VelocitySpeed
 from flightdatautilities import masked_array_testutils as ma_test
 from flightdatautilities.geometry import midpoint
 
-from analysis_engine.library import align
+from analysis_engine.library import align, median_value
 from analysis_engine.node import (
     A, App, ApproachItem, KPV, KTI, load, M, P, KeyPointValue,
     MultistateDerivedParameterNode,
@@ -66,6 +66,8 @@ from analysis_engine.key_point_values import (
     Airspeed35To1000FtMin,
     Airspeed5000To3000FtMax,
     Airspeed500To20FtMax,
+    Airspeed500To50FtMedian,
+    Airspeed500To50FtMedianMinusAirspeedSelected,
     Airspeed500To20FtMin,
     Airspeed5000To10000FtMax,
     Airspeed8000To10000FtMax,
@@ -434,6 +436,7 @@ from analysis_engine.key_point_values import (
     SpeedbrakeDeployedWithConfDuration,
     SpeedbrakeDeployedWithFlapDuration,
     SpeedbrakeDeployedWithPowerOnDuration,
+    StallWarningDuration,
     StickPusherActivatedDuration,
     StickShakerActivatedDuration,
     TAWSAlertDuration,
@@ -1777,6 +1780,55 @@ class TestAirspeed500To20FtMin(unittest.TestCase, CreateKPVsWithinSlicesTest):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test Not Implemented')
+
+
+class TestAirspeed500To50FtMedian(unittest.TestCase, CreateKPVsWithinSlicesTest):
+
+    def setUp(self):
+        self.node_class = Airspeed500To50FtMedian
+        self.operational_combinations = [('Airspeed', 
+                                          'Altitude AAL For Flight Phases')]
+        self.function = median_value
+        self.second_param_method_calls = [('slices_from_to', (500, 50), {})]
+
+    def test_derive(self):
+        aspd = P('Airspeed', array=np.ma.array([999, 999, 999, 999, 999,
+            145.25,  145.  ,  145.5 ,  146.  ,  146.  ,  145.75,  145.25,
+            145.5 ,  145.  ,  147.5 ,  145.75,  145.25,  145.5 ,  145.75,
+            145.5 ,  145.25,  142.25,  145.  ,  145.  ,  144.25,  145.75,
+            144.5 ,  146.75,  145.75,  146.25,  145.5 ,  144.  ,  142.5 ,
+            143.5 ,  144.5 ,  144.  ,  145.5 ,  144.5 ,  143.  ,  142.75,
+            999, 999, 999, 999, 999]))
+        alt = P('Altitude AAL', array=[502]*5 + range(399, 50, -10) + [0]*5)
+        node = Airspeed500To50FtMedian()
+        node.derive(aspd, alt)
+        self.assertEqual(node,
+                         [KeyPointValue(22, 145.25, 
+                                        name='Airspeed 500 To 50 Ft Median')])
+ 
+ 
+class TestAirspeed500To50FtMedianMinusAirspeedSelected(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = Airspeed500To50FtMedianMinusAirspeedSelected
+        self.operational_combinations = [('Airspeed Selected', 
+                                          'Airspeed 500 To 50 Ft Median')]
+        self.assertEqual(self.node_class.get_name(),
+                        'Airspeed 500 To 50 Ft Median Minus Airspeed Selected')
+
+    def test_derive(self):
+        
+        select_spd = P('Airspeed Selected', array=[
+            145.,  145.,  145.,  145.,  145.,  145.,  145.,  145.,  145.,
+            145.,  145.,  145.,  145.,  145.,  145.,  145.,  145.,  145.,
+            145.,  145.,  145.,  145.,  145.,  145.,  145.,  145.,  145.,
+            145.,  145.,  145.,  145.,  145.,  145.,  145.,  145.])
+        median_spd = Airspeed500To50FtMedian()
+        median_spd.create_kpv(10, 145.25)
+        diff = Airspeed500To50FtMedianMinusAirspeedSelected()
+        diff.derive(select_spd, median_spd)
+        self.assertEqual(diff, [KeyPointValue(10, .25,
+                name='Airspeed 500 To 50 Ft Median Minus Airspeed Selected')])
 
 
 class TestAirspeedAtTouchdown(unittest.TestCase, CreateKPVsAtKTIsTest):
@@ -3598,7 +3650,8 @@ class TestBrakePressureInTakeoffRollMax(unittest.TestCase,
                                         CreateKPVsWithinSlicesTest):
     def setUp(self):
         self.node_class = BrakePressureInTakeoffRollMax
-        self.operational_combinations = [('Brake Pressure', 'Takeoff Roll',)]
+        self.operational_combinations = [('Brake Pressure', 
+                                          'Takeoff Roll Or Rejected Takeoff')]
         self.function = max_value
 
     @unittest.skip('Test Not Implemented')
@@ -3641,7 +3694,7 @@ class TestAutobrakeRejectedTakeoffNotSetDuringTakeoff(unittest.TestCase,
                                                       CreateKPVsWhereTest):
     def setUp(self):
         self.param_name = 'Autobrake Selected RTO'
-        self.phase_name = 'Takeoff Roll'
+        self.phase_name = 'Takeoff Roll Or Rejected Takeoff'
         self.node_class = AutobrakeRejectedTakeoffNotSetDuringTakeoff
         self.values_mapping = {0: '-', 1: 'Selected'}
 
@@ -3653,25 +3706,23 @@ class TestAutobrakeRejectedTakeoffNotSetDuringTakeoff(unittest.TestCase,
         self.basic_setup()
 
 
-class TestAutobrakeRejectedTakeoffNotSetDuringTakeoff_masked(
-        unittest.TestCase, CreateKPVsWhereTest):
-    def setUp(self):
-        self.param_name = 'Autobrake Selected RTO'
-        self.phase_name = 'Takeoff Roll'
-        self.node_class = AutobrakeRejectedTakeoffNotSetDuringTakeoff
-        self.values_mapping = {0: '-', 1: 'Selected'}
-
+    def test_with_masked_values(self):
+        node = AutobrakeRejectedTakeoffNotSetDuringTakeoff()
+        
         # Masked values are considered "correct" in given circumstances, in
         # this case we assume them to be "Selected"
-        self.values_array = np.ma.array(
-            [0] * 5 + [1] * 4 + [0] * 3,
-            mask=[False] * 3 + [True] * 2 + [False] * 7)
-
-        self.expected = [KeyPointValue(
+        autobrake = M('Autobrake Selected RTO', 
+                      np.ma.array(
+                          [0] * 5 + [1] * 4 + [0] * 3,
+                          mask=[False] * 3 + [True] * 2 + [False] * 7),
+                      values_mapping = {0: '-', 1: 'Selected'})
+        phase = S('Takeoff Roll Or Rejected Takeoff')
+        phase.create_section(slice(2, 7))
+        node.derive(autobrake, phase)
+        self.assertEqual(node, [KeyPointValue(
             index=2, value=1.0,
-            name='Autobrake Rejected Takeoff Not Set During Takeoff')]
+            name='Autobrake Rejected Takeoff Not Set During Takeoff')])
 
-        self.basic_setup()
 
 
 ##############################################################################
@@ -7826,11 +7877,43 @@ class TestFlareDuration20FtToTouchdown(unittest.TestCase, NodeTest):
 class TestFlareDistance20FtToTouchdown(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = FlareDistance20FtToTouchdown
-        self.operational_combinations = [('Altitude AAL For Flight Phases', 'Touchdown', 'Landing', 'Groundspeed')]
+        self.operational_combinations = [
+            ('Altitude AAL For Flight Phases',
+             'Touchdown', 'Landing', 'Groundspeed')]
 
-    @unittest.skip('Test Not Implemented')
     def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+        flare_dist = FlareDistance20FtToTouchdown()
+        alt_aal = P('Altitude AAL', frequency=2, array=np.ma.array([
+            78.67015114,  72.96263885,  67.11249936,  61.07833929,
+            54.90942938,  48.68353449,  42.50324374,  36.48330464,
+            30.76228438,  25.47636721,  20.7296974 ,  16.6029949 ,
+            13.11602541,  10.26427979,   8.00656174,   6.28504293,
+            5.0119151 ,   4.09266636,   3.43519846,   2.95430818,
+            2.58943048,   2.29123077,   2.03074567,   1.78243098,
+            1.51466402,   1.19706783,   0.80993319,   0.3440701 ,
+            0.        ,   0.        ,   0.        ,   0.        ,
+            0.        ,   0.        ,   0.        ,   0.        ,
+            0.        ,   0.        ]))
+        
+        gspd = P('Groundspeed', frequency=1, array=np.ma.array([
+            144.40820312,  144.5       ,  144.5       ,  144.5       ,
+            144.5       ,  144.5       ,  144.5       ,  144.65820312,
+            144.90820312,  145.        ,  145.        ,  144.84179688,
+            144.59179688,  144.18359375,  143.68359375,  143.18359375,
+            142.68359375,  142.02539062,  141.27539062,  140.52539062,
+            139.77539062,  139.02539062,  138.27539062,  137.52539062,
+            136.77539062,  136.02539062,  135.27539062,  134.52539062,
+            133.77539062,  132.8671875 ,  131.8671875 ,  130.8671875 ,
+            129.8671875 ,  128.70898438,  127.45898438,  125.89257812,
+            124.14257812,  122.39257812]))
+        tdwn = KTI('Touchdown', frequency=2)
+        tdwn.create_kti(27.0078125)
+        ldg = S('Landing', frequency=2)
+        ldg.create_section(slice(5, 28, None),
+                           begin=5.265625, end=27.265625)
+        flare_dist.get_derived([alt_aal, tdwn, ldg, gspd])
+        self.assertAlmostEqual(flare_dist[0].index, 27, 0)
+        self.assertAlmostEqual(flare_dist[0].value, 632.69, 0)  # Meters
 
 
 ##############################################################################
@@ -7872,7 +7955,7 @@ class TestFuelQtyAtLiftoff(unittest.TestCase):
         fq.derive(fuel_qty, liftoff)
         self.assertEqual(len(fq), 1)
         self.assertEqual(fq[0].index, 54)
-        self.assertEqual(fq[0].value, 105372.5)
+        self.assertAlmostEqual(fq[0].value, 105371, 0)
 
 
 class TestFuelQtyAtTouchdown(unittest.TestCase):
@@ -8114,7 +8197,8 @@ class TestGroundspeedSpeedbrakeHandleDuringTakeoffMax(unittest.TestCase,
     def setUp(self):
         self.node_class = GroundspeedSpeedbrakeHandleDuringTakeoffMax
         self.operational_combinations = [
-            ('Groundspeed', 'Speedbrake Handle', 'Takeoff Roll')]
+            ('Groundspeed', 'Speedbrake Handle',
+             'Takeoff Roll Or Rejected Takeoff')]
 
     def test_derive(self):
         array = np.arange(10) + 100
@@ -8142,7 +8226,7 @@ class TestGroundspeedSpeedbrakeDuringTakeoffMax(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = GroundspeedSpeedbrakeDuringTakeoffMax
         self.operational_combinations = [
-            ('Groundspeed', 'Speedbrake', 'Takeoff Roll')]
+            ('Groundspeed', 'Speedbrake', 'Takeoff Roll Or Rejected Takeoff')]
 
     def test_derive(self):
         array = np.arange(10) + 100
@@ -8170,7 +8254,8 @@ class TestGroundspeedFlapChangeDuringTakeoffMax(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = GroundspeedFlapChangeDuringTakeoffMax
-        self.operational_combinations = [('Groundspeed', 'Flap', 'Takeoff Roll')]
+        self.operational_combinations = [('Groundspeed', 'Flap', 
+                                          'Takeoff Roll Or Rejected Takeoff')]
 
     def test_derive(self):
         array = np.ma.arange(10) + 100
@@ -9252,7 +9337,8 @@ class TestRudderDuringTakeoffMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
 
     def setUp(self):
         self.node_class = RudderDuringTakeoffMax
-        self.operational_combinations = [('Rudder', 'Takeoff Roll')]
+        self.operational_combinations = [('Rudder', 
+                                          'Takeoff Roll Or Rejected Takeoff')]
         self.function = max_abs_value
 
     @unittest.skip('Test Not Implemented')
@@ -9457,6 +9543,14 @@ class TestSpeedbrakeDeployedDuringGoAroundDuration(unittest.TestCase, NodeTest):
 ##############################################################################
 # Warnings: Stick Pusher/Shaker
 
+class TestStallWarningDuration(unittest.TestCase, CreateKPVsWhereTest):
+    def setUp(self):
+        self.param_name = 'Stall Warning'
+        self.phase_name = 'Airborne'
+        self.node_class = StallWarningDuration
+        self.values_mapping = {0: '-', 1: 'Warning'}
+        self.basic_setup()
+
 
 class TestStickPusherActivatedDuration(unittest.TestCase, CreateKPVsWhereTest):
     def setUp(self):
@@ -9464,7 +9558,6 @@ class TestStickPusherActivatedDuration(unittest.TestCase, CreateKPVsWhereTest):
         self.phase_name = 'Airborne'
         self.node_class = StickPusherActivatedDuration
         self.values_mapping = {0: '-', 1: 'Push'}
-
         self.basic_setup()
 
 
@@ -9474,7 +9567,6 @@ class TestStickShakerActivatedDuration(unittest.TestCase, CreateKPVsWhereTest):
         self.phase_name = 'Airborne'
         self.node_class = StickShakerActivatedDuration
         self.values_mapping = {0: '-', 1: 'Shake'}
-
         self.basic_setup()
 
     def test_short_pulses(self):
@@ -9493,10 +9585,9 @@ class TestStickShakerActivatedDuration(unittest.TestCase, CreateKPVsWhereTest):
 class TestOverspeedDuration(unittest.TestCase, CreateKPVsWhereTest):
     def setUp(self):
         self.param_name = 'Overspeed Warning'
-        self.phase_name = None
+        self.phase_name = 'Airborne'
         self.node_class = OverspeedDuration
         self.values_mapping = {0: '-', 1: 'Overspeed'}
-
         self.basic_setup()
 
 
@@ -9666,7 +9757,8 @@ class TestMasterWarningDuringTakeoffDuration(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = MasterWarningDuringTakeoffDuration
-        self.operational_combinations = [('Master Warning', 'Takeoff Roll')]
+        self.operational_combinations = [('Master Warning', 
+                                          'Takeoff Roll Or Rejected Takeoff')]
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
@@ -9677,7 +9769,8 @@ class TestMasterCautionDuringTakeoffDuration(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = MasterCautionDuringTakeoffDuration
-        self.operational_combinations = [('Master Caution', 'Takeoff Roll')]
+        self.operational_combinations = [('Master Caution', 
+                                          'Takeoff Roll Or Rejected Takeoff')]
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
@@ -10264,7 +10357,7 @@ class TestTakeoffConfigurationWarningDuration(unittest.TestCase,
                                               CreateKPVsWhereTest):
     def setUp(self):
         self.param_name = 'Takeoff Configuration Warning'
-        self.phase_name = 'Takeoff Roll'
+        self.phase_name = 'Takeoff Roll Or Rejected Takeoff'
         self.node_class = TakeoffConfigurationWarningDuration
         self.values_mapping = {0: '-', 1: 'Warning'}
 
@@ -10275,7 +10368,7 @@ class TestTakeoffConfigurationFlapWarningDuration(unittest.TestCase,
                                                   CreateKPVsWhereTest):
     def setUp(self):
         self.param_name = 'Takeoff Configuration Flap Warning'
-        self.phase_name = 'Takeoff Roll'
+        self.phase_name = 'Takeoff Roll Or Rejected Takeoff'
         self.node_class = TakeoffConfigurationFlapWarningDuration
         self.values_mapping = {0: '-', 1: 'Warning'}
 
@@ -10286,7 +10379,7 @@ class TestTakeoffConfigurationParkingBrakeWarningDuration(unittest.TestCase,
                                                           CreateKPVsWhereTest):
     def setUp(self):
         self.param_name = 'Takeoff Configuration Parking Brake Warning'
-        self.phase_name = 'Takeoff Roll'
+        self.phase_name = 'Takeoff Roll Or Rejected Takeoff'
         self.node_class = TakeoffConfigurationParkingBrakeWarningDuration
         self.values_mapping = {0: '-', 1: 'Warning'}
 
@@ -10297,7 +10390,7 @@ class TestTakeoffConfigurationSpoilerWarningDuration(unittest.TestCase,
                                                      CreateKPVsWhereTest):
     def setUp(self):
         self.param_name = 'Takeoff Configuration Spoiler Warning'
-        self.phase_name = 'Takeoff Roll'
+        self.phase_name = 'Takeoff Roll Or Rejected Takeoff'
         self.node_class = TakeoffConfigurationSpoilerWarningDuration
         self.values_mapping = {0: '-', 1: 'Warning'}
 
@@ -10308,7 +10401,7 @@ class TestTakeoffConfigurationStabilizerWarningDuration(unittest.TestCase,
                                                         CreateKPVsWhereTest):
     def setUp(self):
         self.param_name = 'Takeoff Configuration Stabilizer Warning'
-        self.phase_name = 'Takeoff Roll'
+        self.phase_name = 'Takeoff Roll Or Rejected Takeoff'
         self.node_class = TakeoffConfigurationStabilizerWarningDuration
         self.values_mapping = {0: '-', 1: 'Warning'}
 
@@ -10349,7 +10442,8 @@ class TestThrustAsymmetryDuringTakeoffMax(unittest.TestCase, CreateKPVsWithinSli
 
     def setUp(self):
         self.node_class = ThrustAsymmetryDuringTakeoffMax
-        self.operational_combinations = [('Thrust Asymmetry', 'Takeoff Roll')]
+        self.operational_combinations = [('Thrust Asymmetry',
+                                          'Takeoff Roll Or Rejected Takeoff')]
         self.function = max_value
 
     @unittest.skip('Test Not Implemented')
@@ -10460,7 +10554,7 @@ class TestTurbulenceDuringApproachMax(unittest.TestCase, CreateKPVsWithinSlicesT
 
     def setUp(self):
         self.node_class = TurbulenceDuringApproachMax
-        self.operational_combinations = [('Turbulence RMS g', 'Approach')]
+        self.operational_combinations = [('Turbulence', 'Approach')]
         self.function = max_value
 
     @unittest.skip('Test Not Implemented')
@@ -10472,7 +10566,7 @@ class TestTurbulenceDuringCruiseMax(unittest.TestCase, CreateKPVsWithinSlicesTes
 
     def setUp(self):
         self.node_class = TurbulenceDuringCruiseMax
-        self.operational_combinations = [('Turbulence RMS g', 'Cruise')]
+        self.operational_combinations = [('Turbulence', 'Cruise')]
         self.function = max_value
 
     @unittest.skip('Test Not Implemented')
@@ -10484,7 +10578,7 @@ class TestTurbulenceDuringFlightMax(unittest.TestCase, CreateKPVsWithinSlicesTes
 
     def setUp(self):
         self.node_class = TurbulenceDuringFlightMax
-        self.operational_combinations = [('Turbulence RMS g', 'Airborne')]
+        self.operational_combinations = [('Turbulence', 'Airborne')]
         self.function = max_value
 
     @unittest.skip('Test Not Implemented')
@@ -10631,7 +10725,7 @@ class TestDualInputDuration(unittest.TestCase, NodeTest):
         dual = M('Dual Input Warning', np.ma.zeros(50), values_mapping=mapping)
         dual.array[3:10] = 'Dual'
 
-        takeoff_roll = buildsection('Takeoff Roll', 0, 5)
+        takeoff_roll = buildsection('Takeoff Roll Or Rejected Takeoff', 0, 5)
         landing_roll = buildsection('Landing Roll', 44, 50)
 
         node = self.node_class()
@@ -10648,7 +10742,7 @@ class TestDualInputDuration(unittest.TestCase, NodeTest):
         path = os.path.join(test_data_path, 'dual_input.hdf5')
         [dual], phase = self.get_params_from_hdf(path, ['Dual Input Warning'])
 
-        takeoff_roll = buildsection('Takeoff Roll', 0, 100)
+        takeoff_roll = buildsection('Takeoff Roll Or Rejected Takeoff', 0, 100)
         landing_roll = buildsection('Landing Roll', 320, 420)
 
         node = self.node_class()
@@ -10881,9 +10975,10 @@ class TestLastFlapChangeToTakeoffRollEndDuration(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = LastFlapChangeToTakeoffRollEndDuration
         self.operational_combinations = [
-            ('Flap Lever', 'Takeoff Roll'),
-            ('Flap Lever (Synthetic)', 'Takeoff Roll'),
-            ('Flap Lever', 'Flap Lever (Synthetic)', 'Takeoff Roll'),
+            ('Flap Lever', 'Takeoff Roll Or Rejected Takeoff'),
+            ('Flap Lever (Synthetic)', 'Takeoff Roll Or Rejected Takeoff'),
+            ('Flap Lever', 'Flap Lever (Synthetic)', 
+             'Takeoff Roll Or Rejected Takeoff'),
         ]
 
     def test_derive(self):
