@@ -8443,9 +8443,9 @@ class FlareDistance20FtToTouchdown(KeyPointValueNode):
                 # value to yield the KTP value.
                 if idx_20:
                     dist = max(integrate(gspd.array[idx_20:tdown.index+1],
-                                         gspd.hz))
+                                         gspd.hz, scale=KTS_TO_MPS))
                     self.create_kpv(tdown.index, dist)
-
+                    
 
 ##############################################################################
 # Fuel Quantity
