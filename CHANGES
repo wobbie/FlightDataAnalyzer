@@ -9,6 +9,29 @@ You can view the differences in tagged versions as follows:
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
 
+V0.14.1
+-------
+
+ - Improvements
+   - Engine Vibrations are averaged over 8 seconds to limit the effect of transient spikes.
+   - library.second_window has an option to automatically extend the window if the window size is incompatible.
+   - Eng Start and Eng Stop detection is more robust when the flight data is corrupted or incomplete.
+   - Rejected Takeoff improved to detect less obvious instances.
+   - Control Column/Wheel Force Key Point Values limited to the Airborne flight phase.
+   - Segment boundaries during splitting are forced to be 4 seconds for ARINC 767 data.
+   - Stable Approach algorithm detection improved by broadening the criteria and averaging engine power for 8 seconds.
+   - Plotting parameters with matplotlib creates subgraphs when requested for more configurable data inspection.
+   - Eng Hotel Mode flight phases require Propeller Brake.
+   - Stall Warning Duration Key Point Value.
+   - Overspeed Duration Key Point Value.
+   - Airspeed Minus Airspeed Selected For 3 Sec Key Point Value.
+   - Clip library function removed from codebase as it has been replaced by second_window.
+ - Fixes
+   - Turbulence RMS g renamed to Turbulence.
+   - The Altitude STD signal is not smoothed twice.
+   - Speedbrake Handle error fixed when only one of (L), (R) or (C) parameters are available.
+   - Node type has been fixed to be stored correctly when creating derived parameters.
+
 V0.13.3
 -------
 
@@ -20,7 +43,7 @@ V0.13.3
    - Fixed frequency issue with gear up also changed to using Gear Up Selected to improve accuracy at gear extention.
    - Stick Shaker KPVs not created for segments less than one second.
    - Engine Start and Stop now work with Eng (*) Ng where available. 
- - Fixes:
+ - Fixes
    - Fixes to Gear parameters to correct Gear Retracting and prevent Gear Retracting
      and Gear Retracted phases overlapping
    - Split segments datetime correction logging
