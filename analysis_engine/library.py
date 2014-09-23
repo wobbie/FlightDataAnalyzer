@@ -457,6 +457,12 @@ def bearing_and_distance(lat1, lon1, lat2, lon2):
     """
     Simplified version of bearings and distances for a single pair of
     locations. Gives bearing and distance of point 2 from point 1.
+    
+    :param lat1, lon1: Latitude/Longitude of starting point in degrees
+    :param lat2, lon2: Latitude/Longitude of ending point in degrees
+    
+    :returns bearing, distance: Bearing in degrees, Distance in metres.
+    :rtype: Two Numpy masked arrays 
     """
     brg, dist = bearings_and_distances(np.ma.array(lat2), np.ma.array(lon2),
                                        {'latitude':lat1, 'longitude':lon1})
@@ -478,7 +484,7 @@ def bearings_and_distances(latitudes, longitudes, reference):
     :type reference: dict with {'latitude': lat, 'longitude': lon} in degrees.
 
     :returns bearings, distances: Bearings in degrees, Distances in metres.
-    :type distances: Two Numpy masked arrays
+    :rtype: Two Numpy masked arrays
 
     Navigation formulae have been derived from the scripts at
     http://www.movable-type.co.uk/scripts/latlong.html

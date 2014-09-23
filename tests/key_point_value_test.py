@@ -7877,11 +7877,43 @@ class TestFlareDuration20FtToTouchdown(unittest.TestCase, NodeTest):
 class TestFlareDistance20FtToTouchdown(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = FlareDistance20FtToTouchdown
-        self.operational_combinations = [('Altitude AAL For Flight Phases', 'Touchdown', 'Landing', 'Groundspeed')]
+        self.operational_combinations = [
+            ('Altitude AAL For Flight Phases',
+             'Touchdown', 'Landing', 'Groundspeed')]
 
-    @unittest.skip('Test Not Implemented')
     def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+        flare_dist = FlareDistance20FtToTouchdown()
+        alt_aal = P('Altitude AAL', frequency=2, array=np.ma.array([
+            78.67015114,  72.96263885,  67.11249936,  61.07833929,
+            54.90942938,  48.68353449,  42.50324374,  36.48330464,
+            30.76228438,  25.47636721,  20.7296974 ,  16.6029949 ,
+            13.11602541,  10.26427979,   8.00656174,   6.28504293,
+            5.0119151 ,   4.09266636,   3.43519846,   2.95430818,
+            2.58943048,   2.29123077,   2.03074567,   1.78243098,
+            1.51466402,   1.19706783,   0.80993319,   0.3440701 ,
+            0.        ,   0.        ,   0.        ,   0.        ,
+            0.        ,   0.        ,   0.        ,   0.        ,
+            0.        ,   0.        ]))
+        
+        gspd = P('Groundspeed', frequency=1, array=np.ma.array([
+            144.40820312,  144.5       ,  144.5       ,  144.5       ,
+            144.5       ,  144.5       ,  144.5       ,  144.65820312,
+            144.90820312,  145.        ,  145.        ,  144.84179688,
+            144.59179688,  144.18359375,  143.68359375,  143.18359375,
+            142.68359375,  142.02539062,  141.27539062,  140.52539062,
+            139.77539062,  139.02539062,  138.27539062,  137.52539062,
+            136.77539062,  136.02539062,  135.27539062,  134.52539062,
+            133.77539062,  132.8671875 ,  131.8671875 ,  130.8671875 ,
+            129.8671875 ,  128.70898438,  127.45898438,  125.89257812,
+            124.14257812,  122.39257812]))
+        tdwn = KTI('Touchdown', frequency=2)
+        tdwn.create_kti(27.0078125)
+        ldg = S('Landing', frequency=2)
+        ldg.create_section(slice(5, 28, None),
+                           begin=5.265625, end=27.265625)
+        flare_dist.get_derived([alt_aal, tdwn, ldg, gspd])
+        self.assertAlmostEqual(flare_dist[0].index, 27, 0)
+        self.assertAlmostEqual(flare_dist[0].value, 632.69, 0)  # Meters
 
 
 ##############################################################################

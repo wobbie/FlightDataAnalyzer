@@ -522,7 +522,7 @@ class DerivedParameterNode(Node):
         if not isinstance(self.array, np.ma.MaskedArray):
             self.array = np.ma.array(array, dtype=float)
 
-        if not self.data_type:
+        if data_type:
             self.data_type = data_type
 
         super(DerivedParameterNode, self).__init__(name=name,

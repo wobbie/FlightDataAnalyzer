@@ -16,7 +16,7 @@ from analysis_engine.library import (
 from analysis_engine.node import (
     Attribute,
     A,
-    #App,
+    App,
     #ApproachItem,
     #KeyPointValue,
     #KPV,
@@ -2199,32 +2199,36 @@ class TestStableApproach(unittest.TestCase):
         opts = StableApproach.get_operational_combinations()
         combinations = [
             # all
-            ('Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL', 'Vapp'),
+            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL', 'Vapp'),
             # exc. Vapp
-            ('Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
+            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
             # exc. Airspeed Relative
-            ('Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL', 'Vapp'),
+            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL', 'Vapp'),
             # exc. Vapp and Airspeed Relative
-            ('Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
+            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
             # exc. ILS Glideslope and Vapp
-            ('Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
+            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
             # exc. ILS Glideslope and ILS Localizer and Vapp
-            ('Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
+            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
             # using EPR and exc. Airspeed Relative
-            ('Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) EPR Avg For 10 Sec', 'Altitude AAL', 'Vapp'),
+            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) EPR Avg For 10 Sec', 'Altitude AAL', 'Vapp'),
             # including Family attribute
-            ('Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) EPR Avg For 10 Sec', 'Altitude AAL', 'Vapp', 'Family'),
+            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) EPR Avg For 10 Sec', 'Altitude AAL', 'Vapp', 'Family'),
         ]
         for combo in combinations:
             self.assertIn(combo, opts)
 
     def test_stable_approach(self):
         stable = StableApproach()
+        apps = App()
+        apps.create_approach('LANDING', slice(15, 20),
+                             gs_est=True, loc_est=True,
+                             runway={'localizer':{'is_offset':False}})                
 
         # Arrays will be 20 seconds long, index 4, 13,14,15 are stable
         #0. first and last values are not in approach slice
-        apps = S()
-        apps.create_section(slice(1,20))
+        phases = S()
+        phases.create_section(slice(1,20))
         #1. gear up for index 0-2
         g = [ 0,  0,  0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1]
         gear = M(array=np.ma.array(g), values_mapping={1:'Down'})
@@ -2262,7 +2266,7 @@ class TestStableApproach(unittest.TestCase):
         # == [2000, 1800, 1600, 1400, 1200, 1000, 800, 600, 400, 219, 199, 179, 159, 139, 119, 99, 79, 59, 39, 19]
         alt = P(array=np.ma.array(al))
         # DERIVE without using Vapp (using Vref limits)
-        stable.derive(apps, gear, flap, head, aspd, None, vert_spd, glide, loc, eng, None, alt, None)
+        stable.derive(apps, phases, gear, flap, head, aspd, None, vert_spd, glide, loc, eng, None, alt, None)
         self.assertEqual(len(stable.array), len(alt.array))
         self.assertEqual(len(stable.array), len(head.array))
 
@@ -2273,19 +2277,22 @@ class TestStableApproach(unittest.TestCase):
                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
 
         #========== NO GLIDESLOPE ==========
-        # Test without the use of Glideslope (not on it at 1000ft) therefore
-        # instability for index 7-10 is now due to low Engine Power
+        # Test without the use of Glideslope (not established according to
+        # Approach) therefore instability for index 7-10 is now due to low
+        # Engine Power
         glide2 = P(array=np.ma.array([3.5]*20))
-        stable.derive(apps, gear, flap, head, aspd, None, vert_spd, glide2, loc, eng, None, alt, None)
+        apps[0].gs_est = False
+        stable.derive(apps, phases, gear, flap, head, aspd, None, vert_spd, glide2, loc, eng, None, alt, None)
         self.assertEqual(list(stable.array.data),
         #index: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20
                [0, 1, 1, 4, 9, 2, 8, 8, 8, 8, 8, 3, 3, 8, 9, 9, 9, 9, 9, 9, 0])
-
+        
         #========== VERTICAL SPEED ==========
         # Test with a lot of vertical speed (rather than just gusts above)
+        # Note: Glideslope still not established.
         v2 = [-1800] * 20
         vert_spd2 = P(array=np.ma.array(v2))
-        stable.derive(apps, gear, flap, head, aspd, None, vert_spd2, glide2, loc, eng, None, alt, None)
+        stable.derive(apps, phases, gear, flap, head, aspd, None, vert_spd2, glide2, loc, eng, None, alt, None)
         self.assertEqual(list(stable.array.data),
         #index: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20
                [0, 1, 1, 4, 7, 2, 7, 7, 7, 7, 7, 3, 3, 7, 7, 7, 7, 7, 7, 7, 0])
@@ -2295,20 +2302,25 @@ class TestStableApproach(unittest.TestCase):
         # reason is continued to touchdown. Higher level checks (Heading at 3)
         # still take priority at indexes 11-12
         #                                        219ft == 1.5 dots
+        apps[0].gs_est = True
         g3 = [ 6,  6,  6,  6,  0, .5, .5,-.5,1.2,1.5,1.4,1.3,  0,  0,  0,  0,  0, -2, -2, -2, -2]
         gm = [ 1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0]
         glide3 = P(array=np.ma.array(g3, mask=gm))
-        stable.derive(apps, gear, flap, head, aspd, None, vert_spd, glide3, loc, eng, None, alt, None)
+        stable.derive(apps, phases, gear, flap, head, aspd, None, vert_spd, glide3, loc, eng, None, alt, None)
         self.assertEqual(list(stable.array.data),
         #index: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20
                [0, 1, 1, 4, 9, 2, 8, 6, 5, 5, 5, 3, 3, 5, 5, 5, 5, 5, 5, 5, 0])
 
 
     def test_with_real_data(self):
-
-        apps = S(items=[Section(name='Approach And Landing',
+        apps = App()
+        apps.create_approach('LANDING', slice(2800, 3000),
+                             gs_est=True, loc_est=True,
+                             runway={'localizer':{'is_offset':False}})
+        phases = S(items=[Section(name='Approach And Landing',
                                 slice=slice(2702, 2993, None),
                                 start_edge=2702.0, stop_edge=2993.0)])
+        
 
         #def save_test_node(param):
             #param.save('../tests/test_data/Stable Approach - '+param.name+'.nod')
@@ -2328,6 +2340,7 @@ class TestStableApproach(unittest.TestCase):
 
         stable.derive(
             apps=apps,
+            phases=phases,
             gear=gear,
             flap=flap,
             tdev=tdev,

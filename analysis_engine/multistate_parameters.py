@@ -2160,7 +2160,8 @@ class StableApproach(MultistateDerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
         # Many parameters are optional dependencies
-        deps = ['Combined Descent', 'Gear Down', 'Flap',
+        deps = ['Approach Information', 'Combined Descent',
+                'Gear Down', 'Flap',
                 'Track Deviation From Runway',
                 'Vertical Speed',
                 'Altitude AAL',
@@ -2170,7 +2171,8 @@ class StableApproach(MultistateDerivedParameterNode):
             'Eng (*) EPR Avg For 10 Sec' in available)
 
     def derive(self,
-               apps=S('Combined Descent'), #-- check!
+               apps=A('Approach Information'),
+               phases=S('Combined Descent'),
                gear=M('Gear Down'),
                flap=M('Flap'),
                tdev=P('Track Deviation From Runway'),
@@ -2196,7 +2198,11 @@ class StableApproach(MultistateDerivedParameterNode):
         repair = lambda ar, ap, method='interpolate': repair_mask(
             ar[ap], raise_entirely_masked=False, method=method)
 
-        for approach in apps:
+        for approach, phase in zip(apps, phases):
+            # use Combined descent phase slice as it contains the data from
+            # top of descent to touchdown (approach starts and finishes later)
+            approach.slice = phase.slice
+            
             # FIXME: approaches shorter than 10 samples will not work due to
             # the use of moving_average with a width of 10 samples.
             if approach.slice.stop - approach.slice.start < 10:
@@ -2231,15 +2237,7 @@ class StableApproach(MultistateDerivedParameterNode):
 
             index_at_50 = index_closest_value(altitude, 50)
             index_at_200 = index_closest_value(altitude, 200)
-
-            # Determine whether Glideslope was used at 1000ft, if not ignore ILS
-            glide_est_at_1000ft = False
-            if gdev and ldev:
-                _1000 = index_at_value(altitude, 1000)
-                if _1000:
-                    # If masked at 1000ft; bool(np.ma.masked) == False
-                    glide_est_at_1000ft = abs(glideslope[_1000]) < 1.5  # dots
-
+            
             #== 1. Gear Down ==
             # Assume unstable due to Gear Down at first
             self.array[_slice] = 1
@@ -2266,9 +2264,14 @@ class StableApproach(MultistateDerivedParameterNode):
             #== 3. Heading ==
             self.array[_slice][stable] = 3
             
-            # TODO: Try 30 degrees for a trial run!!
-            
-            STABLE_HEADING = 15  # degrees - use 15 to allow rolling a little over the 10 degrees when aligning to runway.
+            runway = approach.runway
+            if runway and runway.get('localizer', {}).get('is_offset'):
+                # offset localizer
+                STABLE_HEADING = 20  # degrees
+            else:
+                # use 12 to allow rolling a little over the 10 degrees when
+                # aligning to runway.
+                STABLE_HEADING = 12  # degrees
             stable_track_dev = abs(track_dev) <= STABLE_HEADING
             stable &= stable_track_dev.filled(True)  # assume stable (on track)
 
@@ -2292,7 +2295,7 @@ class StableApproach(MultistateDerivedParameterNode):
                 stable_airspeed[altitude < 50] = stable_airspeed[index_at_50]
                 stable &= stable_airspeed.filled(True)  # if no V Ref speed, values are masked so consider stable as one is not flying to the vref speed??
 
-            if glide_est_at_1000ft:
+            if approach.gs_est:
                 #== 5. Glideslope Deviation ==
                 self.array[_slice][stable] = 5
                 STABLE_GLIDESLOPE = 1.0  # dots
@@ -2301,6 +2304,7 @@ class StableApproach(MultistateDerivedParameterNode):
                 stable_gs[altitude < 200] = stable_gs[index_at_200]
                 stable &= stable_gs.filled(False)  # masked values are usually because they are way outside of range and short spikes will have been repaired
 
+            if approach.gs_est and approach.loc_est:
                 #== 6. Localizer Deviation ==
                 self.array[_slice][stable] = 6
                 STABLE_LOCALIZER = 1.0  # dots

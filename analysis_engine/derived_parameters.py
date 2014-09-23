@@ -6371,17 +6371,23 @@ class TrackDeviationFromRunway(DerivedParameterNode):
             track = track_mag
 
         self.array = np_ma_masked_zeros_like(track.array)
-
+        to_stop = None
+        if to_rwy:
+            # extend takeoff slice for 5 minutes after
+            to_stop = takeoff[0].slice.stop+300
+            _slice = slice(takeoff[0].slice.start, to_stop)
+            self._track_deviation(track.array, _slice, to_rwy.value, magnetic)
+            
         for app in apps:
             if not app.runway:
                 self.warning("Cannot calculate TrackDeviationFromRunway for "
                              "approach as there is no runway.")
                 continue
-            self._track_deviation(track.array, app.slice, app.runway, magnetic)
+            # extend approach slice up to 15 minutes earlier (or to takeoff)
+            app_start = max(to_stop, app.slice.start-900)
+            _slice = slice(app_start, app.slice.stop)
+            self._track_deviation(track.array, _slice, app.runway, magnetic)
 
-        if to_rwy:
-            self._track_deviation(track.array, takeoff[0].slice, to_rwy.value,
-                                  magnetic)
 
 
 class ElevatorActuatorMismatch(DerivedParameterNode):
