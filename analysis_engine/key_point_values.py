@@ -1237,8 +1237,9 @@ class Airspeed500To50FtMedianMinusAirspeedSelected(KeyPointValueNode):
                spds_500_to_50=KPV('Airspeed 500 To 50 Ft Median')):
         for spd_500_to_50 in spds_500_to_50:
             spd_sel = value_at_index(spd_selected.array, spd_500_to_50.index)
-            self.create_kpv(spd_500_to_50.index, 
-                            spd_500_to_50.value - spd_sel)
+            if spd_sel is not None:
+                self.create_kpv(spd_500_to_50.index,
+                                spd_500_to_50.value - spd_sel)
 
 
 class AirspeedAtTouchdown(KeyPointValueNode):
