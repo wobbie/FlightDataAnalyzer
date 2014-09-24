@@ -227,11 +227,16 @@ class ClimbStart(KeyTimeInstanceNode):
     
     def derive(self, alt_aal=P('Altitude AAL'), liftoffs=KTI('Liftoff'),
                tocs=KTI('Top Of Climb')):
+        # Repair Altitude AAL array as masked sections will affect
+        # Climb Start detection.
+        alt_array = repair_mask(alt_aal.array, repair_duration=None)
+        
         for liftoff in liftoffs:
             # Assumes a Top Of Climb KTI exists after each Liftoff.
             toc = tocs.get_next(liftoff.index)
             climb_slice = slice(liftoff.index, toc.index)
-            index = index_at_value(alt_aal.array, CLIMB_THRESHOLD, climb_slice)
+            
+            index = index_at_value(alt_array, CLIMB_THRESHOLD, climb_slice)
             if index:
                 self.create_kti(index)
 
