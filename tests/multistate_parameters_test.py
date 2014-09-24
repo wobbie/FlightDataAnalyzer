@@ -2233,7 +2233,8 @@ class TestStableApproach(unittest.TestCase):
         g = [ 0,  0,  0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1]
         gear = M(array=np.ma.array(g), values_mapping={1:'Down'})
         #2. landing flap invalid index 0, 5
-        f = [ 5, 15, 15, 15, 15,  0, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15]
+        # Setting 30 is ignored as it's above 1,000ft
+        f = [ 5, 15, 30, 15, 15,  0, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15]
         flap = P(array=np.ma.array(f))
         #3. Heading stays within limits except for index 11-12, although we weren't on the heading sample 15 (masked out)
         h = [20, 20,  2,  3,  4,  8,  0,  0,  0,  0,  2, 20, 20,  8,  2,  0,  1,  1,  1,  1,  1]
