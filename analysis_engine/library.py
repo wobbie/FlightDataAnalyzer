@@ -1642,6 +1642,12 @@ def find_edges(array, _slice=slice(None), direction='rising_edges'):
     transition took place (with highest probability) midway between the two
     recorded states.
     '''
+    if ((_slice.start is not None or _slice.stop is not None) and 
+        len(array[_slice]) < 2):
+        # Slice of array is too small for finding edges.
+        # Avoid unnecessarily copying whole array if slice is default.
+        return []
+    
     if direction == 'rising_edges':
         method = 'fill_start'
     else:
