@@ -2247,9 +2247,14 @@ class StableApproach(MultistateDerivedParameterNode):
             #== 2. Landing Flap ==
             # not due to landing gear so try to prove it wasn't due to Landing Flap
             self.array[_slice][stable] = 2
-            # look for maximum flap used in approach, otherwise go-arounds
-            # can detect the start of flap retracting as the landing flap.
-            landing_flap = np.ma.max(flap_lever)
+            # look for maximum flap used in approach below 1,000ft, otherwise
+            # go-arounds can detect the start of flap retracting as the
+            # landing flap.
+            landing_flap = np.ma.where(altitude < 1000, flap_lever, np.ma.masked).max()
+            if landing_flap is np.ma.masked:
+                # try looking above 1000ft
+                landing_flap = np.ma.where(altitude > 1000, flap_lever, np.ma.masked).max()
+            
             if landing_flap is not np.ma.masked:
                 landing_flap_set = (flap_lever == landing_flap)
                 # assume stable (flap set)
