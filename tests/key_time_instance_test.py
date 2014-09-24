@@ -169,7 +169,7 @@ class TestBottomOfDescent(unittest.TestCase):
 
 class TestClimbStart(unittest.TestCase):
     def test_can_operate(self):
-        expected = [('Altitude AAL', 'Liftoff', 'Top Of Climb')]
+        expected = [('Altitude AAL For Flight Phases', 'Liftoff', 'Top Of Climb')]
         opts = ClimbStart.get_operational_combinations()
         self.assertEqual(opts, expected)
 
