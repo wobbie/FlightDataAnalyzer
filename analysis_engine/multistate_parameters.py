@@ -2112,21 +2112,28 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
 
 class StableApproach(MultistateDerivedParameterNode):
     '''
-    During the Approach, the following steps are assessed for stability:
+    During the Descent and Approach, the following steps are assessed in turn
+    to determine the aircraft stability:
 
     1. Gear is down
     2. Landing Flap is set
-    3. Heading aligned to Runway within 10 degrees
-    4. Approach Airspeed minus Reference speed within 20 knots
+    3. Track is aligned to Runway (within 12 degrees or 30 if offset approach)
+    4. Airspeed minus selected approach speed within -5 to +10 knots (for 3 secs)
     5. Glideslope deviation within 1 dot
     6. Localizer deviation within 1 dot
-    7. Vertical speed between -1000 and -200 fpm
-    8. Engine Power greater than 45% # TODO: and not Cycling within last 5 seconds
+    7. Vertical speed between -1100 and -200 fpm
+    8. Engine Thurst greater than 45% N1 or 35% (A319/B787) or 1.09 EPR (for 10 secs)
 
     if all the above steps are met, the result is the declaration of:
     9. "Stable"
-
+    
+    Notes:
+    
+    Airspeed is relative to "Airspeed Selected" where available as this will
+    account for the reference speed and any compensation for the wind speed.
+    
     If Vapp is recorded, a more constraint airspeed threshold is applied.
+    
     Where parameters are not monitored below a certain threshold (e.g. ILS
     below 200ft) the stability criteria just before 200ft is reached is
     continued through to landing. So if one was unstable due to ILS
@@ -2135,23 +2142,24 @@ class StableApproach(MultistateDerivedParameterNode):
 
     TODO/REVIEW:
     ============
-    * Check for 300ft limit if turning onto runway late and ignore stability criteria before this? Alternatively only assess criteria when heading is within 50.
-    * Q: Fill masked values of parameters with False (unstable: stop here) or True (stable, carry on)
+    * Check for 300ft limit if turning onto runway late and ignore stability 
+      criteria before this? Alternatively only assess criteria when heading is 
+      within 50.
     * Add hysteresis (3 second gliding windows for GS / LOC etc.)
     * Engine cycling check
-    * Check Boeing's Vref as one may add an increment to this (20kts) which is not recorded!
+    * Use Engine TPR for B787 instead of EPR if available.
     '''
 
     values_mapping = {
         0: '-',  # All values should be masked anyway, this helps align values
         1: 'Gear Not Down',
         2: 'Not Landing Flap',
-        3: 'Hdg Not Aligned',   # Rename with heading?
+        3: 'Track Not Aligned',
         4: 'Aspd Not Stable',  # Q: Split into two Airspeed High/Low?
         5: 'GS Not Stable',
         6: 'Loc Not Stable',
         7: 'IVV Not Stable',
-        8: 'Eng N1 Not Stable',
+        8: 'Eng Thrust Not Stable',
         9: 'Stable',
     }
 
@@ -2186,10 +2194,6 @@ class StableApproach(MultistateDerivedParameterNode):
                alt=P('Altitude AAL'),
                vapp=P('Vapp'),
                family=A('Family')):
-
-        #Ht AAL due to
-        # the altitude above airfield level corresponding to each cause
-        # options are FLAP, GEAR GS HI/LO, LOC, SPD HI/LO and VSI HI/LO
 
         # create an empty fully masked array
         self.array = np.ma.zeros(len(alt.array), dtype=np.short)
@@ -2266,18 +2270,18 @@ class StableApproach(MultistateDerivedParameterNode):
                     'the approach.')
                 stable &= True
 
-            #== 3. Heading ==
+            #== 3. Track Deviation ==
             self.array[_slice][stable] = 3
             
             runway = approach.runway
             if runway and runway.get('localizer', {}).get('is_offset'):
-                # offset localizer
-                STABLE_HEADING = 20  # degrees
+                # offset ILS Localizer or offset approach without ILS (IAN approach)
+                STABLE_TRACK = 30  # degrees
             else:
                 # use 12 to allow rolling a little over the 10 degrees when
                 # aligning to runway.
-                STABLE_HEADING = 12  # degrees
-            stable_track_dev = abs(track_dev) <= STABLE_HEADING
+                STABLE_TRACK = 12  # degrees
+            stable_track_dev = abs(track_dev) <= STABLE_TRACK
             stable &= stable_track_dev.filled(True)  # assume stable (on track)
 
             if airspeed is not None:
@@ -2327,7 +2331,7 @@ class StableApproach(MultistateDerivedParameterNode):
             stable_vert[altitude < 50] = stable_vert[index_at_50]
             stable &= stable_vert.filled(True)
 
-            #== 8. Engine Power (N1) ==
+            #== 8. Engine Thrust (N1/EPR) ==
             self.array[_slice][stable] = 8
             # TODO: Patch this value depending upon aircraft type
             if family and family.value in ('B787', 'A319'):
@@ -2340,9 +2344,7 @@ class StableApproach(MultistateDerivedParameterNode):
             # extend the stability at the end of the altitude threshold through to landing
             stable_engine[altitude < 50] = stable_engine[index_at_50]
             stable &= stable_engine.filled(True)
-
-            # TODO: Use Engine TPR instead of EPR if available.
-
+            
             #== 9. Stable ==
             # Congratulations; whatever remains in this approach is stable!
             self.array[_slice][stable] = 9
