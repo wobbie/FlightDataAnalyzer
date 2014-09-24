@@ -37,9 +37,17 @@ def geo_locate(hdf, items):
         logger.warning("Could not geo-locate as either 'Latitude Smoothed' or "
                        "'Longitude Smoothed' were not found within the hdf.")
         return items
-
-    lat_pos = derived_param_from_hdf(hdf['Latitude Smoothed'])
-    lon_pos = derived_param_from_hdf(hdf['Longitude Smoothed'])
+    
+    lat_hdf = hdf['Latitude Smoothed']
+    lon_hdf = hdf['Longitude Smoothed']
+    
+    if not lat_hdf.array.count() or lon_hdf.array.count():
+        logger.warning("Could not geo-locate as either 'Latitude Smoothed' or "
+                       "'Longitude Smoothed' have no unmasked values.")
+        return items
+    
+    lat_pos = derived_param_from_hdf(lat_hdf)
+    lon_pos = derived_param_from_hdf(lon_hdf)
     lat_pos.array = repair_mask(lat_pos.array, extrapolate=True)
     lon_pos.array = repair_mask(lon_pos.array, extrapolate=True)
     for item in items:
