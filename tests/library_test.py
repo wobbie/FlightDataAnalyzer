@@ -4640,10 +4640,63 @@ class TestSlicesDuration(unittest.TestCase):
                                           slice(30, 60)], 2), 19)
 
 
+class TestSlicesContract(unittest.TestCase):
+    def test_slices_contract(self):
+        slices = [slice(None, 10), slice(30, 40), slice(70, None)]
+        self.assertEqual(slices_contract(slices, 0), slices)
+        expected = [slice(2, 8), slice(32, 38), slice(72, None)]
+        self.assertEqual(slices_contract(slices, 2), expected)
+        expected = [slice(2, 8), slice(32, 38), slice(72, 78)]
+        self.assertEqual(slices_contract(slices, 2, max_index=80), expected)
+        # Smaller slices may be contracted 'out of existence'.
+        slices = [slice(None, 20, 2), slice(30, 40), slice(70, None)]
+        expected = [slice(6, 14, 2), slice(76, None)]
+        self.assertEqual(slices_contract(slices, 6), expected)
+        expected = [slice(6, 14, 2)]
+        self.assertEqual(slices_contract(slices, 6, max_index=80), expected)
+        expected = [slice(5, 15, 2)]
+        self.assertEqual(slices_contract(slices, 5, max_index=80), expected)
+        expected = [slice(90, None)]
+        self.assertEqual(slices_contract(slices, 20), expected)
+        expected = []
+        self.assertEqual(slices_contract(slices, 20, max_index=80), expected)
+        
+        # Negative step is not supported.
+        slices = [slice(5, 25), slice(40, 60, -2)]
+        self.assertRaises(NotImplementedError, slices_contract, slices, 2)
+        # Negative or 0 max_index is invalid.
+        slices = [slice(5, 25)]
+        self.assertRaises(ValueError, slices_contract, slices, 2, 0)
+        self.assertRaises(ValueError, slices_contract, slices, 5, -4)
+
+
+class TestSlicesContractDuration(unittest.TestCase):
+    def test_slices_contract_duration(self):
+        slices = [slice(None, 10), slice(30, 40), slice(70, None)]
+        expected = [slice(2, 8), slice(32, 38), slice(72, None)]
+        self.assertEqual(slices_contract_duration(slices, 1/2.0, 1), expected)
+        expected = [slice(0.5, 9.5), slice(30.5, 39.5), slice(70.5, 79.5)]
+        self.assertEqual(slices_contract_duration(slices, 2, 1, max_index=80), expected)
+
+
 class TestSlicesExtend(unittest.TestCase):
     def test_slices_extend(self):
         slices = [slice(None, 10), slice(30, 40), slice(70, None)]
+        self.assertEqual(slices_extend(slices, 0), slices)
         expected = [slice(None, 15), slice(25, 45), slice(65, None)]
+        self.assertEqual(slices_extend(slices, 5), expected)
+        expected = [slice(None, 52), slice(58, None)]
+        self.assertEqual(slices_extend(slices, 12), expected)
+        # Step is retained.
+        slices = [slice(10, 20, 3)]
+        expected = [slice(5, 25, 3)]
+        self.assertEqual(slices_extend(slices, 5), expected)
+        # Negative step is not supported.
+        slices = [slice(10, 20, -1)]
+        self.assertRaises(NotImplementedError, slices_extend, slices, 5)
+        # Does not extend slices beyond 0 otherwise slicing behaviour changes.
+        slices = [slice(0, 10)]
+        expected = [slice(None, 15)]
         self.assertEqual(slices_extend(slices, 5), expected)
 
 
@@ -5225,6 +5278,15 @@ class TestSlicesNot(unittest.TestCase):
 
 
 class TestSlicesOr(unittest.TestCase):
+    
+    def test_slices_or_single_list(self):
+        '''
+        The contents of a single list should be OR'd.
+        '''
+        slices = [slice(None, 15), slice(25, 45), slice(65, None)]
+        expected = [slice(None, 15), slice(25, 45), slice(65, None)]
+        self.assertEqual(slices_or(slices), slices)
+    
     def test_slices_or_with_overlap(self):
         slice_list_a = [slice(10,13)]
         slice_list_b = [slice(16,25)]
@@ -5241,21 +5303,6 @@ class TestSlicesOr(unittest.TestCase):
                                    slice_list_b),
                          [slice(10,13), slice(16,31)])
 
-    def test_slices_or_offset(self):
-        slice_list_a = [slice(10,13)]
-        self.assertEqual(slices_or(slice_list_a, begin_at = 11),
-                         [slice(11, 13)])
-
-    def test_slices_or_truncated(self):
-        slice_list_a = [slice(10,13)]
-        slice_list_b = [slice(16,25)]
-        slice_list_c = [slice(20,31)]
-        self.assertEqual(slices_or(slice_list_a,
-                                   slice_list_b,
-                                   slice_list_c,
-                                   end_at = 18),
-                         [slice(10,13), slice(16,18)])
-
     def test_slices_or_empty_first_list(self):
         slice_list_a = []
         slice_list_b = [slice(1,3)]
@@ -5265,13 +5312,15 @@ class TestSlicesOr(unittest.TestCase):
     def test_slices_or_one_list(self):
         self.assertEqual(slices_or([slice(1,2)]), [slice(1,2)])
 
-    def test_slices_or_none_ends(self):
-        self.assertEqual(slices_or([slice(None,2)]), [slice(0,2)])
-        #self.assertEqual(slices_or([slice(1,None)]), [slice(1,-1)])
-        self.assertEqual(slices_or([slice(None,3), slice(1,None)]), [slice(0,3)])
-
     def test_slices_or_raises_with_none(self):
         self.assertRaises(slices_or([None]))
+    
+    def test_slices_or_None(self):
+        slice_list_a = [slice(2, 10)]
+        slice_list_b = [slice(None, 4), slice(7, 9)]
+        slice_list_c = [slice(6, None)]
+        self.assertEqual(slices_or(slice_list_a, slice_list_b, slice_list_c),
+                         [slice(None, None)])
 
 
 class TestStepLocalCusp(unittest.TestCase):

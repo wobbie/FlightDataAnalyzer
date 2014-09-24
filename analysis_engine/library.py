@@ -4,6 +4,7 @@ import numpy as np
 import math
 
 from collections import OrderedDict, namedtuple
+from copy import copy
 from datetime import datetime, timedelta
 from hashlib import sha256
 from itertools import izip, izip_longest, tee
@@ -3387,59 +3388,43 @@ def slices_not(slice_list, begin_at=None, end_at=None):
     return shift_slices(np.ma.clump_unmasked(workspace[startpoint:endpoint]), startpoint)
 
 
-def slices_or(*slice_lists, **kwargs):
+
+def slices_or(*slice_lists):
     '''
-    "OR" function for a list of slices.
-
-    :param slice_list: list of slices to be combined.
-    :type slice_list: list of Python slices.
-    :param begin_at: optional starting index value, slices before this will be ignored
-    :type begin_at: integer
-    :param end_at: optional ending index value, slices before this will be ignored
-    :type end_at: integer
-
-    :returns: list of slices. If begin or end is specified, the range will
-    extend to these points. Otherwise the scope is within the end slices.
-
-    :error: raises ValueError in the case where None has been passed in. This
-    can arise with TAWS Alert derived parameter if a new LFL carries the
-    wrong text string for a TAWS signal, so forms a "backstop" error trap.
+    Logical OR function for lists of slices.
+    
+    :param slice_lists: Lists of slices to be combined.
+    :type slice_lists: [[slice]]
+    :returns: List of slices combined.
+    :rtype: list
     '''
-    if len(slice_lists) == 0:
-        return
-
-    a = None
-    b = None
+    slices = []
+    if all(len(s) == 0 or s == [None] for s in slice_lists):
+        return slices
+    
     for slice_list in slice_lists:
-        if slice_list==None:
-            raise ValueError('slices_or called with slice list of None')
-        for each_slice in slice_list:
-            if not each_slice:
-                break
-
-            a = each_slice.start or 0 if a is None else min(a, each_slice.start)
-
-            if each_slice.stop is None:
-                break
-            b = each_slice.stop if b is None else max(b, each_slice.stop)
-
-    if kwargs.has_key('begin_at'):
-        startpoint = kwargs['begin_at']
-    else:
-        startpoint = 0
-
-    if kwargs.has_key('end_at'):
-        endpoint = kwargs['end_at']
-    else:
-        endpoint = b
-
-    if startpoint>=0 and endpoint>0:
-        workspace = np.ma.zeros(b)
-        for slice_list in slice_lists:
-            for each_slice in slice_list:
-                workspace[each_slice] = 1
-        workspace=np.ma.masked_equal(workspace, 1)
-        return shift_slices(np.ma.clump_masked(workspace[startpoint:endpoint]), startpoint)
+        for input_slice in slice_list:
+            
+            modified = False
+            for output_slice in copy(slices):
+                if slices_overlap(input_slice, output_slice):
+                    # min prefers None
+                    slice_start = min(input_slice.start, output_slice.start)
+                    # max prefers anything but None
+                    if input_slice.stop == None or output_slice.stop == None:
+                        slice_stop = None
+                    else:
+                        slice_stop = max(input_slice.stop, output_slice.stop)
+                    
+                    input_slice = slice(slice_start, slice_stop)
+                    slices.remove(output_slice)
+                    slices.append(input_slice)
+                    modified = True
+            
+            if not modified:
+                slices.append(input_slice)
+    
+    return slices
 
 
 def slices_remove_small_gaps(slice_list, time_limit=10, hz=1, count=None):
@@ -5397,6 +5382,62 @@ def slices_duration(slices, hz):
     return sum([slice_duration(_slice, hz) for _slice in slices])
 
 
+def slices_contract(slices, length, max_index=None):
+    '''
+    Contract as in decrease in size. Slices which are smaller than the contraction are removed.
+    Negative steps are not supported.
+    
+    :param slices: Slices to contract.
+    :type slices: [slice]
+    :param length: Length to contract.
+    :type length: int or float
+    :param max_index: Max index for contracting None slices.
+    :type max_index: int or None
+    :returns: Contracted slices.
+    :rtype: slice
+    '''
+    if length == 0:
+        return slices
+    
+    if max_index is not None and max_index <= 0:
+        raise ValueError('')
+    
+    constricted_slices = []
+    for s in slices:
+        if s.step and s.step < 0:
+            raise NotImplementedError('Negative steps are not supported.')
+        
+        slice_start = s.start + length if s.start else length
+        
+        slice_stop = s.stop or max_index
+        if slice_stop:
+            slice_stop -= length
+            
+            if slice_start >= slice_stop:
+                # Slice has been contracted 'out of existence'.
+                continue
+        
+        constricted_slices.append(slice(slice_start, slice_stop, s.step))
+    
+    return constricted_slices
+
+
+def slices_contract_duration(slices, frequency, seconds, max_index=None):
+    '''
+    :param slices: Slices to contract.
+    :type slices: [slice]
+    :param frequency: Frequency of slices.
+    :type frequency: int or float
+    :param seconds: Seconds to contract the slices by.
+    :type seconds: int or float
+    :param max_index: Max index for contracting None slices.
+    :type max_index: int or None
+    :returns: Contract slices.
+    :rtype: [slice]
+    '''
+    return slices_contract(slices, seconds / float(frequency), max_index=max_index)
+
+
 def slices_extend(slices, length):
     '''
     :param slices: Slices to extend.
@@ -5406,13 +5447,20 @@ def slices_extend(slices, length):
     :returns: Extended slices.
     :rtype: [slice]
     '''
+    if length == 0:
+        return slices
+    
     extended_slices = []
     for s in slices:
+        if s.step and s.step < 0:
+            raise NotImplementedError('Negative step is not supported.')
+        
         extended_slices.append(slice(
             s.start - length if s.start else None,
             s.stop + length if s.stop else None,
+            s.step,
         ))
-    return extended_slices
+    return slices_or(extended_slices)
 
 
 def slices_extend_duration(slices, frequency, seconds):
