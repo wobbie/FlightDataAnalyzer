@@ -1797,11 +1797,6 @@ class TestFindEdges(unittest.TestCase):
         result = find_edges(array, slice(0,10), direction='all_edges')
         expected = [1.5,3.5,5.5,7.5]
         self.assertEqual(expected, result)
-
-    def test_find_edges_failure(self):
-        array = np.ma.array([1])
-        self.assertRaises(ValueError, find_edges, array, slice(0,1),
-                          direction='anything')
         
     def test_find_edges_masked_edge(self):
         edges = np.ma.array([1,1,0,0,0,1,1], mask=\
@@ -1812,6 +1807,14 @@ class TestFindEdges(unittest.TestCase):
         no_edges = np.ma.array([1,1,0,0,0,1,1], mask=\
                                [0,0,1,1,1,0,0])
         self.assertFalse(find_edges(no_edges, direction='all_edges'))
+    
+    def test_find_edges_too_small_slice(self):
+        # Too small slice should not raise exception.
+        edges = np.ma.arange(10)
+        self.assertEqual(find_edges(edges, _slice=slice(5, 5)), [])
+        self.assertEqual(find_edges(edges, _slice=slice(5, 6)), [])
+        self.assertEqual(find_edges(edges, _slice=slice(None, 1)), [])
+        self.assertEqual(find_edges(edges, _slice=slice(9, None)), [])
         
 
 
