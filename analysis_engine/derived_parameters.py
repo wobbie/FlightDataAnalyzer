@@ -6058,15 +6058,22 @@ class ApproachRange(DerivedParameterNode):
             ## This plot code allows the actual flightpath and regression line
             ## to be viewed in case of concern about the performance of the
             ## algorithm.
-            ##import matplotlib.pyplot as plt
-            ##x1=app_range[gs_est.start:this_app_slice.stop]
-            ##y1=alt_aal.array[gs_est.start:this_app_slice.stop]
-            ##x2=app_range[gs_est]
-            ##y2=alt_aal.array[gs_est] * (1-0.13*glide.array[gs_est])
-            ##xnew = np.linspace(np.min(x2),np.max(x2),num=2)
-            ##ynew = (xnew - offset)/slope
-            ##plt.plot(x1,y1,'-',x2,y2,'-',xnew,ynew,'-')
-            ##plt.show()
+            ## x-reference set to 0=g/s position or aiming point.
+            ## blue = Altitude AAL
+            ## red = corrected for glideslope deviations
+            ## black = fitted slope.
+            
+            #from analysis_engine.plot_flight import plot_parameter
+            #import matplotlib.pyplot as plt
+            #x1=app_range[gs_est.start:this_app_slice.stop] - offset
+            #y1=alt_aal.array[gs_est.start:this_app_slice.stop]
+            #x2=app_range[gs_est] - offset
+            ## 
+            #y2=alt_aal.array[gs_est] * (1-0.13*glide.array[gs_est])
+            #xnew = np.linspace(np.min(x2),np.max(x2),num=2)
+            #ynew = (xnew)/slope
+            #plt.plot(x1,y1,'b-',x2,y2,'r-',xnew,ynew,'k-')
+            #plt.show()
 
 
             # Shift the values in this approach so that the range = 0 at
