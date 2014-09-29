@@ -1508,6 +1508,9 @@ class ControlColumn(DerivedParameterNode):
 
 class ControlColumnCapt(DerivedParameterNode):
     '''
+    Special functions for the ATR series aircraft where potentiometer or
+    synchro transducers may be installed. This process selects the most
+    likely signal source.
     '''
 
     name = 'Control Column (Capt)'
@@ -1536,6 +1539,9 @@ class ControlColumnCapt(DerivedParameterNode):
 
 class ControlColumnFO(DerivedParameterNode):
     '''
+    Special functions for the ATR series aircraft where potentiometer or
+    synchro transducers may be installed. This process selects the most
+    likely signal source.
     '''
 
     name = 'Control Column (FO)'
