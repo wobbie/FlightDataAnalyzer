@@ -4579,7 +4579,9 @@ class MagneticVariation(DerivedParameterNode):
             return
 
         # Repair mask to avoid interpolating between masked values.
-        mag_vars = repair_mask(np.ma.array(mag_vars), extrapolate=True)
+        mag_vars = repair_mask(np.ma.array(mag_vars), 
+                               repair_duration=None, 
+                               extrapolate=True)
         interpolator = InterpolatedUnivariateSpline(
             np.arange(0, len(lat.array), mag_var_frequency), mag_vars)
         interpolation_length = (len(mag_vars) - 1) * mag_var_frequency
@@ -4590,6 +4592,7 @@ class MagneticVariation(DerivedParameterNode):
         # Exclude masked values.
         mask = lat.array.mask | lon.array.mask | alt_aal.array.mask
         array = np.ma.masked_where(mask, array)
+        # Q: Not sure of the logic behind this second mask repair.
         self.array = repair_mask(array, extrapolate=True,
                                  repair_duration=None)
 
