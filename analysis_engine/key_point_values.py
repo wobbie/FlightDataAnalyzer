@@ -11037,10 +11037,12 @@ class TCASRAReactionDelay(KeyPointValueNode):
                 # Look beyond 2 seconds to find slope from point of initiation.
                 slopes = np.ma.where(indexes > 17, abs(peaks / indexes), 0.0)
                 start_to_peak = slice(ra.start, ra.start + i[np.argmax(slopes)])
-                react_index = peak_curvature(acc_array, _slice=start_to_peak,
-                                             curve_sense='Bipolar') - ra.start
-                self.create_kpv(ra.start + react_index,
-                                react_index / acc.frequency)
+                peek_curvature_ix = peak_curvature(
+                    acc_array, _slice=start_to_peak, curve_sense='Bipolar')
+                if peek_curvature_ix is not None:
+                    react_index = peek_curvature_ix - ra.start
+                    self.create_kpv(ra.start + react_index,
+                                    react_index / acc.frequency)
 
 
 class TCASRAInitialReactionStrength(KeyPointValueNode):
