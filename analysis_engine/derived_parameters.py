@@ -926,7 +926,7 @@ class AltitudeRadio(DerivedParameterNode):
         self.offset = 0.0
         self.frequency = 4.0
 
-        if family and family.value in ('A319', 'A320', 'A321', 'A330', 'A340'):
+        if family and family.value in ('A310', 'A319', 'A320', 'A321', 'A330', 'A340'):
             osources = []
             for source in sources:
                 if source is None:
