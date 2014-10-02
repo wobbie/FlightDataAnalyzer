@@ -926,7 +926,7 @@ class AltitudeRadio(DerivedParameterNode):
         self.offset = 0.0
         self.frequency = 4.0
 
-        if family and family.value in ('A319', 'A320', 'A321', 'A330', 'A340'):
+        if family and family.value in ('A310', 'A319', 'A320', 'A321', 'A330', 'A340'):
             osources = []
             for source in sources:
                 if source is None:
@@ -1508,6 +1508,9 @@ class ControlColumn(DerivedParameterNode):
 
 class ControlColumnCapt(DerivedParameterNode):
     '''
+    Special functions for the ATR series aircraft where potentiometer or
+    synchro transducers may be installed. This process selects the most
+    likely signal source.
     '''
 
     name = 'Control Column (Capt)'
@@ -1536,6 +1539,9 @@ class ControlColumnCapt(DerivedParameterNode):
 
 class ControlColumnFO(DerivedParameterNode):
     '''
+    Special functions for the ATR series aircraft where potentiometer or
+    synchro transducers may be installed. This process selects the most
+    likely signal source.
     '''
 
     name = 'Control Column (FO)'
@@ -4573,7 +4579,9 @@ class MagneticVariation(DerivedParameterNode):
             return
 
         # Repair mask to avoid interpolating between masked values.
-        mag_vars = repair_mask(np.ma.array(mag_vars), extrapolate=True)
+        mag_vars = repair_mask(np.ma.array(mag_vars), 
+                               repair_duration=None, 
+                               extrapolate=True)
         interpolator = InterpolatedUnivariateSpline(
             np.arange(0, len(lat.array), mag_var_frequency), mag_vars)
         interpolation_length = (len(mag_vars) - 1) * mag_var_frequency
@@ -4584,6 +4592,7 @@ class MagneticVariation(DerivedParameterNode):
         # Exclude masked values.
         mask = lat.array.mask | lon.array.mask | alt_aal.array.mask
         array = np.ma.masked_where(mask, array)
+        # Q: Not sure of the logic behind this second mask repair.
         self.array = repair_mask(array, extrapolate=True,
                                  repair_duration=None)
 
@@ -6058,15 +6067,22 @@ class ApproachRange(DerivedParameterNode):
             ## This plot code allows the actual flightpath and regression line
             ## to be viewed in case of concern about the performance of the
             ## algorithm.
-            ##import matplotlib.pyplot as plt
-            ##x1=app_range[gs_est.start:this_app_slice.stop]
-            ##y1=alt_aal.array[gs_est.start:this_app_slice.stop]
-            ##x2=app_range[gs_est]
-            ##y2=alt_aal.array[gs_est] * (1-0.13*glide.array[gs_est])
-            ##xnew = np.linspace(np.min(x2),np.max(x2),num=2)
-            ##ynew = (xnew - offset)/slope
-            ##plt.plot(x1,y1,'-',x2,y2,'-',xnew,ynew,'-')
-            ##plt.show()
+            ## x-reference set to 0=g/s position or aiming point.
+            ## blue = Altitude AAL
+            ## red = corrected for glideslope deviations
+            ## black = fitted slope.
+            
+            #from analysis_engine.plot_flight import plot_parameter
+            #import matplotlib.pyplot as plt
+            #x1=app_range[gs_est.start:this_app_slice.stop] - offset
+            #y1=alt_aal.array[gs_est.start:this_app_slice.stop]
+            #x2=app_range[gs_est] - offset
+            ## 
+            #y2=alt_aal.array[gs_est] * (1-0.13*glide.array[gs_est])
+            #xnew = np.linspace(np.min(x2),np.max(x2),num=2)
+            #ynew = (xnew)/slope
+            #plt.plot(x1,y1,'b-',x2,y2,'r-',xnew,ynew,'k-')
+            #plt.show()
 
 
             # Shift the values in this approach so that the range = 0 at
