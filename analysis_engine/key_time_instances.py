@@ -1704,25 +1704,6 @@ class GlideslopeEstablishedEnd(KeyTimeInstanceNode):
             self.create_kti(ils.slice.stop)
 
 
-class APVNAVModeAndThrustModeSelected(KeyTimeInstanceNode):
-    '''
-    Will create a KTI at the point where both discretes are enabled.
-    '''
-    
-    name = 'AP VNAV Mode And Thrust Mode Selected'
-    
-    def derive(self,
-               vnav_mode=P('AP VNAV'),
-               thrust=P('Thrust Mode Selected')):
-        
-        combined = ((thrust.array == 'Selected') &
-                    (vnav_mode.array == 'Engaged'))
-        slices = np.ma.clump_unmasked(np.ma.masked_where(combined == False,
-                                                         combined))
-        for slice_ in slices:
-            self.create_kti(slice_.start)
-
-
 class OffBlocks(KeyTimeInstanceNode):
     '''
     Simple KTI derived from the first point of heading change, so probably

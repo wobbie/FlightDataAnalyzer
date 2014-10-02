@@ -7551,23 +7551,6 @@ class AirspeedMinusFlapManoeuvreSpeed(DerivedParameterNode):
         self.array = airspeed.array - fms.array
 
 
-class AirspeedMinusFlapManoeuvreSpeedFor3Sec(DerivedParameterNode):
-    '''
-    Airspeed relative to flap manoeuvre speeds over a 3 second window.
-
-    See the derived parameter 'Airspeed Minus Flap Manoeuvre Speed' for further
-    details.
-    '''
-
-    align_frequency = 2
-    align_offset = 0
-    units = ut.KT
-
-    def derive(self, speed=P('Airspeed Minus Flap Manoeuvre Speed')):
-
-        self.array = second_window(speed.array, self.frequency, 3)
-
-
 ########################################
 # Airspeed Relative
 
