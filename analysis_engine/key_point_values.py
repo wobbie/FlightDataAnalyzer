@@ -2989,27 +2989,6 @@ class AirspeedDuringLevelFlightMax(KeyPointValueNode):
             self.create_kpv(*max_value(air_spd.array, section.slice))
 
 
-class AirspeedSelectedMCPAt8000FtDescending(KeyPointValueNode):
-    '''
-    Airspeed Selected in the Mode Control Panel (MCP) at 8000ft in descent.
-    '''
-
-    units = ut.KT
-    name = 'Airspeed Selected (MCP) At 8000 Ft Descending'
-
-    def derive(self,
-               mcp=P('Airspeed Selected (MCP)'),
-               alt_std_desc=S('Altitude When Descending')):
-        #TODO: Refactor to be a formatted name node if multiple Airspeed At
-        #  Altitude KPVs are required. Could depend on either Altitude When
-        #  Climbing or Altitude When Descending, but the assumption is that
-        #  we'll have both.
-    
-        # TODO: Confirm MCP parameter name.
-        self.create_kpvs_at_ktis(mcp.array,
-                                 alt_std_desc.get(name='8000 Ft Descending'))
-
-
 ##############################################################################
 # Alpha Floor
 
@@ -3735,8 +3714,6 @@ class AltitudeAtFlapExtension(KeyPointValueNode):
             for flap in flaps:
                 value = value_at_index(alt_aal.array, flap.index)
                 self.create_kpv(flap.index, value)
-
-
 
 
 class AltitudeAtFirstFlapExtensionAfterLiftoff(KeyPointValueNode):

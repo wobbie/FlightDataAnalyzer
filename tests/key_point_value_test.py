@@ -8,7 +8,7 @@ import math
 from itertools import izip
 from mock import Mock, call, patch
 
-from flightdatautilities import aircrafttables as units as ut
+from flightdatautilities import units as ut
 from flightdatautilities.aircrafttables.interfaces import VelocitySpeed
 from flightdatautilities.geometry import midpoint
 
@@ -118,7 +118,6 @@ from analysis_engine.key_point_values import (
     AirspeedRelativeWithConfigurationDuringDescentMin,
     AirspeedSelectedAtLiftoff,
     AirspeedSelectedFMCMinusFlapManoeuvreSpeed1000to5000FtMin,
-    AirspeedSelectedMCPAt8000FtDescending,
     AirspeedTopOfDescentTo10000FtMax,
     AirspeedTopOfDescentTo4000FtMax,
     AirspeedTopOfDescentTo4000FtMin,
@@ -1361,26 +1360,6 @@ class TestAirspeedAt8000FtDescending(unittest.TestCase, NodeTest):
                          [KeyPointValue(index=10, value=100.0, name='Airspeed At 8000 Ft Descending'),
                           KeyPointValue(index=16, value=160.0, name='Airspeed At 8000 Ft Descending'),
                           KeyPointValue(index=18, value=180.0, name='Airspeed At 8000 Ft Descending')])
-
-
-class TestAirspeedSelectedMCPAt8000FtDescending(unittest.TestCase, NodeTest):
-    def setUp(self):
-        self.node_class = AirspeedSelectedMCPAt8000FtDescending
-        self.operational_combinations = [('Airspeed Selected (MCP)', 'Altitude When Descending')]
-
-    def test_derive_basic(self):
-        air_spd = P('Airspeed Selected (MCP)', array=np.ma.arange(0, 200, 5))
-        alt_std_desc = AltitudeWhenDescending(
-            items=[KeyTimeInstance(13, '8000 Ft Descending'),
-                   KeyTimeInstance(26, '8000 Ft Descending'),
-                   KeyTimeInstance(32, '8000 Ft Descending'),
-                   KeyTimeInstance(35, '4000 Ft Descending')])
-        node = self.node_class()
-        node.derive(air_spd, alt_std_desc)
-        self.assertEqual(node,
-                         [KeyPointValue(index=13, value=65.0, name='Airspeed Selected (MCP) At 8000 Ft Descending'),
-                          KeyPointValue(index=26, value=130.0, name='Airspeed Selected (MCP) At 8000 Ft Descending'),
-                          KeyPointValue(index=32, value=160.0, name='Airspeed Selected (MCP) At 8000 Ft Descending')])
 
 
 class TestAirspeedMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
