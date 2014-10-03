@@ -3731,12 +3731,13 @@ class AltitudeAtFirstFlapExtensionAfterLiftoff(KeyPointValueNode):
             self.create_kpv(flap_ext.index, flap_ext.value)
 
 
-class AltitudeAtFlapExtensionWithGearDown(KeyPointValueNode):
+class AltitudeAtFlapExtensionWithGearDownSelected(KeyPointValueNode):
     '''
-    Altitude at flap extensions while gear is down and aircraft is airborne.
+    Altitude at flap extensions while gear is selected down (may be in
+    transit) and aircraft is airborne.
     '''
 
-    NAME_FORMAT = 'Altitude At Flap %(flap)s Extension With Gear Down'
+    NAME_FORMAT = 'Altitude At Flap %(flap)s Extension With Gear Down Selected'
     NAME_VALUES = NAME_VALUES_LEVER
     units = ut.FT
 
@@ -3744,29 +3745,25 @@ class AltitudeAtFlapExtensionWithGearDown(KeyPointValueNode):
     def can_operate(cls, available):
 
         return any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available) \
-            and all_of(('Altitude AAL', 'Gear Extended', 'Airborne'), available)
+            and all_of(('Altitude AAL', 'Gear Down Selected', 'Airborne'), available)
 
     def derive(self,
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
                alt_aal=P('Altitude AAL'),
-               gear_ext=S('Gear Extended'),
+               gear_ext=M('Gear Down Selected'),
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-
         # Raw flap values must increase to detect extensions.
         extend = np.ma.diff(flap.array.raw) > 0
 
-        slices = slices_and(
-            (a.slice for a in airborne),
-            (g.slice for g in gear_ext),
-        )
-
-        for air_down in slices:
-            for index in np.ma.where(extend[air_down])[0]:
+        for in_air in airborne.get_slices():
+            for index in np.ma.where(extend[in_air])[0]:
                 # The flap we are moving to is +1 from the diff index
-                index = (air_down.start or 0) + index + 1
+                index = (in_air.start or 0) + index + 1
+                if gear_ext.array[index] != 'Down':
+                    continue                
                 value = alt_aal.array[index]
                 try:
                     self.create_kpv(index, value, flap=flap.array[index])
@@ -3792,30 +3789,27 @@ class AirspeedAtFlapExtensionWithGearDown(KeyPointValueNode):
     def can_operate(cls, available):
 
         return any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available) \
-            and all_of(('Airspeed', 'Gear Extended', 'Airborne'), available)
+            and all_of(('Airspeed', 'Gear Down Selected', 'Airborne'), available)
 
     def derive(self,
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
                air_spd=P('Airspeed'),
-               gear_ext=S('Gear Extended'),
+               gear_ext=M('Gear Down Selected'),
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-
         # Raw flap values must increase to detect extensions.
         extend = np.ma.diff(flap.array.raw) > 0
 
-        slices = slices_and(
-            (a.slice for a in airborne),
-            (g.slice for g in gear_ext),
-        )
-
-        for air_down in slices:
-            for index in np.ma.where(extend[air_down])[0]:
+        for in_air in airborne.get_slices():
+            # iterate over each extension
+            for index in np.ma.where(extend[in_air])[0]:
                 # The flap we are moving to is +1 from the diff index
-                index = (air_down.start or 0) + index + 1
-                value = air_spd.array[index]
+                index = (in_air.start or 0) + index + 1
+                if gear_ext.array[index] != 'Down':
+                    continue
+                value = value_at_index(air_spd.array, index)
                 try: 
                     self.create_kpv(index, value, flap=flap.array[index])
                 except:
@@ -3879,6 +3873,7 @@ class AltitudeAtFirstFlapChangeAfterLiftoff(KeyPointValueNode):
 class AltitudeAtLastFlapChangeBeforeTouchdown(KeyPointValueNode):
     '''
     '''
+    #TODO: Review this in comparison to AltitudeAtLastFlapRetraction
 
     units = ut.FT
 
@@ -3955,6 +3950,7 @@ class AltitudeAtFirstFlapRetraction(KeyPointValueNode):
 class AltitudeAtLastFlapRetraction(KeyPointValueNode):
     '''
     '''
+    #TODO: Review this in comparison to AltitudeAtLastFlapChangeBeforeTouchdown
 
     units = ut.FT
 
