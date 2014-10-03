@@ -6442,6 +6442,35 @@ class EngTPRAtTOGADuringTakeoffMin(KeyPointValueNode):
             self.create_kpv(index, value)
 
 
+class EngEPRExceedEPRRedlineDuration(KeyPointValueNode):
+    '''
+    Origionally coded for B777, returns the duration EPR is above EPR Redline
+    for each engine
+    '''
+
+    name = 'Eng EPR Exceeded EPR Redline Duration'
+    units = ut.SECOND
+
+    def derive(self,
+               eng_1_epr=P('Eng (1) EPR'),
+               eng_1_epr_red=P('Eng (1) EPR Redline'),
+               eng_2_epr=P('Eng (2) EPR'),
+               eng_2_epr_red=P('Eng (2) EPR Redline'),
+               eng_3_epr=P('Eng (3) EPR'),
+               eng_3_epr_red=P('Eng (3) EPR Redline'),
+               eng_4_epr=P('Eng (4) EPR'),
+               eng_4_epr_red=P('Eng (4) EPR Redline')):
+
+        eng_eprs = (eng_1_epr, eng_2_epr, eng_3_epr, eng_4_epr)
+        eng_epr_reds = (eng_1_epr_red, eng_2_epr_red, eng_3_epr_red, eng_4_epr_red)
+
+        eng_groups = zip(eng_eprs, eng_epr_reds)
+        for eng_epr, eng_epr_red in eng_groups:
+            if eng_epr and eng_epr_red:
+                epr_diff = eng_epr.array - eng_epr_red.array
+                self.create_kpvs_where(epr_diff > 0, self.hz)
+
+
 ##############################################################################
 # Engine Fire
 
@@ -7095,6 +7124,35 @@ class EngN154to72PercentWithThrustReversersDeployedDurationMax(KeyPointValueNode
                 self.create_kpvs_from_slice_durations((max_slice,),
                                                       eng_n1.frequency,
                                                       number=eng_num)
+
+
+class EngN1ExceededN1RedlineDuration(KeyPointValueNode):
+    '''
+    Origionally coded for B777, returns the duration N1 is above N1 Redline
+    for each engine
+    '''
+
+    name = 'Eng N1 Exceeded N1 Redline Duration'
+    units = ut.SECOND
+
+    def derive(self,
+               eng_1_n1=P('Eng (1) N1'),
+               eng_1_n1_red=P('Eng (1) N1 Redline'),
+               eng_2_n1=P('Eng (2) N1'),
+               eng_2_n1_red=P('Eng (2) N1 Redline'),
+               eng_3_n1=P('Eng (3) N1'),
+               eng_3_n1_red=P('Eng (3) N1 Redline'),
+               eng_4_n1=P('Eng (4) N1'),
+               eng_4_n1_red=P('Eng (4) N1 Redline')):
+
+        eng_n1s = (eng_1_n1, eng_2_n1, eng_3_n1, eng_4_n1)
+        eng_n1_reds= (eng_1_n1_red, eng_2_n1_red, eng_3_n1_red, eng_4_n1_red)
+
+        eng_groups = zip(eng_n1s, eng_n1_reds)
+        for eng_n1, eng_n1_redline in eng_groups:
+            if eng_n1 and eng_n1_redline:
+                n1_diff = eng_n1.array - eng_n1_redline.array
+                self.create_kpvs_where(n1_diff > 0, self.hz)
 
 
 ##############################################################################
