@@ -3776,12 +3776,38 @@ class AltitudeAtFlapExtensionWithGearDownSelected(KeyPointValueNode):
                     self.create_kpv(index, value, flap=flap.array[index+2])
 
 
-class AirspeedAtFlapExtensionWithGearDown(KeyPointValueNode):
+class AirspeedAtFlapExtension(KeyPointValueNode):
+    '''
+    Airspeed at flap extensions while the aircraft is airborne.
+    '''
+
+    NAME_FORMAT = 'Airspeed At Flap %(flap)s Extension'
+    NAME_VALUES = NAME_VALUES_LEVER
+    units = ut.KT
+
+    def derive(self, flap=M('Flap Lever'), air_spd=P('Airspeed'),
+               airborne=S('Airborne')):
+
+        # Raw flap values must increase to detect extensions.
+        extend = np.ma.diff(flap.array.raw) > 0
+
+        for air_down in airborne.get_slices():
+            for index in np.ma.where(extend[air_down])[0]:
+                # The flap we are moving to is +1 from the diff index
+                index = (air_down.start or 0) + index + 1
+                value = air_spd.array[index]
+                try: 
+                    self.create_kpv(index, value, flap=flap.array[index])
+                except:
+                    self.create_kpv(index, value, flap=flap.array[index+2])
+
+
+class AirspeedAtFlapExtensionWithGearDownSelected(KeyPointValueNode):
     '''
     Airspeed at flap extensions while gear is down and aircraft is airborne.
     '''
 
-    NAME_FORMAT = 'Airspeed At Flap %(flap)s Extension With Gear Down'
+    NAME_FORMAT = 'Airspeed At Flap %(flap)s Extension With Gear Down Selected'
     NAME_VALUES = NAME_VALUES_LEVER
     units = ut.KT
 
