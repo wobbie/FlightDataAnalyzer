@@ -610,7 +610,7 @@ def main():
                         action='store_true', help=help)
     parser.add_argument('-r', '--requested', type=str, nargs='+',
                         dest='requested', default=[], help='Requested nodes.')
-    parser.add_argument('--required', type=str, nargs='+', dest='required',
+    parser.add_argument('-R', '--required', type=str, nargs='+', dest='required',
                         default=[], help='Required nodes.')
     parser.add_argument('-tail', '--tail', dest='tail_number',
                         default='G-FDSL',  # as per flightdatacommunity file
