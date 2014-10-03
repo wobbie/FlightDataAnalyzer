@@ -41,15 +41,19 @@ def geo_locate(hdf, items):
     lat_hdf = hdf['Latitude Smoothed']
     lon_hdf = hdf['Longitude Smoothed']
     
-    if not lat_hdf.array.count() or lon_hdf.array.count():
+    if (not lat_hdf.array.count()) or (not lon_hdf.array.count()):
         logger.warning("Could not geo-locate as either 'Latitude Smoothed' or "
                        "'Longitude Smoothed' have no unmasked values.")
         return items
     
     lat_pos = derived_param_from_hdf(lat_hdf)
     lon_pos = derived_param_from_hdf(lon_hdf)
-    lat_pos.array = repair_mask(lat_pos.array, extrapolate=True)
-    lon_pos.array = repair_mask(lon_pos.array, extrapolate=True)
+    # We want to place start of flight and end of flight markers at the ends
+    # of the data which may extend more than REPAIR_DURATION seconds beyond
+    # the end of the valid data. Hence by setting this to None and
+    # extrapolate=True we achieve this goal.
+    lat_pos.array = repair_mask(lat_pos.array, repair_duration=None, extrapolate=True)
+    lon_pos.array = repair_mask(lon_pos.array, repair_duration=None, extrapolate=True)
     for item in items:
         item.latitude = lat_pos.at(item.index) or None
         item.longitude = lon_pos.at(item.index) or None
@@ -606,7 +610,7 @@ def main():
                         action='store_true', help=help)
     parser.add_argument('-r', '--requested', type=str, nargs='+',
                         dest='requested', default=[], help='Requested nodes.')
-    parser.add_argument('--required', type=str, nargs='+', dest='required',
+    parser.add_argument('-R', '--required', type=str, nargs='+', dest='required',
                         default=[], help='Required nodes.')
     parser.add_argument('-tail', '--tail', dest='tail_number',
                         default='G-FDSL',  # as per flightdatacommunity file

@@ -23,10 +23,11 @@ from analysis_engine.settings import METRES_TO_FEET
 
 if platform.system() == 'Windows':
     # For built versions and Dave's pythonxy.
-    import wx
+    ##import wx
     # Must appear before the importing plt
     import matplotlib
-    matplotlib.use('agg')
+    ###matplotlib.use('agg')
+    matplotlib.use('WX')
 
 import matplotlib.pyplot as plt
 

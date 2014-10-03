@@ -225,18 +225,14 @@ class ClimbStart(KeyTimeInstanceNode):
     Creates KTIs where the aircraft transitions through %dft
     ''' % CLIMB_THRESHOLD
     
-    def derive(self, alt_aal=P('Altitude AAL'), liftoffs=KTI('Liftoff'),
+    def derive(self, alt_aal=P('Altitude AAL For Flight Phases'), liftoffs=KTI('Liftoff'),
                tocs=KTI('Top Of Climb')):
-        # Repair Altitude AAL array as masked sections will affect
-        # Climb Start detection.
-        alt_array = repair_mask(alt_aal.array, repair_duration=None)
-        
         for liftoff in liftoffs:
             # Assumes a Top Of Climb KTI exists after each Liftoff.
             toc = tocs.get_next(liftoff.index)
             climb_slice = slice(liftoff.index, toc.index)
             
-            index = index_at_value(alt_array, CLIMB_THRESHOLD, climb_slice)
+            index = index_at_value(alt_aal.array, CLIMB_THRESHOLD, climb_slice)
             if index:
                 self.create_kti(index)
 
@@ -1706,25 +1702,6 @@ class GlideslopeEstablishedEnd(KeyTimeInstanceNode):
     def derive(self, ilss=S('ILS Glideslope Established')):
         for ils in ilss:
             self.create_kti(ils.slice.stop)
-
-
-class APVNAVModeAndThrustModeSelected(KeyTimeInstanceNode):
-    '''
-    Will create a KTI at the point where both discretes are enabled.
-    '''
-    
-    name = 'AP VNAV Mode And Thrust Mode Selected'
-    
-    def derive(self,
-               vnav_mode=P('AP VNAV'),
-               thrust=P('Thrust Mode Selected')):
-        
-        combined = ((thrust.array == 'Selected') &
-                    (vnav_mode.array == 'Engaged'))
-        slices = np.ma.clump_unmasked(np.ma.masked_where(combined == False,
-                                                         combined))
-        for slice_ in slices:
-            self.create_kti(slice_.start)
 
 
 class OffBlocks(KeyTimeInstanceNode):

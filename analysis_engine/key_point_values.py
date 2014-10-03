@@ -2527,47 +2527,6 @@ class AirspeedMinusFlapManoeuvreSpeedWithFlapDuringDescentMin(KeyPointValueNode,
             self.create_kpv(index, value, flap=detent)
 
 
-class AirspeedMinusFlapManoeuvreSpeedFor3SecWithFlapDuringDescentMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
-    '''
-    Airspeed relative to the flap manoeuvre speed for 3 seconds during the 
-    descent phase for each flap setting.
-
-    Based on Flap Lever for safety based investigations which primarily
-    depend upon the pilot actions, rather than maintenance investigations
-    which depend upon the actual flap surface position. Uses Flap Lever if
-    available otherwise falls back to Flap Lever (Synthetic) which is
-    established from other sources.
-    '''
-
-    NAME_FORMAT = 'Airspeed Minus Flap Manoeuvre Speed For 3 Sec With Flap %(flap)s During Descent Min'
-    NAME_VALUES = NAME_VALUES_LEVER
-    units = ut.KT
-
-    @classmethod
-    def can_operate(cls, available):
-
-        core = all_of((
-            'Airspeed Minus Flap Manoeuvre Speed For 3 Sec',
-            'Descent To Flare',
-        ), available)
-        flap = any_of((
-            'Flap Lever',
-            'Flap Lever (Synthetic)',
-        ), available)
-        return core and flap
-
-    def derive(self,
-               flap_lever=M('Flap Lever'),
-               flap_synth=M('Flap Lever (Synthetic)'),
-               airspeed=P('Airspeed Minus Flap Manoeuvre Speed For 3 Sec'),
-               scope=S('Descent To Flare')):
-
-        flap = flap_lever or flap_synth
-        data = self.flap_or_conf_max_or_min(flap, airspeed, min_value, scope)
-        for index, value, detent in data:
-            self.create_kpv(index, value, flap=detent)
-
-
 class AirspeedAtFirstFlapExtensionWhileAirborne(KeyPointValueNode):
     '''
     Airspeed measured at the point of Flap Extension while airborne.
@@ -3028,27 +2987,6 @@ class AirspeedDuringLevelFlightMax(KeyPointValueNode):
 
         for section in lvl_flt:
             self.create_kpv(*max_value(air_spd.array, section.slice))
-
-
-class AirspeedSelectedMCPAt8000FtDescending(KeyPointValueNode):
-    '''
-    Airspeed Selected in the Mode Control Panel (MCP) at 8000ft in descent.
-    '''
-
-    units = ut.KT
-    name = 'Airspeed Selected (MCP) At 8000 Ft Descending'
-
-    def derive(self,
-               mcp=P('Airspeed Selected (MCP)'),
-               alt_std_desc=S('Altitude When Descending')):
-        #TODO: Refactor to be a formatted name node if multiple Airspeed At
-        #  Altitude KPVs are required. Could depend on either Altitude When
-        #  Climbing or Altitude When Descending, but the assumption is that
-        #  we'll have both.
-    
-        # TODO: Confirm MCP parameter name.
-        self.create_kpvs_at_ktis(mcp.array,
-                                 alt_std_desc.get(name='8000 Ft Descending'))
 
 
 ##############################################################################
@@ -3778,20 +3716,6 @@ class AltitudeAtFlapExtension(KeyPointValueNode):
                 self.create_kpv(flap.index, value)
 
 
-class AltitudeAtAPVNAVModeAndThrustModeSelected(KeyPointValueNode):
-    '''
-    '''
-    
-    name = 'Altitude At AP VNAV Mode And Thrust Mode Selected'
-    units = ut.FT
-    
-    def derive(self,
-               alt_aal=P('Altitude AAL'),
-               vnav_thrust=KTI('AP VNAV Mode And Thrust Mode Selected')):
-        
-        self.create_kpvs_at_ktis(alt_aal.array, vnav_thrust)
-
-
 class AltitudeAtFirstFlapExtensionAfterLiftoff(KeyPointValueNode):
     '''
     Separates the first flap extension.
@@ -3807,12 +3731,13 @@ class AltitudeAtFirstFlapExtensionAfterLiftoff(KeyPointValueNode):
             self.create_kpv(flap_ext.index, flap_ext.value)
 
 
-class AltitudeAtFlapExtensionWithGearDown(KeyPointValueNode):
+class AltitudeAtFlapExtensionWithGearDownSelected(KeyPointValueNode):
     '''
-    Altitude at flap extensions while gear is down and aircraft is airborne.
+    Altitude at flap extensions while gear is selected down (may be in
+    transit) and aircraft is airborne.
     '''
 
-    NAME_FORMAT = 'Altitude At Flap %(flap)s Extension With Gear Down'
+    NAME_FORMAT = 'Altitude At Flap %(flap)s Extension With Gear Down Selected'
     NAME_VALUES = NAME_VALUES_LEVER
     units = ut.FT
 
@@ -3820,29 +3745,25 @@ class AltitudeAtFlapExtensionWithGearDown(KeyPointValueNode):
     def can_operate(cls, available):
 
         return any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available) \
-            and all_of(('Altitude AAL', 'Gear Extended', 'Airborne'), available)
+            and all_of(('Altitude AAL', 'Gear Down Selected', 'Airborne'), available)
 
     def derive(self,
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
                alt_aal=P('Altitude AAL'),
-               gear_ext=S('Gear Extended'),
+               gear_ext=M('Gear Down Selected'),
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-
         # Raw flap values must increase to detect extensions.
         extend = np.ma.diff(flap.array.raw) > 0
 
-        slices = slices_and(
-            (a.slice for a in airborne),
-            (g.slice for g in gear_ext),
-        )
-
-        for air_down in slices:
-            for index in np.ma.where(extend[air_down])[0]:
+        for in_air in airborne.get_slices():
+            for index in np.ma.where(extend[in_air])[0]:
                 # The flap we are moving to is +1 from the diff index
-                index = (air_down.start or 0) + index + 1
+                index = (in_air.start or 0) + index + 1
+                if gear_ext.array[index] != 'Down':
+                    continue                
                 value = alt_aal.array[index]
                 try:
                     self.create_kpv(index, value, flap=flap.array[index])
@@ -3855,12 +3776,38 @@ class AltitudeAtFlapExtensionWithGearDown(KeyPointValueNode):
                     self.create_kpv(index, value, flap=flap.array[index+2])
 
 
-class AirspeedAtFlapExtensionWithGearDown(KeyPointValueNode):
+class AirspeedAtFlapExtension(KeyPointValueNode):
+    '''
+    Airspeed at flap extensions while the aircraft is airborne.
+    '''
+
+    NAME_FORMAT = 'Airspeed At Flap %(flap)s Extension'
+    NAME_VALUES = NAME_VALUES_LEVER
+    units = ut.KT
+
+    def derive(self, flap=M('Flap Lever'), air_spd=P('Airspeed'),
+               airborne=S('Airborne')):
+
+        # Raw flap values must increase to detect extensions.
+        extend = np.ma.diff(flap.array.raw) > 0
+
+        for air_down in airborne.get_slices():
+            for index in np.ma.where(extend[air_down])[0]:
+                # The flap we are moving to is +1 from the diff index
+                index = (air_down.start or 0) + index + 1
+                value = air_spd.array[index]
+                try: 
+                    self.create_kpv(index, value, flap=flap.array[index])
+                except:
+                    self.create_kpv(index, value, flap=flap.array[index+2])
+
+
+class AirspeedAtFlapExtensionWithGearDownSelected(KeyPointValueNode):
     '''
     Airspeed at flap extensions while gear is down and aircraft is airborne.
     '''
 
-    NAME_FORMAT = 'Airspeed At Flap %(flap)s Extension With Gear Down'
+    NAME_FORMAT = 'Airspeed At Flap %(flap)s Extension With Gear Down Selected'
     NAME_VALUES = NAME_VALUES_LEVER
     units = ut.KT
 
@@ -3868,30 +3815,27 @@ class AirspeedAtFlapExtensionWithGearDown(KeyPointValueNode):
     def can_operate(cls, available):
 
         return any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available) \
-            and all_of(('Airspeed', 'Gear Extended', 'Airborne'), available)
+            and all_of(('Airspeed', 'Gear Down Selected', 'Airborne'), available)
 
     def derive(self,
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
                air_spd=P('Airspeed'),
-               gear_ext=S('Gear Extended'),
+               gear_ext=M('Gear Down Selected'),
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-
         # Raw flap values must increase to detect extensions.
         extend = np.ma.diff(flap.array.raw) > 0
 
-        slices = slices_and(
-            (a.slice for a in airborne),
-            (g.slice for g in gear_ext),
-        )
-
-        for air_down in slices:
-            for index in np.ma.where(extend[air_down])[0]:
+        for in_air in airborne.get_slices():
+            # iterate over each extension
+            for index in np.ma.where(extend[in_air])[0]:
                 # The flap we are moving to is +1 from the diff index
-                index = (air_down.start or 0) + index + 1
-                value = air_spd.array[index]
+                index = (in_air.start or 0) + index + 1
+                if gear_ext.array[index] != 'Down':
+                    continue
+                value = value_at_index(air_spd.array, index)
                 try: 
                     self.create_kpv(index, value, flap=flap.array[index])
                 except:
@@ -3955,6 +3899,7 @@ class AltitudeAtFirstFlapChangeAfterLiftoff(KeyPointValueNode):
 class AltitudeAtLastFlapChangeBeforeTouchdown(KeyPointValueNode):
     '''
     '''
+    #TODO: Review this in comparison to AltitudeAtLastFlapRetraction
 
     units = ut.FT
 
@@ -4031,6 +3976,7 @@ class AltitudeAtFirstFlapRetraction(KeyPointValueNode):
 class AltitudeAtLastFlapRetraction(KeyPointValueNode):
     '''
     '''
+    #TODO: Review this in comparison to AltitudeAtLastFlapChangeBeforeTouchdown
 
     units = ut.FT
 
@@ -9364,28 +9310,6 @@ class Pitch7FtToTouchdownMax(KeyPointValueNode):
         )
 
 
-class AirspeedV2Plus20DifferenceAtAPVNAVModeAndThrustModeSelected(KeyPointValueNode):
-    '''
-    This was requested by one customer who wanted to know the speed margin
-    from the ideal of V2+20 when the crew put the automatics in after
-    take-off.
-    '''
-    
-    name = 'V2+20 Minus Airspeed At AP VNAV Mode And Thrust Mode Selected'
-    units = ut.KT
-    
-    def derive(self,
-               airspeed=P('Airspeed'),
-               v2=P('V2'),
-               vnav_thrusts=KTI('AP VNAV Mode And Thrust Mode Selected')):
-        
-        # XXX: Assuming V2 value is constant.
-        v2_value = v2.array[np.ma.where(v2.array)[0][0]] + 20
-        for vnav_thrust in vnav_thrusts:
-            difference = abs(v2_value - airspeed.array[vnav_thrust.index])
-            self.create_kpv(vnav_thrust.index, difference)
-
-
 class PitchCyclesDuringFinalApproach(KeyPointValueNode):
     '''
     Counts the number of half-cycles of pitch attitude that exceed 3 deg in
@@ -9420,21 +9344,6 @@ class PitchDuringGoAroundMax(KeyPointValueNode):
                go_arounds=S('Go Around And Climbout')):
 
         self.create_kpvs_within_slices(pitch.array, go_arounds, max_value)
-
-
-class PitchAtAPVNAVModeAndThrustModeSelected(KeyPointValueNode):
-    '''
-    Will create a Pitch KPV for each KTI.
-    '''
-    
-    name = 'Pitch At AP VNAV Mode And Thrust Mode Selected'
-    units = ut.DEGREE
-    
-    def derive(self,
-               pitch=P('Pitch'),
-               vnav_thrust=KTI('AP VNAV Mode And Thrust Mode Selected')):
-        
-        self.create_kpvs_at_ktis(pitch.array, vnav_thrust)
 
 
 ##############################################################################
@@ -11095,10 +11004,12 @@ class TCASRAReactionDelay(KeyPointValueNode):
                 # Look beyond 2 seconds to find slope from point of initiation.
                 slopes = np.ma.where(indexes > 17, abs(peaks / indexes), 0.0)
                 start_to_peak = slice(ra.start, ra.start + i[np.argmax(slopes)])
-                react_index = peak_curvature(acc_array, _slice=start_to_peak,
-                                             curve_sense='Bipolar') - ra.start
-                self.create_kpv(ra.start + react_index,
-                                react_index / acc.frequency)
+                peek_curvature_ix = peak_curvature(
+                    acc_array, _slice=start_to_peak, curve_sense='Bipolar')
+                if peek_curvature_ix is not None:
+                    react_index = peek_curvature_ix - ra.start
+                    self.create_kpv(ra.start + react_index,
+                                    react_index / acc.frequency)
 
 
 class TCASRAInitialReactionStrength(KeyPointValueNode):

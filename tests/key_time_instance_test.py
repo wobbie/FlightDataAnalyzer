@@ -15,7 +15,6 @@ from analysis_engine.key_time_instances import (
     AltitudeWhenDescending,
     APDisengagedSelection,
     APEngagedSelection,
-    APVNAVModeAndThrustModeSelected,
     ATDisengagedSelection,
     ATEngagedSelection,
     Autoland,
@@ -169,7 +168,7 @@ class TestBottomOfDescent(unittest.TestCase):
 
 class TestClimbStart(unittest.TestCase):
     def test_can_operate(self):
-        expected = [('Altitude AAL', 'Liftoff', 'Top Of Climb')]
+        expected = [('Altitude AAL For Flight Phases', 'Liftoff', 'Top Of Climb')]
         opts = ClimbStart.get_operational_combinations()
         self.assertEqual(opts, expected)
 
@@ -1744,30 +1743,6 @@ class TestTransmit(unittest.TestCase):
         expected = [KeyTimeInstance(index=2.5, name='Transmit')]
         self.assertEqual(tr, expected)
 
-
-class TestAPVNAVModeAndThrustModeSelected(unittest.TestCase, NodeTest):
-
-    def setUp(self):
-        self.node_class = APVNAVModeAndThrustModeSelected
-        self.operational_combinations = [('AP VNAV', 'Thrust Mode Selected')]
-    
-    def test_derive_basic(self):
-        vnav_mode = M(
-            name='AP VNAV',
-            array=np.ma.array([1, 0, 1, 0, 1, 1, 0]),
-            values_mapping={0: '-', 1: 'Engaged'},
-        )
-        thrust = M(
-            name='Thrust Mode Selected',
-            array=np.ma.array([0, 0, 1, 1, 1, 1, 0]),
-            values_mapping={0: '-', 1: 'Selected'},
-        )
-        node = self.node_class()
-        node.derive(vnav_mode, thrust)
-        self.assertEqual(node, [
-            KeyTimeInstance(index=2, name='AP VNAV Mode And Thrust Mode Selected'),
-            KeyTimeInstance(index=4, name='AP VNAV Mode And Thrust Mode Selected'),
-        ])
 
 class TestOffBlocks(unittest.TestCase):
     def test_can_operate(self):
