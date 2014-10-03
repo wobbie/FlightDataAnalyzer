@@ -9252,28 +9252,6 @@ class Pitch7FtToTouchdownMax(KeyPointValueNode):
         )
 
 
-class AirspeedV2Plus20DifferenceAtAPVNAVModeAndThrustModeSelected(KeyPointValueNode):
-    '''
-    This was requested by one customer who wanted to know the speed margin
-    from the ideal of V2+20 when the crew put the automatics in after
-    take-off.
-    '''
-    
-    name = 'V2+20 Minus Airspeed At AP VNAV Mode And Thrust Mode Selected'
-    units = ut.KT
-    
-    def derive(self,
-               airspeed=P('Airspeed'),
-               v2=P('V2'),
-               vnav_thrusts=KTI('AP VNAV Mode And Thrust Mode Selected')):
-        
-        # XXX: Assuming V2 value is constant.
-        v2_value = v2.array[np.ma.where(v2.array)[0][0]] + 20
-        for vnav_thrust in vnav_thrusts:
-            difference = abs(v2_value - airspeed.array[vnav_thrust.index])
-            self.create_kpv(vnav_thrust.index, difference)
-
-
 class PitchCyclesDuringFinalApproach(KeyPointValueNode):
     '''
     Counts the number of half-cycles of pitch attitude that exceed 3 deg in
@@ -9308,21 +9286,6 @@ class PitchDuringGoAroundMax(KeyPointValueNode):
                go_arounds=S('Go Around And Climbout')):
 
         self.create_kpvs_within_slices(pitch.array, go_arounds, max_value)
-
-
-class PitchAtAPVNAVModeAndThrustModeSelected(KeyPointValueNode):
-    '''
-    Will create a Pitch KPV for each KTI.
-    '''
-    
-    name = 'Pitch At AP VNAV Mode And Thrust Mode Selected'
-    units = ut.DEGREE
-    
-    def derive(self,
-               pitch=P('Pitch'),
-               vnav_thrust=KTI('AP VNAV Mode And Thrust Mode Selected')):
-        
-        self.create_kpvs_at_ktis(pitch.array, vnav_thrust)
 
 
 ##############################################################################
