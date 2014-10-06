@@ -171,6 +171,22 @@ class TestFindLowAlts(unittest.TestCase):
         self.assertAlmostEqual(low_alts[4].start, 10362, places=0)
         self.assertAlmostEqual(low_alts[4].stop, 10815, places=0)
         
+        low_alts = find_low_alts(array, 500, 500, 2000,
+                                        level_flights=level_flights,
+                                        relative_start=True,
+                                        relative_stop=True)
+        self.assertEqual(len(low_alts), 5)
+        self.assertAlmostEqual(low_alts[0].start, 0, places=0)
+        self.assertAlmostEqual(low_alts[0].stop, 499, places=0)
+        self.assertAlmostEqual(low_alts[1].start, 3586, places=0)
+        self.assertAlmostEqual(low_alts[1].stop, 3722, places=0)
+        self.assertAlmostEqual(low_alts[2].start, 4895, places=0)
+        self.assertAlmostEqual(low_alts[2].stop, 5009, places=0)
+        self.assertAlmostEqual(low_alts[3].start, 7124, places=0)
+        self.assertAlmostEqual(low_alts[3].stop, 7265, places=0)
+        self.assertAlmostEqual(low_alts[4].start, 10522, places=0)
+        self.assertAlmostEqual(low_alts[4].stop, 10815, places=0)
+        
         low_alts = find_low_alts(array, 500, 3000,
                                  level_flights=level_flights)
         self.assertEqual(len(low_alts), 5)
