@@ -1095,8 +1095,8 @@ class TestGoAroundAndClimbout(unittest.TestCase):
         levels = buildsection('Level Flight', 70, 76)
         ga_phase = GoAroundAndClimbout()
         ga_phase.derive(alt, levels)
-        # Level flight reached at 70
-        expected = buildsection('Go Around And Climbout', 55, 70)
+        # Level flight reached at ~70
+        expected = buildsection('Go Around And Climbout', 55, 68)
         self.assertEqual(len(ga_phase), 1)
         self.assertEqual(ga_phase.get_first().start_edge, expected[0].start_edge)
         self.assertEqual(ga_phase.get_first().stop_edge, expected[0].stop_edge)
@@ -1128,12 +1128,12 @@ class TestGoAroundAndClimbout(unittest.TestCase):
         ga_phase = GoAroundAndClimbout()
         ga_phase.derive(alt_aal, level_flights)
         self.assertEqual(len(ga_phase), 3)
-        self.assertAlmostEqual(ga_phase[0].slice.start, 3425, places=0)
+        self.assertAlmostEqual(ga_phase[0].slice.start, 3586, places=0)
         self.assertAlmostEqual(ga_phase[0].slice.stop, 3722, places=0)
-        self.assertAlmostEqual(ga_phase[1].slice.start, 4807, places=0)
+        self.assertAlmostEqual(ga_phase[1].slice.start, 4895, places=0)
         self.assertAlmostEqual(ga_phase[1].slice.stop, 5009, places=0)
-        self.assertAlmostEqual(ga_phase[2].slice.start, 6883, places=0)
-        self.assertAlmostEqual(ga_phase[2].slice.stop, 7258, places=0)
+        self.assertAlmostEqual(ga_phase[2].slice.start, 7124, places=0)
+        self.assertAlmostEqual(ga_phase[2].slice.stop, 7265, places=0)
     
     def test_go_around_and_climbout_below_3000ft(self):
         alt_aal = load(os.path.join(test_data_path,
@@ -1143,8 +1143,8 @@ class TestGoAroundAndClimbout(unittest.TestCase):
         ga_phase = GoAroundAndClimbout()
         ga_phase.derive(alt_aal, level_flights)
         self.assertEqual(len(ga_phase), 1)
-        self.assertAlmostEqual(ga_phase[0].slice.start, 10545, places=0)
-        self.assertAlmostEqual(ga_phase[0].slice.stop, 10833, places=0)
+        self.assertAlmostEqual(ga_phase[0].slice.start, 10697, places=0)
+        self.assertAlmostEqual(ga_phase[0].slice.stop, 10968, places=0)
 
     def test_go_around_and_climbout_real_data(self):
         alt_aal = load(os.path.join(test_data_path,
@@ -1159,15 +1159,16 @@ class TestGoAroundAndClimbout(unittest.TestCase):
             #slice(1676.0, 1836.0, None),
             #slice(2021.0, 2206.0, None),
             #slice(2208.0, 2502.0, None)])
-        self.assertAlmostEqual(ga_phase[0].slice.start, 1005, places=0)
+        self.assertAlmostEqual(ga_phase[0].slice.start, 1057, places=0)
         self.assertAlmostEqual(ga_phase[0].slice.stop, 1169, places=0)
-        self.assertAlmostEqual(ga_phase[1].slice.start, 1378, places=0)
+        self.assertAlmostEqual(ga_phase[1].slice.start, 1393, places=0)
         self.assertAlmostEqual(ga_phase[1].slice.stop, 1502, places=0)
-        self.assertAlmostEqual(ga_phase[2].slice.start, 1676, places=0)
+        # For some reason, places=0 breaks for 1721.5 == 1721 or 1722..
+        self.assertAlmostEqual(ga_phase[2].slice.start, 1722, delta=0.5)
         self.assertAlmostEqual(ga_phase[2].slice.stop, 1836, places=0)
-        self.assertAlmostEqual(ga_phase[3].slice.start, 2021, places=0)
+        self.assertAlmostEqual(ga_phase[3].slice.start, 2071, places=0)
         self.assertAlmostEqual(ga_phase[3].slice.stop, 2205, places=0)
-        self.assertAlmostEqual(ga_phase[4].slice.start, 2208, places=0)
+        self.assertAlmostEqual(ga_phase[4].slice.start, 2392, places=0)
         self.assertAlmostEqual(ga_phase[4].slice.stop, 2502, places=0)
         
     def test_two_go_arounds_for_atr42(self):
@@ -1176,10 +1177,10 @@ class TestGoAroundAndClimbout(unittest.TestCase):
         ga_phase = GoAroundAndClimbout()
         ga_phase.derive(alt_aal, None)
         self.assertEqual(len(ga_phase), 2)
-        self.assertAlmostEqual(ga_phase[0].slice.start, 9771, places=0)
-        self.assertAlmostEqual(ga_phase[0].slice.stop, 10945, places=0)
-        self.assertAlmostEqual(ga_phase[1].slice.start, 12056, places=0)
-        self.assertAlmostEqual(ga_phase[1].slice.stop, 12737, places=0)
+        self.assertAlmostEqual(ga_phase[0].slice.start, 10703, places=0)
+        self.assertAlmostEqual(ga_phase[0].slice.stop, 10948, places=0)
+        self.assertAlmostEqual(ga_phase[1].slice.start, 12529, places=0)
+        self.assertAlmostEqual(ga_phase[1].slice.stop, 12749, places=0)
 
 
 

@@ -118,7 +118,7 @@ class GoAroundAndClimbout(FlightPhaseNode):
     We already know that the Key Time Instance has been identified at the
     lowest point of the go-around, and that it lies below the 3000ft
     approach thresholds. The function here is to expand the phase 500ft before
-    to the first level off after (up to 2000ft maximum).
+    to the first level off after (up to 2000ft above minimum altitude).
     '''
     
     @classmethod
@@ -130,7 +130,9 @@ class GoAroundAndClimbout(FlightPhaseNode):
         # Find the ups and downs in the height trace.
         level_flights = level_flights.get_slices() if level_flights else None
         low_alt_slices = find_low_alts(
-            alt_aal.array, 3000, stop_alt=2000, level_flights=level_flights)
+            alt_aal.array, 3000, start_alt=500, stop_alt=2000, level_flights=level_flights,
+            relative_start=True, relative_stop=True,
+        )
         dlc_slices = []
         for low_alt in low_alt_slices:
             if (alt_aal.array[low_alt.start] and
