@@ -2333,14 +2333,19 @@ class StableApproach(MultistateDerivedParameterNode):
 
             #== 8. Engine Thrust (N1/EPR) ==
             self.array[_slice][stable] = 8
-            # TODO: Patch this value depending upon aircraft type
-            if family and family.value in ('B787', 'A319'):
-                STABLE_N1_MIN = 35  # %
+            # Patch this value depending upon aircraft type
+            if eng_epr:
+                if family and family.value in ('A319', 'A320', 'A321'):
+                    STABLE_EPR_MIN = 1.05  # Ratio
+                else:
+                    STABLE_EPR_MIN = 1.09  # Ratio
+                stable_engine = (engine >= STABLE_EPR_MIN)
             else:
-                STABLE_N1_MIN = 45  # %
-            STABLE_EPR_MIN = 1.09
-            eng_minimum = STABLE_EPR_MIN if eng_epr else STABLE_N1_MIN
-            stable_engine = (engine >= eng_minimum)
+                if family and family.value in ('B787', 'A319'):
+                    STABLE_N1_MIN = 35  # %
+                else:
+                    STABLE_N1_MIN = 45  # %
+                stable_engine = (engine >= STABLE_N1_MIN)
             # extend the stability at the end of the altitude threshold through to landing
             stable_engine[altitude < 50] = stable_engine[index_at_50]
             stable &= stable_engine.filled(True)
