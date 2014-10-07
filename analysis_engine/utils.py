@@ -5,6 +5,7 @@ import re
 import zipfile
 
 from collections import defaultdict
+from cPickle import UnpicklingError
 from datetime import datetime
 from inspect import isclass
 
@@ -14,7 +15,7 @@ from hdfaccess.utils import strip_hdf
 from analysis_engine.api_handler import APIError, get_api_handler
 from analysis_engine.dependency_graph import dependencies3, graph_nodes
 from analysis_engine.node import (
-    load, Node, NodeManager,
+    loads, Node, NodeManager,
     DerivedParameterNode,
     KeyPointValueNode,
     KeyTimeInstanceNode,
@@ -37,22 +38,24 @@ def open_node_container(zip_path):
     '''
     with zipfile.ZipFile(zip_path, 'r') as zip_file:
         filenames = zip_file.namelist()
-        zip_file.extractall('.')
-    
-    nodes = defaultdict(dict)
-    for filename in filenames:
-        match = re.match('^(?P<flight_pk>\d+) - (?P<node_name>[\w\d\s]+).nod$', filename)
-        if not match:
-            print "Skipping invalid filename '%s'"
-            os.remove(filename)
-            continue
         
-        groupdict = match.groupdict()
+        flight_filenames = defaultdict(dict)
         
-        nodes[groupdict['flight_pk']][groupdict['node_name']] = load(filename)
-        os.remove(filename)
-    
-    return nodes
+        for filename in filenames:
+            match = re.match('^(?P<flight_pk>\d+) - (?P<node_name>[\w\d\s()]+).nod$', filename)
+            if not match:
+                print "Skipping invalid filename '%s'" % filename
+                continue
+            
+            groupdict = match.groupdict()
+            flight_filenames[groupdict['flight_pk']][groupdict['node_name']] = filename
+        
+        for flight_pk, node_filenames in flight_filenames.iteritems():
+            nodes = {}
+            for node_name, filename in node_filenames.iteritems():
+                nodes[node_name] = loads(zip_file.read(filename))
+            
+            yield flight_pk, nodes
 
 
 def get_aircraft_info(tail_number):
