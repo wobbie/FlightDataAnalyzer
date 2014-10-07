@@ -78,6 +78,8 @@ def load(path):
     
     :param path: Path to pickled Node object file
     :type path: String
+    :returns: Node loaded from file.
+    :rtype: Node
     '''
     with gzip.open(path) as file_obj:
         try:
@@ -89,11 +91,31 @@ def load(path):
         return cPickle.load(fh)
 
 
+def loads(bytes):
+    '''
+    Load a Node module from a string of bytes.
+    
+    :param bytes: Pickled Node stored in a string.
+    :type bytes: str
+    :returns: Node loaded from string.
+    :rtype: Node
+    '''
+    return cPickle.loads(bytes)
+
+
 def dump(node, dest):
     '''
     Save a node to a destination path
     '''
     return node.save(dest)
+
+
+def dumps(node):
+    '''
+    Dump a node to a string.
+    '''
+    return node.dumps()
+
 save = dump
 
 
@@ -418,6 +440,11 @@ def can_operate(cls, available):
             _open = open
         with _open(dest, 'wb') as fh:
             return cPickle.dump(self, fh, protocol)
+    
+    def dumps(self, protocol=-1):
+        '''
+        '''
+        return cPickle.dumps(self, protocol)
     save = dump
 
     # Logging
@@ -2392,7 +2419,7 @@ class Attribute(object):
     def todict(self):
         return {
             'name': self.name,
-            'value': self.value
+            'value': self.value,
         }
 
 
