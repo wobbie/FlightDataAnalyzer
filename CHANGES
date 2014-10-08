@@ -9,6 +9,28 @@ You can view the differences in tagged versions as follows:
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
 
+
+V0.15.1
+-------
+
+ - Imprevements
+   - Avoid issubclass calls taking 20% of runtime
+   - Add A310 family to correction of overflow in Altitude Radio
+   - AltitudeAtFlapExtensionWithGearDown and AirspeedAtFlapExtension now uses Gear Down Selected.
+   - Process flight supports -R short for --required
+   - find_low_alts: Support relative start and stop Relative to minimum dip
+   - GoAroundAndClimbout: relative start and stop Changed to match flight phases document. 500ft before and 2000ft after.
+   - Stable Approach threshold adjusted for A320 family EPR Aircraft
+ - Fixes
+   - Fix plotting where it does not open a window on show()
+   - TCASRAReactionDelay: peak_curvature may return None
+   - Magnetic variation repair amended
+ - Added
+   - Airspeed with flap selection (KPV)
+   - Eng EPR exceeding Redline duration (KPV)
+   - Eng N1 exceeding Redline duration (KPV)
+
+
 V0.14.1
 -------
 
