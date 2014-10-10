@@ -331,7 +331,7 @@ def can_operate(cls, available):
         :rtype: self
         """
         assert len(args) == len(self.get_dependency_names()), \
-               "Incorrect number of arguments for derive method"
+            '%s: incorrect number of arguments for derive() method' % self.__class__.__name__
         dependencies_to_align = \
             [d for d in args if d is not None and d.frequency]
         if dependencies_to_align and self.align:
