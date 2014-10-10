@@ -1499,7 +1499,7 @@ class TestFlapLeverSynthetic(unittest.TestCase, NodeTest):
         node.derive(flap, slat, flaperon, model, series, family)
 
         mapping = {x: str(x) for x in sorted(set(expected))}
-        self.assertTrue(np.all(node.array == np.repeat(expected, repeat)))
+        self.assertEqual(list(node.array), list(np.repeat(expected, repeat)))
 
 
 class TestFlaperon(unittest.TestCase):
