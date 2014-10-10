@@ -3918,7 +3918,9 @@ class AltitudeAtLastFlapChangeBeforeTouchdown(KeyPointValueNode):
         flap = flap_lever or flap_synth
 
         for touchdown in touchdowns:
-            land_flap = flap.array.raw[touchdown.index]
+            # using 2 samples prior to touchdown to avoid auto flap
+            # retraction at touchdown
+            land_flap = flap.array.raw[touchdown.index - 2 * self.hz]
             flap_move = abs(flap.array.raw - land_flap)
             rough_index = index_at_value(flap_move, 0.5, slice(touchdown.index, 0, -1))
             # index_at_value tries to be precise, but in this case we really
