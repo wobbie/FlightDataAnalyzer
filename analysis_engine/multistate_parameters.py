@@ -5,6 +5,8 @@ import logging
 
 import numpy as np
 
+from pprint import pformat
+
 from flightdatautilities import aircrafttables as at, units as ut
 
 from hdfaccess.parameter import MappedArray
@@ -324,18 +326,7 @@ class Configuration(MultistateDerivedParameterNode):
 
     Multi-state with the following mapping::
 
-        {
-            0: '0',
-            1: '1',
-            2: '1+F',
-            3: '1*',
-            4: '2',
-            5: '2*',
-            6: '3',
-            7: '4',
-            8: '5',
-            9: 'Full',
-        }
+        %s
 
     Some values are based on footnotes in various pieces of documentation:
 
@@ -347,7 +338,7 @@ class Configuration(MultistateDerivedParameterNode):
     represented by the selected lever position.
 
     Note: Values that do not map directly to a required state are masked
-    '''
+    ''' % pformat(at.constants.AVAILABLE_CONF_STATES)
     values_mapping = at.constants.AVAILABLE_CONF_STATES
     align_frequency = 2
 
