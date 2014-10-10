@@ -208,6 +208,7 @@ from analysis_engine.key_point_values import (
     EngGasTempDuringMaximumContinuousPowerForXMinMax,
     EngGasTempDuringMaximumContinuousPowerMax,
     EngGasTempDuringTakeoff5MinRatingMax,
+    EngGasTempExceededEngGasTempRedlineDuration,
     EngN1500To50FtMax,
     EngN1500To50FtMin,
     EngN154to72PercentWithThrustReversersDeployedDurationMax,
@@ -229,10 +230,12 @@ from analysis_engine.key_point_values import (
     EngN2DuringMaximumContinuousPowerMax,
     EngN2DuringTakeoff5MinRatingMax,
     EngN2DuringTaxiMax,
+    EngN2ExceededN2RedlineDuration,
     EngN3DuringGoAround5MinRatingMax,
     EngN3DuringMaximumContinuousPowerMax,
     EngN3DuringTakeoff5MinRatingMax,
     EngN3DuringTaxiMax,
+    EngN3ExceededN3RedlineDuration,
     EngNpDuringClimbMin,
     EngNpDuringGoAround5MinRatingMax,
     EngNpDuringMaximumContinuousPowerMax,
@@ -5783,6 +5786,29 @@ class TestEngGasTempDuringFlightMin(unittest.TestCase, CreateKPVsWithinSlicesTes
         self.assertTrue(False, msg='Test not implemented.')
 
 
+class TestEngGasTempExceededEngGasTempRedlineDuration(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = EngGasTempExceededEngGasTempRedlineDuration
+        array = np.ma.array([0]*5 + range(10) + [10]*10)
+        self.array = np.ma.concatenate((array, array[::-1]))
+
+    def test_derive(self):
+        egt_1 = P(name='Eng (1) Gas Temp', array=self.array.copy())
+        egt_1_red = P(name='Eng (1) Gas Temp Redline', array=self.array.copy()+20)
+        egt_2 = P(name='Eng (2) Gas Temp', array=self.array.copy())
+        egt_2_red = P(name='Eng (2) Gas Temp Redline', array=self.array.copy()+20)
+        egt_2.array[13:17] = 35
+
+        node = self.node_class()
+        node.derive(egt_1, egt_1_red, egt_2, egt_2_red, *[None]*4)
+
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 13)
+        self.assertEqual(node[0].value, 4)
+        self.assertEqual(node[0].name, 'Eng Gas Temp Exceeded Eng Gas Temp Redline Duration')
+
+
 ##############################################################################
 # Engine N1
 
@@ -6125,6 +6151,29 @@ class TestEngN2CyclesDuringFinalApproach(unittest.TestCase, NodeTest):
         self.assertTrue(False, msg='Test not implemented.')
 
 
+class TestEngN2ExceededN2RedlineDuration(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = EngN2ExceededN2RedlineDuration
+        array = np.ma.array([0]*5 + range(10) + [10]*10)
+        self.array = np.ma.concatenate((array, array[::-1]))
+
+    def test_derive(self):
+        n2_1 = P(name='Eng (1) N2', array=self.array.copy())
+        n2_1_red = P(name='Eng (1) N2 Redline', array=self.array.copy()+20)
+        n2_2 = P(name='Eng (2) N2', array=self.array.copy())
+        n2_2_red = P(name='Eng (2) N2 Redline', array=self.array.copy()+20)
+        n2_2.array[13:17] = 35
+
+        node = self.node_class()
+        node.derive(n2_1, n2_1_red, n2_2, n2_2_red, *[None]*4)
+
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 13)
+        self.assertEqual(node[0].value, 4)
+        self.assertEqual(node[0].name, 'Eng N2 Exceeded N2 Redline Duration')
+
+
 ##############################################################################
 # Engine N3
 
@@ -6174,6 +6223,29 @@ class TestEngN3MaximumContinuousPowerMax(unittest.TestCase, NodeTest):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestEngN3ExceededN3RedlineDuration(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = EngN3ExceededN3RedlineDuration
+        array = np.ma.array([0]*5 + range(10) + [10]*10)
+        self.array = np.ma.concatenate((array, array[::-1]))
+
+    def test_derive(self):
+        n3_1 = P(name='Eng (1) N3', array=self.array.copy())
+        n3_1_red = P(name='Eng (1) N3 Redline', array=self.array.copy()+20)
+        n3_2 = P(name='Eng (2) N3', array=self.array.copy())
+        n3_2_red = P(name='Eng (2) N3 Redline', array=self.array.copy()+20)
+        n3_2.array[13:17] = 35
+
+        node = self.node_class()
+        node.derive(n3_1, n3_1_red, n3_2, n3_2_red, *[None]*4)
+
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 13)
+        self.assertEqual(node[0].value, 4)
+        self.assertEqual(node[0].name, 'Eng N3 Exceeded N3 Redline Duration')
 
 
 ##############################################################################

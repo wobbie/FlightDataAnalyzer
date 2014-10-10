@@ -6739,6 +6739,35 @@ class EngGasTempDuringFlightMin(KeyPointValueNode):
         )
 
 
+class EngGasTempExceededEngGasTempRedlineDuration(KeyPointValueNode):
+    '''
+    Origionally coded for B777, returns the duration Gas Temp is above Gas
+    Temp Redline for each engine
+    '''
+
+    name = 'Eng Gas Temp Exceeded Eng Gas Temp Redline Duration'
+    units = ut.SECOND
+
+    def derive(self,
+               eng_1_egt=P('Eng (1) Gas Temp'),
+               eng_1_egt_red=P('Eng (1) Gas Temp Redline'),
+               eng_2_egt=P('Eng (2) Gas Temp'),
+               eng_2_egt_red=P('Eng (2) Gas Temp Redline'),
+               eng_3_egt=P('Eng (3) Gas Temp'),
+               eng_3_egt_red=P('Eng (3) Gas Temp Redline'),
+               eng_4_egt=P('Eng (4) Gas Temp'),
+               eng_4_egt_red=P('Eng (4) Gas Temp Redline')):
+
+        eng_egts = (eng_1_egt, eng_2_egt, eng_3_egt, eng_4_egt)
+        eng_egt_reds = (eng_1_egt_red, eng_2_egt_red, eng_3_egt_red, eng_4_egt_red)
+
+        eng_groups = zip(eng_egts, eng_egt_reds)
+        for eng_egt, eng_egt_red in eng_groups:
+            if eng_egt and eng_egt_red:
+                egt_diff = eng_egt.array - eng_egt_red.array
+                self.create_kpvs_where(egt_diff > 0, self.hz)
+
+
 ##############################################################################
 # Engine N1
 
@@ -7183,6 +7212,35 @@ class EngN2CyclesDuringFinalApproach(KeyPointValueNode):
             ))
 
 
+class EngN2ExceededN2RedlineDuration(KeyPointValueNode):
+    '''
+    Origionally coded for B777, returns the duration N2 is above N2 Redline
+    for each engine
+    '''
+
+    name = 'Eng N2 Exceeded N2 Redline Duration'
+    units = ut.SECOND
+
+    def derive(self,
+               eng_1_n2=P('Eng (1) N2'),
+               eng_1_n2_red=P('Eng (1) N2 Redline'),
+               eng_2_n2=P('Eng (2) N2'),
+               eng_2_n2_red=P('Eng (2) N2 Redline'),
+               eng_3_n2=P('Eng (3) N2'),
+               eng_3_n2_red=P('Eng (3) N2 Redline'),
+               eng_4_n2=P('Eng (4) N2'),
+               eng_4_n2_red=P('Eng (4) N2 Redline')):
+
+        eng_n2s = (eng_1_n2, eng_2_n2, eng_3_n2, eng_4_n2)
+        eng_n2_reds= (eng_1_n2_red, eng_2_n2_red, eng_3_n2_red, eng_4_n2_red)
+
+        eng_groups = zip(eng_n2s, eng_n2_reds)
+        for eng_n2, eng_n2_redline in eng_groups:
+            if eng_n2 and eng_n2_redline:
+                n2_diff = eng_n2.array - eng_n2_redline.array
+                self.create_kpvs_where(n2_diff > 0, self.hz)
+
+
 ##############################################################################
 # Engine N3
 
@@ -7244,6 +7302,36 @@ class EngN3DuringMaximumContinuousPowerMax(KeyPointValueNode):
 
         slices = to_ratings + ga_ratings + grounded
         self.create_kpv_outside_slices(eng_n3_max.array, slices, max_value)
+
+
+
+class EngN3ExceededN3RedlineDuration(KeyPointValueNode):
+    '''
+    Origionally coded for B777, returns the duration N3 is above N3 Redline
+    for each engine
+    '''
+
+    name = 'Eng N3 Exceeded N3 Redline Duration'
+    units = ut.SECOND
+
+    def derive(self,
+               eng_1_n3=P('Eng (1) N3'),
+               eng_1_n3_red=P('Eng (1) N3 Redline'),
+               eng_2_n3=P('Eng (2) N3'),
+               eng_2_n3_red=P('Eng (2) N3 Redline'),
+               eng_3_n3=P('Eng (3) N3'),
+               eng_3_n3_red=P('Eng (3) N3 Redline'),
+               eng_4_n3=P('Eng (4) N3'),
+               eng_4_n3_red=P('Eng (4) N3 Redline')):
+
+        eng_n3s = (eng_1_n3, eng_2_n3, eng_3_n3, eng_4_n3)
+        eng_n3_reds= (eng_1_n3_red, eng_2_n3_red, eng_3_n3_red, eng_4_n3_red)
+
+        eng_groups = zip(eng_n3s, eng_n3_reds)
+        for eng_n3, eng_n3_redline in eng_groups:
+            if eng_n3 and eng_n3_redline:
+                n3_diff = eng_n3.array - eng_n3_redline.array
+                self.create_kpvs_where(n3_diff > 0, self.hz)
 
 
 ##############################################################################
