@@ -654,7 +654,7 @@ class TestConfiguration(unittest.TestCase, NodeTest):
         self.assertEqual(node.units, None)
         self.assertIsInstance(node.array, MappedArray)
         values = unique_values(node.array.astype(int))
-        self.assertEqual(values, {0: 2, 1: 2, 2: 2, 3: 2, 4: 2, 5: 2, 6: 2, 9: 3})
+        self.assertEqual(values, {0: 2, 10: 2, 13: 2, 16: 2, 20: 2, 26: 2, 30: 2, 90: 3})
 
 
 class TestDaylight(unittest.TestCase):
@@ -1499,7 +1499,7 @@ class TestFlapLeverSynthetic(unittest.TestCase, NodeTest):
         node.derive(flap, slat, flaperon, model, series, family)
 
         mapping = {x: str(x) for x in sorted(set(expected))}
-        self.assertTrue(np.all(node.array == np.repeat(expected, repeat)))
+        self.assertEqual(list(node.array), list(np.repeat(expected, repeat)))
 
 
 class TestFlaperon(unittest.TestCase):

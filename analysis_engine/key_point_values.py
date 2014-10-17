@@ -2527,47 +2527,6 @@ class AirspeedMinusFlapManoeuvreSpeedWithFlapDuringDescentMin(KeyPointValueNode,
             self.create_kpv(index, value, flap=detent)
 
 
-class AirspeedMinusFlapManoeuvreSpeedFor3SecWithFlapDuringDescentMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
-    '''
-    Airspeed relative to the flap manoeuvre speed for 3 seconds during the 
-    descent phase for each flap setting.
-
-    Based on Flap Lever for safety based investigations which primarily
-    depend upon the pilot actions, rather than maintenance investigations
-    which depend upon the actual flap surface position. Uses Flap Lever if
-    available otherwise falls back to Flap Lever (Synthetic) which is
-    established from other sources.
-    '''
-
-    NAME_FORMAT = 'Airspeed Minus Flap Manoeuvre Speed For 3 Sec With Flap %(flap)s During Descent Min'
-    NAME_VALUES = NAME_VALUES_LEVER
-    units = ut.KT
-
-    @classmethod
-    def can_operate(cls, available):
-
-        core = all_of((
-            'Airspeed Minus Flap Manoeuvre Speed For 3 Sec',
-            'Descent To Flare',
-        ), available)
-        flap = any_of((
-            'Flap Lever',
-            'Flap Lever (Synthetic)',
-        ), available)
-        return core and flap
-
-    def derive(self,
-               flap_lever=M('Flap Lever'),
-               flap_synth=M('Flap Lever (Synthetic)'),
-               airspeed=P('Airspeed Minus Flap Manoeuvre Speed For 3 Sec'),
-               scope=S('Descent To Flare')):
-
-        flap = flap_lever or flap_synth
-        data = self.flap_or_conf_max_or_min(flap, airspeed, min_value, scope)
-        for index, value, detent in data:
-            self.create_kpv(index, value, flap=detent)
-
-
 class AirspeedAtFirstFlapExtensionWhileAirborne(KeyPointValueNode):
     '''
     Airspeed measured at the point of Flap Extension while airborne.
@@ -3028,27 +2987,6 @@ class AirspeedDuringLevelFlightMax(KeyPointValueNode):
 
         for section in lvl_flt:
             self.create_kpv(*max_value(air_spd.array, section.slice))
-
-
-class AirspeedSelectedMCPAt8000FtDescending(KeyPointValueNode):
-    '''
-    Airspeed Selected in the Mode Control Panel (MCP) at 8000ft in descent.
-    '''
-
-    units = ut.KT
-    name = 'Airspeed Selected (MCP) At 8000 Ft Descending'
-
-    def derive(self,
-               mcp=P('Airspeed Selected (MCP)'),
-               alt_std_desc=S('Altitude When Descending')):
-        #TODO: Refactor to be a formatted name node if multiple Airspeed At
-        #  Altitude KPVs are required. Could depend on either Altitude When
-        #  Climbing or Altitude When Descending, but the assumption is that
-        #  we'll have both.
-    
-        # TODO: Confirm MCP parameter name.
-        self.create_kpvs_at_ktis(mcp.array,
-                                 alt_std_desc.get(name='8000 Ft Descending'))
 
 
 ##############################################################################
@@ -3778,20 +3716,6 @@ class AltitudeAtFlapExtension(KeyPointValueNode):
                 self.create_kpv(flap.index, value)
 
 
-class AltitudeAtAPVNAVModeAndThrustModeSelected(KeyPointValueNode):
-    '''
-    '''
-    
-    name = 'Altitude At AP VNAV Mode And Thrust Mode Selected'
-    units = ut.FT
-    
-    def derive(self,
-               alt_aal=P('Altitude AAL'),
-               vnav_thrust=KTI('AP VNAV Mode And Thrust Mode Selected')):
-        
-        self.create_kpvs_at_ktis(alt_aal.array, vnav_thrust)
-
-
 class AltitudeAtFirstFlapExtensionAfterLiftoff(KeyPointValueNode):
     '''
     Separates the first flap extension.
@@ -3807,12 +3731,13 @@ class AltitudeAtFirstFlapExtensionAfterLiftoff(KeyPointValueNode):
             self.create_kpv(flap_ext.index, flap_ext.value)
 
 
-class AltitudeAtFlapExtensionWithGearDown(KeyPointValueNode):
+class AltitudeAtFlapExtensionWithGearDownSelected(KeyPointValueNode):
     '''
-    Altitude at flap extensions while gear is down and aircraft is airborne.
+    Altitude at flap extensions while gear is selected down (may be in
+    transit) and aircraft is airborne.
     '''
 
-    NAME_FORMAT = 'Altitude At Flap %(flap)s Extension With Gear Down'
+    NAME_FORMAT = 'Altitude At Flap %(flap)s Extension With Gear Down Selected'
     NAME_VALUES = NAME_VALUES_LEVER
     units = ut.FT
 
@@ -3820,29 +3745,25 @@ class AltitudeAtFlapExtensionWithGearDown(KeyPointValueNode):
     def can_operate(cls, available):
 
         return any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available) \
-            and all_of(('Altitude AAL', 'Gear Extended', 'Airborne'), available)
+            and all_of(('Altitude AAL', 'Gear Down Selected', 'Airborne'), available)
 
     def derive(self,
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
                alt_aal=P('Altitude AAL'),
-               gear_ext=S('Gear Extended'),
+               gear_ext=M('Gear Down Selected'),
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-
         # Raw flap values must increase to detect extensions.
         extend = np.ma.diff(flap.array.raw) > 0
 
-        slices = slices_and(
-            (a.slice for a in airborne),
-            (g.slice for g in gear_ext),
-        )
-
-        for air_down in slices:
-            for index in np.ma.where(extend[air_down])[0]:
+        for in_air in airborne.get_slices():
+            for index in np.ma.where(extend[in_air])[0]:
                 # The flap we are moving to is +1 from the diff index
-                index = (air_down.start or 0) + index + 1
+                index = (in_air.start or 0) + index + 1
+                if gear_ext.array[index] != 'Down':
+                    continue                
                 value = alt_aal.array[index]
                 try:
                     self.create_kpv(index, value, flap=flap.array[index])
@@ -3855,12 +3776,38 @@ class AltitudeAtFlapExtensionWithGearDown(KeyPointValueNode):
                     self.create_kpv(index, value, flap=flap.array[index+2])
 
 
-class AirspeedAtFlapExtensionWithGearDown(KeyPointValueNode):
+class AirspeedAtFlapExtension(KeyPointValueNode):
+    '''
+    Airspeed at flap extensions while the aircraft is airborne.
+    '''
+
+    NAME_FORMAT = 'Airspeed At Flap %(flap)s Extension'
+    NAME_VALUES = NAME_VALUES_LEVER
+    units = ut.KT
+
+    def derive(self, flap=M('Flap Lever'), air_spd=P('Airspeed'),
+               airborne=S('Airborne')):
+
+        # Raw flap values must increase to detect extensions.
+        extend = np.ma.diff(flap.array.raw) > 0
+
+        for air_down in airborne.get_slices():
+            for index in np.ma.where(extend[air_down])[0]:
+                # The flap we are moving to is +1 from the diff index
+                index = (air_down.start or 0) + index + 1
+                value = air_spd.array[index]
+                try: 
+                    self.create_kpv(index, value, flap=flap.array[index])
+                except:
+                    self.create_kpv(index, value, flap=flap.array[index+2])
+
+
+class AirspeedAtFlapExtensionWithGearDownSelected(KeyPointValueNode):
     '''
     Airspeed at flap extensions while gear is down and aircraft is airborne.
     '''
 
-    NAME_FORMAT = 'Airspeed At Flap %(flap)s Extension With Gear Down'
+    NAME_FORMAT = 'Airspeed At Flap %(flap)s Extension With Gear Down Selected'
     NAME_VALUES = NAME_VALUES_LEVER
     units = ut.KT
 
@@ -3868,30 +3815,27 @@ class AirspeedAtFlapExtensionWithGearDown(KeyPointValueNode):
     def can_operate(cls, available):
 
         return any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available) \
-            and all_of(('Airspeed', 'Gear Extended', 'Airborne'), available)
+            and all_of(('Airspeed', 'Gear Down Selected', 'Airborne'), available)
 
     def derive(self,
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
                air_spd=P('Airspeed'),
-               gear_ext=S('Gear Extended'),
+               gear_ext=M('Gear Down Selected'),
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
-
         # Raw flap values must increase to detect extensions.
         extend = np.ma.diff(flap.array.raw) > 0
 
-        slices = slices_and(
-            (a.slice for a in airborne),
-            (g.slice for g in gear_ext),
-        )
-
-        for air_down in slices:
-            for index in np.ma.where(extend[air_down])[0]:
+        for in_air in airborne.get_slices():
+            # iterate over each extension
+            for index in np.ma.where(extend[in_air])[0]:
                 # The flap we are moving to is +1 from the diff index
-                index = (air_down.start or 0) + index + 1
-                value = air_spd.array[index]
+                index = (in_air.start or 0) + index + 1
+                if gear_ext.array[index] != 'Down':
+                    continue
+                value = value_at_index(air_spd.array, index)
                 try: 
                     self.create_kpv(index, value, flap=flap.array[index])
                 except:
@@ -3955,6 +3899,7 @@ class AltitudeAtFirstFlapChangeAfterLiftoff(KeyPointValueNode):
 class AltitudeAtLastFlapChangeBeforeTouchdown(KeyPointValueNode):
     '''
     '''
+    #TODO: Review this in comparison to AltitudeAtLastFlapRetraction
 
     units = ut.FT
 
@@ -3973,7 +3918,9 @@ class AltitudeAtLastFlapChangeBeforeTouchdown(KeyPointValueNode):
         flap = flap_lever or flap_synth
 
         for touchdown in touchdowns:
-            land_flap = flap.array.raw[touchdown.index]
+            # using 2 samples prior to touchdown to avoid auto flap
+            # retraction at touchdown
+            land_flap = flap.array.raw[touchdown.index - 2 * self.hz]
             flap_move = abs(flap.array.raw - land_flap)
             rough_index = index_at_value(flap_move, 0.5, slice(touchdown.index, 0, -1))
             # index_at_value tries to be precise, but in this case we really
@@ -4031,6 +3978,7 @@ class AltitudeAtFirstFlapRetraction(KeyPointValueNode):
 class AltitudeAtLastFlapRetraction(KeyPointValueNode):
     '''
     '''
+    #TODO: Review this in comparison to AltitudeAtLastFlapChangeBeforeTouchdown
 
     units = ut.FT
 
@@ -6442,6 +6390,35 @@ class EngTPRAtTOGADuringTakeoffMin(KeyPointValueNode):
             self.create_kpv(index, value)
 
 
+class EngEPRExceedEPRRedlineDuration(KeyPointValueNode):
+    '''
+    Origionally coded for B777, returns the duration EPR is above EPR Redline
+    for each engine
+    '''
+
+    name = 'Eng EPR Exceeded EPR Redline Duration'
+    units = ut.SECOND
+
+    def derive(self,
+               eng_1_epr=P('Eng (1) EPR'),
+               eng_1_epr_red=P('Eng (1) EPR Redline'),
+               eng_2_epr=P('Eng (2) EPR'),
+               eng_2_epr_red=P('Eng (2) EPR Redline'),
+               eng_3_epr=P('Eng (3) EPR'),
+               eng_3_epr_red=P('Eng (3) EPR Redline'),
+               eng_4_epr=P('Eng (4) EPR'),
+               eng_4_epr_red=P('Eng (4) EPR Redline')):
+
+        eng_eprs = (eng_1_epr, eng_2_epr, eng_3_epr, eng_4_epr)
+        eng_epr_reds = (eng_1_epr_red, eng_2_epr_red, eng_3_epr_red, eng_4_epr_red)
+
+        eng_groups = zip(eng_eprs, eng_epr_reds)
+        for eng_epr, eng_epr_red in eng_groups:
+            if eng_epr and eng_epr_red:
+                epr_diff = eng_epr.array - eng_epr_red.array
+                self.create_kpvs_where(epr_diff > 0, self.hz)
+
+
 ##############################################################################
 # Engine Fire
 
@@ -6762,6 +6739,35 @@ class EngGasTempDuringFlightMin(KeyPointValueNode):
             airborne,
             min_value,
         )
+
+
+class EngGasTempExceededEngGasTempRedlineDuration(KeyPointValueNode):
+    '''
+    Origionally coded for B777, returns the duration Gas Temp is above Gas
+    Temp Redline for each engine
+    '''
+
+    name = 'Eng Gas Temp Exceeded Eng Gas Temp Redline Duration'
+    units = ut.SECOND
+
+    def derive(self,
+               eng_1_egt=P('Eng (1) Gas Temp'),
+               eng_1_egt_red=P('Eng (1) Gas Temp Redline'),
+               eng_2_egt=P('Eng (2) Gas Temp'),
+               eng_2_egt_red=P('Eng (2) Gas Temp Redline'),
+               eng_3_egt=P('Eng (3) Gas Temp'),
+               eng_3_egt_red=P('Eng (3) Gas Temp Redline'),
+               eng_4_egt=P('Eng (4) Gas Temp'),
+               eng_4_egt_red=P('Eng (4) Gas Temp Redline')):
+
+        eng_egts = (eng_1_egt, eng_2_egt, eng_3_egt, eng_4_egt)
+        eng_egt_reds = (eng_1_egt_red, eng_2_egt_red, eng_3_egt_red, eng_4_egt_red)
+
+        eng_groups = zip(eng_egts, eng_egt_reds)
+        for eng_egt, eng_egt_red in eng_groups:
+            if eng_egt and eng_egt_red:
+                egt_diff = eng_egt.array - eng_egt_red.array
+                self.create_kpvs_where(egt_diff > 0, self.hz)
 
 
 ##############################################################################
@@ -7097,6 +7103,35 @@ class EngN154to72PercentWithThrustReversersDeployedDurationMax(KeyPointValueNode
                                                       number=eng_num)
 
 
+class EngN1ExceededN1RedlineDuration(KeyPointValueNode):
+    '''
+    Origionally coded for B777, returns the duration N1 is above N1 Redline
+    for each engine
+    '''
+
+    name = 'Eng N1 Exceeded N1 Redline Duration'
+    units = ut.SECOND
+
+    def derive(self,
+               eng_1_n1=P('Eng (1) N1'),
+               eng_1_n1_red=P('Eng (1) N1 Redline'),
+               eng_2_n1=P('Eng (2) N1'),
+               eng_2_n1_red=P('Eng (2) N1 Redline'),
+               eng_3_n1=P('Eng (3) N1'),
+               eng_3_n1_red=P('Eng (3) N1 Redline'),
+               eng_4_n1=P('Eng (4) N1'),
+               eng_4_n1_red=P('Eng (4) N1 Redline')):
+
+        eng_n1s = (eng_1_n1, eng_2_n1, eng_3_n1, eng_4_n1)
+        eng_n1_reds= (eng_1_n1_red, eng_2_n1_red, eng_3_n1_red, eng_4_n1_red)
+
+        eng_groups = zip(eng_n1s, eng_n1_reds)
+        for eng_n1, eng_n1_redline in eng_groups:
+            if eng_n1 and eng_n1_redline:
+                n1_diff = eng_n1.array - eng_n1_redline.array
+                self.create_kpvs_where(n1_diff > 0, self.hz)
+
+
 ##############################################################################
 # Engine N2
 
@@ -7179,6 +7214,35 @@ class EngN2CyclesDuringFinalApproach(KeyPointValueNode):
             ))
 
 
+class EngN2ExceededN2RedlineDuration(KeyPointValueNode):
+    '''
+    Origionally coded for B777, returns the duration N2 is above N2 Redline
+    for each engine
+    '''
+
+    name = 'Eng N2 Exceeded N2 Redline Duration'
+    units = ut.SECOND
+
+    def derive(self,
+               eng_1_n2=P('Eng (1) N2'),
+               eng_1_n2_red=P('Eng (1) N2 Redline'),
+               eng_2_n2=P('Eng (2) N2'),
+               eng_2_n2_red=P('Eng (2) N2 Redline'),
+               eng_3_n2=P('Eng (3) N2'),
+               eng_3_n2_red=P('Eng (3) N2 Redline'),
+               eng_4_n2=P('Eng (4) N2'),
+               eng_4_n2_red=P('Eng (4) N2 Redline')):
+
+        eng_n2s = (eng_1_n2, eng_2_n2, eng_3_n2, eng_4_n2)
+        eng_n2_reds= (eng_1_n2_red, eng_2_n2_red, eng_3_n2_red, eng_4_n2_red)
+
+        eng_groups = zip(eng_n2s, eng_n2_reds)
+        for eng_n2, eng_n2_redline in eng_groups:
+            if eng_n2 and eng_n2_redline:
+                n2_diff = eng_n2.array - eng_n2_redline.array
+                self.create_kpvs_where(n2_diff > 0, self.hz)
+
+
 ##############################################################################
 # Engine N3
 
@@ -7240,6 +7304,36 @@ class EngN3DuringMaximumContinuousPowerMax(KeyPointValueNode):
 
         slices = to_ratings + ga_ratings + grounded
         self.create_kpv_outside_slices(eng_n3_max.array, slices, max_value)
+
+
+
+class EngN3ExceededN3RedlineDuration(KeyPointValueNode):
+    '''
+    Origionally coded for B777, returns the duration N3 is above N3 Redline
+    for each engine
+    '''
+
+    name = 'Eng N3 Exceeded N3 Redline Duration'
+    units = ut.SECOND
+
+    def derive(self,
+               eng_1_n3=P('Eng (1) N3'),
+               eng_1_n3_red=P('Eng (1) N3 Redline'),
+               eng_2_n3=P('Eng (2) N3'),
+               eng_2_n3_red=P('Eng (2) N3 Redline'),
+               eng_3_n3=P('Eng (3) N3'),
+               eng_3_n3_red=P('Eng (3) N3 Redline'),
+               eng_4_n3=P('Eng (4) N3'),
+               eng_4_n3_red=P('Eng (4) N3 Redline')):
+
+        eng_n3s = (eng_1_n3, eng_2_n3, eng_3_n3, eng_4_n3)
+        eng_n3_reds= (eng_1_n3_red, eng_2_n3_red, eng_3_n3_red, eng_4_n3_red)
+
+        eng_groups = zip(eng_n3s, eng_n3_reds)
+        for eng_n3, eng_n3_redline in eng_groups:
+            if eng_n3 and eng_n3_redline:
+                n3_diff = eng_n3.array - eng_n3_redline.array
+                self.create_kpvs_where(n3_diff > 0, self.hz)
 
 
 ##############################################################################
@@ -8289,13 +8383,13 @@ class FlapAtTouchdown(KeyPointValueNode):
 class FlapAtGearDownSelection(KeyPointValueNode):
     '''
     Flap angle at gear down selection.
-
-    Note that this KPV uses the flap surface angle, not the flap lever angle.
+    
+    Flap Including Transition is used to model Flap Lever selection for Flap setting increases.
     '''
 
     units = ut.DEGREE
 
-    def derive(self, flap=M('Flap'), gear_dn_sel=KTI('Gear Down Selection')):
+    def derive(self, flap=M('Flap Including Transition'), gear_dn_sel=KTI('Gear Down Selection')):
 
         self.create_kpvs_at_ktis(flap.array, gear_dn_sel, interpolate=False)
 
@@ -8304,11 +8398,11 @@ class FlapAtGearUpSelectionDuringGoAround(KeyPointValueNode):
     '''
     Flap angle at gear up selection during go around.
 
-    Note that this KPV uses the flap surface angle, not the flap lever angle.
+    Flap Including Transition is used to model Flap Lever selection for Flap setting increases.`
     '''
     units = ut.DEGREE
 
-    def derive(self, flap=M('Flap'),
+    def derive(self, flap=M('Flap Including Transition'),
                gear_up_sel=KTI('Gear Up Selection During Go Around')):
         self.create_kpvs_at_ktis(flap.array, gear_up_sel, interpolate=False)
 
@@ -8379,6 +8473,56 @@ class FlapAt500Ft(KeyPointValueNode):
 
         for gate in gates.get(name='500 Ft Descending'):
             self.create_kpv(gate.index, flap.array.raw[gate.index])
+
+
+class GearDownToLandingFlapConfigurationDuration(KeyPointValueNode):
+    '''
+    Duration between Gear Down selection and Landing Flap Configuration
+    selection. Gear Down selection after Landing Flap Configuration will
+    result in positive values.
+    '''
+    
+    units = ut.SECOND
+    
+    @classmethod
+    def can_operate(cls, available, family=A('Family')):
+        embraer = family and family.value in ('ERJ-170/175',
+                                              'ERJ-190/195',
+                                              'Phenom 300')
+        return embraer and all_of(['Flap Lever', 'Gear Down Selection', 'Approach And Landing', 'Family'], available)
+    
+    def derive(self,
+               flap_lever=M('Flap Lever'),
+               gear_dn_sel=KTI('Gear Down Selection'),
+               approaches=A('Approach And Landing'),
+               family=A('Family')):
+        
+        if family.value in ('ERJ-170/175', 'ERJ-190/195'):
+            valid_settings = ('Lever 4', 'Lever 5', 'Lever Full')
+        elif family.value == 'Phenom 300':
+            valid_settings = ('Lever 3', 'Lever Full')
+        
+        for approach in approaches:
+            # Assume Gear Down is selected before lowest point of descent.
+            last_gear_dn = gear_dn_sel.get_last(within_slice=approach.slice)
+            if not last_gear_dn:
+                continue
+            
+            landing_flap_changes = []
+            for valid_setting in valid_settings:
+                landing_flap_changes.extend(find_edges_on_state_change(
+                    valid_setting,
+                    flap_lever.array,
+                    phase=[approach.slice],
+                ))
+            
+            if not landing_flap_changes:
+                # Always create a KPV if Gear Down is selected during approach
+                self.create_kpv(approach.slice.stop, (approach.slice.stop - last_gear_dn.index) / self.frequency)
+                continue
+            
+            index, diff = max((f, f - last_gear_dn.index) for f in landing_flap_changes)
+            self.create_kpv(index, diff / self.frequency)
 
 
 ##############################################################################
@@ -9306,28 +9450,6 @@ class Pitch7FtToTouchdownMax(KeyPointValueNode):
         )
 
 
-class AirspeedV2Plus20DifferenceAtAPVNAVModeAndThrustModeSelected(KeyPointValueNode):
-    '''
-    This was requested by one customer who wanted to know the speed margin
-    from the ideal of V2+20 when the crew put the automatics in after
-    take-off.
-    '''
-    
-    name = 'V2+20 Minus Airspeed At AP VNAV Mode And Thrust Mode Selected'
-    units = ut.KT
-    
-    def derive(self,
-               airspeed=P('Airspeed'),
-               v2=P('V2'),
-               vnav_thrusts=KTI('AP VNAV Mode And Thrust Mode Selected')):
-        
-        # XXX: Assuming V2 value is constant.
-        v2_value = v2.array[np.ma.where(v2.array)[0][0]] + 20
-        for vnav_thrust in vnav_thrusts:
-            difference = abs(v2_value - airspeed.array[vnav_thrust.index])
-            self.create_kpv(vnav_thrust.index, difference)
-
-
 class PitchCyclesDuringFinalApproach(KeyPointValueNode):
     '''
     Counts the number of half-cycles of pitch attitude that exceed 3 deg in
@@ -9362,21 +9484,6 @@ class PitchDuringGoAroundMax(KeyPointValueNode):
                go_arounds=S('Go Around And Climbout')):
 
         self.create_kpvs_within_slices(pitch.array, go_arounds, max_value)
-
-
-class PitchAtAPVNAVModeAndThrustModeSelected(KeyPointValueNode):
-    '''
-    Will create a Pitch KPV for each KTI.
-    '''
-    
-    name = 'Pitch At AP VNAV Mode And Thrust Mode Selected'
-    units = ut.DEGREE
-    
-    def derive(self,
-               pitch=P('Pitch'),
-               vnav_thrust=KTI('AP VNAV Mode And Thrust Mode Selected')):
-        
-        self.create_kpvs_at_ktis(pitch.array, vnav_thrust)
 
 
 ##############################################################################
