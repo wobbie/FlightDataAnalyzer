@@ -104,6 +104,7 @@ from settings import (AIRSPEED_THRESHOLD,
                       LANDING_THRESHOLD_HEIGHT,
                       METRES_TO_FEET,
                       METRES_TO_NM,
+                      MIN_VALID_FUEL,
                       VERTICAL_SPEED_LAG_TC)
 
 # There is no numpy masked array function for radians, so we just multiply thus:
@@ -3355,7 +3356,7 @@ class FuelQty(DerivedParameterNode):
         params = []
         for param in (fuel_qty_l, fuel_qty_c, fuel_qty_c_1, fuel_qty_c_2,
                       fuel_qty_r, fuel_qty_trim, fuel_qty_aux, fuel_qty_tail):
-            if not param:
+            if not param or np.ma.count(param.array)/float(len(param.array))<MIN_VALID_FUEL:
                 continue
             # Repair array masks to ensure that the summed values are not too small
             # because they do not include masked values.

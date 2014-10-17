@@ -312,6 +312,9 @@ CORE_STOP_SPEED = 35.0  # %
 # Minimum fan speed at idle for engines where N2/N3 not recorded.
 MIN_FAN_RUNNING = 5.0  # %
 
+# Minimum proportion of valid data for unused fuel tanks.
+MIN_VALID_FUEL = 0.25
+
 # Threshold for Longitudinal Acceleration Offset Removed dropping to after
 # a Takeoff Acceleration Start.
 REJECTED_TAKEOFF_THRESHOLD = 0
