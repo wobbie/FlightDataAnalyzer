@@ -2308,7 +2308,7 @@ class NodeManager(object):
         :param name: Name of Node.
         :type name: str
         :param available: Available dependencies to be passed into the derive method of the Node instance.
-        :type available: list of str
+        :type available: set or list of str
         :returns: Result of Operational test on parameter.
         :rtype: bool
         """

@@ -144,11 +144,11 @@ def dependencies3(di_graph, root, node_mgr):
             # node already discovered operational
             return True
         
-        layer = []  # layer of current node's available dependencies
+        layer = set()  # layer of current node's available dependencies
         for dependency in di_graph.successors(node):
             # traverse again, 'like we did last summer'
             if traverse_tree(dependency):
-                layer.append(dependency)
+                layer.add(dependency)
             # each time traverse_tree returns, remove node from visited path
             path.pop()
             
