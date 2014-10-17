@@ -291,6 +291,7 @@ from analysis_engine.key_point_values import (
     FuelQtyAtTouchdown,
     FuelQtyLowWarningDuration,
     FuelQtyWingDifferenceMax,
+    GearDownToLandingFlapConfigurationDuration,
     GrossWeightAtLiftoff,
     GrossWeightAtTouchdown,
     GrossWeightDelta60SecondsInFlightMax,
@@ -7782,6 +7783,7 @@ class TestFlapAtGearUpSelectionDuringGoAround(unittest.TestCase, NodeTest):
             KeyPointValue(index=30.25, value=30, name=name),
         ]))
 
+
 class TestFlapOrConfigurationMaxOrMin(unittest.TestCase):
     
     def test_flap_or_conf_max_or_min_empty_scope(self):
@@ -7886,6 +7888,106 @@ class TestFlapAt500Ft(unittest.TestCase, NodeTest):
         self.assertEqual(node, KPV(name=name, items=[
             KeyPointValue(index=90, value=45, name=name),
         ]))
+
+
+class TestGearDownToLandingFlapConfigurationDuration(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = GearDownToLandingFlapConfigurationDuration
+        self.values_mapping = {
+            0: 'Lever 0',
+            10: 'Lever 1',
+            20: 'Lever 2',
+            30: 'Lever 3',
+            40: 'Lever 4',
+            50: 'Lever 5',
+            90: 'Lever Full',
+        }
+        self.reverse_lookup = {v: k for k, v in self.values_mapping.items()}
+    
+    def test_can_operate(self):
+        self.assertFalse(self.node_class.can_operate([]))
+        valid_family1 = A('Family', value='ERJ-170/175')
+        valid_family2 = A('Family', value='ERJ-190/195')
+        valid_family3 = A('Family', value='Phenom 300')
+        invalid_family = A('Family', value='B787')
+        available = set()
+        self.assertFalse(self.node_class.can_operate(available, family=valid_family1))
+        self.assertFalse(self.node_class.can_operate(available, family=invalid_family))
+        available = {'Flap Lever', 'Gear Down Selection', 'Approach And Landing', 'Family'}
+        self.assertFalse(self.node_class.can_operate(available))
+        self.assertFalse(self.node_class.can_operate(available, family=invalid_family))
+        self.assertTrue(self.node_class.can_operate(available, family=valid_family1))
+        self.assertTrue(self.node_class.can_operate(available, family=valid_family2))
+        self.assertTrue(self.node_class.can_operate(available, family=valid_family3))
+
+    def test_derive_basic_phenom_300(self):
+        flap_lever_values = np.ma.array(
+            [self.reverse_lookup['Lever 0']] * 10 +
+            [self.reverse_lookup['Lever 1']] * 10 +
+            [self.reverse_lookup['Lever 2']] * 10 +
+            [self.reverse_lookup['Lever 3']] * 10 +
+            [self.reverse_lookup['Lever Full']] * 10
+        )
+        
+        flap_lever = M('Flap Lever', array=flap_lever_values, values_mapping=self.values_mapping)
+        
+        gear_dn_sel = KTI('Gear Down Selection',
+                          items=[KeyTimeInstance(x) for x in (5, 15, 25, 27, 41)])
+        
+        approaches = buildsections('Approach And Landing', (15, 20), (20, 32), (35, 45))
+        
+        family = A('Family', value='Phenom 300')
+        
+        node = self.node_class()
+        
+        node.derive(flap_lever, gear_dn_sel, approaches, family)
+        
+        self.assertEqual(len(node), 3)
+        self.assertEqual(node[0].index, 21)
+        self.assertEqual(node[0].value, 6)
+        self.assertEqual(node[1].index, 29.5)
+        self.assertEqual(node[1].value, 2.5)
+        self.assertEqual(node[2].index, 39.5)
+        self.assertEqual(node[2].value, -1.5)
+    
+    
+    def test_derive_basic_erj(self):
+        flap_lever_values = np.ma.array(
+            [self.reverse_lookup['Lever 0']] * 10 +
+            [self.reverse_lookup['Lever 1']] * 10 +
+            [self.reverse_lookup['Lever 2']] * 10 +
+            [self.reverse_lookup['Lever 3']] * 10 +
+            [self.reverse_lookup['Lever 4']] * 10 +
+            [self.reverse_lookup['Lever 5']] * 10 +
+            [self.reverse_lookup['Lever Full']] * 10
+        )
+        
+        flap_lever = M('Flap Lever', array=flap_lever_values, values_mapping=self.values_mapping)
+        
+        gear_dn_sel = KTI('Gear Down Selection',
+                          items=[KeyTimeInstance(x) for x in (5, 15, 25, 27, 41, 52)])
+        
+        approaches = buildsections('Approach And Landing', (15, 20), (20, 32), (35, 45), (45, 55), (55, 65))
+        
+        expected = [
+            (21, 6),
+            (33, 6),
+            (39.5, -1.5),
+            (49.5, -2.5),
+        ]
+        
+        def test_family(family_name):
+            node = self.node_class()
+            family = A('Family', value=family_name)
+            node.derive(flap_lever, gear_dn_sel, approaches, family)
+            self.assertEqual(len(node), len(expected))
+            for index, (kpv_index, kpv_value) in enumerate(expected):
+                self.assertEqual(node[index].index, kpv_index)
+                self.assertEqual(node[index].value, kpv_value)
+        
+        test_family('ERJ-170/175')
+        test_family('ERJ-190/195')
 
 
 ##############################################################################

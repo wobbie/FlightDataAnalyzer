@@ -8475,6 +8475,56 @@ class FlapAt500Ft(KeyPointValueNode):
             self.create_kpv(gate.index, flap.array.raw[gate.index])
 
 
+class GearDownToLandingFlapConfigurationDuration(KeyPointValueNode):
+    '''
+    Duration between Gear Down selection and Landing Flap Configuration
+    selection. Gear Down selection after Landing Flap Configuration will
+    result in positive values.
+    '''
+    
+    units = ut.SECOND
+    
+    @classmethod
+    def can_operate(cls, available, family=A('Family')):
+        embraer = family and family.value in ('ERJ-170/175',
+                                              'ERJ-190/195',
+                                              'Phenom 300')
+        return embraer and all_of(['Flap Lever', 'Gear Down Selection', 'Approach And Landing', 'Family'], available)
+    
+    def derive(self,
+               flap_lever=M('Flap Lever'),
+               gear_dn_sel=KTI('Gear Down Selection'),
+               approaches=A('Approach And Landing'),
+               family=A('Family')):
+        
+        if family.value in ('ERJ-170/175', 'ERJ-190/195'):
+            valid_settings = ('Lever 4', 'Lever 5', 'Lever Full')
+        elif family.value == 'Phenom 300':
+            valid_settings = ('Lever 3', 'Lever Full')
+        
+        for approach in approaches:
+            # Assume Gear Down is selected before lowest point of descent.
+            last_gear_dn = gear_dn_sel.get_last(within_slice=approach.slice)
+            if not last_gear_dn:
+                continue
+            
+            landing_flap_changes = []
+            for valid_setting in valid_settings:
+                landing_flap_changes.extend(find_edges_on_state_change(
+                    valid_setting,
+                    flap_lever.array,
+                    phase=[approach.slice],
+                ))
+            
+            if not landing_flap_changes:
+                # Always create a KPV if Gear Down is selected during approach
+                self.create_kpv(approach.slice.stop, (approach.slice.stop - last_gear_dn.index) / self.frequency)
+                continue
+            
+            index, diff = max((f, f - last_gear_dn.index) for f in landing_flap_changes)
+            self.create_kpv(index, diff / self.frequency)
+
+
 ##############################################################################
 
 
