@@ -5340,7 +5340,19 @@ class TestSlicesOr(unittest.TestCase):
         slice_list_c = [slice(6, None)]
         self.assertEqual(slices_or(slice_list_a, slice_list_b, slice_list_c),
                          [slice(None, None)])
-
+        
+    def test_slices_or_real_example(self):
+        # This comes from a flight where two radio altimeters were starting
+        # to operate during the descent. The original code produced an answer
+        # [slice(0.0, 394, None), slice(979.0, 1198, None), slice(972.0, 1198, None)]
+        # inerror.
+        self.assertEqual(slices_or([slice(0.0, 394, None), 
+                                     slice(975.0, 980, None), 
+                                     slice(984.0, 1198, None)], 
+                                    [slice(0.0, 394, None), 
+                                     slice(972.0, 977, None), 
+                                     slice(979.0, 1198, None)]),
+                                   [slice(0,394), slice(972,1198)])
 
 class TestStepLocalCusp(unittest.TestCase):
     def test_step_cusp_basic(self):

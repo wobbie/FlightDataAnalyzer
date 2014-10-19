@@ -3435,9 +3435,17 @@ def slices_or(*slice_lists):
                         slice_stop = max(input_slice.stop, output_slice.stop)
                     
                     input_slice = slice(slice_start, slice_stop)
-                    slices.remove(output_slice)
+                    try:
+                        slices.remove(output_slice)
+                    except:
+                        # This has already been handled at a lower level, so quit.
+                        break
                     slices.append(input_slice)
                     modified = True
+                    
+                if modified:
+                    # The new slice may overlap two, so repeat the process.
+                    slices = slices_or(slices)
             
             if not modified:
                 slices.append(input_slice)
