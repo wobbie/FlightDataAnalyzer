@@ -950,7 +950,9 @@ class AltitudeRadio(DerivedParameterNode):
 
         self.array = blend_parameters(sources,
                                       offset=self.offset,
-                                      frequency=self.frequency)
+                                      frequency=self.frequency,
+                                      small_slice_duration=10,
+                                      debug=False)
 
         # For aircraft where the antennae are placed well away from the main
         # gear, and especially where it is aft of the main gear, compensation

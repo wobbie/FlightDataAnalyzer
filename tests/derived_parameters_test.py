@@ -1410,7 +1410,23 @@ class TestAltitudeRadio(unittest.TestCase):
         self.assertAlmostEqual(alt_rad.array.data[4], 2.5) # -1.5ft offset
         self.assertEqual(alt_rad.array.data[36], -3.675) # -1.5ft & 5deg
         self.assertEqual(alt_rad.array.data[76], 6.15) # -1.5ft & 10 deg
-        
+
+    def test_altitude_radio_reject_small_segments(self):
+        alt_rad = AltitudeRadio()
+        fast = buildsection('Fast', 0, 40)
+        alt_rad.derive(None, None, None,
+                       Parameter('Altitude Radio (L)', 
+                                 np.ma.array([10]*20),
+                                 1.0, 0.0),
+                       Parameter('Altitude Radio (R)', 
+                                 np.ma.array(data=[0]*2+[20]*2+[0]*4+[20]*8+[0]*4,
+                                             mask=[1]*2+ [0]*2+[1]*4+ [0]*8+[1]*4),
+                                 1.0, 0.0),
+                       None, None, None, None, None, None,)
+        expected = np.ma.array([10]*80)
+        ma_test.assert_masked_array_equal(alt_rad.array, expected)
+
+
 
 class TestAltitudeRadioOffsetRemoved(unittest.TestCase):
     def setUp(self):
