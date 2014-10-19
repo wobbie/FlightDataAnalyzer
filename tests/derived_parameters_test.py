@@ -6711,31 +6711,24 @@ class TestAirspeedMinusFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
 
 
 class TestAirspeedMinusFlapManoeuvreSpeedFor3Sec(unittest.TestCase, NodeTest):
-
+    # This test was missing, so copied from above and amended, but for some
+    # reason fails in second_window with the error "Invalid Seconds for
+    # frequency" which I do not understand. DJ 17/10/14.
     def setUp(self):
         self.node_class = AirspeedMinusFlapManoeuvreSpeedFor3Sec
         self.operational_combinations = [
-            ('Airspeed Minus Flap Manoeuvre Speed',),
+            ('Airspeed', 'Flap Manoeuvre Speed'),
         ]
-        self.airspeed = P(
-            name='Airspeed Minus Flap Manoeuvre Speed',
-            array=np.ma.repeat((100, 110, 120, 100), (6, 7, 1, 6)),
-            frequency=2,
-        )
-
-    def test_derive_basic(self):
+        self.airspeed = P('Airspeed', np.ma.repeat(102, 12))
+        self.flap_mvr_spd = P('Flap Manoeuvre Speed', 
+                              np.ma.array(range(80,87)+range(85,80,-1)))
+        
+    def test_derive__basic(self):
+        self.flap_mvr_spd.array[3] = np.ma.masked
         node = self.node_class()
-        node.get_derived([self.airspeed])
-        expected = np.ma.repeat((100, 110, 100), (6, 8, 6))
-        expected[-6:] = np.ma.masked
-        ma_test.assert_masked_array_equal(node.array, expected)
-
-    def test_derive_align(self):
-        self.airspeed.frequency = 1
-        node = self.node_class()
-        node.get_derived([self.airspeed])
-        expected = np.ma.repeat((100, 105, 110, 100), (11, 1, 16, 12))
-        expected[-7:] = np.ma.masked
+        node.derive(self.airspeed, self.flap_mvr_spd)
+        expected = np.ma.array(data=[0]*4+[18]*4+[0]*4,
+                               mask=[1]*4+[0]*4+[1]*4)
         ma_test.assert_masked_array_equal(node.array, expected)
 
 
