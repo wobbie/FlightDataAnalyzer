@@ -1297,7 +1297,9 @@ class Touchdown(KeyTimeInstanceNode):
                alt=P('Altitude AAL'), 
                gog=M('Gear On Ground'), 
                lands=S('Landing'),
-               flap=P('Flap')):
+               flap=P('Flap'),
+               manufacturer=A('Manufacturer'),
+               family=A('Family')):
         # The preamble here checks that the landing we are looking at is
         # genuine, it's not just because the data stopped in mid-flight. We
         # reduce the scope of the search for touchdown to avoid triggering in
@@ -1328,7 +1330,8 @@ class Touchdown(KeyTimeInstanceNode):
                     if not alt or alt.array[index] < 5.0:
                         index_gog = index
                         
-            if flap and not gog:
+            if manufacturer and manufacturer.value in ('Saab') and \
+               family and family.value in ('2000'):
                 # This covers aircraft with automatic flap retraction on
                 # landing but no gear on ground signal. The Saab 2000 is a
                 # case in point.
