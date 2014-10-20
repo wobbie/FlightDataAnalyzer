@@ -3419,10 +3419,11 @@ def slices_or(*slice_lists):
     slices = []
     if all(len(s) == 0 or s == [None] for s in slice_lists):
         return slices
-    
+
+    recheck = False
     for slice_list in slice_lists:
         for input_slice in slice_list:
-            
+
             modified = False
             for output_slice in copy(slices):
                 if slices_overlap(input_slice, output_slice):
@@ -3442,14 +3443,15 @@ def slices_or(*slice_lists):
                         break
                     slices.append(input_slice)
                     modified = True
-                    
-                if modified:
-                    # The new slice may overlap two, so repeat the process.
-                    slices = slices_or(slices)
-            
+                    recheck = True
+
             if not modified:
                 slices.append(input_slice)
-    
+
+        if recheck:
+            # The new slice may overlap two, so repeat the process.
+            slices = slices_or(slices)
+
     return slices
 
 
