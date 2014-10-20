@@ -3842,14 +3842,15 @@ class AirspeedAtFlapExtensionWithGearDownSelected(KeyPointValueNode):
                     self.create_kpv(index, value, flap=flap.array[index+2])
 
 
-class AltitudeRadioCleanConfigurationMin(KeyPointValueNode):
+class AltitudeAALCleanConfigurationMin(KeyPointValueNode):
     '''
     '''
 
     units = ut.FT
+    name = 'Altitude AAL Clean Configuration Min'
 
     def derive(self,
-               alt_rad=P('Altitude Radio'),
+               alt_rad=P('Altitude AAL'),
                flap=M('Flap'),
                gear_retr=S('Gear Retracted')):
 
