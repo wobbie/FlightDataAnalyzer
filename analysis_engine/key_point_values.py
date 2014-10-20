@@ -3920,9 +3920,9 @@ class AltitudeAtLastFlapChangeBeforeTouchdown(KeyPointValueNode):
         for touchdown in touchdowns:
             # using 2 samples prior to touchdown to avoid auto flap
             # retraction at touchdown
-            land_flap = flap.array.raw[touchdown.index - 2 * self.hz]
+            land_flap = flap.array.raw[touchdown.index]
             flap_move = abs(flap.array.raw - land_flap)
-            rough_index = index_at_value(flap_move, 0.5, slice(touchdown.index, 0, -1))
+            rough_index = index_at_value(flap_move, 0.5, slice(touchdown.index - 2 * self.hz, 0, -1))
             # index_at_value tries to be precise, but in this case we really
             # just want the index at the new flap setting.
             if rough_index:
