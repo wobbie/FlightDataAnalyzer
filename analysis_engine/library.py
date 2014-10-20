@@ -4243,7 +4243,7 @@ def blend_parameters(params, offset=0.0, frequency=1.0, small_slice_duration=4, 
         # samples as below this level it's not possible to compute a cubic
         # spline.
         nts=slices_remove_small_slices(np.ma.clump_unmasked(param.array),
-                                       count=param.frequency * small_slice_duration)
+                                       count=max(param.frequency * small_slice_duration, 4))
         param.array = mask_outside_slices(param.array, nts)
         # Now scale these non-trivial slices into the lowest timebase for
         # collation.
