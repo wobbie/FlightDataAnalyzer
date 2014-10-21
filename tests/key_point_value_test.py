@@ -167,7 +167,7 @@ from analysis_engine.key_point_values import (
     AltitudeLastUnstableDuringLastApproach,
     AltitudeMax,
     AltitudeOvershootAtSuspectedLevelBust,
-    AltitudeRadioCleanConfigurationMin,
+    AltitudeAALCleanConfigurationMin,
     AltitudeWithFlapMax,
     AltitudeSTDWithGearDownMax,
     AltitudeWithGearDownMax,
@@ -4027,11 +4027,11 @@ class TestAirspeedAtFlapExtensionWithGearDownSelected(unittest.TestCase, NodeTes
         ]))
 
 
-class TestAltitudeRadioCleanConfigurationMin(unittest.TestCase, NodeTest):
+class TestAltitudeAALCleanConfigurationMin(unittest.TestCase, NodeTest):
     def setUp(self):
-        self.node_class = AltitudeRadioCleanConfigurationMin
+        self.node_class = AltitudeAALCleanConfigurationMin
         self.operational_combinations = [
-            ('Altitude Radio', 'Flap', 'Gear Retracted'),
+            ('Altitude AAL', 'Flap', 'Gear Retracted'),
         ]
 
     def test_derive(self):
@@ -4044,7 +4044,7 @@ class TestAltitudeRadioCleanConfigurationMin(unittest.TestCase, NodeTest):
             [1000] * 5,
             np.ma.arange(1000, 0, -100),
         ))
-        alt_rad = P('Altitude Radio', array=array)
+        alt_rad = P('Altitude AAL', array=array)
 
         gear_retr = S(items=[Section('Gear Retracted', slice(5, 10), 5, 10)])
 

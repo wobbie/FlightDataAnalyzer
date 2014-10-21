@@ -1296,7 +1296,10 @@ class Touchdown(KeyTimeInstanceNode):
                acc_long=P('Acceleration Longitudinal'),
                alt=P('Altitude AAL'), 
                gog=M('Gear On Ground'), 
-               lands=S('Landing')):
+               lands=S('Landing'),
+               flap=P('Flap'),
+               manufacturer=A('Manufacturer'),
+               family=A('Family')):
         # The preamble here checks that the landing we are looking at is
         # genuine, it's not just because the data stopped in mid-flight. We
         # reduce the scope of the search for touchdown to avoid triggering in
@@ -1326,6 +1329,17 @@ class Touchdown(KeyTimeInstanceNode):
                     # Check we were within 5ft of the ground when the switch triggered.
                     if not alt or alt.array[index] < 5.0:
                         index_gog = index
+                        
+            if manufacturer and manufacturer.value in ('Saab') and \
+               family and family.value in ('2000'):
+                # This covers aircraft with automatic flap retraction on
+                # landing but no gear on ground signal. The Saab 2000 is a
+                # case in point.
+                land_flap = np.ma.array(data=flap.array.data[land.slice],
+                                        mask=flap.array.mask[land.slice])
+                flap_change_idx = index_at_value(land_flap, land_flap[0]-1)
+                if flap_change_idx :
+                    index_gog = int(flap_change_idx) + land.slice.start
 
             index_ref = min([x for x in index_alt, index_gog if x is not None])
             

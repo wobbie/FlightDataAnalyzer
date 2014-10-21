@@ -1410,7 +1410,23 @@ class TestAltitudeRadio(unittest.TestCase):
         self.assertAlmostEqual(alt_rad.array.data[4], 2.5) # -1.5ft offset
         self.assertEqual(alt_rad.array.data[36], -3.675) # -1.5ft & 5deg
         self.assertEqual(alt_rad.array.data[76], 6.15) # -1.5ft & 10 deg
-        
+
+    def test_altitude_radio_reject_small_segments(self):
+        alt_rad = AltitudeRadio()
+        fast = buildsection('Fast', 0, 40)
+        alt_rad.derive(None, None, None,
+                       Parameter('Altitude Radio (L)', 
+                                 np.ma.array([10]*20),
+                                 1.0, 0.0),
+                       Parameter('Altitude Radio (R)', 
+                                 np.ma.array(data=[0]*2+[20]*2+[0]*4+[20]*8+[0]*4,
+                                             mask=[1]*2+ [0]*2+[1]*4+ [0]*8+[1]*4),
+                                 1.0, 0.0),
+                       None, None, None, None, None, None,)
+        expected = np.ma.array([10]*80)
+        ma_test.assert_masked_array_equal(alt_rad.array, expected)
+
+
 
 class TestAltitudeRadioOffsetRemoved(unittest.TestCase):
     def setUp(self):
@@ -3400,7 +3416,7 @@ class TestAOA(unittest.TestCase):
         aoa_r = P('AOA (R)', [4.881875, 4.5703125, 4.5712125, 4.544125],
                           frequency=0.5, offset=0.6484375)
         aoa = AOA()
-        res = aoa.get_derived((aoa_l, aoa_r))
+        res = aoa.get_derived((aoa_l, aoa_r, None))
         self.assertEqual(aoa.hz, 1)
         self.assertEqual(aoa.offset, 0.1484375)
         
@@ -3410,10 +3426,17 @@ class TestAOA(unittest.TestCase):
                   frequency=1.0, offset=0.1484375)
         
         aoa = AOA()
-        res = aoa.get_derived((aoa_l, None))
+        res = aoa.get_derived((aoa_l, None, None))
         self.assertEqual(aoa.hz, 1)
         self.assertEqual(aoa.offset, 0.1484375)
         
+    def test_cl_600_family(self):
+        aoa_r = P('AOA (R)', [0.0, 1.0])
+        family = A('Family', 'CL-600')
+        aoa = AOA()
+        aoa.get_derived([None, aoa_r, family])
+        self.assertAlmostEqual(aoa.array[0], -1.404)
+        self.assertAlmostEqual(aoa.array[1], 0.257)
 
 class TestAccelerationNormalOffsetRemoved(unittest.TestCase):
     @unittest.skip('Test Not Implemented')
@@ -6688,31 +6711,24 @@ class TestAirspeedMinusFlapManoeuvreSpeed(unittest.TestCase, NodeTest):
 
 
 class TestAirspeedMinusFlapManoeuvreSpeedFor3Sec(unittest.TestCase, NodeTest):
-
+    # This test was missing, so copied from above and amended, but for some
+    # reason fails in second_window with the error "Invalid Seconds for
+    # frequency" which I do not understand. DJ 17/10/14.
     def setUp(self):
         self.node_class = AirspeedMinusFlapManoeuvreSpeedFor3Sec
         self.operational_combinations = [
-            ('Airspeed Minus Flap Manoeuvre Speed',),
+            ('Airspeed', 'Flap Manoeuvre Speed'),
         ]
-        self.airspeed = P(
-            name='Airspeed Minus Flap Manoeuvre Speed',
-            array=np.ma.repeat((100, 110, 120, 100), (6, 7, 1, 6)),
-            frequency=2,
-        )
-
-    def test_derive_basic(self):
+        self.airspeed = P('Airspeed', np.ma.repeat(102, 12))
+        self.flap_mvr_spd = P('Flap Manoeuvre Speed', 
+                              np.ma.array(range(80,87)+range(85,80,-1)))
+        
+    def test_derive__basic(self):
+        self.flap_mvr_spd.array[3] = np.ma.masked
         node = self.node_class()
-        node.get_derived([self.airspeed])
-        expected = np.ma.repeat((100, 110, 100), (6, 8, 6))
-        expected[-6:] = np.ma.masked
-        ma_test.assert_masked_array_equal(node.array, expected)
-
-    def test_derive_align(self):
-        self.airspeed.frequency = 1
-        node = self.node_class()
-        node.get_derived([self.airspeed])
-        expected = np.ma.repeat((100, 105, 110, 100), (11, 1, 16, 12))
-        expected[-7:] = np.ma.masked
+        node.derive(self.airspeed, self.flap_mvr_spd)
+        expected = np.ma.array(data=[0]*4+[18]*4+[0]*4,
+                               mask=[1]*4+[0]*4+[1]*4)
         ma_test.assert_masked_array_equal(node.array, expected)
 
 

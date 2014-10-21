@@ -104,6 +104,7 @@ from settings import (AIRSPEED_THRESHOLD,
                       LANDING_THRESHOLD_HEIGHT,
                       METRES_TO_FEET,
                       METRES_TO_NM,
+                      MIN_VALID_FUEL,
                       VERTICAL_SPEED_LAG_TC)
 
 # There is no numpy masked array function for radians, so we just multiply thus:
@@ -949,7 +950,9 @@ class AltitudeRadio(DerivedParameterNode):
 
         self.array = blend_parameters(sources,
                                       offset=self.offset,
-                                      frequency=self.frequency)
+                                      frequency=self.frequency,
+                                      small_slice_duration=10,
+                                      debug=False)
 
         # For aircraft where the antennae are placed well away from the main
         # gear, and especially where it is aft of the main gear, compensation
@@ -3355,7 +3358,7 @@ class FuelQty(DerivedParameterNode):
         params = []
         for param in (fuel_qty_l, fuel_qty_c, fuel_qty_c_1, fuel_qty_c_2,
                       fuel_qty_r, fuel_qty_trim, fuel_qty_aux, fuel_qty_tail):
-            if not param:
+            if not param or np.ma.count(param.array)/float(len(param.array))<MIN_VALID_FUEL:
                 continue
             # Repair array masks to ensure that the summed values are not too small
             # because they do not include masked values.
@@ -7566,6 +7569,24 @@ class AirspeedMinusFlapManoeuvreSpeed(DerivedParameterNode):
 
         self.array = airspeed.array - fms.array
 
+
+
+class AirspeedMinusFlapManoeuvreSpeedFor3Sec(DerivedParameterNode):
+    '''
+    Airspeed relative to flap manoeuvre speed over a 3 second window.
+    '''
+
+    align_frequency = 2
+    align_offset = 0
+    units = ut.KT
+
+    def derive(self,
+               airspeed=P('Airspeed'),
+               fms=P('Flap Manoeuvre Speed')):
+
+        speed = airspeed.array - fms.array
+
+        self.array = second_window(speed, self.frequency, 3, extend_window=True)
 
 ########################################
 # Airspeed Relative

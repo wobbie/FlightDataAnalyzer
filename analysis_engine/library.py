@@ -3419,10 +3419,11 @@ def slices_or(*slice_lists):
     slices = []
     if all(len(s) == 0 or s == [None] for s in slice_lists):
         return slices
-    
+
+    recheck = False
     for slice_list in slice_lists:
         for input_slice in slice_list:
-            
+
             modified = False
             for output_slice in copy(slices):
                 if slices_overlap(input_slice, output_slice):
@@ -3435,13 +3436,22 @@ def slices_or(*slice_lists):
                         slice_stop = max(input_slice.stop, output_slice.stop)
                     
                     input_slice = slice(slice_start, slice_stop)
-                    slices.remove(output_slice)
+                    try:
+                        slices.remove(output_slice)
+                    except:
+                        # This has already been handled at a lower level, so quit.
+                        break
                     slices.append(input_slice)
                     modified = True
-            
+                    recheck = True
+
             if not modified:
                 slices.append(input_slice)
-    
+
+        if recheck:
+            # The new slice may overlap two, so repeat the process.
+            slices = slices_or(slices)
+
     return slices
 
 
@@ -4174,7 +4184,7 @@ def blend_parameters_weighting(array, wt):
     return repair_mask(final_weight, repair_duration=None)
 
 
-def blend_parameters(params, offset=0.0, frequency=1.0, debug=False):
+def blend_parameters(params, offset=0.0, frequency=1.0, small_slice_duration=4, debug=False):
     '''
     This most general form of the blend options allows for multiple sources
     to be blended together even though the spacing, validity and even sample
@@ -4196,7 +4206,8 @@ def blend_parameters(params, offset=0.0, frequency=1.0, debug=False):
     :type offset: float (sec)
     :param frequency: the frequency of the resulting parameter
     :type frequency: float (Hz)
-
+    :param small_slice_duration = duration of short slices to ignore
+    :type small_slice_duration: float (sec)
     :param debug: flag to plot graphs for ease of testing
     :type debug: boolean, default to False
     '''
@@ -4232,7 +4243,8 @@ def blend_parameters(params, offset=0.0, frequency=1.0, debug=False):
         # samples as below this level it's not possible to compute a cubic
         # spline.
         nts=slices_remove_small_slices(np.ma.clump_unmasked(param.array),
-                                       count=4)
+                                       count=max(param.frequency * small_slice_duration, 4))
+        param.array = mask_outside_slices(param.array, nts)
         # Now scale these non-trivial slices into the lowest timebase for
         # collation.
         p_valid_slices.append(slices_multiply(nts, min_ip_freq / p_freq[seq]))
