@@ -6552,7 +6552,7 @@ def index_at_value(array, threshold, _slice=slice(None), endpoint='exact'):
     value_passing_array = (array[left] - threshold) * (array[right] - threshold)
     test_array = np.ma.masked_greater(value_passing_array, 0.0)
 
-    if len(test_array) == 0:
+    if len(test_array) == 0 or np.ma.count(test_array) == 0:
         # Q: Does this mean that value_passing_array is also empty?
         return None
 
