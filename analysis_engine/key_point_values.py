@@ -3573,7 +3573,6 @@ class AltitudeOvershootAtSuspectedLevelBust(KeyPointValueNode):
     def derive(self,
                alt_std=P('Altitude STD Smoothed'),
                level_flights=S('Level Flight')):
-               #alt_aal=P('Altitude AAL')):
         
         bust = 300  # ft
         bust_time = 4 * 60  # 3 mins + 1 min to account for late level flight stabilisation.
@@ -3581,8 +3580,6 @@ class AltitudeOvershootAtSuspectedLevelBust(KeyPointValueNode):
         
         def bust_value(bust_slice, lvl_flt_val):
             
-            #bust_midpoint_idx = slice_midpoint(bust_slice)
-            #bust_midpoint_val = alt_std.array[bust_midpoint_idx]
             func = max_value if np.ma.mean(alt_std.array[bust_slice]) > lvl_flt_val else min_value
             value = func(alt_std.array, _slice=bust_slice)
             if value.index and abs(value.value - lvl_flt_val) >= bust:
