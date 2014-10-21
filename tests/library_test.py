@@ -757,8 +757,10 @@ class TestAlign(unittest.TestCase):
         slave = P(array=np.ma.array([100, 104, 108, 112]),
                   frequency = 1/32.0)
         result = align(slave, master)
-        expected = range(100, 113) + [0] * 3
-        np.testing.assert_array_equal(result.data,expected)
+        expected_data = range(100, 112) + [0] * 4
+        expected = np.ma.array(data=expected_data,
+                               mask=[0]*12+[1]*4)
+        ma_test.assert_array_almost_equal(result, expected)
 
     def test_align_8_hz_half_hz(self):
         # Same offset, so every 16th sample (ratio between master and slave)
