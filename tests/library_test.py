@@ -2603,12 +2603,12 @@ class TestIntegValue(unittest.TestCase):
         array = np.ma.array(range(10), dtype=float)
         i, v = integ_value(array)
         self.assertEqual(i, 9) #
-        self.assertEqual(v, 45.0)
+        self.assertEqual(v, 40.5)
 
         subslice = slice(3,8)
         res = integ_value(array, subslice)
-        self.assertEqual(res.index, 7) # excludes the slice.stop
-        self.assertEqual(res.value, 25.0) # was 20.
+        self.assertEqual(res.index, 7)
+        self.assertEqual(res.value, 23.0)
 
     def test_integ_value_none(self):
         array = np.ma.array([])
