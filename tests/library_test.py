@@ -2473,7 +2473,8 @@ class TestIndexAtValue(unittest.TestCase):
 
     def test_index_at_value_threshold_closing_backwards(self):
         array = 6-np.ma.arange(6)
-        self.assertEquals (index_at_value(array, 99, slice(None, 4, -1), endpoint='closing'), 0)
+        # array [6,5,4,3,2,1] with slice(None, 4, -1) = [1] which is index 5.
+        self.assertEquals (index_at_value(array, 99, slice(None, 4, -1), endpoint='closing'), 5)
 
     def test_index_at_value_masked(self):
         array = np.ma.arange(4)
