@@ -1824,7 +1824,7 @@ class TestFindEdges(unittest.TestCase):
         edges = np.ma.array([1,1,0,0,0,1,1], mask=\
                             [0,0,0,0,1,1,0])
         self.assertEqual(find_edges(edges, direction='all_edges'),
-                         [1.5, 5.5])
+                         [1.5, 3.5])
         
         no_edges = np.ma.array([1,1,0,0,0,1,1], mask=\
                                [0,0,1,1,1,0,0])
