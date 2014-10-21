@@ -841,7 +841,7 @@ class TestAlign(unittest.TestCase):
         result = align(slave, master)
         expected = (master.array/5.0)+1.0
         expected[11:]=np.ma.masked
-        ma_test.assert_array_equal(result, expected)
+        ma_test.assert_array_almost_equal(result, expected)
         
     def test_align_10hz(self):
         master = P('master', array=[1,2], frequency=1.0, offset=0.0)
@@ -855,7 +855,7 @@ class TestAlign(unittest.TestCase):
         result = align(slave, master)
         expected = (master.array/10.0)+2.0
         expected[21:]=np.ma.masked
-        ma_test.assert_array_equal(result, expected)
+        ma_test.assert_array_almost_equal(result, expected)
         
     def test_align_20hz(self):
         master = P('master', array=[1,2], frequency=1.0, offset=0.0)
@@ -869,7 +869,7 @@ class TestAlign(unittest.TestCase):
         result = align(slave, master)
         expected = 6.0-(master.array/20.0)
         expected[81:]=np.ma.masked
-        ma_test.assert_array_equal(result, expected)
+        ma_test.assert_array_almost_equal(result, expected)
         
     def test_align_5_10_20_offset_master(self):
         master = P('master', np.ma.arange(100.0), frequency=20.0, offset=0.1)
