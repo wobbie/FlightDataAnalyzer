@@ -2782,9 +2782,11 @@ def integrate(array, frequency, initial_value=0.0, scale=1.0,
         return np_ma_masked_zeros_like(array)
 
     if repair:
-        integrand = repair_mask(fill_masked_edges(array, 0),
+        integrand = repair_mask(array,
                                 repair_duration=None,
-                                raise_entirely_masked=False, copy=True)
+                                raise_entirely_masked=False, 
+                                extrapolate=True,
+                                copy=True)
     elif contiguous:
         blocks = np.ma.clump_unmasked(array)
         longest_index = None
