@@ -210,8 +210,9 @@ class TestClimbAccelerationStart(unittest.TestCase):
         opts = self.node_class.get_operational_combinations()
         self.assertTrue(self.node_class.can_operate(('Airspeed Selected',
                                                      'Initial Climb')))
-        self.assertTrue(self.node_class.can_operate(('Altitude AAL',
-                                                     'Engine Propulsion')))
+        self.assertTrue(self.node_class.can_operate(('Altitude AAL For Flight Phases',
+                                                     'Engine Propulsion',
+                                                     'Initial Climb')))
         jet = A('Engine Propulsion', 'JET')
         self.assertTrue(self.node_class.can_operate(('Throttle Levers',),
                                                     eng_type=jet))
@@ -256,14 +257,15 @@ class TestClimbAccelerationStart(unittest.TestCase):
     
     def test_derive_engine_propulsion(self):
         jet = A('Engine Propulsion', value='JET')
-        alt_aal = P('Altitude AAL', array=np.ma.arange(1000))
+        alt_aal = P('Altitude AAL For Flight Phases', array=np.ma.arange(1000))
+        init_climbs = buildsection('Initial Climb', 35, 1000)
         node = self.node_class()
-        node.derive(alt_aal, None, None, jet, None, None)
+        node.derive(alt_aal, init_climbs, None, jet, None, None)
         self.assertEqual(len(node), 1)
         self.assertEqual(node[0].index, 800)
         prop = A('Engine Propulsion', value='PROP')
         node = self.node_class()
-        node.derive(alt_aal, None, None, prop, None, None)
+        node.derive(alt_aal, init_climbs, None, prop, None, None)
         self.assertEqual(len(node), 1)
         self.assertEqual(node[0].index, 400)
     

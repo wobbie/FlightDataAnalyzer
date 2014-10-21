@@ -3722,7 +3722,7 @@ class TestAltitudeOvershootAtSuspectedLevelBust(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = AltitudeOvershootAtSuspectedLevelBust
-        self.operational_combinations = [('Altitude STD Smoothed', 'Altitude AAL')]
+        self.operational_combinations = [('Altitude STD Smoothed', 'Level Flight')]
 
     def test_derive_handling_no_data(self):
         alt_std = P(
@@ -3733,43 +3733,15 @@ class TestAltitudeOvershootAtSuspectedLevelBust(unittest.TestCase, NodeTest):
         node.derive(alt_std)
         self.assertEqual(node, [])
 
-    def test_derive_up_down_and_up(self):
-        alt_aal = P(name='Altitude AAL',
-                    array=np.ma.array((1.0-np.cos(np.arange(0,12.6,0.1)))*1000)+10000.0,
-                    )
-        alt_std = P(name='Altitude STD Smoothed',
-                    array=alt_aal.array+3000.0)
-        node = AltitudeOvershootAtSuspectedLevelBust()        
-        node.derive(alt_std, alt_aal)
-        self.assertEqual(node, [
-            KeyPointValue(index=31, value=1995.6772472964967,
-                name='Altitude Overshoot At Suspected Level Bust'),
-            KeyPointValue(index=63, value=-1992.0839618360187,
-                name='Altitude Overshoot At Suspected Level Bust'),
-            KeyPointValue(index=94, value=1985.8853443140706,
-                name='Altitude Overshoot At Suspected Level Bust')
-        ])
-        
-    def test_comparable_to_alt_aal(self):
-        # If the overshoot or undershoot is comparable to the height above the airfield, no level bust is declared.
-        alt_aal = P(name='Altitude AAL',
-                    array=np.ma.array((1.0-np.cos(np.arange(0,12.6,0.1)))*1000)+1000.0,
-                    )
-        alt_std = P(name='Altitude STD Smoothed',
-                    array=alt_aal.array+3000.0)
-        node = AltitudeOvershootAtSuspectedLevelBust()
-        
-        node.derive(alt_std, alt_aal)
-        self.assertEqual(node, [])
-
     def test_derive_too_slow(self):
         alt_std = P(
             name='Altitude STD Smoothed',
             array=np.ma.array(1.0 + np.sin(np.arange(0, 12.6, 0.1))) * 1000,
             frequency=0.02,
         )
+        level_flights = buildsections('Level Flight', (15, 17), (46, 48), (78, 80), (109, 111))
         node = AltitudeOvershootAtSuspectedLevelBust()
-        node.derive(alt_std, alt_std) # Pretend the airfield is at sea level :o)
+        node.get_derived([alt_std, level_flights])
         self.assertEqual(node, [])
 
     def test_derive_straight_up_and_down(self):
@@ -3778,8 +3750,9 @@ class TestAltitudeOvershootAtSuspectedLevelBust(unittest.TestCase, NodeTest):
             array=np.ma.array(range(0, 10000, 50) + range(10000, 0, -50)),
             frequency=1,
         )
+        level_flights = S('Level Flight')
         node = AltitudeOvershootAtSuspectedLevelBust()
-        node.derive(alt_std, alt_std) # Pretend the airfield is at sea level :o)
+        node.derive(alt_std, level_flights)
         self.assertEqual(node, [])
 
     def test_derive_up_and_down_with_overshoot(self):
@@ -3789,12 +3762,12 @@ class TestAltitudeOvershootAtSuspectedLevelBust(unittest.TestCase, NodeTest):
                 + [9000] * 200 + range(9000, 0, -50)),
             frequency=1,
         )
+        level_flights = buildsection('Level Flight', 220, 420)
         node = AltitudeOvershootAtSuspectedLevelBust()
-        node.derive(alt_std, alt_std) # Pretend the airfield is at sea level :o)
-        self.assertEqual(node, [
-            KeyPointValue(index=200, value=1000,
-                name='Altitude Overshoot At Suspected Level Bust'),
-        ])
+        node.derive(alt_std, level_flights)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 200)
+        self.assertEqual(node[0].value, 1000)
 
     def test_derive_up_and_down_with_undershoot(self):
         alt_std = P(
@@ -3804,22 +3777,42 @@ class TestAltitudeOvershootAtSuspectedLevelBust(unittest.TestCase, NodeTest):
                 + range(20000, 0, -50)),
             frequency=1,
         )
+        level_flights = buildsection('Level Flight', 200, 400)
         node = AltitudeOvershootAtSuspectedLevelBust()
-        node.derive(alt_std, alt_std) # Pretend the airfield is at sea level :o)
+        node.derive(alt_std, level_flights)
         self.assertEqual(node, [
             KeyPointValue(index=420, value=-1000,
                 name='Altitude Overshoot At Suspected Level Bust'),
         ])
-        
-    def test_derive_with_real_go_around_data_ignores_overshoot(self):
+    
+    def test_derive_with_real_go_around_data_ignores_undershoot(self):
+        '''
+        Undershoots under 3000 ft are excluded due to different Go Around behaviour.
+        '''
         alt_std = load(os.path.join(test_data_path,
                                     'alt_std_smoothed_go_around.nod'))
-        alt_aal = load(os.path.join(test_data_path,
-                                    'alt_aal_go_around.nod'))
-        alt_aal_aligned = alt_aal.get_aligned(alt_std)
         bust = AltitudeOvershootAtSuspectedLevelBust()
-        bust.derive(alt_std, alt_aal_aligned)
+        level_flights = buildsections(
+            'Level Flight',
+            (1740, 2682),
+            (3400, 3510),
+        )
+        bust.derive(alt_std, level_flights)
         self.assertEqual(len(bust), 0)
+    
+    def test_derive_real_data_overshoot(self):
+        '''
+        Undershoots under 3000 ft are excluded due to different Go Around behaviour.
+        '''
+        alt_std = load(os.path.join(test_data_path,
+                                    'alt_overshoot_alt_std.nod'))
+        level_flights = load(os.path.join(test_data_path,
+                                          'alt_overshoot_level_flight.nod'))
+        bust = AltitudeOvershootAtSuspectedLevelBust()
+        bust.derive(alt_std, level_flights)
+        self.assertEqual(len(bust), 1)
+        self.assertAlmostEqual(bust[0].index, 3713, places=0)
+        self.assertAlmostEqual(bust[0].value, 496, places=0)
 
 
 
