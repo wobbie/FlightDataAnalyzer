@@ -6541,10 +6541,6 @@ def index_at_value(array, threshold, _slice=slice(None), endpoint='exact'):
     if begin == end:
         logger.warning('No range for seek function to scan across')
         return None
-    elif abs(begin - end) < 2:
-        # Requires at least two values to find if the array crosses a
-        # threshold.
-        return None
 
     # When the data being tested passes the value we are seeking, the
     # difference between the data and the value will change sign.
@@ -6552,7 +6548,7 @@ def index_at_value(array, threshold, _slice=slice(None), endpoint='exact'):
     value_passing_array = (array[left] - threshold) * (array[right] - threshold)
     test_array = np.ma.masked_greater(value_passing_array, 0.0)
 
-    if len(test_array) == 0 or np.ma.count(test_array) == 0:
+    if len(test_array) == 0:
         # Q: Does this mean that value_passing_array is also empty?
         return None
 
