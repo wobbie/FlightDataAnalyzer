@@ -1002,7 +1002,7 @@ def cycle_match(idx, cycle_idxs, dist=None):
     Finds the previous and next cycle indexes either side of idx plus
     an allowable distance. For use after "cycle_finder".
 
-    cycle_idxs are generally a "down up down up down" afair where you are
+    cycle_idxs are generally a "down up down up down" affair where you are
     searching for the indexes either side of an "up" for instance. If no
     index is available before or after a match, a None is returned in its
     place. If no matching index found within cycle_idxs, ValueError is raised.
@@ -1020,7 +1020,7 @@ def cycle_match(idx, cycle_idxs, dist=None):
         dist = np.min(np.diff(cycle_idxs)) / 4.0
 
     min_idx = np.argmin(np.abs(np.array(cycle_idxs) - idx))
-    if min_idx < dist:
+    if abs(cycle_idxs[min_idx] - idx) < dist:
         prev = cycle_idxs[min_idx-1] if min_idx > 0 else None
         post = cycle_idxs[min_idx+1] if min_idx < len(cycle_idxs)-1 else None
         return prev, post
