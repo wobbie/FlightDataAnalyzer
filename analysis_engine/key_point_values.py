@@ -79,6 +79,7 @@ from analysis_engine.library import (ambiguous_runway,
                                      slice_midpoint,
                                      slice_samples,
                                      slices_and_not,
+                                     slices_below,
                                      slices_from_ktis,
                                      slices_from_to,
                                      slices_not,
@@ -3560,60 +3561,158 @@ class AltitudeOvershootAtSuspectedLevelBust(KeyPointValueNode):
     assigned level) It would be useful if this included overshoots of cleared
     level, i.e. a reversal of more than 300ft".
     
+    Undershoots under 3000 ft are excluded due to inconsistent Go Around
+    behaviour.
+    
     Q: Could we compare against Altitude Selected to know if the aircraft should
        be climbing or descending?
     '''
 
     units = ut.FT
-
+    
     def derive(self,
                alt_std=P('Altitude STD Smoothed'),
-               alt_aal=P('Altitude AAL')):
-
+               level_flights=S('Level Flight')):
+               #alt_aal=P('Altitude AAL')):
+        
         bust = 300  # ft
-        bust_time = 3 * 60  # 3 mins
-        bust_length = bust_time * self.frequency
+        bust_time = 4 * 60  # 3 mins + 1 min to account for late level flight stabilisation.
+        bust_samples = bust_time * self.frequency
+        
+        def bust_value(bust_slice, lvl_flt_val):
+            
+            #bust_midpoint_idx = slice_midpoint(bust_slice)
+            #bust_midpoint_val = alt_std.array[bust_midpoint_idx]
+            func = max_value if np.ma.mean(alt_std.array[bust_slice]) > lvl_flt_val else min_value
+            value = func(alt_std.array, _slice=bust_slice)
+            if value.index and abs(value.value - lvl_flt_val) >= bust:
+                self.create_kpv(value.index, value.value - lvl_flt_val)
+        
+        def bust_before(prev_lvl_flt_stop_idx,
+                        cur_lvl_flt_start_idx,
+                        cur_lvl_flt_start_val):
+            if cur_lvl_flt_start_val < 3000:
+                return
+            bust_slice = slice(prev_lvl_flt_stop_idx, cur_lvl_flt_start_idx - 1)
+            bust_start_idx = index_at_value(
+                alt_std.array,
+                cur_lvl_flt_start_val,
+                _slice=bust_slice,
+            )
+            if not bust_start_idx or (cur_lvl_flt_start_idx - bust_start_idx) >= bust_samples:
+                return
+            bust_value(slice(bust_start_idx, cur_lvl_flt_start_idx), cur_lvl_flt_start_val)
+        
+        def bust_after(next_lvl_flt_start_idx,
+                       cur_lvl_flt_stop_idx,
+                       cur_lvl_flt_stop_val):
+            bust_slice = slice(next_lvl_flt_start_idx, cur_lvl_flt_stop_idx + 1, -1)
+            bust_stop_idx = index_at_value(
+                alt_std.array,
+                cur_lvl_flt_stop_val,
+                _slice=bust_slice,
+            )
+            if not bust_stop_idx or (bust_stop_idx - cur_lvl_flt_stop_idx) >= bust_samples:
+                return
+            bust_value(slice(cur_lvl_flt_stop_idx, bust_stop_idx), cur_lvl_flt_stop_val)
+        
+        #prev_lvl_flt_stop_idx = 0
+        level_flights = sorted(level_flights.get_slices())
+        for index, level_flight in enumerate(level_flights):
+            
+            bust_before(
+                level_flight.start - bust_samples,
+                level_flight.start,
+                alt_std.array[level_flight.start],
+            )
+            
+            #try:
+                #next_lvl_flt_start_idx = level_flights[index + 1].start
+            #except IndexError:
+                #next_lvl_flt_start_idx = len(alt_std.array)
+            
+            bust_after(
+                level_flight.stop + 300,
+                level_flight.stop,
+                alt_std.array[level_flight.stop],
+            )
+            
+            #prev_lvl_flt_stop_idx = level_flight.stop
+            
+            #bust_before(last_stop, cur_lvl_flt_start_idx, slice_stop_inde)
+            #bust_after(next_start, slice_stop_index,
+            
+            
+            
+            #slice_start_value = alt_std.array[slice_start_index]
+            
+            #before_index = index_at_value(
+                #alt_std.array,
+                #slice_start_value,
+                #_slice=before_bust_slice,
+            #)
+            
+            #if not before_index or (slice_start_index - before_index) >= bust_samples:
+                #continue
+            
+            #before_bust_slice = slice(before_index, slice_start_index)
+            
+            #slice_midpoint_index = slice_midpoint(before_bust_slice)
+            #slice_midpoint_value = alt_std.array[slice_midpoint_index]
+            #func = max_value if slice_midpoint_value > slice_start_value else min_value
+            #value = func(alt_std.array, _slice=before_bust_slice)
+            #if abs(value.value - slice_start_value) < bust:
+                #continue
+            #self.create_kpv(value.index, value.value)
 
-        idxs, peaks = cycle_finder(alt_std.array, min_step=bust)
+    #def derive(self,
+               #alt_std=P('Altitude STD Smoothed'),
+               #alt_aal=P('Altitude AAL')):
 
-        if idxs is None:
-            return
-        for num, idx in enumerate(idxs[1: -1]):
-            begin = index_at_value(np.ma.abs(alt_std.array - peaks[num + 1]),
-                                   bust, _slice=slice(idx, None, -1))
-            end = index_at_value(np.ma.abs(alt_std.array - peaks[num + 1]), bust,
-                                 _slice=slice(idx, None))
-            if begin and end:
-                duration = (end - begin) / alt_std.frequency
-                if duration < bust_time:
-                    a = alt_std.array[idxs[num]]  # One before the peak of interest
-                    b = alt_std.array[idxs[num + 1]]  # The peak of interest
-                    # The next one (index reduced to avoid running beyond end of
-                    # data)
-                    c = alt_std.array[idxs[num + 2] - 1]
-                    idx_from = max(0, idxs[num + 1] - bust_length)
-                    idx_to = min(len(alt_std.array), idxs[num + 1] + bust_length)
-                    if b > (a + c) / 2:
-                        overshoot = min(b - a, b - c)
-                        #if overshoot > 5000:
-                        if overshoot > alt_aal.array[idxs[num + 1]] / 4:
-                            # This happens normally on short sectors or training flights.
-                            continue
-                        # Include a scan over the preceding and following
-                        # bust_time in case the preceding or following peaks
-                        # were outside this timespan.
-                        alt_a = np.ma.min(alt_std.array[idx_from:idxs[num + 1]])
-                        alt_c = np.ma.min(alt_std.array[idxs[num + 1]:idx_to])
-                        overshoot = min(b - a, b - alt_a, b - alt_c, b - c)
-                        self.create_kpv(idx, overshoot)
-                    else:
-                        undershoot = max(b - a, b - c)
-                        if undershoot < -alt_aal.array[idxs[num + 1]]/4:
-                            continue
-                        alt_a = np.ma.max(alt_std.array[idx_from:idxs[num + 1]])
-                        alt_c = np.ma.max(alt_std.array[idxs[num + 1]:idx_to])
-                        undershoot = max(b - a, b - alt_a, b - alt_c, b - c)
-                        self.create_kpv(idx, undershoot)
+        #bust = 300  # ft
+        #bust_time = 3 * 60  # 3 mins
+        #bust_length = bust_time * self.frequency
+
+        #idxs, peaks = cycle_finder(alt_std.array, min_step=bust)
+
+        #if idxs is None:
+            #return
+        #for num, idx in enumerate(idxs[1: -1]):
+            #begin = index_at_value(np.ma.abs(alt_std.array - peaks[num + 1]),
+                                   #bust, _slice=slice(idx, None, -1))
+            #end = index_at_value(np.ma.abs(alt_std.array - peaks[num + 1]), bust,
+                                 #_slice=slice(idx, None))
+            #if begin and end:
+                #duration = (end - begin) / alt_std.frequency
+                #if duration < bust_time:
+                    #a = alt_std.array[idxs[num]]  # One before the peak of interest
+                    #b = alt_std.array[idxs[num + 1]]  # The peak of interest
+                    ## The next one (index reduced to avoid running beyond end of
+                    ## data)
+                    #c = alt_std.array[idxs[num + 2] - 1]
+                    #idx_from = max(0, idxs[num + 1] - bust_length)
+                    #idx_to = min(len(alt_std.array), idxs[num + 1] + bust_length)
+                    #if b > (a + c) / 2:
+                        #overshoot = min(b - a, b - c)
+                        ##if overshoot > 5000:
+                        #if overshoot > alt_aal.array[idxs[num + 1]] / 4:
+                            ## This happens normally on short sectors or training flights.
+                            #continue
+                        ## Include a scan over the preceding and following
+                        ## bust_time in case the preceding or following peaks
+                        ## were outside this timespan.
+                        #alt_a = np.ma.min(alt_std.array[idx_from:idxs[num + 1]])
+                        #alt_c = np.ma.min(alt_std.array[idxs[num + 1]:idx_to])
+                        #overshoot = min(b - a, b - alt_a, b - alt_c, b - c)
+                        #self.create_kpv(idx, overshoot)
+                    #else:
+                        #undershoot = max(b - a, b - c)
+                        #if undershoot < -alt_aal.array[idxs[num + 1]]/4:
+                            #continue
+                        #alt_a = np.ma.max(alt_std.array[idx_from:idxs[num + 1]])
+                        #alt_c = np.ma.max(alt_std.array[idxs[num + 1]:idx_to])
+                        #undershoot = max(b - a, b - alt_a, b - alt_c, b - c)
+                        #self.create_kpv(idx, undershoot)
 
 
 class CabinAltitudeWarningDuration(KeyPointValueNode):
