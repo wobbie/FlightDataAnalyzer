@@ -797,7 +797,11 @@ class TestAlign(unittest.TestCase):
         slave = P(frequency=2, offset=0.02,
                   array=np.ma.array([10, 11, 12, 13], mask=True))
         result = align(slave, master)
-        np.testing.assert_array_equal(result.data, expected.data)
+        #Original implementation returned zero array. Now completes first
+        #step of alignment before returning. This is not significant as the
+        #array is completely masked, so testing the data component is
+        #superfluous. np.testing.assert_array_equal(result.data,
+        #expected.data)
         np.testing.assert_array_equal(result.mask, expected.mask)
 
         # Example with different offset - returns all 0s
@@ -805,7 +809,7 @@ class TestAlign(unittest.TestCase):
         slave = P(frequency=2, offset=0.01,
                   array=np.ma.array([10, 11, 12, 13], mask=True))
         result = align(slave, master)
-        np.testing.assert_array_equal(result.data, expected.data)
+        # np.testing.assert_array_equal(result.data, expected.data)
         np.testing.assert_array_equal(result.mask, expected.mask)
     
     def test_align_downsample_same_offset(self):
