@@ -258,10 +258,10 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
                'Throttle Levers' in available)
         prop = (eng_type and eng_type.value == 'PROP' and
                'Eng (*) Np Max' in available)
-        alt = all_of(('Engine Propulsion', 'Altitude AAL'), available)
+        alt = all_of(('Engine Propulsion', 'Altitude AAL For Flight Phases'), available)
         return spd_sel or jet or prop or alt
     
-    def derive(self, alt_aal=P('Altitude AAL'),
+    def derive(self, alt_aal=P('Altitude AAL For Flight Phases'),
                initial_climbs=S('Initial Climb'),
                spd_sel=P('Airspeed Selected'),
                eng_type=A('Engine Propulsion'),
@@ -322,7 +322,8 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
             if alt_aal:
                 self.frequency = alt_aal.frequency
                 self.offset = alt_aal.offset
-                self.create_kti(index_at_value(alt_aal.array, alt))
+                _slice = initial_climbs.get_aligned(alt_aal).get_first().slice
+                self.create_kti(index_at_value(alt_aal.array, alt, _slice=_slice))
 
 
 class ClimbThrustDerateDeselected(KeyTimeInstanceNode):
