@@ -738,7 +738,7 @@ class TestAlign(unittest.TestCase):
         3.9375,  4.125 ,  4.3125,  4.5   ,  4.6875,  4.875 ,  5.0625,
         5.25  ,  5.4375,  5.625 ,  5.8125,  6.    ,  6.1875,  6.375 ,
         6.5625,  6.75  ,  6.9375,  7.125 ,  7.3125,  7.5   ,  7.6875,
-        7.875 ,  8.0625,  8.25  ,  8.4375,  8.625 ,  8.8125,  9.    ,
+        7.875 ,  8.0625,  8.25  ,  8.4375,  8.625 ,  8.8125,  0.    ,
         0.    ,  0.    ,  0.    ,  0.    ,  0.    ,  0.    ,  0.    ,
         0.    ,  0.    ,  0.    ,  0.    ,  0.    ,  0.    ,  0.    ,  0.    ]
         np.testing.assert_array_equal(result.data,expected)
@@ -747,7 +747,7 @@ class TestAlign(unittest.TestCase):
         master = P(array=np.ma.arange(1024), frequency=8)
         slave = P(array=np.ma.array([0, 512]), frequency=1/64.0)
         result = align(slave, master)
-        expected = range(0, 513) + [0]*511
+        expected = range(0, 512) + [0]*512
         np.testing.assert_array_equal(result.data,expected)
 
 
@@ -785,7 +785,7 @@ class TestAlign(unittest.TestCase):
         slave = P(frequency=1.0/64, offset=0.0,
                    array=np.ma.array([1, 65, 129, 193], dtype=float))
         result = align(slave, onehz)
-        expected = np.ma.array(range(1, 194) + [0] * 63)
+        expected = np.ma.array(range(1, 193) + [0] * 64)
         np.testing.assert_array_equal(result.data, expected)
 
     def test_align_fully_masked_array(self):
