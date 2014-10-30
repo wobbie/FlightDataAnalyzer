@@ -6150,8 +6150,8 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
             if direction == 'decrease':
                 flap_tolerance *= -1
 
-            roc_idx = index_at_value(roc, roc_to_seek_for, scan_rev, endpoint='closest')
-            val_idx = index_at_value(array, prev_flap.value + flap_tolerance, scan_rev, endpoint='closest') #???
+            roc_idx = index_at_value(roc, roc_to_seek_for, scan_rev)
+            val_idx = index_at_value(array, prev_flap.value + flap_tolerance, scan_rev)
             idx = max(val_idx, roc_idx) or flap_midpoint
 
         elif (is_masked and direction == 'increase'
@@ -6165,8 +6165,8 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
             if direction == 'increase':
                 flap_tolerance *= -1
 
-            roc_idx = index_at_value(roc, roc_to_seek_for, scan_fwd, endpoint='closest')
-            val_idx = index_at_value(array, next_flap + flap_tolerance, scan_fwd, endpoint='closest') #???
+            roc_idx = index_at_value(roc, roc_to_seek_for, scan_fwd)
+            val_idx = index_at_value(array, next_flap + flap_tolerance, scan_fwd)
             # Rate of change is preferred when the parameter flattens out,
             # value is used when transitioning between two states and the
             # parameter does not level.
@@ -6177,7 +6177,15 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
         new_array[floor(idx)+1:] = next_flap
 
     # Mask edges of array to avoid extrapolation.
-    return np.ma.array(new_array, mask=mask_edges(array))
+    finished_array = np.ma.array(new_array, mask=mask_edges(array))
+    
+    
+    import matplotlib.pyplot as plt
+    plt.plot(array)
+    plt.plot(finished_array)
+    plt.show()
+    
+    return finished_array 
 
 
 def touchdown_inertial(land, roc, alt):
