@@ -6158,9 +6158,7 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
               or step_at == 'move_stop'
               or direction == 'increase' and step_at == 'excluding_transition'
               or direction == 'decrease' and step_at == 'including_transition'):
-            scan_fwd = slice(flap_midpoint, next_midpoint, +1)
-            ##idx = index_at_value_or_level_off(array, next_flap, scan_fwd,
-                                              ##abs_threshold=0.2)
+            scan_fwd = slice(int(flap_midpoint), next_midpoint, +1)
 
             if direction == 'increase':
                 flap_tolerance *= -1

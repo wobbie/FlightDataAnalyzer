@@ -5540,9 +5540,9 @@ class TestStepValues(unittest.TestCase):
 
     def test_step_including_transition_edge_case(self):
         # This set of values caused problems with a low sample rate flap (767-4 frame)
-        array = np.ma.array([0, 1, 1, 1, 1, 0.878, 0.5270, 0.0, 0.0, 0.0, 0.0])
+        array = np.ma.array([0, 1, 1, 1, 1, 0.878, 0.5270, 0.0, 0.0, 0.0, 0.45, 1])
         stepped = step_values(array, (0, 1), hz=0.25, step_at='including_transition')
-        self.assertEqual(list(stepped),[0]+[1]*7+[0]*3)
+        self.assertEqual(list(stepped),[0]+[1]*6+[0]*3+[1]*2)
 
     def test_step_trailing_edge_real_data(self):
         array = np.ma.array([0, 0, 0, 0, 0, 0, 0.12, 0.37, 0.5, 0.49, 0.49, 
