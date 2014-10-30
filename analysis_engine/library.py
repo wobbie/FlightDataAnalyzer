@@ -6177,11 +6177,12 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
     # Mask edges of array to avoid extrapolation.
     finished_array = np.ma.array(new_array, mask=mask_edges(array))
     
-    
+    '''
     import matplotlib.pyplot as plt
     plt.plot(array)
     plt.plot(finished_array)
     plt.show()
+    '''
     
     return finished_array 
 
