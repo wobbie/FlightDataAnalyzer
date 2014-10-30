@@ -2413,6 +2413,9 @@ class TestIndexAtValue(unittest.TestCase):
 
     # Reminder: index_at_value (array, threshold, _slice=slice(None), endpoint='exact')
 
+    def test_modes(self):
+        self.assertRaises(AssertionError, index_at_value, np.ma.arange(4), 99, slice(1, None), endpoint='similar')
+
     def test_index_at_value_basic(self):
         array = np.ma.arange(4)
         self.assertEquals (index_at_value(array, 1.5, slice(0, 3)), 1.5)
@@ -2522,6 +2525,11 @@ class TestIndexAtValue(unittest.TestCase):
         # For comparison...
         self.assertEquals (index_at_value(array, 3.1, slice(1, 8), endpoint='exact'), None)
         self.assertEquals (index_at_value(array, 3.1, slice(1, 8), endpoint='closing'), 2.0)
+
+    def test_index_at_value_closing(self):
+        array = np.ma.array([0,1,2,2,2,2,2,2])
+        self.assertEquals (index_at_value(array, 3.1, slice(0, 8), endpoint='first_closing'), 2)
+        self.assertEquals (index_at_value(array, 3.1, slice(0, 8), endpoint='closing'), 7)
 
     def test_index_at_value_nearest_backwards(self):
         array = np.ma.array([0,1,2,3,2,1,2,1])
@@ -5529,6 +5537,12 @@ class TestStepValues(unittest.TestCase):
         array = np.ma.concatenate((array,array[::-1]))
         stepped = step_values(array, (0, 1, 5, 15), step_at='including_transition')
         self.assertEqual(list(stepped),[0]*11+[1]*3+[5]*19+[15]*30+[5]*19+[1]*6+[0]*8)
+
+    def test_step_including_transition_edge_case(self):
+        # This set of values caused problems with a low sample rate flap (767-4 frame)
+        array = np.ma.array([0, 1, 1, 1, 1, 0.878, 0.5270, 0.0, 0.0, 0.0, 0.0])
+        stepped = step_values(array, (0, 1), hz=0.25, step_at='including_transition')
+        self.assertEqual(list(stepped),[0]+[1]*7+[0]*3)
 
     def test_step_trailing_edge_real_data(self):
         array = np.ma.array([0, 0, 0, 0, 0, 0, 0.12, 0.37, 0.5, 0.49, 0.49, 

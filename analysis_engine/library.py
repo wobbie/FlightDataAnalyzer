@@ -6523,10 +6523,12 @@ def index_at_value(array, threshold, _slice=slice(None), endpoint='exact'):
     :type endpoint: string 'exact' requires array to pass through the threshold,
     while 'closing' seeks the last point where the array is closing on the
     threshold and 'nearest' seeks the point nearest to the threshold.
+    'first_closing' seeks the first point where the array reaches the closest value.
 
     :returns: interpolated time when the array values crossed the threshold. (One value only).
     :returns type: Float or None
     '''
+    assert endpoint in ['exact', 'closing', 'nearest', 'first_closing']
     step = _slice.step or 1
     max_index = len(array)
 
@@ -6570,7 +6572,7 @@ def index_at_value(array, threshold, _slice=slice(None), endpoint='exact'):
     elif not np.ma.count(test_array):
         # The parameter does not pass through threshold in the period in
         # question, so return empty-handed.
-        if endpoint == 'closing':
+        if endpoint in ['closing', 'first_closing']:
             # Rescan the data to find the last point where the array data is
             # closing.
             diff = np.ma.ediff1d(array[_slice])
@@ -6587,10 +6589,20 @@ def index_at_value(array, threshold, _slice=slice(None), endpoint='exact'):
                 value = value.value
             else:
                 return None
-            if threshold >= value:
-                diff_where = np.ma.where(diff < 0)
+
+            if endpoint == 'closing':
+                if threshold >= value:
+                    diff_where = np.ma.where(diff < 0)
+                else:
+                    diff_where = np.ma.where(diff > 0)
+            elif endpoint == 'first_closing':
+                if threshold >= value:
+                    diff_where = np.ma.where(diff <= 0)
+                else:
+                    diff_where = np.ma.where(diff >= 0)
             else:
-                diff_where = np.ma.where(diff > 0)
+                raise 'Unrecognised command in index_at_value'
+                
             try:
                 return (_slice.start or 0) + (step * diff_where[0][0])
             except IndexError:
