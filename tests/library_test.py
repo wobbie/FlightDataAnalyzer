@@ -2388,6 +2388,11 @@ class TestHysteresis(unittest.TestCase):
         result = hysteresis(data,2)
         np.testing.assert_array_equal(result.filled(999),
                                       [999,1,1,1,999,0,5,6,6,0.5])
+        
+    def test_hysteresis_with_zero_or_negative_thresholod(self):
+        data = np.ma.array([0,1])
+        np.testing.assert_array_equal(data.data, hysteresis(data,0).data)
+        self.assertRaises(ValueError, hysteresis, data, -3)        
 
     """
     Hysteresis may need to be speeded up, in which case this test can be

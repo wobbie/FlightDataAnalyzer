@@ -2646,6 +2646,13 @@ def hysteresis(array, hysteresis):
     """
     if np.ma.count(array) == 0: # No unmasked elements.
         return array
+    
+    if hysteresis == 0.0 or hysteresis == None:
+        return array
+    
+    if hysteresis < 0.0:
+        raise ValueError("Hysteresis called with negative threshold")
+        return array
 
     quarter_range = hysteresis / 4.0
     # Length is going to be used often, so prepare here:
