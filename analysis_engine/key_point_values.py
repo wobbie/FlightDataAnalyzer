@@ -7599,14 +7599,17 @@ class EngVibBroadbandMax(KeyPointValueNode):
 
 class EngOilPressMax(KeyPointValueNode):
     '''
+    Maximum oil pressure in flight. High oil pressure on a cold engine
+    pre-flight assumed not significant.
     '''
 
     units = ut.PSI
 
     def derive(self,
-               oil_press=P('Eng (*) Oil Press Max')):
+               oil_press=P('Eng (*) Oil Press Max'),
+               airborne=S('Airborne')):
 
-        self.create_kpv(*max_value(oil_press.array))
+        self.create_kpvs_within_slices(oil_press.array, airborne, max_value)
 
 
 class EngOilPressMin(KeyPointValueNode):
