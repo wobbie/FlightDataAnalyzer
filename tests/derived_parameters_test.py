@@ -2176,6 +2176,21 @@ class TestEng_N1MinFor5Sec(unittest.TestCase, NodeTest):
                                mask=[0]*9+[1]*6)
         ma_test.assert_masked_array_equal(min5s.array, expected)
 
+    def test_real_data(self):
+        test_data = np.ma.array([56,53.5,49.6,47.2,41.9,37.3,33.8,31.6,30.2,
+                                 29.9,30.1,30,30.1,30.1,30.1,30.2,30.2,30.9,
+                                 32.9,37.2,40.1,39.7,37.6,36.1,36,38.1,42.1,
+                                 44.3,44.8,44.5,46.3,50.5,55.1,55.5,54.9,54.4])
+        param=P('Eng (*) N1 Min', array=test_data, frequency=1.0)
+        min5s = Eng_N1MinFor5Sec()
+        min5s.derive(param)
+        #The second_window process is not sensitive to min/max hence tracks
+        #this data incorrectly. The peak at sample 20 should set the level
+        #for 5 seconds, and the trough that follows should not go lower than
+        #the highest value seen for 5 seconds.
+        self.assertEqual(min5s.array[18:23], np.ma.array([40.1]*5))
+        self.assertAlmostEqual(min5s.array[24], 39.7)
+
 class TestEng_N2Avg(unittest.TestCase, NodeTest):
 
     def setUp(self):
