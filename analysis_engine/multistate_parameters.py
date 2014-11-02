@@ -1292,6 +1292,7 @@ class GearDownSelected(MultistateDerivedParameterNode):
 
         self.array = np.zeros_like(gear_down.array, dtype=np.short)
         self.array[gear_down.array == 'Down'] = 'Down'
+        self.array = repair_mask(self.array, method='fill_start')
         if gear_warn:
             # We use up to 10s of `Gear (*) Red Warning` == 'Warning'
             # preceeding the actual gear position change state to define the
