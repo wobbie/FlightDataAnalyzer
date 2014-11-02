@@ -16,6 +16,7 @@ from hdfaccess.parameter import MappedArray
 from flightdatautilities import aircrafttables as at
 
 from settings import (
+    BUMP_HALF_WIDTH,
     KTS_TO_MPS,
     METRES_TO_FEET,
     REPAIR_DURATION,
@@ -548,7 +549,7 @@ def bump(acc, kti):
     :returns: The peak acceleration within +/- 3 seconds of the KTI
     :type: Acceleration, from the acc.array.
     """
-    dt = 3.0 # Half width of range to scan across for peak acceleration.
+    dt = BUMP_HALF_WIDTH # Half width of range to scan across for peak acceleration.
     from_index = max(ceil(kti.index - dt * acc.hz), 0)
     to_index = min(int(kti.index + dt * acc.hz)+1, len(acc.array))
     bump_accel = acc.array[from_index:to_index]
