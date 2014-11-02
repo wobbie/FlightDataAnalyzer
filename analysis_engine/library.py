@@ -6957,6 +6957,13 @@ def second_window(array, frequency, seconds, extend_window=False):
             # Much faster than using window_array[start+i] = last_value
             window_array_data[idx] = last_value
     
+    '''
+    import matplotlib.pyplot as plt
+    plt.plot(array)
+    plt.plot(window_array)
+    plt.show()
+    '''
+    
     return window_array
 
 #---------------------------------------------------------------------------

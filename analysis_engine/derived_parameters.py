@@ -2427,7 +2427,7 @@ class Eng_N1MinFor5Sec(DerivedParameterNode):
     units = ut.PERCENT
 
     def derive(self, eng_n1_min=P('Eng (*) N1 Min')):
-        self.array = second_window(eng_n1_min.array, self.frequency, 5)
+        self.array = second_window(eng_n1_min.array, self.frequency, 5, extend_window=True)
 
 
 ##############################################################################

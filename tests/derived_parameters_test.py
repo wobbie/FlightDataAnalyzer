@@ -2167,10 +2167,14 @@ class TestEng_N1MinFor5Sec(unittest.TestCase, NodeTest):
         self.node_class = Eng_N1MinFor5Sec
         self.operational_combinations = [('Eng (*) N1 Min',)]
 
-    @unittest.skip('Test Not Implemented')
     def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
-
+        test_data = np.ma.array([5,4,3,2,1,0,1,2,3,4]+[5]*5)
+        param=P('Eng (*) N1 Min', array=test_data, frequency=1.0)
+        min5s = Eng_N1MinFor5Sec()
+        min5s.derive(param)
+        expected = np.ma.array(data=[5,4,3,3,3,3,3,3,3,4]+[5]*5,
+                               mask=[0]*9+[1]*6)
+        ma_test.assert_masked_array_equal(min5s.array, expected)
 
 class TestEng_N2Avg(unittest.TestCase, NodeTest):
 
