@@ -244,7 +244,7 @@ class TestAPVerticalMode(unittest.TestCase):
     
     def test_can_operate(self):
         # Avoid exploding long list of combinations.
-        self.assertTrue(APVerticalMode.can_operate(['Climb Active']))
+        self.assertTrue(APVerticalMode.can_operate(['Climb Mode Active']))
         self.assertTrue(APVerticalMode.can_operate(['Longitudinal Mode Selected']))
         self.assertTrue(APVerticalMode.can_operate([
             'Climb Active',
@@ -285,7 +285,7 @@ class TestAPVerticalMode(unittest.TestCase):
     def test_derive_all(self):
         activated_values_mapping = {0: '-', 1: 'Activated'}
         climb_active = M(
-            'Climb Active',
+            'Climb Mode Active',
             array=np.ma.array([0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
             values_mapping=activated_values_mapping,
         )
