@@ -1532,7 +1532,11 @@ class KeyTimeInstanceNode(FormattedNameNode):
                     # Annotate the transition with the post-change state.
                     kwargs.update(**{name: array[int(math.floor(edge_index)) + 1]})
                 self.create_kti(edge_index, **kwargs)
-
+        
+        # Check we recognise what we are being asked to do:
+        if direction not in ['rising_edges', 'falling_edges', 'all_edges']:
+            raise ValueError('direction  %s not recognised in create_ktis_at_edges' %direction)
+        
         # High level function scans phase blocks or complete array and
         # presents appropriate arguments for analysis. We test for phase.name
         # as phase returns False.

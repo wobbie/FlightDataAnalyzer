@@ -886,6 +886,8 @@ class GearDownSelection(KeyTimeInstanceNode):
     Instants at which gear down was selected while airborne.
     '''
 
+    align_frequency = 1
+
     def derive(self,
                gear_dn_sel=M('Gear Down Selected'),
                airborne=S('Airborne')):

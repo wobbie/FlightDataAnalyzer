@@ -143,6 +143,10 @@ AT_WASHOUT_TC = 60.0
 BOUNCED_LANDING_THRESHOLD = 2.0
 BOUNCED_MAXIMUM_DURATION = 20  # sec
 
+# The duration to be scanned for peak accelerations during takeoff and landing.
+# To avoid overlap, accelerations in flight are "trimmed" to avoid this period.
+BUMP_HALF_WIDTH = 3.0 # sec
+
 # Force to start checking control stiffness. Intended to be the same setting
 # for all three flying controls.
 CONTROL_FORCE_THRESHOLD = 3.0  # lb

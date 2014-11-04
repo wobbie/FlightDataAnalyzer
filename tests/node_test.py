@@ -1672,10 +1672,8 @@ class TestKeyTimeInstanceNode(unittest.TestCase):
         test_param = MappedArray(data=[0]*4+[1]*6+[0]*5,
                                  mask=[1]*15,
                                  values_mapping={0: 'Off', 1: 'On'})
-        
-        kti.create_ktis_on_state_change('On', test_param, change='entering')
-        #Check that long mask does not create additional KTI
-        self.assertEqual(len(kti), 0)
+        self.assertRaises(ValueError, kti.create_ktis_on_state_change, 
+                          'On', test_param, change='entering')
         
     def test_create_ktis_on_state_change_leaving(self):
         kti = self.kti

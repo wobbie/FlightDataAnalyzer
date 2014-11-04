@@ -87,7 +87,7 @@ from analysis_engine.library import (actuator_mismatch,
                                      track_linking,
                                      value_at_index,
                                      vstack_params,
-                                     vstack_params_avg)
+                                     vstack_params_sw)
 
 from settings import (AIRSPEED_THRESHOLD,
                       ALTITUDE_RADIO_OFFSET_LIMIT,
@@ -2427,7 +2427,7 @@ class Eng_N1MinFor5Sec(DerivedParameterNode):
     units = ut.PERCENT
 
     def derive(self, eng_n1_min=P('Eng (*) N1 Min')):
-        self.array = second_window(eng_n1_min.array, self.frequency, 5)
+        self.array = second_window(eng_n1_min.array, self.frequency, 5, extend_window=True)
 
 
 ##############################################################################
@@ -3118,7 +3118,7 @@ class Eng_VibN1Max(DerivedParameterNode):
                lpt2=P('Eng (2) Vib N1 Turbine')):
 
         params = eng1, eng2, eng3, eng4, fan1, fan2, lpt1, lpt2
-        engines = vstack_params_avg(8, *params)
+        engines = vstack_params_sw(8, *params)
         self.array = np.ma.max(engines, axis=0)
         self.offset = offset_select('mean', params)
 
@@ -3153,7 +3153,7 @@ class Eng_VibN2Max(DerivedParameterNode):
                hpt2=P('Eng (2) Vib N2 Turbine')):
 
         params = eng1, eng2, eng3, eng4, hpc1, hpc2, hpt1, hpt2
-        engines = vstack_params_avg(8, *params)
+        engines = vstack_params_sw(8, *params)
         self.array = np.ma.max(engines, axis=0)
         self.offset = offset_select('mean', params)
 
@@ -3184,7 +3184,7 @@ class Eng_VibN3Max(DerivedParameterNode):
                eng4=P('Eng (4) Vib N3')):
 
         params = eng1, eng2, eng3, eng4
-        engines = vstack_params_avg(8, *params)
+        engines = vstack_params_sw(8, *params)
         self.array = np.ma.max(engines, axis=0)
         self.offset = offset_select('mean', params)
 
@@ -3226,7 +3226,7 @@ class Eng_VibBroadbandMax(DerivedParameterNode):
                   eng1_accel_a, eng2_accel_a, eng3_accel_a, eng4_accel_a,
                   eng1_accel_b, eng2_accel_b, eng3_accel_b, eng4_accel_b)
 
-        engines = vstack_params_avg(8, *params)
+        engines = vstack_params_sw(8, *params)
         self.array = np.ma.max(engines, axis=0)
         self.offset = offset_select('mean', params)
 
@@ -3257,7 +3257,7 @@ class Eng_VibAMax(DerivedParameterNode):
                eng4=P('Eng (4) Vib (A)')):
 
         params = eng1, eng2, eng3, eng4
-        engines = vstack_params_avg(8, *params)
+        engines = vstack_params_sw(8, *params)
         self.array = np.ma.max(engines, axis=0)
         self.offset = offset_select('mean', params)
 
@@ -3288,7 +3288,7 @@ class Eng_VibBMax(DerivedParameterNode):
                eng4=P('Eng (4) Vib (B)')):
 
         params = eng1, eng2, eng3, eng4
-        engines = vstack_params_avg(8, *params)
+        engines = vstack_params_sw(8, *params)
         self.array = np.ma.max(engines, axis=0)
         self.offset = offset_select('mean', params)
 
@@ -3319,7 +3319,7 @@ class Eng_VibCMax(DerivedParameterNode):
                eng4=P('Eng (4) Vib (C)')):
 
         params = eng1, eng2, eng3, eng4
-        engines = vstack_params_avg(8, *params)
+        engines = vstack_params_sw(8, *params)
         self.array = np.ma.max(engines, axis=0)
         self.offset = offset_select('mean', params)
 
@@ -3882,14 +3882,15 @@ class HeadingTrue(DerivedParameterNode):
 
 class ILSFrequency(DerivedParameterNode):
     '''
-    This code is based upon the normal operation of an Instrument Landing
-    System whereby the left and right receivers are tuned to the same runway
-    ILS frequency. This allows independent monitoring of the approach by the
-    two crew.
-
-    If there is a problem with the system, users can inspect the (1) and (2)
-    signals separately, although the normal use will show valid ILS data when
-    both are tuned to the same frequency.
+    Identification of the tuned ILS Frequency.
+    
+    Where two systems are recorded, this adopts the No.1 system where
+    possible, reverting to the No.2 system when this is tuned to an ILS
+    frequency and No1 is not.
+    
+    Note: This code used to check for both receivers tuned to the same ILS
+    frequency, but on a number of flights one receiver was found to be tuned
+    to a VOR or DME, hence the change in function.
     '''
 
     name = 'ILS Frequency'
@@ -3906,8 +3907,6 @@ class ILSFrequency(DerivedParameterNode):
                f1v=P('ILS-VOR (1) Frequency'), f2v=P('ILS-VOR (2) Frequency')):
         
         #TODO: Extend to allow for three-receiver installations
-        #TODO: Support just one of the ILS (1/2) Frequency params incase the
-        # other signal is invalid
         if f1 and f2:
             first = f1.array
             # align second to the first
@@ -3927,15 +3926,12 @@ class ILSFrequency(DerivedParameterNode):
         # Mask invalid frequencies
         f1_trim = filter_vor_ils_frequencies(first, 'ILS')
         if f1v and not f2v:
-            mask = f1_trim.mask
+            self.array = f1_trim
         else:
-            # We look for both
-            # receivers being tuned together to form a valid signal
             f2_trim = filter_vor_ils_frequencies(second, 'ILS')
-            # and mask where the two receivers are not matched
-            mask = np.ma.masked_not_equal(f1_trim - f2_trim, 0.0).mask
-
-        self.array = np.ma.array(data=f1_trim.data, mask=mask)
+            # We use getmaskarray rather than .mask to provide a correct
+            # dimension array in the presence of fully valid data.
+            self.array = np.ma.where(np.ma.getmaskarray(f1_trim), f2_trim, f1_trim)
 
 
 class ILSLocalizer(DerivedParameterNode):

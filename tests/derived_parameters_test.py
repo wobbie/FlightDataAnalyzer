@@ -2167,10 +2167,29 @@ class TestEng_N1MinFor5Sec(unittest.TestCase, NodeTest):
         self.node_class = Eng_N1MinFor5Sec
         self.operational_combinations = [('Eng (*) N1 Min',)]
 
-    @unittest.skip('Test Not Implemented')
     def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+        test_data = np.ma.array([5,4,3,2,1,0,1,2,3,4]+[5]*5)
+        param=P('Eng (*) N1 Min', array=test_data, frequency=1.0)
+        min5s = Eng_N1MinFor5Sec()
+        min5s.derive(param)
+        expected = np.ma.array(data=[5,4,3,3,3,3,3,3,3,4]+[5]*5,
+                               mask=[0]*9+[1]*6)
+        ma_test.assert_masked_array_equal(min5s.array, expected)
 
+    def test_real_data(self):
+        test_data = np.ma.array([56,53.5,49.6,47.2,41.9,37.3,33.8,31.6,30.2,
+                                 29.9,30.1,30,30.1,30.1,30.1,30.2,30.2,30.9,
+                                 32.9,37.2,40.1,39.7,37.6,36.1,36,38.1,42.1,
+                                 44.3,44.8,44.5,46.3,50.5,55.1,55.5,54.9,54.4])
+        param=P('Eng (*) N1 Min', array=test_data, frequency=1.0)
+        min5s = Eng_N1MinFor5Sec()
+        min5s.derive(param)
+        #The second_window process is not sensitive to min/max hence tracks
+        #this data incorrectly. The peak at sample 20 should set the level
+        #for 5 seconds, and the trough that follows should not go lower than
+        #the highest value seen for 5 seconds.
+        self.assertEqual(min5s.array[18:23], np.ma.array([40.1]*5))
+        self.assertAlmostEqual(min5s.array[24], 39.7)
 
 class TestEng_N2Avg(unittest.TestCase, NodeTest):
 
@@ -3107,6 +3126,50 @@ class TestILSFrequency(unittest.TestCase):
              mask=[True,True,False,False,False,True])
         ma_test.assert_masked_array_approx_equal(result.array, expected_array)
         
+    def test_ils_vor_1_frequency_in_range(self):
+        f1 = P('ILS-VOR (1) Frequency', 
+               np.ma.array([1,2,108.10,108.15,111.95,112.00]),
+               offset = 0.1, frequency = 0.5)
+        f2 = P('ILS-VOR (2) Frequency', 
+               np.ma.array([1,2,3,4,5,6]),
+               offset = 1.1, frequency = 0.5)
+        ils = ILSFrequency()
+        result = ils.get_derived([None, None, f1, f2])
+        expected_array = np.ma.array(
+            data=[1,2,108.10,108.15,111.95,112.00], 
+             mask=[True,True,False,False,False,True])
+        ma_test.assert_masked_array_approx_equal(result.array, expected_array)
+        
+    def test_ils_vor_2_frequency_in_range(self):
+        f1 = P('ILS-VOR (1) Frequency', 
+               np.ma.array([1,2,3,4,5,6]),
+               offset = 1.1, frequency = 0.5)
+        f2 = P('ILS-VOR (2) Frequency', 
+               np.ma.array([1,2,108.10,108.15,111.95,112.00]),
+               offset = 0.1, frequency = 0.5)
+        ils = ILSFrequency()
+        result = ils.get_derived([None, None, f1, f2])
+        expected_array = np.ma.array(
+            data=[1, 108.10, 108.15, 111.95, 112.00, 6], 
+             mask=[True,False,False,False,True,True])
+        ma_test.assert_masked_array_approx_equal(result.array, expected_array)
+        
+    def test_ils_vor_1_takes_precedence(self):
+        f1 = P('ILS-VOR (1) Frequency', 
+               np.ma.array([0,108.10,108.10,0,108.10,112.00]),
+               offset = 0.1, frequency = 0.5)
+        f2 = P('ILS-VOR (2) Frequency', 
+               np.ma.array([110.50,110.50,110.50,110.50,110.50,110.50]),
+               offset = 1.1, frequency = 0.5)
+        ils = ILSFrequency()
+        result = ils.get_derived([None, None, f1, f2])
+        expected_array = np.ma.array(
+            data=[110.50,108.10,108.10,110.50,108.10,110.50], 
+             mask=[True,False,False,False,False,False])
+        ma_test.assert_masked_array_approx_equal(result.array, expected_array)
+        
+
+
     def test_single_ils_vor_frequency_in_range(self):
         f1 = P('ILS-VOR (1) Frequency', 
                np.ma.array(data=[1,2,108.10,108.15,111.95,112.00],
@@ -3141,15 +3204,13 @@ class TestILSFrequency(unittest.TestCase):
                np.ma.array([108.10,111.95]*3),
                offset = 1.1, frequency = 0.5)
         ils = ILSFrequency()
-        result = ils.get_derived([f1, f2])
-        expected_array = np.ma.array(
-            data= [  99,   99, 108.10, 111.95,   99, 111.95], 
-             mask=[True, True,  False,  False, True,  False])
+        result = ils.get_derived([None, None, f1, f2])
+        expected_array = f1.array
         ma_test.assert_masked_array_approx_equal(result.array, expected_array)
 
     def test_ils_frequency_different_sample_rates(self):
         f1 = P('ILS-VOR (1) Frequency', 
-               np.ma.array([108.10]*3+[111.95]*3),
+               np.ma.array([110.5]*2+[0]*2+[111.95]*2),
                frequency = 0.5,
                offset = 0.423828125)
         f2 = P('ILS-VOR (2) Frequency', 
@@ -3157,10 +3218,10 @@ class TestILSFrequency(unittest.TestCase):
                frequency = 0.25,
                offset = 1.423828125)
         ils = ILSFrequency()
-        result = ils.get_derived([f1, f2])
+        result = ils.get_derived([None, None, f1, f2])
         expected_array = np.ma.array(
-            data= [108.10, 108.10, 108.10, 111.95,   99, 111.95], 
-             mask=[  True,  False,  False,   True, True,   True])
+            data= [110.5, 110.5, 108.10, 108.10, 111.95, 111.95], 
+             mask=[  False,  False,  False,   False, False,   False])
         ma_test.assert_masked_array_approx_equal(result.array, expected_array)
 
 

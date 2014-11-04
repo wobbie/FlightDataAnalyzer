@@ -12,6 +12,7 @@ from analysis_engine.settings import (ACCEL_LAT_OFFSET_LIMIT,
                                       ACCEL_LON_OFFSET_LIMIT,
                                       ACCEL_NORM_OFFSET_LIMIT,
                                       AIRSPEED_THRESHOLD,
+                                      BUMP_HALF_WIDTH,
                                       CLIMB_OR_DESCENT_MIN_DURATION,
                                       CONTROL_FORCE_THRESHOLD,
                                       FEET_PER_NM,
@@ -191,6 +192,18 @@ def thrust_reversers_working(landing, pwr, tr, threshold):
     return clump_multistate(tr.array, 'Deployed', high_power_landing_slices)
 
 
+def remove_bump(airborne):
+    '''
+    This removes the takeoff and landing bump periods from the airborne phase
+    to avoid overlap of KPV periods.
+    '''
+    removed = []
+    hz = airborne.frequency
+    for air in airborne:
+        new_slice = slice(air.slice.start + BUMP_HALF_WIDTH * hz, 
+                          air.slice.stop - BUMP_HALF_WIDTH * hz)
+        removed.append(new_slice)
+    return removed
 
 ##############################################################################
 # Acceleration
@@ -501,7 +514,7 @@ class AccelerationNormalWithFlapUpWhileAirborneMax(KeyPointValueNode):
         if '0' in flap.array.state:
             retracted = flap.array == '0'
         acc_flap_up = np.ma.masked_where(~retracted, acc_norm.array)
-        self.create_kpv_from_slices(acc_flap_up, airborne, max_value)
+        self.create_kpv_from_slices(acc_flap_up, remove_bump(airborne), max_value)
 
 
 class AccelerationNormalWithFlapUpWhileAirborneMin(KeyPointValueNode):
@@ -531,7 +544,8 @@ class AccelerationNormalWithFlapUpWhileAirborneMin(KeyPointValueNode):
         elif '0' in flap.array.state:
             retracted = flap.array == '0'
         acc_flap_up = np.ma.masked_where(~retracted, acc_norm.array)
-        self.create_kpv_from_slices(acc_flap_up, airborne, min_value)
+        self.create_kpv_from_slices(acc_flap_up, remove_bump(airborne), 
+                                    min_value)
 
 
 class AccelerationNormalWithFlapDownWhileAirborneMax(KeyPointValueNode):
@@ -561,7 +575,7 @@ class AccelerationNormalWithFlapDownWhileAirborneMax(KeyPointValueNode):
         elif '0' in flap.array.state:
             retracted = flap.array == '0'
         acc_flap_dn = np.ma.masked_where(retracted, acc_norm.array)
-        self.create_kpv_from_slices(acc_flap_dn, airborne, max_value)
+        self.create_kpv_from_slices(acc_flap_dn, remove_bump(airborne), max_value)
 
 
 class AccelerationNormalWithFlapDownWhileAirborneMin(KeyPointValueNode):
@@ -591,7 +605,7 @@ class AccelerationNormalWithFlapDownWhileAirborneMin(KeyPointValueNode):
         elif '0' in flap.array.state:
             retracted = flap.array == '0'
         acc_flap_dn = np.ma.masked_where(retracted, acc_norm.array)
-        self.create_kpv_from_slices(acc_flap_dn, airborne, min_value)
+        self.create_kpv_from_slices(acc_flap_dn, remove_bump(airborne), min_value)
 
 
 class AccelerationNormalAtLiftoff(KeyPointValueNode):
@@ -7596,14 +7610,17 @@ class EngVibBroadbandMax(KeyPointValueNode):
 
 class EngOilPressMax(KeyPointValueNode):
     '''
+    Maximum oil pressure in flight. High oil pressure on a cold engine
+    pre-flight assumed not significant.
     '''
 
     units = ut.PSI
 
     def derive(self,
-               oil_press=P('Eng (*) Oil Press Max')):
+               oil_press=P('Eng (*) Oil Press Max'),
+               airborne=S('Airborne')):
 
-        self.create_kpv(*max_value(oil_press.array))
+        self.create_kpvs_within_slices(oil_press.array, airborne, max_value)
 
 
 class EngOilPressMin(KeyPointValueNode):

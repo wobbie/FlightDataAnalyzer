@@ -6330,7 +6330,7 @@ class TestEngOilPressMax(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = EngOilPressMax
-        self.operational_combinations = [('Eng (*) Oil Press Max', )]
+        self.operational_combinations = [('Eng (*) Oil Press Max', 'Airborne')]
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):

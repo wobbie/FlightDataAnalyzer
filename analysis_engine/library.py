@@ -16,6 +16,7 @@ from hdfaccess.parameter import MappedArray
 from flightdatautilities import aircrafttables as at
 
 from settings import (
+    BUMP_HALF_WIDTH,
     KTS_TO_MPS,
     METRES_TO_FEET,
     REPAIR_DURATION,
@@ -548,7 +549,7 @@ def bump(acc, kti):
     :returns: The peak acceleration within +/- 3 seconds of the KTI
     :type: Acceleration, from the acc.array.
     """
-    dt = 3.0 # Half width of range to scan across for peak acceleration.
+    dt = BUMP_HALF_WIDTH # Half width of range to scan across for peak acceleration.
     from_index = max(ceil(kti.index - dt * acc.hz), 0)
     to_index = min(int(kti.index + dt * acc.hz)+1, len(acc.array))
     bump_accel = acc.array[from_index:to_index]
@@ -1002,7 +1003,7 @@ def cycle_match(idx, cycle_idxs, dist=None):
     Finds the previous and next cycle indexes either side of idx plus
     an allowable distance. For use after "cycle_finder".
 
-    cycle_idxs are generally a "down up down up down" afair where you are
+    cycle_idxs are generally a "down up down up down" affair where you are
     searching for the indexes either side of an "up" for instance. If no
     index is available before or after a match, a None is returned in its
     place. If no matching index found within cycle_idxs, ValueError is raised.
@@ -1020,7 +1021,7 @@ def cycle_match(idx, cycle_idxs, dist=None):
         dist = np.min(np.diff(cycle_idxs)) / 4.0
 
     min_idx = np.argmin(np.abs(np.array(cycle_idxs) - idx))
-    if min_idx < dist:
+    if abs(cycle_idxs[min_idx] - idx) < dist:
         prev = cycle_idxs[min_idx-1] if min_idx > 0 else None
         post = cycle_idxs[min_idx+1] if min_idx < len(cycle_idxs)-1 else None
         return prev, post
@@ -1198,7 +1199,7 @@ def closest_unmasked_value(array, index, start_index=None, stop_index=None):
     elif next_value:
         return next_value
     else:
-        return None, None
+        return None
 
 
 def clump_multistate(array, state, _slices=[slice(None)], condition=True):
@@ -2646,6 +2647,13 @@ def hysteresis(array, hysteresis):
     """
     if np.ma.count(array) == 0: # No unmasked elements.
         return array
+    
+    if hysteresis == 0.0 or hysteresis == None:
+        return array
+    
+    if hysteresis < 0.0:
+        raise ValueError("Hysteresis called with negative threshold")
+        return array
 
     quarter_range = hysteresis / 4.0
     # Length is going to be used often, so prepare here:
@@ -2782,9 +2790,11 @@ def integrate(array, frequency, initial_value=0.0, scale=1.0,
         return np_ma_masked_zeros_like(array)
 
     if repair:
-        integrand = repair_mask(fill_masked_edges(array, 0),
+        integrand = repair_mask(array,
                                 repair_duration=None,
-                                raise_entirely_masked=False, copy=True)
+                                raise_entirely_masked=False, 
+                                extrapolate=True,
+                                copy=True)
     elif contiguous:
         blocks = np.ma.clump_unmasked(array)
         longest_index = None
@@ -6148,23 +6158,21 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
             if direction == 'decrease':
                 flap_tolerance *= -1
 
-            roc_idx = index_at_value(roc, roc_to_seek_for, scan_rev, endpoint='closest')
-            val_idx = index_at_value(array, prev_flap.value + flap_tolerance, scan_rev, endpoint='closest') #???
+            roc_idx = index_at_value(roc, roc_to_seek_for, scan_rev)
+            val_idx = index_at_value(array, prev_flap.value + flap_tolerance, scan_rev)
             idx = max(val_idx, roc_idx) or flap_midpoint
 
         elif (is_masked and direction == 'increase'
               or step_at == 'move_stop'
               or direction == 'increase' and step_at == 'excluding_transition'
               or direction == 'decrease' and step_at == 'including_transition'):
-            scan_fwd = slice(flap_midpoint, next_midpoint, +1)
-            ##idx = index_at_value_or_level_off(array, next_flap, scan_fwd,
-                                              ##abs_threshold=0.2)
+            scan_fwd = slice(int(flap_midpoint), next_midpoint, +1)
 
             if direction == 'increase':
                 flap_tolerance *= -1
 
-            roc_idx = index_at_value(roc, roc_to_seek_for, scan_fwd, endpoint='closest')
-            val_idx = index_at_value(array, next_flap + flap_tolerance, scan_fwd, endpoint='closest') #???
+            roc_idx = index_at_value(roc, roc_to_seek_for, scan_fwd)
+            val_idx = index_at_value(array, next_flap + flap_tolerance, scan_fwd)
             # Rate of change is preferred when the parameter flattens out,
             # value is used when transitioning between two states and the
             # parameter does not level.
@@ -6175,7 +6183,16 @@ def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
         new_array[floor(idx)+1:] = next_flap
 
     # Mask edges of array to avoid extrapolation.
-    return np.ma.array(new_array, mask=mask_edges(array))
+    finished_array = np.ma.array(new_array, mask=mask_edges(array))
+    
+    '''
+    import matplotlib.pyplot as plt
+    plt.plot(array)
+    plt.plot(finished_array)
+    plt.show()
+    '''
+    
+    return finished_array 
 
 
 def touchdown_inertial(land, roc, alt):
@@ -6513,10 +6530,12 @@ def index_at_value(array, threshold, _slice=slice(None), endpoint='exact'):
     :type endpoint: string 'exact' requires array to pass through the threshold,
     while 'closing' seeks the last point where the array is closing on the
     threshold and 'nearest' seeks the point nearest to the threshold.
+    'first_closing' seeks the first point where the array reaches the closest value.
 
     :returns: interpolated time when the array values crossed the threshold. (One value only).
     :returns type: Float or None
     '''
+    assert endpoint in ['exact', 'closing', 'nearest', 'first_closing']
     step = _slice.step or 1
     max_index = len(array)
 
@@ -6541,10 +6560,6 @@ def index_at_value(array, threshold, _slice=slice(None), endpoint='exact'):
     if begin == end:
         logger.warning('No range for seek function to scan across')
         return None
-    elif abs(begin - end) < 2:
-        # Requires at least two values to find if the array crosses a
-        # threshold.
-        return None
 
     # When the data being tested passes the value we are seeking, the
     # difference between the data and the value will change sign.
@@ -6564,7 +6579,7 @@ def index_at_value(array, threshold, _slice=slice(None), endpoint='exact'):
     elif not np.ma.count(test_array):
         # The parameter does not pass through threshold in the period in
         # question, so return empty-handed.
-        if endpoint == 'closing':
+        if endpoint in ['closing', 'first_closing']:
             # Rescan the data to find the last point where the array data is
             # closing.
             diff = np.ma.ediff1d(array[_slice])
@@ -6581,10 +6596,20 @@ def index_at_value(array, threshold, _slice=slice(None), endpoint='exact'):
                 value = value.value
             else:
                 return None
-            if threshold >= value:
-                diff_where = np.ma.where(diff < 0)
+
+            if endpoint == 'closing':
+                if threshold >= value:
+                    diff_where = np.ma.where(diff < 0)
+                else:
+                    diff_where = np.ma.where(diff > 0)
+            elif endpoint == 'first_closing':
+                if threshold >= value:
+                    diff_where = np.ma.where(diff <= 0)
+                else:
+                    diff_where = np.ma.where(diff >= 0)
             else:
-                diff_where = np.ma.where(diff > 0)
+                raise 'Unrecognised command in index_at_value'
+                
             try:
                 return (_slice.start or 0) + (step * diff_where[0][0])
             except IndexError:
@@ -6805,7 +6830,7 @@ def vstack_params(*params):
     return np.ma.vstack([getattr(p, 'array', p) for p in params if p is not None])
 
 
-def vstack_params_avg(window, *params):
+def vstack_params_filtered(window, *params, **kw):
     '''
     Create a multi-dimensional masked array with a dimension per param.
 
@@ -6817,17 +6842,35 @@ def vstack_params_avg(window, *params):
     :rtype: np.ma.array
     :raises: ValueError if all params are None (concatenation of zero-length sequences is impossible)
     '''
+    method = kw.get('method')
+    if method not in ('moving_average', 'second_window'):
+        raise ValueError(
+            'Only `moving_average`, `second_window` filtering methods are '
+            'currently supported')
+
     params = [p for p in params if p is not None]
     window = int(window * params[0].frequency)
     if not window % 2:
         window += 1
 
     if window > 1:
-        arrays = [moving_average(p.array, window) for p in params]
+        if method == 'moving_average':
+            arrays = [moving_average(p.array, window) for p in params]
+        elif method == 'second_window':
+            arrays = [
+                second_window(p.array, p.hz, window, extend_window=True) for p in params]
     else:
         arrays = [p.array for p in params]
 
     return np.ma.vstack(arrays)
+
+
+def vstack_params_avg(window, *params):
+    return vstack_params_filtered(window, *params, method='moving_average')
+
+
+def vstack_params_sw(window, *params):
+    return vstack_params_filtered(window, *params, method='second_window')
 
 
 def vstack_params_where_state(*param_states):
@@ -6932,6 +6975,13 @@ def second_window(array, frequency, seconds, extend_window=False):
             # Set this value in the data object of the masked array.
             # Much faster than using window_array[start+i] = last_value
             window_array_data[idx] = last_value
+    
+    '''
+    import matplotlib.pyplot as plt
+    plt.plot(array)
+    plt.plot(window_array)
+    plt.show()
+    '''
     
     return window_array
 

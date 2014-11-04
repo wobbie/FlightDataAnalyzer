@@ -244,7 +244,7 @@ class TestAPVerticalMode(unittest.TestCase):
     
     def test_can_operate(self):
         # Avoid exploding long list of combinations.
-        self.assertTrue(APVerticalMode.can_operate(['Climb Active']))
+        self.assertTrue(APVerticalMode.can_operate(['Climb Mode Active']))
         self.assertTrue(APVerticalMode.can_operate(['Longitudinal Mode Selected']))
         self.assertTrue(APVerticalMode.can_operate([
             'Climb Active',
@@ -285,7 +285,7 @@ class TestAPVerticalMode(unittest.TestCase):
     def test_derive_all(self):
         activated_values_mapping = {0: '-', 1: 'Activated'}
         climb_active = M(
-            'Climb Active',
+            'Climb Mode Active',
             array=np.ma.array([0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
             values_mapping=activated_values_mapping,
         )
@@ -1729,6 +1729,22 @@ class TestGearDownSelected(unittest.TestCase):
         dn_sel = GearDownSelected()
         dn_sel.derive(gdn, None)
         np.testing.assert_array_equal(dn_sel.array, [1, 1, 1, 0, 0, 0])
+        
+    def test_gear_dn_selected_with_mask(self):
+        gdn = M(
+            array=np.ma.array(data=[1, 1, 1, 0, 0, 0],
+                              mask=[0, 1, 0, 0, 1, 0]),
+            values_mapping={1: 'Down', 0: 'Up'},
+            name='Gear Down',
+            frequency=1,
+            offset=0.1
+        )
+        dn_sel = GearDownSelected()
+        dn_sel.derive(gdn, None)
+        expected = np.ma.array(data=[1, 1, 1, 0, 0, 0],
+                               mask=[0, 0, 0, 0, 0, 0])
+        ma_test.assert_masked_array_equal(dn_sel.array, expected)
+        np.testing.assert_array_equal(dn_sel.array.data, expected.data)
 
     def test_gear_dn_selected_with_warnings(self):
         gdn = M(

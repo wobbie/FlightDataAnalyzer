@@ -738,7 +738,7 @@ class TestAlign(unittest.TestCase):
         3.9375,  4.125 ,  4.3125,  4.5   ,  4.6875,  4.875 ,  5.0625,
         5.25  ,  5.4375,  5.625 ,  5.8125,  6.    ,  6.1875,  6.375 ,
         6.5625,  6.75  ,  6.9375,  7.125 ,  7.3125,  7.5   ,  7.6875,
-        7.875 ,  8.0625,  8.25  ,  8.4375,  8.625 ,  8.8125,  9.    ,
+        7.875 ,  8.0625,  8.25  ,  8.4375,  8.625 ,  8.8125,  0.    ,
         0.    ,  0.    ,  0.    ,  0.    ,  0.    ,  0.    ,  0.    ,
         0.    ,  0.    ,  0.    ,  0.    ,  0.    ,  0.    ,  0.    ,  0.    ]
         np.testing.assert_array_equal(result.data,expected)
@@ -747,7 +747,7 @@ class TestAlign(unittest.TestCase):
         master = P(array=np.ma.arange(1024), frequency=8)
         slave = P(array=np.ma.array([0, 512]), frequency=1/64.0)
         result = align(slave, master)
-        expected = range(0, 513) + [0]*511
+        expected = range(0, 512) + [0]*512
         np.testing.assert_array_equal(result.data,expected)
 
 
@@ -757,8 +757,10 @@ class TestAlign(unittest.TestCase):
         slave = P(array=np.ma.array([100, 104, 108, 112]),
                   frequency = 1/32.0)
         result = align(slave, master)
-        expected = range(100, 113) + [0] * 3
-        np.testing.assert_array_equal(result.data,expected)
+        expected_data = range(100, 112) + [0] * 4
+        expected = np.ma.array(data=expected_data,
+                               mask=[0]*12+[1]*4)
+        ma_test.assert_array_almost_equal(result, expected)
 
     def test_align_8_hz_half_hz(self):
         # Same offset, so every 16th sample (ratio between master and slave)
@@ -783,7 +785,7 @@ class TestAlign(unittest.TestCase):
         slave = P(frequency=1.0/64, offset=0.0,
                    array=np.ma.array([1, 65, 129, 193], dtype=float))
         result = align(slave, onehz)
-        expected = np.ma.array(range(1, 194) + [0] * 63)
+        expected = np.ma.array(range(1, 193) + [0] * 64)
         np.testing.assert_array_equal(result.data, expected)
 
     def test_align_fully_masked_array(self):
@@ -797,7 +799,11 @@ class TestAlign(unittest.TestCase):
         slave = P(frequency=2, offset=0.02,
                   array=np.ma.array([10, 11, 12, 13], mask=True))
         result = align(slave, master)
-        np.testing.assert_array_equal(result.data, expected.data)
+        #Original implementation returned zero array. Now completes first
+        #step of alignment before returning. This is not significant as the
+        #array is completely masked, so testing the data component is
+        #superfluous. np.testing.assert_array_equal(result.data,
+        #expected.data)
         np.testing.assert_array_equal(result.mask, expected.mask)
 
         # Example with different offset - returns all 0s
@@ -805,7 +811,7 @@ class TestAlign(unittest.TestCase):
         slave = P(frequency=2, offset=0.01,
                   array=np.ma.array([10, 11, 12, 13], mask=True))
         result = align(slave, master)
-        np.testing.assert_array_equal(result.data, expected.data)
+        # np.testing.assert_array_equal(result.data, expected.data)
         np.testing.assert_array_equal(result.mask, expected.mask)
     
     def test_align_downsample_same_offset(self):
@@ -841,7 +847,7 @@ class TestAlign(unittest.TestCase):
         result = align(slave, master)
         expected = (master.array/5.0)+1.0
         expected[11:]=np.ma.masked
-        ma_test.assert_array_equal(result, expected)
+        ma_test.assert_array_almost_equal(result, expected)
         
     def test_align_10hz(self):
         master = P('master', array=[1,2], frequency=1.0, offset=0.0)
@@ -855,7 +861,7 @@ class TestAlign(unittest.TestCase):
         result = align(slave, master)
         expected = (master.array/10.0)+2.0
         expected[21:]=np.ma.masked
-        ma_test.assert_array_equal(result, expected)
+        ma_test.assert_array_almost_equal(result, expected)
         
     def test_align_20hz(self):
         master = P('master', array=[1,2], frequency=1.0, offset=0.0)
@@ -869,7 +875,7 @@ class TestAlign(unittest.TestCase):
         result = align(slave, master)
         expected = 6.0-(master.array/20.0)
         expected[81:]=np.ma.masked
-        ma_test.assert_array_equal(result, expected)
+        ma_test.assert_array_almost_equal(result, expected)
         
     def test_align_5_10_20_offset_master(self):
         master = P('master', np.ma.arange(100.0), frequency=20.0, offset=0.1)
@@ -1818,7 +1824,7 @@ class TestFindEdges(unittest.TestCase):
         edges = np.ma.array([1,1,0,0,0,1,1], mask=\
                             [0,0,0,0,1,1,0])
         self.assertEqual(find_edges(edges, direction='all_edges'),
-                         [1.5, 5.5])
+                         [1.5, 3.5])
         
         no_edges = np.ma.array([1,1,0,0,0,1,1], mask=\
                                [0,0,1,1,1,0,0])
@@ -2382,6 +2388,11 @@ class TestHysteresis(unittest.TestCase):
         result = hysteresis(data,2)
         np.testing.assert_array_equal(result.filled(999),
                                       [999,1,1,1,999,0,5,6,6,0.5])
+        
+    def test_hysteresis_with_zero_or_negative_thresholod(self):
+        data = np.ma.array([0,1])
+        np.testing.assert_array_equal(data.data, hysteresis(data,0).data)
+        self.assertRaises(ValueError, hysteresis, data, -3)        
 
     """
     Hysteresis may need to be speeded up, in which case this test can be
@@ -2406,6 +2417,9 @@ class TestHysteresis(unittest.TestCase):
 class TestIndexAtValue(unittest.TestCase):
 
     # Reminder: index_at_value (array, threshold, _slice=slice(None), endpoint='exact')
+
+    def test_modes(self):
+        self.assertRaises(AssertionError, index_at_value, np.ma.arange(4), 99, slice(1, None), endpoint='similar')
 
     def test_index_at_value_basic(self):
         array = np.ma.arange(4)
@@ -2467,7 +2481,8 @@ class TestIndexAtValue(unittest.TestCase):
 
     def test_index_at_value_threshold_closing_backwards(self):
         array = 6-np.ma.arange(6)
-        self.assertEquals (index_at_value(array, 99, slice(None, 4, -1), endpoint='closing'), 0)
+        # array [6,5,4,3,2,1] with slice(None, 4, -1) = [1] which is index 5.
+        self.assertEquals (index_at_value(array, 99, slice(None, 4, -1), endpoint='closing'), 5)
 
     def test_index_at_value_masked(self):
         array = np.ma.arange(4)
@@ -2515,6 +2530,11 @@ class TestIndexAtValue(unittest.TestCase):
         # For comparison...
         self.assertEquals (index_at_value(array, 3.1, slice(1, 8), endpoint='exact'), None)
         self.assertEquals (index_at_value(array, 3.1, slice(1, 8), endpoint='closing'), 2.0)
+
+    def test_index_at_value_closing(self):
+        array = np.ma.array([0,1,2,2,2,2,2,2])
+        self.assertEquals (index_at_value(array, 3.1, slice(0, 8), endpoint='first_closing'), 2)
+        self.assertEquals (index_at_value(array, 3.1, slice(0, 8), endpoint='closing'), 7)
 
     def test_index_at_value_nearest_backwards(self):
         array = np.ma.array([0,1,2,3,2,1,2,1])
@@ -2596,12 +2616,12 @@ class TestIntegValue(unittest.TestCase):
         array = np.ma.array(range(10), dtype=float)
         i, v = integ_value(array)
         self.assertEqual(i, 9) #
-        self.assertEqual(v, 45.0)
+        self.assertEqual(v, 40.5)
 
         subslice = slice(3,8)
         res = integ_value(array, subslice)
-        self.assertEqual(res.index, 7) # excludes the slice.stop
-        self.assertEqual(res.value, 25.0) # was 20.
+        self.assertEqual(res.index, 7)
+        self.assertEqual(res.value, 23.0)
 
     def test_integ_value_none(self):
         array = np.ma.array([])
@@ -5522,6 +5542,12 @@ class TestStepValues(unittest.TestCase):
         array = np.ma.concatenate((array,array[::-1]))
         stepped = step_values(array, (0, 1, 5, 15), step_at='including_transition')
         self.assertEqual(list(stepped),[0]*11+[1]*3+[5]*19+[15]*30+[5]*19+[1]*6+[0]*8)
+
+    def test_step_including_transition_edge_case(self):
+        # This set of values caused problems with a low sample rate flap (767-4 frame)
+        array = np.ma.array([0, 1, 1, 1, 1, 0.878, 0.5270, 0.0, 0.0, 0.0, 0.45, 1])
+        stepped = step_values(array, (0, 1), hz=0.25, step_at='including_transition')
+        self.assertEqual(list(stepped),[0]+[1]*6+[0]*3+[1]*2)
 
     def test_step_trailing_edge_real_data(self):
         array = np.ma.array([0, 0, 0, 0, 0, 0, 0.12, 0.37, 0.5, 0.49, 0.49, 

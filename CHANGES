@@ -10,6 +10,32 @@ You can view the differences in tagged versions as follows:
 
 
 
+V0.16.1
+-------
+
+ - Fixed
+   - Fix to climb acceleration start KTI
+   - Fix to blend_parameters for low frequency parameters
+   - Fix to AltitudeAtLastFlapChangeBeforeTouchdown to cater for auto flap
+     retraction at touchdown
+   - Changed AltitudeRadioCleanConfigurationMin to use Altitude AAL
+ - Improved
+   - Unit test improvements
+   - Altitude Overshoot improved to use Level Flight
+   - Change to slices_or to try to reduce running time
+   - Touchdown algorithm extended to cater for Saab 3000 special case
+   - Small slice duration parameter added to blend_parameters
+   - Change to AltitudeAtLastFlapChangeBeforeTouchdown to avoid auto flap
+     retraction at touchdown
+   - Configuration: use aircraft tables values
+ - Added
+   - Touchdown specific to Saab 2000
+   - Airspeed minus flap manoeuvre speed for 3 sec
+   - Added GearDownToLandingFlapConfigurationDuration
+   - Ldg gear out of sequence use Flap Including Trans
+   - Added EGT/N2/N3 exceeded redline duration KPVs
+
+
 V0.15.1
 -------
 
