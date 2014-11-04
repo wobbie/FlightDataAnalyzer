@@ -6830,7 +6830,7 @@ def vstack_params(*params):
     return np.ma.vstack([getattr(p, 'array', p) for p in params if p is not None])
 
 
-def vstack_params_avg(window, *params):
+def vstack_params_filtered(window, *params, **kw):
     '''
     Create a multi-dimensional masked array with a dimension per param.
 
@@ -6842,17 +6842,35 @@ def vstack_params_avg(window, *params):
     :rtype: np.ma.array
     :raises: ValueError if all params are None (concatenation of zero-length sequences is impossible)
     '''
+    method = kw.get('method')
+    if method not in ('moving_average', 'second_window'):
+        raise ValueError(
+            'Only `moving_average`, `second_window` filtering methods are '
+            'currently supported')
+
     params = [p for p in params if p is not None]
     window = int(window * params[0].frequency)
     if not window % 2:
         window += 1
 
     if window > 1:
-        arrays = [moving_average(p.array, window) for p in params]
+        if method == 'moving_average':
+            arrays = [moving_average(p.array, window) for p in params]
+        elif method == 'second_window':
+            arrays = [
+                second_window(p.array, p.hz, window, extend_window=True) for p in params]
     else:
         arrays = [p.array for p in params]
 
     return np.ma.vstack(arrays)
+
+
+def vstack_params_avg(window, *params):
+    return vstack_params_filtered(window, *params, method='moving_average')
+
+
+def vstack_params_sw(window, *params):
+    return vstack_params_filtered(window, *params, method='second_window')
 
 
 def vstack_params_where_state(*param_states):
