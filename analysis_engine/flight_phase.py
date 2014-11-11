@@ -830,7 +830,10 @@ class ILSLocalizerEstablished(FlightPhaseNode):
             app_freq_slices = shift_slices(runs_of_ones(frequency_changes == 0), app_slice.start)
             frequency_slices.extend(app_freq_slices)
 
-        # If we have a frequency source, only create slices if we have some valid frequencies.
+        # If we have a frequency source, only create slices if we have some
+        # valid frequencies. Note that we are not checking this is the right
+        # frequency for that runway. This allows for problems in ILS
+        # Frequency decoding which occur on some types.
         create_ils_phases(frequency_slices)
         self.info("ILS Frequency has valid data. Created %d established phases" % len(self))        
 
