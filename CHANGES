@@ -10,6 +10,30 @@ You can view the differences in tagged versions as follows:
 
 
 
+v0.18.1
+-------
+
+ - Improved
+   - Add B747 to Speedbrake Selected
+   - Derive Rudder from upper and lower (no middle)
+   - Unit test improvements
+   - Vibrations: use second_window instead of moving_average to improve short
+     peak filtering
+   - Acceleration Normal events refined to avoid overlap with liftoff and
+     touchdown periods
+   - repair_mask added to GearDownSelected
+   - Gear Down Selection aligned to 1Hz to avoid problems with 767-3A frame
+   - Engine oil pressure max KPV amended to only operate in flight.
+   - Hysteresis modified to accept zero or None thresholds, and raise an
+     exception for negative thresholds.
+   - step_values: scan_fwd start rounded down to include first sample of
+     transition array
+   - index_at_value assertion added to check that endpoint argument is
+     recognised
+   - step_values used index_at_value with unrecognised endpoint argument
+   - ILS Frequency derived parameter amended to allow for different frequencies
+     being set
+
 V0.16.1
 -------
 
