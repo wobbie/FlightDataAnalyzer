@@ -2135,6 +2135,10 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         elif 'B737' in family_name:
             self.array = self.b737_speedbrake(spdbrk, handle)
 
+        elif family_name == 'B747':
+            self.array = self.derive_from_handle(handle.array, deployed=5,
+                                                 armed=1)
+
         elif family_name == 'B757':
             self.array = self.derive_from_handle(handle.array, deployed=25,
                                                  armed=12)

@@ -91,7 +91,7 @@ class ApproachInformation(ApproachNode):
         runway = None
 
         # A1. If we have latitude and longitude, look for the nearest airport:
-        if lowest_lat and lowest_lon:
+        if lowest_lat!=None and lowest_lon!=None:
             kwargs.update(latitude=lowest_lat, longitude=lowest_lon)
             try:
                 airport = api.get_nearest_airport(**kwargs)

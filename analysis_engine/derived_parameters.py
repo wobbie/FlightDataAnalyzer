@@ -5176,7 +5176,16 @@ class Rudder(DerivedParameterNode):
     '''
 
     units = ut.DEGREE
-    
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return any_of((
+            'Rudder (Upper)',
+            'Rudder (Middle)',
+            'Rudder (Lower)',
+        ), available)
+
     def derive(self,
                src_A=P('Rudder (Upper)'),
                src_B=P('Rudder (Middle)'),
