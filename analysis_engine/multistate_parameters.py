@@ -15,11 +15,14 @@ from analysis_engine.node import (
     A, MultistateDerivedParameterNode,
     M,
     P,
-    S
+    S,
 )
 from analysis_engine.library import (
     all_of,
     any_of,
+    calculate_flap,
+    calculate_slat,
+    calculate_surface_angle,
     datetime_of_index,
     find_edges_on_state_change,
     index_at_value,
@@ -810,81 +813,14 @@ class Flap(MultistateDerivedParameterNode):
             self.array = np.ma.array(flap_herc)
             self.frequency, self.offset = alt_aal.frequency, alt_aal.offset
             return
-
-        self.values_mapping = at.get_flap_map(model.value, series.value, family.value)
-        self.array = step_values(repair_mask(flap.array),
-                                 self.values_mapping.keys(),
-                                 flap.hz, step_at='move_start')
-
-
-class FlapExcludingTransition(MultistateDerivedParameterNode):
-    '''
-    Specifically designed to cater for maintenance monitoring, this assumes
-    that when moving the lower of the start and endpoints of the movement
-    apply. This minimises the chance of needing a flap overspeed inspection.
-    '''
-
-    units = ut.DEGREE
-
-    @classmethod
-    def can_operate(cls, available,
-                    model=A('Model'), series=A('Series'), family=A('Family')):
-
-        if not all_of(('Flap Angle', 'Model', 'Series', 'Family'), available):
-            return False
-
-        try:
-            at.get_flap_map(model.value, series.value, family.value)
-        except KeyError:
-            cls.debug("No flap mapping available for '%s', '%s', '%s'.",
-                      model.value, series.value, family.value)
-            return False
-
-        return True
-
-    def derive(self, flap=P('Flap Angle'),
-               model=A('Model'), series=A('Series'), family=A('Family')):
-
-        self.values_mapping = at.get_flap_map(model.value, series.value, family.value)
-        self.array = step_values(repair_mask(flap.array),
-                                 self.values_mapping.keys(),
-                                 flap.hz, step_at='excluding_transition')
-
-
-class FlapIncludingTransition(MultistateDerivedParameterNode):
-    '''
-    Specifically designed to cater for maintenance monitoring, this assumes
-    that when moving the higher of the start and endpoints of the movement
-    apply. This increases the chance of needing a flap overspeed inspection,
-    but provides a more cautious interpretation of the maintenance
-    requirements.
-    '''
-
-    units = ut.DEGREE
-
-    @classmethod
-    def can_operate(cls, available,
-                    model=A('Model'), series=A('Series'), family=A('Family')):
-
-        if not all_of(('Flap Angle', 'Model', 'Series', 'Family'), available):
-            return False
-
-        try:
-            at.get_flap_map(model.value, series.value, family.value)
-        except KeyError:
-            cls.debug("No flap mapping available for '%s', '%s', '%s'.",
-                      model.value, series.value, family.value)
-            return False
-
-        return True
-
-    def derive(self, flap=P('Flap Angle'),
-               model=A('Model'), series=A('Series'), family=A('Family')):
-
-        self.values_mapping = at.get_flap_map(model.value, series.value, family.value)
-        self.array = step_values(repair_mask(flap.array),
-                                 self.values_mapping.keys(),
-                                 flap.hz, step_at='including_transition')
+        
+        self.values_mapping, self.array, self.frequency = calculate_flap(
+            'lever',
+            flap,
+            model,
+            series,
+            family,
+        )
 
 
 class FlapLever(MultistateDerivedParameterNode):
@@ -919,9 +855,159 @@ class FlapLever(MultistateDerivedParameterNode):
                model=A('Model'), series=A('Series'), family=A('Family')):
 
         self.values_mapping = at.get_lever_map(model.value, series.value, family.value)
-        self.array = step_values(repair_mask(flap_lever.array),
-                                 self.values_mapping.keys(),
-                                 flap_lever.hz, step_at='move_start')
+        self.array = calculate_surface_angle(
+            'lever',
+            flap_lever,
+            self.values_mapping.keys(),
+        )
+
+
+
+class FlapIncludingTransition(MultistateDerivedParameterNode):
+    '''
+    Specifically designed to cater for maintenance monitoring, this assumes
+    that when moving the higher of the start and endpoints of the movement
+    apply. This increases the chance of needing a flap overspeed inspection,
+    but provides a more cautious interpretation of the maintenance
+    requirements.
+    '''
+
+    units = ut.DEGREE
+    align = False
+    
+    @classmethod
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family')):
+
+        if not all_of(('Flap Angle', 'Model', 'Series', 'Family'), available):
+            return False
+
+        try:
+            at.get_flap_map(model.value, series.value, family.value)
+        except KeyError:
+            cls.debug("No lever mapping available for '%s', '%s', '%s'.",
+                      model.value, series.value, family.value)
+            return False
+
+        return True
+    
+    def derive(self,
+               flap_angle=P('Flap Angle'),
+               model=A('Model'),
+               series=A('Series'),
+               family=A('Family')):
+        self.values_mapping, self.array, self.frequency = calculate_flap(
+            'including',
+            flap_angle,
+            model,
+            series,
+            family,
+        )
+
+
+class FlapExcludingTransition(MultistateDerivedParameterNode):
+    '''
+    Specifically designed to cater for maintenance monitoring, this assumes
+    that when moving the higher of the start and endpoints of the movement
+    apply. This increases the chance of needing a flap overspeed inspection,
+    but provides a more cautious interpretation of the maintenance
+    requirements.
+    '''
+
+    units = ut.DEGREE
+    align = False
+    
+    @classmethod
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family')):
+
+        if not all_of(('Flap Angle', 'Model', 'Series', 'Family'), available):
+            return False
+
+        try:
+            at.get_flap_map(model.value, series.value, family.value)
+        except KeyError:
+            cls.debug("No lever mapping available for '%s', '%s', '%s'.",
+                      model.value, series.value, family.value)
+            return False
+
+        return True
+    
+    def derive(self,
+               flap_angle=P('Flap Angle'),
+               model=A('Model'),
+               series=A('Series'),
+               family=A('Family')):
+        self.values_mapping, self.array, self.frequency,  = calculate_flap(
+            'excluding',
+            flap_angle,
+            model,
+            series,
+            family,
+        )
+
+
+class Flap(MultistateDerivedParameterNode):
+    name = 'Flap'
+    units = ut.DEGREE
+    align = False
+    
+    @classmethod
+    def can_operate(cls, available, frame=A('Frame'),
+                    model=A('Model'), series=A('Series'), family=A('Family')):
+        
+        if frame and frame.value == 'L382-Hercules' and 'Altitude AAL' in available:
+            return True
+        
+        if not all_of(('Flap Angle', 'Model', 'Series', 'Family'), available):
+            return False
+
+        try:
+            at.get_flap_map(model.value, series.value, family.value)
+        except KeyError:
+            cls.debug("No lever mapping available for '%s', '%s', '%s'.",
+                      model.value, series.value, family.value)
+            return False
+
+        return True
+    
+    def derive(self,
+               flap_angle=P('Flap Angle'),
+               model=A('Model'),
+               series=A('Series'),
+               family=A('Family'),
+               frame=A('Frame'),
+               alt_aal=P('Altitude AAL')):
+        
+        frame_name = frame.value if frame else None
+        
+        if frame_name == 'L382-Hercules':
+            self.values_mapping = {0: '0', 50: '50', 100: '100'}
+
+            self.units = ut.PERCENT  # Hercules flaps are unique in this regard!
+
+            # Flap is not recorded, so invent one of the correct length.
+            flap_herc = np_ma_zeros_like(alt_aal.array)
+
+            # Takeoff is normally with 50% flap382
+            _, toffs = slices_from_to(alt_aal.array, 0.0, 1000.0)
+            flap_herc[:toffs[0].stop] = 50.0
+
+            # Assume 50% from 2000 to 1000ft, and 100% thereafter on the approach.
+            _, apps = slices_from_to(alt_aal.array, 2000.0, 0.0)
+            flap_herc[apps[-1].start:] = np.ma.where(alt_aal.array[apps[-1].start:] > 1000.0, 50.0, 100.0)
+
+            self.array = np.ma.array(flap_herc)
+            self.frequency, self.offset = alt_aal.frequency, alt_aal.offset
+            return
+        
+        self.values_mapping, self.array, self.frequency = calculate_flap(
+            'lever',
+            flap_angle,
+            model,
+            series,
+            family,
+        )
 
 
 class FlapLeverSynthetic(MultistateDerivedParameterNode):
@@ -1034,16 +1120,17 @@ class Flaperon(MultistateDerivedParameterNode):
 
     def derive(self, al=P('Aileron (L)'), ar=P('Aileron (R)'),
                model=A('Model'), series=A('Series'), family=A('Family')):
-
         # Take the difference of the two signals (which should cancel each
         # other out when rolling) and divide the range by two (to account for
         # the left going negative and right going positive when flaperons set)
-        flaperon_angle = (al.array - ar.array) / 2
+        al.array = (al.array - ar.array) / 2
 
         self.values_mapping = at.get_aileron_map(model.value, series.value, family.value)
-        self.array = step_values(flaperon_angle,
-                                 self.values_mapping.keys(),
-                                 al.hz, step_at='move_start')
+        self.array, self.frequency = calculate_surface_angle(
+            'lever',
+            al,
+            self.values_mapping.keys(),
+        )
 
 
 class FuelQty_Low(MultistateDerivedParameterNode):
@@ -1656,11 +1743,13 @@ class Slat(MultistateDerivedParameterNode):
 
     def derive(self, slat=P('Slat Angle'),
                model=A('Model'), series=A('Series'), family=A('Family')):
-
-        self.values_mapping = at.get_slat_map(model.value, series.value, family.value)
-        self.array = step_values(repair_mask(slat.array),
-                                 self.values_mapping.keys(),
-                                 slat.hz, step_at='move_start')
+        self.values_mapping, self.array, self.frequency = calculate_slat(
+            'lever',
+            slat,
+            model,
+            series,
+            family,
+        )
 
 
 class SlatExcludingTransition(MultistateDerivedParameterNode):
@@ -1691,10 +1780,13 @@ class SlatExcludingTransition(MultistateDerivedParameterNode):
     def derive(self, slat=P('Slat Angle'),
                model=A('Model'), series=A('Series'), family=A('Family')):
 
-        self.values_mapping = at.get_slat_map(model.value, series.value, family.value)
-        self.array = step_values(repair_mask(slat.array),
-                                 self.values_mapping.keys(),
-                                 slat.hz, step_at='excluding_transition')
+        self.values_mapping, self.array, self.frequency = calculate_slat(
+            'excluding',
+            slat,
+            model,
+            series,
+            family,
+        )
 
 
 class SlatIncludingTransition(MultistateDerivedParameterNode):
@@ -1727,10 +1819,13 @@ class SlatIncludingTransition(MultistateDerivedParameterNode):
     def derive(self, slat=P('Slat Angle'),
                model=A('Model'), series=A('Series'), family=A('Family')):
 
-        self.values_mapping = at.get_slat_map(model.value, series.value, family.value)
-        self.array = step_values(repair_mask(slat.array),
-                                 self.values_mapping.keys(),
-                                 slat.hz, step_at='including_transition')
+        self.values_mapping, self.array, self.frequency = calculate_slat(
+            'including',
+            slat,
+            model,
+            series,
+            family,
+        )
 
 
 class StickPusher(MultistateDerivedParameterNode):

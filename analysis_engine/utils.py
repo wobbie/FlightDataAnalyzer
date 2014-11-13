@@ -5,7 +5,6 @@ import re
 import zipfile
 
 from collections import defaultdict
-from cPickle import UnpicklingError
 from datetime import datetime
 from inspect import isclass
 
@@ -14,6 +13,7 @@ from hdfaccess.utils import strip_hdf
 
 from analysis_engine.api_handler import APIError, get_api_handler
 from analysis_engine.dependency_graph import dependencies3, graph_nodes
+# node classes required for unpickling
 from analysis_engine.node import (
     loads, Node, NodeManager,
     DerivedParameterNode,
