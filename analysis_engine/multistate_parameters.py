@@ -947,69 +947,6 @@ class FlapExcludingTransition(MultistateDerivedParameterNode):
         )
 
 
-class Flap(MultistateDerivedParameterNode):
-    name = 'Flap'
-    units = ut.DEGREE
-    align = False
-    
-    @classmethod
-    def can_operate(cls, available, frame=A('Frame'),
-                    model=A('Model'), series=A('Series'), family=A('Family')):
-        
-        if frame and frame.value == 'L382-Hercules' and 'Altitude AAL' in available:
-            return True
-        
-        if not all_of(('Flap Angle', 'Model', 'Series', 'Family'), available):
-            return False
-
-        try:
-            at.get_flap_map(model.value, series.value, family.value)
-        except KeyError:
-            cls.debug("No lever mapping available for '%s', '%s', '%s'.",
-                      model.value, series.value, family.value)
-            return False
-
-        return True
-    
-    def derive(self,
-               flap_angle=P('Flap Angle'),
-               model=A('Model'),
-               series=A('Series'),
-               family=A('Family'),
-               frame=A('Frame'),
-               alt_aal=P('Altitude AAL')):
-        
-        frame_name = frame.value if frame else None
-        
-        if frame_name == 'L382-Hercules':
-            self.values_mapping = {0: '0', 50: '50', 100: '100'}
-
-            self.units = ut.PERCENT  # Hercules flaps are unique in this regard!
-
-            # Flap is not recorded, so invent one of the correct length.
-            flap_herc = np_ma_zeros_like(alt_aal.array)
-
-            # Takeoff is normally with 50% flap382
-            _, toffs = slices_from_to(alt_aal.array, 0.0, 1000.0)
-            flap_herc[:toffs[0].stop] = 50.0
-
-            # Assume 50% from 2000 to 1000ft, and 100% thereafter on the approach.
-            _, apps = slices_from_to(alt_aal.array, 2000.0, 0.0)
-            flap_herc[apps[-1].start:] = np.ma.where(alt_aal.array[apps[-1].start:] > 1000.0, 50.0, 100.0)
-
-            self.array = np.ma.array(flap_herc)
-            self.frequency, self.offset = alt_aal.frequency, alt_aal.offset
-            return
-        
-        self.values_mapping, self.array, self.frequency = calculate_flap(
-            'lever',
-            flap_angle,
-            model,
-            series,
-            family,
-        )
-
-
 class FlapLeverSynthetic(MultistateDerivedParameterNode):
     '''
     '''
