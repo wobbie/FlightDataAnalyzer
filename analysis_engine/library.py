@@ -636,19 +636,20 @@ def calculate_surface_angle(mode, param, detents):
     :returns: array and frequency
     :rtype: np.ma.array, int or float
     '''
-    orig_freq = param.frequency
     # No need to re-align if high frequency.
-    if orig_freq < 2:
+    if param.frequency < 2:
         freq = 2
+        offset = param.offset * (float(param.frequency) / freq)
         param.array = align_args(
             param.array,
             param.frequency,
             param.offset,
             freq,
-            param.offset,
+            offset,
         )
     else:
-        freq = orig_freq
+        freq = param.frequency
+        offset = param.offset
     
     angle = param.array
     mask = angle.mask.copy()
@@ -664,7 +665,7 @@ def calculate_surface_angle(mode, param, detents):
     result = np_ma_zeros_like(angle, mask=angle.mask)
   
     # ---- Pre-processing ----------------------------------------------
-    gfilter_radius = filter_normal_sigma / orig_freq ** freq_power
+    gfilter_radius = filter_normal_sigma / param.frequency ** freq_power
     angle = medfilt(angle, filter_median_window)
     angle = np.ma.masked_array(filters.gaussian_filter1d(angle, gfilter_radius))
     
@@ -722,7 +723,7 @@ def calculate_surface_angle(mode, param, detents):
     # ---- Set-up the output --------------------------------------------
     # Re-apply the original mask.
     result.mask = mask
-    return result, freq, param.offset
+    return result, freq, offset
 
 
 def calculate_timebase(years, months, days, hours, mins, secs):

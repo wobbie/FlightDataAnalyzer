@@ -873,7 +873,6 @@ class FlapIncludingTransition(MultistateDerivedParameterNode):
     '''
 
     units = ut.DEGREE
-    align = False
     
     @classmethod
     def can_operate(cls, available,
@@ -915,7 +914,6 @@ class FlapExcludingTransition(MultistateDerivedParameterNode):
     '''
 
     units = ut.DEGREE
-    align = False
     
     @classmethod
     def can_operate(cls, available,
