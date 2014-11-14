@@ -855,7 +855,7 @@ class FlapLever(MultistateDerivedParameterNode):
                model=A('Model'), series=A('Series'), family=A('Family')):
 
         self.values_mapping = at.get_lever_map(model.value, series.value, family.value)
-        self.array = calculate_surface_angle(
+        self.array, self.frequency = calculate_surface_angle(
             'lever',
             flap_lever,
             self.values_mapping.keys(),
@@ -2509,13 +2509,13 @@ class ThrustReversers(MultistateDerivedParameterNode):
     def can_operate(cls, available):
         return all_of((
             'Eng (1) Thrust Reverser (L) Deployed',
-            'Eng (1) Thrust Reverser (L) Unlocked',
+            #'Eng (1) Thrust Reverser (L) Unlocked',   # bonus if available!
             'Eng (1) Thrust Reverser (R) Deployed',
-            'Eng (1) Thrust Reverser (R) Unlocked',
+            #'Eng (1) Thrust Reverser (R) Unlocked',   # bonus if available!
             'Eng (2) Thrust Reverser (L) Deployed',
-            'Eng (2) Thrust Reverser (L) Unlocked',
+            #'Eng (2) Thrust Reverser (L) Unlocked',   # bonus if available!
             'Eng (2) Thrust Reverser (R) Deployed',
-            'Eng (2) Thrust Reverser (R) Unlocked',
+            #'Eng (2) Thrust Reverser (R) Unlocked',   # bonus if available!
         ), available) or all_of((
             #'Eng (1) Thrust Reverser Unlocked',   # bonus if available!
             'Eng (1) Thrust Reverser Deployed',

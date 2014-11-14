@@ -244,7 +244,19 @@ def is_5_10_20(number):
     """
     return number in [5, 10, 20]
 
+
 def align(slave, master, interpolate=True):
+    return align_args(
+        slave.array,
+        slave.frequency,
+        slave.offset,
+        master.frequency,
+        master.offset,
+        interpolate=interpolate,
+    )
+
+
+def align_args(slave_array, slave_frequency, slave_offset, master_frequency, master_offset=0, interpolate=True):
     """
     This function takes two parameters which will have been sampled at
     different rates and with different measurement offsets in time, and
@@ -278,7 +290,6 @@ def align(slave, master, interpolate=True):
     :returns: Slave array aligned to master.
     :rtype: np.ma.array
     """
-    slave_array = slave.array # Optimised access to attribute.
     if isinstance(slave_array, MappedArray):  # Multi-state array.
         # force disable interpolate!
         slave_array = slave_array.raw
@@ -287,24 +298,23 @@ def align(slave, master, interpolate=True):
     elif isinstance(slave_array, np.ma.MaskedArray):
         _dtype = float
     else:
-        raise ValueError('Cannot align slave array of unknown type: '
-            'Slave: %s, Master: %s.', slave.name, master.name)
+        raise ValueError('Cannot align slave array of unknown type.')
 
     if len(slave_array) == 0:
         # No elements to align, avoids exception being raised in the loop below.
         return slave_array
-    if slave.frequency == master.frequency and slave.offset == master.offset:
+    if slave_frequency == master_frequency and slave_offset == master_offset:
         # No alignment is required, return the slave's array unchanged.
         return slave_array
 
     # Get the sample rates for the two parameters
-    wm = master.frequency
-    ws = slave.frequency
+    wm = master_frequency
+    ws = slave_frequency
     slowest = min(wm, ws)
 
     # The timing offsets comprise of word location and possible latency.
     # Express the timing disparity in terms of the slave parameter sample interval
-    delta = (master.offset - slave.offset) * slave.frequency
+    delta = (master_offset - slave_offset) * slave_frequency
 
     # If the slowest sample rate is less than 1 Hz, we extend the period and
     # so achieve a lowest rate of one per period.
@@ -314,15 +324,15 @@ def align(slave, master, interpolate=True):
 
     # Check the values are in ranges we have tested
     assert is_power2(wm) or is_5_10_20(wm), \
-           "master = '%s' @ %sHz; wm=%s" % (master.name, master.hz, wm)
+           "master @ %sHz; wm=%s" % (master_frequency, wm)
     assert is_power2(ws) or is_5_10_20(ws), \
-           "slave = '%s' @ %sHz; ws=%s" % (slave.name, slave.hz, ws)
+           "slave @ %sHz; ws=%s" % (slave_frequency, ws)
 
     # Trap 5, 10 or 20Hz parameters that have non-zero offsets (this case is not currently covered)
-    if is_5_10_20(wm) and master.offset:
-        raise ValueError('Align: Master offset non-zero at sample rate %sHz' %master.frequency)
-    if is_5_10_20(ws) and slave.offset:
-        raise ValueError('Align: Slave offset non-zero at sample rate %sHz' %slave.frequency)
+    if is_5_10_20(wm) and master_offset:
+        raise ValueError('Align: Master offset non-zero at sample rate %sHz' % master_frequency)
+    if is_5_10_20(ws) and slave_offset:
+        raise ValueError('Align: Slave offset non-zero at sample rate %sHz' % slave_frequency)
 
     # Compute the sample rate ratio:
     r = wm / float(ws)
@@ -338,20 +348,23 @@ def align(slave, master, interpolate=True):
     # Where offsets are equal, the slave_array recorded values remain
     # unchanged and interpolation is performed between these values.
     # - and we do not interpolate mapped arrays!
-    if not delta and interpolate and (is_power2(slave.frequency) and
-                                      is_power2(master.frequency)):
+    if not delta and interpolate and (is_power2(slave_frequency) and
+                                      is_power2(master_frequency)):
         slave_aligned.mask = True
-        if master.frequency > slave.frequency:
+        if master_frequency > slave_frequency:
             # populate values and interpolate
             slave_aligned[0::r] = slave_array[0::1]
             # Interpolate and do not extrapolate masked ends or gaps
             # bigger than the duration between slave samples (i.e. where
             # original slave data is masked).
             # If array is fully masked, return array of masked zeros
-            dur_between_slave_samples = 1.0 / slave.frequency
-            return repair_mask(slave_aligned, frequency=master.frequency,
-                               repair_duration=dur_between_slave_samples,
-                               raise_entirely_masked=False)
+            dur_between_slave_samples = 1.0 / slave_frequency
+            return repair_mask(
+                slave_aligned,
+                frequency=master_frequency,
+                repair_duration=dur_between_slave_samples,
+                raise_entirely_masked=False,
+            )
 
         else:
             # step through slave taking the required samples
@@ -580,14 +593,23 @@ def calculate_flap(mode, flap_angle, model, series, family):
 def calculate_surface_angle(mode, param, detents):
     '''
     '''
-    angle = param.array
+    orig_freq = param.frequency
+    # No need to re-align if high frequency.
+    if orig_freq < 2:
+        freq = 2
+        param.array = align_args(
+            param.array,
+            param.frequency,
+            param.offset,
+            freq,
+        )
+    else:
+        freq = orig_freq
     
+    angle = param.array
     mask = angle.mask.copy()
     # Repair the array to avoid extreme values affecting the algorithm.
     angle = repair_mask(angle, repair_duration=None)
-    orig_freq = param.frequency
-    # No need to re-align if high frequency.
-    freq = 2 if orig_freq < 2 else orig_freq
     thresh_main_metrics = 5
     thresh_angle_range = 0.4
     filter_median_window = 3
@@ -621,8 +643,6 @@ def calculate_surface_angle(mode, param, detents):
     tran_slices = np.ma.clump_unmasked(angle)
 
     for s in tran_slices:
-        
-        # TODO: .max()
         if np.abs(np.max(angle[s]) - np.min(angle[s])) < thresh_angle_range:
             angle.mask[s] = True
     
