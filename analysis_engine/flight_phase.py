@@ -995,8 +995,7 @@ class Grounded(FlightPhaseNode):
 class Taxiing(FlightPhaseNode):
     '''
     This finds the first and last signs of movement to provide endpoints to
-    the taxi phases. As Rate Of Turn is derived directly from heading, this
-    phase is guaranteed to be operable for very basic aircraft.
+    the taxi phases.
     
     If groundspeed is available, only periods where the groundspeed is over
     5kts are considered taxiing.
@@ -1042,14 +1041,14 @@ class Taxiing(FlightPhaseNode):
 class Mobile(FlightPhaseNode):
     '''
     This finds the first and last signs of movement to provide endpoints to
-    the taxi phases. As Rate Of Turn is derived directly from heading, this
+    the taxi phases. As Heading Rate is derived directly from heading, this
     phase is guaranteed to be operable for very basic aircraft.
     '''
     @classmethod
     def can_operate(cls, available):
-        return 'Rate Of Turn' in available
+        return 'Heading Rate' in available
 
-    def derive(self, rot=P('Rate Of Turn'), gspd=P('Groundspeed'),
+    def derive(self, rot=P('Heading Rate'), gspd=P('Groundspeed'),
                toffs=S('Takeoff'), lands=S('Landing')):
         move = np.ma.flatnotmasked_edges(np.ma.masked_less\
                                          (np.ma.abs(rot.array),
@@ -1459,7 +1458,7 @@ class TurningInAir(FlightPhaseNode):
     """
     Rate of Turn is greater than +/- RATE_OF_TURN_FOR_FLIGHT_PHASES (%.2f) in the air
     """ % RATE_OF_TURN_FOR_FLIGHT_PHASES
-    def derive(self, rate_of_turn=P('Rate Of Turn'), airborne=S('Airborne')):
+    def derive(self, rate_of_turn=P('Heading Rate'), airborne=S('Airborne')):
         turning = np.ma.masked_inside(repair_mask(rate_of_turn.array),
                                       -RATE_OF_TURN_FOR_FLIGHT_PHASES,
                                       RATE_OF_TURN_FOR_FLIGHT_PHASES)
@@ -1480,7 +1479,7 @@ class TurningOnGround(FlightPhaseNode):
     
     Rate of Turn is greater than +/- RATE_OF_TURN_FOR_TAXI_TURNS (%.2f) on the ground
     """ % RATE_OF_TURN_FOR_TAXI_TURNS
-    def derive(self, rate_of_turn=P('Rate Of Turn'), taxi=S('Taxiing')): # Q: Use Mobile?
+    def derive(self, rate_of_turn=P('Heading Rate'), taxi=S('Taxiing')): # Q: Use Mobile?
         turning = np.ma.masked_inside(repair_mask(rate_of_turn.array),
                                       -RATE_OF_TURN_FOR_TAXI_TURNS,
                                       RATE_OF_TURN_FOR_TAXI_TURNS)

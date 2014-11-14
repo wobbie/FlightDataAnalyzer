@@ -159,7 +159,7 @@ from analysis_engine.derived_parameters import (
     Stabilizer,
     VerticalSpeed,
     VerticalSpeedForFlightPhases,
-    RateOfTurn,
+    HeadingRate,
     Roll,
     Rudder,
     ThrottleLevers,
@@ -3319,20 +3319,20 @@ class TestVerticalSpeedForFlightPhases(unittest.TestCase):
         np.testing.assert_array_equal(vert_spd.array, expected)
 
         
-class TestRateOfTurn(unittest.TestCase):
+class TestHeadingRate(unittest.TestCase):
     def test_can_operate(self):
         expected = [('Heading Continuous',)]
-        opts = RateOfTurn.get_operational_combinations()
+        opts = HeadingRate.get_operational_combinations()
         self.assertEqual(opts, expected)
        
     def test_rate_of_turn(self):
-        rot = RateOfTurn()
+        rot = HeadingRate()
         rot.derive(P('Heading Continuous', np.ma.array(range(10))))
         answer = np.ma.array(data=[1]*10, dtype=np.float)
         np.testing.assert_array_equal(rot.array, answer) # Tests data only; NOT mask
        
     def test_rate_of_turn_phase_stability(self):
-        rot = RateOfTurn()
+        rot = HeadingRate()
         rot.derive(P('Heading Continuous', np.ma.array([0,0,2,4,2,0,0],
                                                           dtype=float)))
         answer = np.ma.array([0,1.95,0.5,0,-0.5,-1.95,0])
@@ -3342,7 +3342,7 @@ class TestRateOfTurn(unittest.TestCase):
         # Sample taken from a long circling hold pattern
         head_cont = P(array=np.ma.array(
             np.load(os.path.join(test_data_path, 'heading_continuous_in_hold.npy'))), frequency=2)
-        rot = RateOfTurn()
+        rot = HeadingRate()
         rot.get_derived((head_cont,))
         np.testing.assert_allclose(rot.array[50:1150],
                                    np.ones(1100, dtype=float)*2.1, rtol=0.1)
