@@ -10,6 +10,8 @@ from hashlib import sha256
 from itertools import izip, izip_longest, tee
 from math import asin, atan2, ceil, cos, degrees, floor, log, radians, sin, sqrt
 from scipy import interpolate as scipy_interpolate, optimize
+from scipy.ndimage import filters
+from scipy.signal import medfilt
 
 from hdfaccess.parameter import MappedArray
 
@@ -560,6 +562,103 @@ def bump(acc, kti):
 
     peak = bump_accel[bump_index]
     return from_index + bump_index, peak
+
+
+
+def calculate_slat(mode, slat_angle, model, series, family):
+    values_mapping = at.get_slat_map(model.value, series.value, family.value)
+    array, frequency = calculate_surface_angle(mode, slat_angle, values_mapping.keys())
+    return values_mapping, array, frequency
+
+
+def calculate_flap(mode, flap_angle, model, series, family):
+    values_mapping = at.get_flap_map(model.value, series.value, family.value)
+    array, frequency = calculate_surface_angle(mode, flap_angle, values_mapping.keys())
+    return values_mapping, array, frequency
+
+
+def calculate_surface_angle(mode, param, detents):
+    '''
+    '''
+    angle = param.array
+    
+    mask = angle.mask.copy()
+    # Repair the array to avoid extreme values affecting the algorithm.
+    angle = repair_mask(angle, repair_duration=None)
+    orig_freq = param.frequency
+    # No need to re-align if high frequency.
+    freq = 2 if orig_freq < 2 else orig_freq
+    thresh_main_metrics = 5
+    thresh_angle_range = 0.4
+    filter_median_window = 3
+    filter_normal_sigma = 0.5
+    
+    freq_power = 0.5
+    
+    result = np_ma_zeros_like(angle, mask=angle.mask)
+  
+    # ---- Pre-processing ----------------------------------------------
+    gfilter_radius = filter_normal_sigma / orig_freq ** freq_power
+    angle = medfilt(angle, filter_median_window)
+    angle = np.ma.masked_array(filters.gaussian_filter1d(angle, gfilter_radius))
+    
+    metrics = np.full(len(angle), np.Inf)
+    for l in np.array([2, 3, 4, 5, 6, 8, 12, 16]):
+        maxy = filters.maximum_filter1d(angle, l)
+        miny = filters.minimum_filter1d(angle, l)
+        m = np.log(maxy - miny +  1) / np.log(l)
+        metrics = np.minimum(metrics, m)
+
+    metrics = medfilt(metrics,3)
+    metrics *= 200.0
+    
+    c1 = metrics < angle
+    c2 = metrics < thresh_main_metrics
+    angle.mask = (c1 | c2)
+
+    # ---- First pass: flat transitions are not transitions ------------
+    flat_slices = np.ma.clump_masked(angle)
+    tran_slices = np.ma.clump_unmasked(angle)
+
+    for s in tran_slices:
+        
+        # TODO: .max()
+        if np.abs(np.max(angle[s]) - np.min(angle[s])) < thresh_angle_range:
+            angle.mask[s] = True
+    
+    # ---- Second pass: re-assign flap ----------------------------------
+    flat_slices = np.ma.clump_masked(angle)
+    tran_slices = np.ma.clump_unmasked(angle)
+
+    for s in flat_slices:
+        avg = np.mean(angle.data[s])
+        index = np.argmin(np.abs(avg - detents))
+        result[s] = detents[index]
+
+    for s in tran_slices:
+        
+        lo = angle[s][0]
+        hi = angle[s][-1]
+        
+        detents_lo = detents[np.argmin(abs(lo - detents))]
+        detents_hi = detents[np.argmin(abs(hi - detents))]
+        
+        if mode == 'lever':
+            result[s] = detents_hi
+            continue
+        
+        if detents_hi > detents_lo:
+            result[s] = detents_lo if mode == 'excluding' else detents_hi
+        elif detents_hi < detents_lo:
+            result[s] = detents_hi if mode == 'excluding' else detents_lo
+        else:
+            # If equal fill with either hi or lo.
+            result[s] = detents_lo
+    
+    # ---- Set-up the output --------------------------------------------
+    # Re-apply the original mask.
+    result.mask = mask
+    return result, freq
 
 
 def calculate_timebase(years, months, days, hours, mins, secs):
@@ -7021,9 +7120,11 @@ def alt2press(alt_ft):
     return press
 
 def alt2press_ratio(alt_ft):
-    return np.ma.where(alt_ft <= H1, \
-                       _alt2press_ratio_gradient(alt_ft),
-                       _alt2press_ratio_isothermal(alt_ft))
+    return np.ma.where(
+        alt_ft <= H1,
+        _alt2press_ratio_gradient(alt_ft),
+        _alt2press_ratio_isothermal(alt_ft),
+    )
 
 def air_density(alt, sat):
     pr = alt2press_ratio(alt)
@@ -7122,11 +7223,11 @@ def press2alt(P):
     Pressure is assumed to be in psi, and height is returned in feet.
     """
     Pmb = P * 68.947
-    H = np.ma.where(Pmb > P11,
-                    _press2alt_gradient(Pmb),
-                    _press2alt_isothermal(Pmb)
-                    )
-
+    H = np.ma.where(
+        Pmb > P11,
+        _press2alt_gradient(Pmb),
+        _press2alt_isothermal(Pmb),
+    )
     return H
 
 def _press2alt_gradient(Pmb):
