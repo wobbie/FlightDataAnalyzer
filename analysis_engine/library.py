@@ -246,17 +246,6 @@ def is_5_10_20(number):
 
 
 def align(slave, master, interpolate=True):
-    return align_args(
-        slave.array,
-        slave.frequency,
-        slave.offset,
-        master.frequency,
-        master.offset,
-        interpolate=interpolate,
-    )
-
-
-def align_args(slave_array, slave_frequency, slave_offset, master_frequency, master_offset=0, interpolate=True):
     """
     This function takes two parameters which will have been sampled at
     different rates and with different measurement offsets in time, and
@@ -290,6 +279,29 @@ def align_args(slave_array, slave_frequency, slave_offset, master_frequency, mas
     :returns: Slave array aligned to master.
     :rtype: np.ma.array
     """
+    return align_args(
+        slave.array,
+        slave.frequency,
+        slave.offset,
+        master.frequency,
+        master.offset,
+        interpolate=interpolate,
+    )
+
+
+def align_args(slave_array, slave_frequency, slave_offset, master_frequency, master_offset=0, interpolate=True):
+    '''
+    align implementation abstracted from Parameter class interface.
+    
+    :type slave_array: np.ma.masked_array
+    :type slave_frequency: int or float
+    :type slave_offset: int or float
+    :type master_frequency: int or float
+    :type master_offset: int or float
+    :type interpolate: bool
+    :returns: Slave array aligned to master.
+    :rtype: np.ma.array
+    '''
     if isinstance(slave_array, MappedArray):  # Multi-state array.
         # force disable interpolate!
         slave_array = slave_array.raw
@@ -579,12 +591,33 @@ def bump(acc, kti):
 
 
 def calculate_slat(mode, slat_angle, model, series, family):
+    '''
+    Retrieves flap map and calls calculate_surface_angle with detents.
+    
+    :type mode: str
+    :type slat_angle: np.ma.array
+    :type model: Attribute
+    :type series: Attribute
+    :type family: Attribute
+    :rtype: dict, np.ma.array, int or float
+    '''
     values_mapping = at.get_slat_map(model.value, series.value, family.value)
     array, frequency = calculate_surface_angle(mode, slat_angle, values_mapping.keys())
     return values_mapping, array, frequency
 
 
 def calculate_flap(mode, flap_angle, model, series, family):
+    '''
+    Retrieves flap map and calls calculate_surface_angle with detents.
+    
+    :type mode: str
+    :type flap_angle: np.ma.array
+    :type model: Attribute
+    :type series: Attribute
+    :type family: Attribute
+    :returns: values mapping, array and frequency
+    :rtype: dict, np.ma.array, int or float
+    '''
     values_mapping = at.get_flap_map(model.value, series.value, family.value)
     array, frequency = calculate_surface_angle(mode, flap_angle, values_mapping.keys())
     return values_mapping, array, frequency
@@ -592,6 +625,17 @@ def calculate_flap(mode, flap_angle, model, series, family):
 
 def calculate_surface_angle(mode, param, detents):
     '''
+    Steps a surface angle into detents using one of the following modes:
+     - 'including' - Including transition is equivalent to 'move_start' on rising values and 'move_stop' on falling values.
+     - 'excluding' - Excluding transition is equivalent to 'move_stop' on rising values and 'move_start' on falling values.
+     - 'lever' - Lever is equivalent to 'move_start' on both rising and falling values.
+    
+    :param mode: 'including', 'excluding' or 'lever'.
+    :type mode: str
+    :type param: Parameter
+    :type detents: [int or float]
+    :returns: array and frequency
+    :rtype: np.ma.array, int or float
     '''
     orig_freq = param.frequency
     # No need to re-align if high frequency.
@@ -602,6 +646,7 @@ def calculate_surface_angle(mode, param, detents):
             param.frequency,
             param.offset,
             freq,
+            param.offset,
         )
     else:
         freq = orig_freq
