@@ -855,7 +855,7 @@ class FlapLever(MultistateDerivedParameterNode):
                model=A('Model'), series=A('Series'), family=A('Family')):
 
         self.values_mapping = at.get_lever_map(model.value, series.value, family.value)
-        self.array = calculate_surface_angle(
+        self.array, self.frequency = calculate_surface_angle(
             'lever',
             flap_lever,
             self.values_mapping.keys(),
