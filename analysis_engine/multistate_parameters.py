@@ -814,7 +814,7 @@ class Flap(MultistateDerivedParameterNode):
             self.frequency, self.offset = alt_aal.frequency, alt_aal.offset
             return
         
-        self.values_mapping, self.array, self.frequency = calculate_flap(
+        self.values_mapping, self.array, self.frequency, self.offset = calculate_flap(
             'lever',
             flap,
             model,
@@ -855,7 +855,7 @@ class FlapLever(MultistateDerivedParameterNode):
                model=A('Model'), series=A('Series'), family=A('Family')):
 
         self.values_mapping = at.get_lever_map(model.value, series.value, family.value)
-        self.array, self.frequency = calculate_surface_angle(
+        self.array, self.frequency, self.offset = calculate_surface_angle(
             'lever',
             flap_lever,
             self.values_mapping.keys(),
@@ -896,7 +896,7 @@ class FlapIncludingTransition(MultistateDerivedParameterNode):
                model=A('Model'),
                series=A('Series'),
                family=A('Family')):
-        self.values_mapping, self.array, self.frequency = calculate_flap(
+        self.values_mapping, self.array, self.frequency, self.offset = calculate_flap(
             'including',
             flap_angle,
             model,
@@ -938,7 +938,7 @@ class FlapExcludingTransition(MultistateDerivedParameterNode):
                model=A('Model'),
                series=A('Series'),
                family=A('Family')):
-        self.values_mapping, self.array, self.frequency,  = calculate_flap(
+        self.values_mapping, self.array, self.frequency, self.offset = calculate_flap(
             'excluding',
             flap_angle,
             model,
@@ -1063,7 +1063,7 @@ class Flaperon(MultistateDerivedParameterNode):
         al.array = (al.array - ar.array) / 2
 
         self.values_mapping = at.get_aileron_map(model.value, series.value, family.value)
-        self.array, self.frequency = calculate_surface_angle(
+        self.array, self.frequency, self.offset = calculate_surface_angle(
             'lever',
             al,
             self.values_mapping.keys(),
@@ -1680,7 +1680,7 @@ class Slat(MultistateDerivedParameterNode):
 
     def derive(self, slat=P('Slat Angle'),
                model=A('Model'), series=A('Series'), family=A('Family')):
-        self.values_mapping, self.array, self.frequency = calculate_slat(
+        self.values_mapping, self.array, self.frequency, self.offset = calculate_slat(
             'lever',
             slat,
             model,
@@ -1717,7 +1717,7 @@ class SlatExcludingTransition(MultistateDerivedParameterNode):
     def derive(self, slat=P('Slat Angle'),
                model=A('Model'), series=A('Series'), family=A('Family')):
 
-        self.values_mapping, self.array, self.frequency = calculate_slat(
+        self.values_mapping, self.array, self.frequency, self.offset = calculate_slat(
             'excluding',
             slat,
             model,
@@ -1756,7 +1756,7 @@ class SlatIncludingTransition(MultistateDerivedParameterNode):
     def derive(self, slat=P('Slat Angle'),
                model=A('Model'), series=A('Series'), family=A('Family')):
 
-        self.values_mapping, self.array, self.frequency = calculate_slat(
+        self.values_mapping, self.array, self.frequency, self.offset = calculate_slat(
             'including',
             slat,
             model,

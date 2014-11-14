@@ -589,7 +589,6 @@ def bump(acc, kti):
     return from_index + bump_index, peak
 
 
-
 def calculate_slat(mode, slat_angle, model, series, family):
     '''
     Retrieves flap map and calls calculate_surface_angle with detents.
@@ -602,8 +601,8 @@ def calculate_slat(mode, slat_angle, model, series, family):
     :rtype: dict, np.ma.array, int or float
     '''
     values_mapping = at.get_slat_map(model.value, series.value, family.value)
-    array, frequency = calculate_surface_angle(mode, slat_angle, values_mapping.keys())
-    return values_mapping, array, frequency
+    array, frequency, offset = calculate_surface_angle(mode, slat_angle, values_mapping.keys())
+    return values_mapping, array, frequency, offset
 
 
 def calculate_flap(mode, flap_angle, model, series, family):
@@ -619,8 +618,8 @@ def calculate_flap(mode, flap_angle, model, series, family):
     :rtype: dict, np.ma.array, int or float
     '''
     values_mapping = at.get_flap_map(model.value, series.value, family.value)
-    array, frequency = calculate_surface_angle(mode, flap_angle, values_mapping.keys())
-    return values_mapping, array, frequency
+    array, frequency, offset = calculate_surface_angle(mode, flap_angle, values_mapping.keys())
+    return values_mapping, array, frequency, offset
 
 
 def calculate_surface_angle(mode, param, detents):
@@ -723,7 +722,7 @@ def calculate_surface_angle(mode, param, detents):
     # ---- Set-up the output --------------------------------------------
     # Re-apply the original mask.
     result.mask = mask
-    return result, freq
+    return result, freq, param.offset
 
 
 def calculate_timebase(years, months, days, hours, mins, secs):
