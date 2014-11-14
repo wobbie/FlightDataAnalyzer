@@ -78,7 +78,7 @@ MINIMUM_SPLIT_PARAM_VALUE = 0.175
 
 # Threshold for splitting based upon rate of turn. This threshold dictates
 # when the aircraft is not considered to be turning.
-RATE_OF_TURN_SPLITTING_THRESHOLD = 0.1
+HEADING_RATE_SPLITTING_THRESHOLD = 0.1
 
 # Parameter names to be normalised for splitting flights.
 SPLIT_PARAMETERS = ('Eng (1) N1', 'Eng (2) N1', 'Eng (3) N1', 'Eng (4) N1',
@@ -355,12 +355,12 @@ VERTICAL_SPEED_FOR_TOUCHDOWN = -100  # fpm
 # Vertical speed complementary filter timeconstant
 VERTICAL_SPEED_LAG_TC = 5.0  # sec
 
-# Rate of turn limits for flight.
+# Heading Rate (rate of turn) limits for flight.
 # (Also used for validation of accelerometers on ground).
-RATE_OF_TURN_FOR_FLIGHT_PHASES = 2.0  # deg per second
+HEADING_RATE_FOR_FLIGHT_PHASES = 2.0  # deg per second
 
-# Rate of turn limit for taxi event.
-RATE_OF_TURN_FOR_TAXI_TURNS = 5.0  # deg per second
+# Heading Rate limit for taxi event.
+HEADING_RATE_FOR_TAXI_TURNS = 5.0  # deg per second
 
 # Duration of masked data to repair by interpolation for flight phase analysis
 REPAIR_DURATION = 10  # seconds

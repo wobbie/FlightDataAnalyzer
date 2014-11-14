@@ -52,8 +52,8 @@ from analysis_engine.settings import (
     KTS_TO_MPS,
     LANDING_ROLL_END_SPEED,
     LANDING_THRESHOLD_HEIGHT,
-    RATE_OF_TURN_FOR_FLIGHT_PHASES,
-    RATE_OF_TURN_FOR_TAXI_TURNS,
+    HEADING_RATE_FOR_FLIGHT_PHASES,
+    HEADING_RATE_FOR_TAXI_TURNS,
     TAKEOFF_ACCELERATION_THRESHOLD,
     VERTICAL_SPEED_FOR_CLIMB_PHASE,
     VERTICAL_SPEED_FOR_DESCENT_PHASE,
@@ -1456,12 +1456,12 @@ class TaxiOut(FlightPhaseNode):
 
 class TurningInAir(FlightPhaseNode):
     """
-    Rate of Turn is greater than +/- RATE_OF_TURN_FOR_FLIGHT_PHASES (%.2f) in the air
-    """ % RATE_OF_TURN_FOR_FLIGHT_PHASES
+    Rate of Turn is greater than +/- HEADING_RATE_FOR_FLIGHT_PHASES (%.2f) in the air
+    """ % HEADING_RATE_FOR_FLIGHT_PHASES
     def derive(self, rate_of_turn=P('Heading Rate'), airborne=S('Airborne')):
         turning = np.ma.masked_inside(repair_mask(rate_of_turn.array),
-                                      -RATE_OF_TURN_FOR_FLIGHT_PHASES,
-                                      RATE_OF_TURN_FOR_FLIGHT_PHASES)
+                                      -HEADING_RATE_FOR_FLIGHT_PHASES,
+                                      HEADING_RATE_FOR_FLIGHT_PHASES)
         turn_slices = np.ma.clump_unmasked(turning)
         for turn_slice in turn_slices:
             if any([is_slice_within_slice(turn_slice, air.slice)
@@ -1477,12 +1477,12 @@ class TurningOnGround(FlightPhaseNode):
     speed\ at, typically, 30deg from the runway centreline. The landing\
     phase\ turnoff angle is nominally 45 deg, so avoiding this period.
     
-    Rate of Turn is greater than +/- RATE_OF_TURN_FOR_TAXI_TURNS (%.2f) on the ground
-    """ % RATE_OF_TURN_FOR_TAXI_TURNS
+    Rate of Turn is greater than +/- HEADING_RATE_FOR_TAXI_TURNS (%.2f) on the ground
+    """ % HEADING_RATE_FOR_TAXI_TURNS
     def derive(self, rate_of_turn=P('Heading Rate'), taxi=S('Taxiing')): # Q: Use Mobile?
         turning = np.ma.masked_inside(repair_mask(rate_of_turn.array),
-                                      -RATE_OF_TURN_FOR_TAXI_TURNS,
-                                      RATE_OF_TURN_FOR_TAXI_TURNS)
+                                      -HEADING_RATE_FOR_TAXI_TURNS,
+                                      HEADING_RATE_FOR_TAXI_TURNS)
         turn_slices = np.ma.clump_unmasked(turning)
         for turn_slice in turn_slices:
             if any([is_slice_within_slice(turn_slice, txi.slice)

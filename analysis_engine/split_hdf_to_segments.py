@@ -193,7 +193,7 @@ def _rate_of_turn(heading):
     rate_of_turn = np.ma.abs(rate_of_change(heading, 8))
     rate_of_turn_masked = \
         np.ma.masked_greater(rate_of_turn,
-                             settings.RATE_OF_TURN_SPLITTING_THRESHOLD)
+                             settings.HEADING_RATE_SPLITTING_THRESHOLD)
     return rate_of_turn_masked
 
 
@@ -475,7 +475,7 @@ def split_segments(hdf):
             start = rot_split_index
             logger.info("Splitting at index '%s' where rate of turn was below "
                         "'%s'.", rot_split_index,
-                        settings.RATE_OF_TURN_SPLITTING_THRESHOLD)
+                        settings.HEADING_RATE_SPLITTING_THRESHOLD)
             continue
         else:
             logger.info(
