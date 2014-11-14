@@ -1340,20 +1340,20 @@ class TestMobile(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = Mobile
         self.operational_combinations = [
-            ('Rate Of Turn',),
-            ('Rate Of Turn', 'Groundspeed'),
-            ('Rate Of Turn', 'Takeoff'),
-            ('Rate Of Turn', 'Landing'),
-            ('Rate Of Turn', 'Groundspeed', 'Takeoff'),
-            ('Rate Of Turn', 'Groundspeed', 'Landing'),
-            ('Rate Of Turn', 'Takeoff', 'Landing'),
-            ('Rate Of Turn', 'Groundspeed', 'Takeoff', 'Landing'),
+            ('Heading Rate',),
+            ('Heading Rate', 'Groundspeed'),
+            ('Heading Rate', 'Takeoff'),
+            ('Heading Rate', 'Landing'),
+            ('Heading Rate', 'Groundspeed', 'Takeoff'),
+            ('Heading Rate', 'Groundspeed', 'Landing'),
+            ('Heading Rate', 'Takeoff', 'Landing'),
+            ('Heading Rate', 'Groundspeed', 'Takeoff', 'Landing'),
         ]
 
     def test_rot_only(self):
         rot = np.ma.array([0,0,5,5,5,0,0])
         move = Mobile()
-        move.derive(P('Rate Of Turn',rot), None)
+        move.derive(P('Heading Rate',rot), None)
         expected = buildsection('Mobile', 2, 4)
         self.assertEqual(move.get_slices(), expected.get_slices())
 
@@ -1361,7 +1361,7 @@ class TestMobile(unittest.TestCase, NodeTest):
         rot = np.ma.array([0,0,0,5,5,0,0])
         gspd= np.ma.array([0,6,6,6,0,0,0])
         move = Mobile()
-        move.derive(P('Rate Of Turn',rot),
+        move.derive(P('Heading Rate',rot),
                     P('Groundspeed',gspd))
         expected = buildsection('Mobile', 1, 4)
         self.assertEqual(move.get_slices(), expected.get_slices())
@@ -1370,7 +1370,7 @@ class TestMobile(unittest.TestCase, NodeTest):
         rot = np.ma.array([0,0,5,5,0,0,0])
         gspd= np.ma.array([0,0,0,6,6,6,0])
         move = Mobile()
-        move.derive(P('Rate Of Turn',rot),
+        move.derive(P('Heading Rate',rot),
                     P('Groundspeed',gspd))
         expected = buildsection('Mobile', 2, 5)
         self.assertEqual(move.get_slices(), expected.get_slices())
@@ -1716,12 +1716,12 @@ class TestTaxiing(unittest.TestCase):
 
 class TestTurningInAir(unittest.TestCase):
     def test_can_operate(self):
-        expected = [('Rate Of Turn', 'Airborne')]
+        expected = [('Heading Rate', 'Airborne')]
         self.assertEqual(TurningInAir.get_operational_combinations(), expected)
 
     def test_turning_in_air_phase_basic(self):
         rate_of_turn_data = np.arange(-4, 4.4, 0.4)
-        rate_of_turn = Parameter('Rate Of Turn', np.ma.array(rate_of_turn_data))
+        rate_of_turn = Parameter('Heading Rate', np.ma.array(rate_of_turn_data))
         airborne = buildsection('Airborne',0,21)
         turning_in_air = TurningInAir()
         turning_in_air.derive(rate_of_turn, airborne)
@@ -1732,7 +1732,7 @@ class TestTurningInAir(unittest.TestCase):
         rate_of_turn_data = np.ma.arange(-4, 4.4, 0.4)
         rate_of_turn_data[6] = np.ma.masked
         rate_of_turn_data[16] = np.ma.masked
-        rate_of_turn = Parameter('Rate Of Turn', np.ma.array(rate_of_turn_data))
+        rate_of_turn = Parameter('Heading Rate', np.ma.array(rate_of_turn_data))
         airborne = buildsection('Airborne',0,21)
         turning_in_air = TurningInAir()
         turning_in_air.derive(rate_of_turn, airborne)
@@ -1742,12 +1742,12 @@ class TestTurningInAir(unittest.TestCase):
 
 class TestTurningOnGround(unittest.TestCase):
     def test_can_operate(self):
-        expected = [('Rate Of Turn', 'Taxiing')]
+        expected = [('Heading Rate', 'Taxiing')]
         self.assertEqual(TurningOnGround.get_operational_combinations(), expected)
 
     def test_turning_on_ground_phase_basic(self):
         rate_of_turn_data = np.ma.arange(-12, 12, 1)
-        rate_of_turn = Parameter('Rate Of Turn', np.ma.array(rate_of_turn_data))
+        rate_of_turn = Parameter('Heading Rate', np.ma.array(rate_of_turn_data))
         grounded = buildsection('Grounded', 0, 24)
         turning_on_ground = TurningOnGround()
         turning_on_ground.derive(rate_of_turn, grounded)
@@ -1758,7 +1758,7 @@ class TestTurningOnGround(unittest.TestCase):
         rate_of_turn_data = np.ma.arange(-12, 12, 1)
         rate_of_turn_data[10] = np.ma.masked
         rate_of_turn_data[18] = np.ma.masked
-        rate_of_turn = Parameter('Rate Of Turn', np.ma.array(rate_of_turn_data))
+        rate_of_turn = Parameter('Heading Rate', np.ma.array(rate_of_turn_data))
         grounded = buildsection('Grounded', 0, 24)
         turning_on_ground = TurningOnGround()
         turning_on_ground.derive(rate_of_turn, grounded)
@@ -1772,7 +1772,7 @@ class TestTurningOnGround(unittest.TestCase):
         rate_of_turn_data = np.ma.arange(-12, 12, 1)
         rate_of_turn_data[10] = np.ma.masked
         rate_of_turn_data[18] = np.ma.masked
-        rate_of_turn = Parameter('Rate Of Turn', np.ma.array(rate_of_turn_data))
+        rate_of_turn = Parameter('Heading Rate', np.ma.array(rate_of_turn_data))
         grounded = buildsection('Grounded', 0,10)
         turning_on_ground = TurningOnGround()
         turning_on_ground.derive(rate_of_turn, grounded)

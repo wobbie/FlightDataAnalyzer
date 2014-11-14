@@ -5033,7 +5033,7 @@ class LatitudePrepared(DerivedParameterNode, CoordinatesStraighten):
             self.array = lat_array
 
 
-class RateOfTurn(DerivedParameterNode):
+class HeadingRate(DerivedParameterNode):
     '''
     Simple rate of change of heading.
     '''
