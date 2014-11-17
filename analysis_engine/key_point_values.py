@@ -8395,7 +8395,11 @@ class HeadingVariationAbove100KtsAirspeedDuringLanding(KeyPointValueNode):
 
 class HeadingVariationTouchdownPlus4SecTo60KtsAirspeed(KeyPointValueNode):
     '''
-    Maximum difference in Magnetic Heading.
+    Maximum difference in Magnetic Heading. 
+    
+    The final turnoff is ignored, as this may arise above 60kt IAS at a rapid
+    exit turnoff. The highest variation from the mean heading is marked as
+    the point of interest.
     '''
 
     units = ut.DEGREE
@@ -8409,9 +8413,21 @@ class HeadingVariationTouchdownPlus4SecTo60KtsAirspeed(KeyPointValueNode):
             begin = tdwn.index + 4.0 * head.frequency
             end = index_at_value(airspeed.array, 60.0, slice(begin, None), endpoint='nearest')
             if end:
-                # We found a suitable endpoint, so create a KPV...
-                dev = np.ma.ptp(head.array[begin:end + 1])
-                self.create_kpv(end, dev)
+                # We have a meaningful slice to examine.
+                to_scan = head.array[begin:end+1]
+                indexes, values = cycle_finder(to_scan)
+                # If the final sample is due to a turnoff, remove this before
+                # examining the wanderings.
+                if indexes[-1] >= len(to_scan)-1:
+                    indexes = indexes[:-1]
+                    values = values[:-1]
+                # The overall deviation is...
+                dev = np.ma.ptp(values)
+                # Which happened at...
+                wander = np.ma.abs(to_scan[:indexes[-1]] - np.ma.average(to_scan[:indexes[-1]]))
+                index = np.ma.argmax(wander)
+                # Create the KPV.
+                self.create_kpv(begin+index, dev)
 
 
 class HeadingVacatingRunway(KeyPointValueNode):
