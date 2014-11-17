@@ -7610,20 +7610,36 @@ class TestHeadingVariationTouchdownPlus4SecTo60KtsAirspeed(unittest.TestCase, No
 
         heading = P('Heading Continuous', np.ma.array([10]*25))
         heading.array[15] = 15
+        # This value ensures the array is not artificially "quiet":
+        heading.array[18] = 11
         heading.array[-5] = 20
         airspeed = P('Airspeed', np.ma.arange(99, 50, -2))
         airspeed.array[-5:] = np.ma.masked
         tdwns = KTI(name='Touchdown', items=[
             KeyTimeInstance(index=10, name='Touchdown'),
-        ])
-
+            ])
         node = self.node_class()
         node.derive(heading, airspeed, tdwns)
         self.assertEqual(len(node), 1, msg="Expected one KPV got %s" % len(node))
         self.assertEqual(node[0].value, 5)
-        self.assertEqual(node[0].index, 19)
+        self.assertEqual(node[0].index, 15)
 
-
+    def test_ignore_ret(self):
+        heading = P('Heading Continuous', np.ma.array([10]*25))
+        heading.array[10] = 5
+        heading.array[15] = 15
+        # The final samples increase to represent a rapid exit turnoff.
+        heading.array[-4:] = [12, 18, 24, 30]
+        airspeed = P('Airspeed', np.ma.arange(107, 58, -2))
+        tdwns = KTI(name='Touchdown', items=[
+            KeyTimeInstance(index=4, name='Touchdown'),
+            ])
+        hvt = HeadingVariationTouchdownPlus4SecTo60KtsAirspeed()
+        hvt.derive(heading, airspeed, tdwns)
+        self.assertEqual(hvt[0].value, 10)
+        self.assertEqual(hvt[0].index, 10)
+        
+        
 class TestHeadingVacatingRunway(unittest.TestCase, NodeTest):
 
     def setUp(self):
