@@ -1,4 +1,4 @@
-import csv
+ 
 import mock
 import numpy as np
 import os
@@ -15,11 +15,13 @@ from analysis_engine.flight_attribute import LandingRunway
 
 # A set of masked array test utilities from Pierre GF Gerard-Marchant
 # http://www.java2s.com/Open-Source/Python/Math/Numerical-Python/numpy/numpy/ma/testutils.py.htm
+from flightdatautilities.array_operations import load_compressed
 import flightdatautilities.masked_array_testutils as ma_test
 
 from analysis_engine.library import *
 from analysis_engine.node import (A, P, S, load, M, KTI, KeyTimeInstance, Section)
 from analysis_engine.settings import METRES_TO_FEET
+
 from flight_phase_test import buildsections
 
 test_data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -1112,8 +1114,307 @@ class TestBump(unittest.TestCase):
         # and did we find the right peak and miss the traps?
         self.assertEqual(bump(accel, instant[0])[1],1.0)
 
-last_year = datetime.now().year - 1
+
+class TestCalculateSurfaceAngle(unittest.TestCase):
+    flap_map_1 = {0: '0', 15: '15', 30: '30', 45: '45'}
+    flap_map_2 = {0: '0', 1: '1', 5: '5', 15: '15', 20: '20', 25: '25', 30: '30'}
+    slat_map_1 = {0: '0', 15: '15', 25: '25'}
+    slat_map_2 = {0: '0', 50: '50', 100: '100'}
+    
+    @staticmethod
+    def _calculate(func, array):
+        parameter = P(array=array, frequency=2)
+        args = [parameter, mock.Mock(), mock.Mock(), mock.Mock()]
+        return (
+            func('excluding', *args)[1],
+            func('including', *args)[1],
+            func('lever', *args)[1],
+        )
+    
+    @classmethod
+    def _calculate_flap(cls, array):
+        return cls._calculate(calculate_flap, array)
+    
+    @classmethod
+    def _calculate_slat(cls, array):
+        return cls._calculate(calculate_slat, array)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_flap_1(self, at):
+        at.get_flap_map.return_value = self.flap_map_1
+        array = load_compressed(os.path.join(test_data_path, 'calculate_flap_1.npz'))
+        flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
+        early = [0] * 11 + [15] * 18
+        late = [0] * 20 + [15] * 9
+        self.assertEqual(flap_exc.tolist(), late)
+        self.assertEqual(flap_inc.tolist(), early)
+        self.assertEqual(flap_lev.tolist(), early)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_flap_2(self, at):
+        at.get_flap_map.return_value = self.flap_map_1
+        array = load_compressed(os.path.join(test_data_path, 'calculate_flap_2.npz'))
+        flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
+        early = [15] * 11 + [0] * 26
+        late = [15] * 28 + [0] * 9
+        self.assertEqual(flap_exc.tolist(), early)
+        self.assertEqual(flap_inc.tolist(), late)
+        self.assertEqual(flap_lev.tolist(), early)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_flap_3(self, at):
+        at.get_flap_map.return_value = self.flap_map_1
+        array = load_compressed(os.path.join(test_data_path, 'calculate_flap_3.npz'))
+        flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
+        early = [0] * 10 + [15] * 23
+        late = [0] * 24 + [15] * 9
+        self.assertEqual(flap_exc.tolist(), late)
+        self.assertEqual(flap_inc.tolist(), early)
+        self.assertEqual(flap_lev.tolist(), early)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_flap_4(self, at):
+        at.get_flap_map.return_value = self.flap_map_1
+        array = load_compressed(os.path.join(test_data_path, 'calculate_flap_4.npz'))
+        flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
+        early = [15] * 11 + [30] * 18
+        late = [15] * 20 + [30] * 9
+        self.assertEqual(flap_exc.tolist(), late)
+        self.assertEqual(flap_inc.tolist(), early)
+        self.assertEqual(flap_lev.tolist(), early)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_flap_5(self, at):
+        at.get_flap_map.return_value = self.flap_map_1
+        array = load_compressed(os.path.join(test_data_path, 'calculate_flap_5.npz'))
+        flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
+        flat = [30] * 24
+        self.assertEqual(flap_exc.tolist(), flat)
+        self.assertEqual(flap_inc.tolist(), flat)
+        self.assertEqual(flap_lev.tolist(), flat)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_flap_6(self, at):
+        at.get_flap_map.return_value = self.flap_map_1
+        array = load_compressed(os.path.join(test_data_path, 'calculate_flap_6.npz'))
+        flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
+        early = [30] * 11 + [0] * 38
+        late = [30] * 41 + [0] * 8
+        self.assertEqual(flap_exc.tolist(), early)
+        self.assertEqual(flap_inc.tolist(), late)
+        self.assertEqual(flap_lev.tolist(), early)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_flap_7(self, at):
+        at.get_flap_map.return_value = self.flap_map_1
+        array = load_compressed(os.path.join(test_data_path, 'calculate_flap_7.npz'))
+        flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
+        flat = [0] * 23
+        self.assertEqual(flap_exc.tolist(), flat)
+        self.assertEqual(flap_inc.tolist(), flat)
+        self.assertEqual(flap_lev.tolist(), flat)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_flap_8(self, at):
+        at.get_flap_map.return_value = self.flap_map_1
+        array = load_compressed(os.path.join(test_data_path, 'calculate_flap_8.npz'))
+        flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
+        flat = [0] * 40
+        self.assertEqual(flap_exc.tolist(), flat)
+        self.assertEqual(flap_inc.tolist(), flat)
+        self.assertEqual(flap_lev.tolist(), flat)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_flap_9(self, at):
+        at.get_flap_map.return_value = self.flap_map_1
+        array = load_compressed(os.path.join(test_data_path, 'calculate_flap_9.npz'))
+        flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
+        early = [0] * 11 + [15] * 18
+        late = [0] * 20 + [15] * 9
+        self.assertEqual(flap_exc.tolist(), late)
+        self.assertEqual(flap_inc.tolist(), early)
+        self.assertEqual(flap_lev.tolist(), early)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_flap_10(self, at):
+        at.get_flap_map.return_value = self.flap_map_1
+        array = load_compressed(os.path.join(test_data_path, 'calculate_flap_10.npz'))
+        flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
+        early = [15] * 11 + [0] * 29
+        late = [15] * 31 + [0] * 9
+        self.assertEqual(flap_exc.tolist(), early)
+        self.assertEqual(flap_inc.tolist(), late)
+        self.assertEqual(flap_lev.tolist(), early)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_flap_11(self, at):
+        at.get_flap_map.return_value = self.flap_map_1
+        array = load_compressed(os.path.join(test_data_path, 'calculate_flap_11.npz'))
+        flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
+        early = [0] * 11 + [15] * 18
+        late = [0] * 20 + [15] * 9
+        self.assertEqual(flap_exc.tolist(), late)
+        self.assertEqual(flap_inc.tolist(), early)
+        self.assertEqual(flap_lev.tolist(), early)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_flap_12(self, at):
+        at.get_flap_map.return_value = self.flap_map_1
+        array = load_compressed(os.path.join(test_data_path, 'calculate_flap_12.npz'))
+        flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
+        early = [15] * 11 + [30] * 22
+        late = [15] * 24 + [30] * 9
+        self.assertEqual(flap_exc.tolist(), late)
+        self.assertEqual(flap_inc.tolist(), early)
+        self.assertEqual(flap_lev.tolist(), early)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_flap_13(self, at):
+        at.get_flap_map.return_value = self.flap_map_1
+        array = load_compressed(os.path.join(test_data_path, 'calculate_flap_13.npz'))
+        flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
+        early = [30] * 11 + [0] * 42
+        late = [30] * 44 + [0] * 9
+        self.assertEqual(flap_exc.tolist(), early)
+        self.assertEqual(flap_inc.tolist(), late)
+        self.assertEqual(flap_lev.tolist(), early)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_flap_14(self, at):
+        at.get_flap_map.return_value = self.flap_map_2
+        array = load_compressed(os.path.join(test_data_path, 'calculate_flap_14.npz'))
+        flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
+        early = [0] * 11 + [1] * 20 + [5] * 30
+        late = [0] * 17 + [1] * 35 + [5] * 9
+        self.assertEqual(flap_exc.tolist(), late)
+        self.assertEqual(flap_inc.tolist(), early)
+        self.assertEqual(flap_lev.tolist(), early)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_flap_15(self, at):
+        # This test case is a little problematic as the flap setting of 1 is skipped for Flap Excluding Transition.
+        at.get_flap_map.return_value = self.flap_map_2
+        array = load_compressed(os.path.join(test_data_path, 'calculate_flap_15.npz'))
+        flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
+        early = [5] * 11 + [1] * 27 + [0] * 34
+        late = [5] * 38 + [0] * 34
+        self.assertEqual(flap_exc.tolist(), early)
+        self.assertEqual(flap_inc.tolist(), late)
+        self.assertEqual(flap_lev.tolist(), early)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_flap_16(self, at):
+        at.get_flap_map.return_value = self.flap_map_2
+        array = load_compressed(os.path.join(test_data_path, 'calculate_flap_16.npz'))
+        flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
+        early = [0] * 11 + [1] * 34
+        late = [0] * 17 + [1] * 28
+        self.assertEqual(flap_exc.tolist(), late)
+        self.assertEqual(flap_inc.tolist(), early)
+        self.assertEqual(flap_lev.tolist(), early)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_flap_17(self, at):
+        at.get_flap_map.return_value = self.flap_map_2
+        array = load_compressed(os.path.join(test_data_path, 'calculate_flap_17.npz'))
+        flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
+        early = [1] * 11 + [5] * 35
+        late = [1] * 37 + [5] * 9
+        self.assertEqual(flap_exc.tolist(), late)
+        self.assertEqual(flap_inc.tolist(), early)
+        self.assertEqual(flap_lev.tolist(), early)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_flap_18(self, at):
+        at.get_flap_map.return_value = self.flap_map_2
+        array = load_compressed(os.path.join(test_data_path, 'calculate_flap_18.npz'))
+        flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
+        early = [5] * 11 + [20] * 32
+        late = [5] * 31 + [20] * 12
+        self.assertEqual(flap_exc.tolist(), late)
+        self.assertEqual(flap_inc.tolist(), early)
+        self.assertEqual(flap_lev.tolist(), early)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_flap_19(self, at):
+        at.get_flap_map.return_value = self.flap_map_2
+        array = load_compressed(os.path.join(test_data_path, 'calculate_flap_19.npz'))
+        flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
+        early = [20] * 34 + [25] * 31
+        late = [20] * 41 + [25] * 24
+        self.assertEqual(flap_exc.tolist(), late)
+        self.assertEqual(flap_inc.tolist(), early)
+        self.assertEqual(flap_lev.tolist(), early)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_flap_20(self, at):
+        at.get_flap_map.return_value = self.flap_map_2
+        array = load_compressed(os.path.join(test_data_path, 'calculate_flap_20.npz'))
+        flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
+        early = [30] * 11 + [1] * 59 + [0] * 36
+        late = [30] * 70 + [0] * 36
+        self.assertEqual(flap_exc.tolist(), early)
+        self.assertEqual(flap_inc.tolist(), late)
+        self.assertEqual(flap_lev.tolist(), early)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_slat_1(self, at):
+        at.get_slat_map.return_value = self.slat_map_1
+        array = load_compressed(os.path.join(test_data_path, 'calculate_slat_1.npz'))
+        slat_exc, slat_inc, slat_lev = self._calculate_slat(array)
+        early = [0] * 11 + [15] * 34
+        late = [0] * 36 + [15] * 9
+        self.assertEqual(slat_exc.tolist(), late)
+        self.assertEqual(slat_inc.tolist(), early)
+        self.assertEqual(slat_lev.tolist(), early)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_slat_2(self, at):
+        at.get_slat_map.return_value = self.slat_map_1
+        array = load_compressed(os.path.join(test_data_path, 'calculate_slat_2.npz'))
+        slat_exc, slat_inc, slat_lev = self._calculate_slat(array)
+        early = [15] * 11 + [0] * 33
+        late = [15] * 35 + [0] * 9
+        self.assertEqual(slat_exc.tolist(), early)
+        self.assertEqual(slat_inc.tolist(), late)
+        self.assertEqual(slat_lev.tolist(), early)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_slat_3(self, at):
+        at.get_slat_map.return_value = self.slat_map_2
+        array = load_compressed(os.path.join(test_data_path, 'calculate_slat_3.npz'))
+        slat_exc, slat_inc, slat_lev = self._calculate_slat(array)
+        early = [0] * 11 + [50] * 31
+        late = [0] * 33 + [50] * 9
+        self.assertEqual(slat_exc.tolist(), late)
+        self.assertEqual(slat_inc.tolist(), early)
+        self.assertEqual(slat_lev.tolist(), early)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_slat_4(self, at):
+        at.get_slat_map.return_value = self.slat_map_2
+        array = load_compressed(os.path.join(test_data_path, 'calculate_slat_4.npz'))
+        slat_exc, slat_inc, slat_lev = self._calculate_slat(array)
+        early = [100] * 11 + [50] * 19
+        late = [100] * 21 + [50] * 9
+        self.assertEqual(slat_exc.tolist(), early)
+        self.assertEqual(slat_inc.tolist(), late)
+        self.assertEqual(slat_lev.tolist(), early)
+    
+    @patch('analysis_engine.library.at')
+    def test_calculate_slat_5(self, at):
+        at.get_slat_map.return_value = self.slat_map_2
+        array = load_compressed(os.path.join(test_data_path, 'calculate_slat_5.npz'))
+        slat_exc, slat_inc, slat_lev = self._calculate_slat(array)
+        early = [50] * 11 + [0] * 31
+        late = [50] * 33 + [0] * 9
+        self.assertEqual(slat_exc.tolist(), early)
+        self.assertEqual(slat_inc.tolist(), late)
+        self.assertEqual(slat_lev.tolist(), early)
+
+
 class TestCalculateTimebase(unittest.TestCase):
+    last_year = datetime.now().year - 1
     def test_calculate_timebase_zero_year(self):
         # 6th second is the first valid datetime(2020,12,25,23,59,0)
         years = [None] * 6 + [0] * 19  # 6 sec offset
@@ -1131,7 +1432,7 @@ class TestCalculateTimebase(unittest.TestCase):
     @unittest.skip("Validation of year moved outside of calculate_timebase - invalid test?")
     def test_calculate_timebase_future_year(self):
         # a few valid years followed by many invalid
-        years = [last_year] * 15 + [2999] * 10
+        years = [self.last_year] * 15 + [2999] * 10
         months = [None] * 5 + [12] * 20
         days = [None] * 4 + [24] * 5 + [25] * 16
         hours = [None] * 3 + [23] * 7 + [00] * 15
@@ -1141,11 +1442,11 @@ class TestCalculateTimebase(unittest.TestCase):
 
         #>>> datetime(2020,12,25,00,01,19) - timedelta(seconds=25)
         #datetime.datetime(2020, 12, 25, 0, 0, 50)
-        self.assertEqual(start_dt, datetime(last_year, 12, 24, 23, 58, 54, tzinfo=pytz.utc))
+        self.assertEqual(start_dt, datetime(self.last_year, 12, 24, 23, 58, 54, tzinfo=pytz.utc))
         
     def test_calculate_timebase(self):
         # 6th second is the first valid datetime(2020,12,25,23,59,0)
-        years = [None] * 6 + [last_year] * 19  # 6 sec offset
+        years = [None] * 6 + [self.last_year] * 19  # 6 sec offset
         months = [None] * 5 + [12] * 20
         days = [None] * 4 + [24] * 5 + [25] * 16
         hours = [None] * 3 + [23] * 7 + [00] * 15
@@ -1155,7 +1456,7 @@ class TestCalculateTimebase(unittest.TestCase):
 
         #>>> datetime(2020,12,25,00,01,19) - timedelta(seconds=25)
         #datetime.datetime(2020, 12, 25, 0, 0, 50)
-        self.assertEqual(start_dt, datetime(last_year, 12, 25, 0, 0, 54, tzinfo=pytz.utc))
+        self.assertEqual(start_dt, datetime(self.last_year, 12, 25, 0, 0, 54, tzinfo=pytz.utc))
 
     def test_no_valid_datetimes_raises_valueerror(self):
         years = [None] * 25
@@ -1180,14 +1481,14 @@ class TestCalculateTimebase(unittest.TestCase):
 
     def test_no_change_in_dt_picks_it_as_start(self):
         # also tests using numpy masked arrays
-        years = np.ma.array([last_year] * 20)  # 6 sec offset
+        years = np.ma.array([self.last_year] * 20)  # 6 sec offset
         months = np.ma.array([12] * 20)
         days = np.ma.array([25] * 20)
         hours = np.ma.array([23] * 20)
         mins = np.ma.array([0] * 20)
         secs = np.ma.array([0] * 20) # 6th second in next hr
         start_dt = calculate_timebase(years, months, days, hours, mins, secs)
-        self.assertEqual(start_dt, datetime(last_year,12,25,23,0,0, tzinfo=pytz.utc))
+        self.assertEqual(start_dt, datetime(self.last_year,12,25,23,0,0, tzinfo=pytz.utc))
 
     def test_real_data_params_2_digit_year(self):
         years = np.load(os.path.join(test_data_path, 'year.npy'))

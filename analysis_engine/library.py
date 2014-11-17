@@ -10,6 +10,8 @@ from hashlib import sha256
 from itertools import izip, izip_longest, tee
 from math import asin, atan2, ceil, cos, degrees, floor, log, radians, sin, sqrt
 from scipy import interpolate as scipy_interpolate, optimize
+from scipy.ndimage import filters
+from scipy.signal import medfilt
 
 from hdfaccess.parameter import MappedArray
 
@@ -242,6 +244,7 @@ def is_5_10_20(number):
     """
     return number in [5, 10, 20]
 
+
 def align(slave, master, interpolate=True):
     """
     This function takes two parameters which will have been sampled at
@@ -276,7 +279,29 @@ def align(slave, master, interpolate=True):
     :returns: Slave array aligned to master.
     :rtype: np.ma.array
     """
-    slave_array = slave.array # Optimised access to attribute.
+    return align_args(
+        slave.array,
+        slave.frequency,
+        slave.offset,
+        master.frequency,
+        master.offset,
+        interpolate=interpolate,
+    )
+
+
+def align_args(slave_array, slave_frequency, slave_offset, master_frequency, master_offset=0, interpolate=True):
+    '''
+    align implementation abstracted from Parameter class interface.
+    
+    :type slave_array: np.ma.masked_array
+    :type slave_frequency: int or float
+    :type slave_offset: int or float
+    :type master_frequency: int or float
+    :type master_offset: int or float
+    :type interpolate: bool
+    :returns: Slave array aligned to master.
+    :rtype: np.ma.array
+    '''
     if isinstance(slave_array, MappedArray):  # Multi-state array.
         # force disable interpolate!
         slave_array = slave_array.raw
@@ -285,24 +310,23 @@ def align(slave, master, interpolate=True):
     elif isinstance(slave_array, np.ma.MaskedArray):
         _dtype = float
     else:
-        raise ValueError('Cannot align slave array of unknown type: '
-            'Slave: %s, Master: %s.', slave.name, master.name)
+        raise ValueError('Cannot align slave array of unknown type.')
 
     if len(slave_array) == 0:
         # No elements to align, avoids exception being raised in the loop below.
         return slave_array
-    if slave.frequency == master.frequency and slave.offset == master.offset:
+    if slave_frequency == master_frequency and slave_offset == master_offset:
         # No alignment is required, return the slave's array unchanged.
         return slave_array
 
     # Get the sample rates for the two parameters
-    wm = master.frequency
-    ws = slave.frequency
+    wm = master_frequency
+    ws = slave_frequency
     slowest = min(wm, ws)
 
     # The timing offsets comprise of word location and possible latency.
     # Express the timing disparity in terms of the slave parameter sample interval
-    delta = (master.offset - slave.offset) * slave.frequency
+    delta = (master_offset - slave_offset) * slave_frequency
 
     # If the slowest sample rate is less than 1 Hz, we extend the period and
     # so achieve a lowest rate of one per period.
@@ -312,15 +336,15 @@ def align(slave, master, interpolate=True):
 
     # Check the values are in ranges we have tested
     assert is_power2(wm) or is_5_10_20(wm), \
-           "master = '%s' @ %sHz; wm=%s" % (master.name, master.hz, wm)
+           "master @ %sHz; wm=%s" % (master_frequency, wm)
     assert is_power2(ws) or is_5_10_20(ws), \
-           "slave = '%s' @ %sHz; ws=%s" % (slave.name, slave.hz, ws)
+           "slave @ %sHz; ws=%s" % (slave_frequency, ws)
 
     # Trap 5, 10 or 20Hz parameters that have non-zero offsets (this case is not currently covered)
-    if is_5_10_20(wm) and master.offset:
-        raise ValueError('Align: Master offset non-zero at sample rate %sHz' %master.frequency)
-    if is_5_10_20(ws) and slave.offset:
-        raise ValueError('Align: Slave offset non-zero at sample rate %sHz' %slave.frequency)
+    if is_5_10_20(wm) and master_offset:
+        raise ValueError('Align: Master offset non-zero at sample rate %sHz' % master_frequency)
+    if is_5_10_20(ws) and slave_offset:
+        raise ValueError('Align: Slave offset non-zero at sample rate %sHz' % slave_frequency)
 
     # Compute the sample rate ratio:
     r = wm / float(ws)
@@ -336,20 +360,23 @@ def align(slave, master, interpolate=True):
     # Where offsets are equal, the slave_array recorded values remain
     # unchanged and interpolation is performed between these values.
     # - and we do not interpolate mapped arrays!
-    if not delta and interpolate and (is_power2(slave.frequency) and
-                                      is_power2(master.frequency)):
+    if not delta and interpolate and (is_power2(slave_frequency) and
+                                      is_power2(master_frequency)):
         slave_aligned.mask = True
-        if master.frequency > slave.frequency:
+        if master_frequency > slave_frequency:
             # populate values and interpolate
             slave_aligned[0::r] = slave_array[0::1]
             # Interpolate and do not extrapolate masked ends or gaps
             # bigger than the duration between slave samples (i.e. where
             # original slave data is masked).
             # If array is fully masked, return array of masked zeros
-            dur_between_slave_samples = 1.0 / slave.frequency
-            return repair_mask(slave_aligned, frequency=master.frequency,
-                               repair_duration=dur_between_slave_samples,
-                               raise_entirely_masked=False)
+            dur_between_slave_samples = 1.0 / slave_frequency
+            return repair_mask(
+                slave_aligned,
+                frequency=master_frequency,
+                repair_duration=dur_between_slave_samples,
+                raise_entirely_masked=False,
+            )
 
         else:
             # step through slave taking the required samples
@@ -560,6 +587,143 @@ def bump(acc, kti):
 
     peak = bump_accel[bump_index]
     return from_index + bump_index, peak
+
+
+def calculate_slat(mode, slat_angle, model, series, family):
+    '''
+    Retrieves flap map and calls calculate_surface_angle with detents.
+    
+    :type mode: str
+    :type slat_angle: np.ma.array
+    :type model: Attribute
+    :type series: Attribute
+    :type family: Attribute
+    :rtype: dict, np.ma.array, int or float
+    '''
+    values_mapping = at.get_slat_map(model.value, series.value, family.value)
+    array, frequency, offset = calculate_surface_angle(mode, slat_angle, values_mapping.keys())
+    return values_mapping, array, frequency, offset
+
+
+def calculate_flap(mode, flap_angle, model, series, family):
+    '''
+    Retrieves flap map and calls calculate_surface_angle with detents.
+    
+    :type mode: str
+    :type flap_angle: np.ma.array
+    :type model: Attribute
+    :type series: Attribute
+    :type family: Attribute
+    :returns: values mapping, array and frequency
+    :rtype: dict, np.ma.array, int or float
+    '''
+    values_mapping = at.get_flap_map(model.value, series.value, family.value)
+    array, frequency, offset = calculate_surface_angle(mode, flap_angle, values_mapping.keys())
+    return values_mapping, array, frequency, offset
+
+
+def calculate_surface_angle(mode, param, detents):
+    '''
+    Steps a surface angle into detents using one of the following modes:
+     - 'including' - Including transition is equivalent to 'move_start' on rising values and 'move_stop' on falling values.
+     - 'excluding' - Excluding transition is equivalent to 'move_stop' on rising values and 'move_start' on falling values.
+     - 'lever' - Lever is equivalent to 'move_start' on both rising and falling values.
+    
+    :param mode: 'including', 'excluding' or 'lever'.
+    :type mode: str
+    :type param: Parameter
+    :type detents: [int or float]
+    :returns: array and frequency
+    :rtype: np.ma.array, int or float
+    '''
+    # No need to re-align if high frequency.
+    if param.frequency < 2:
+        freq = 2
+        offset = param.offset * (float(param.frequency) / freq)
+        param.array = align_args(
+            param.array,
+            param.frequency,
+            param.offset,
+            freq,
+            offset,
+        )
+    else:
+        freq = param.frequency
+        offset = param.offset
+    
+    angle = param.array
+    mask = angle.mask.copy()
+    # Repair the array to avoid extreme values affecting the algorithm.
+    angle = repair_mask(angle, repair_duration=None)
+    thresh_main_metrics = 5
+    thresh_angle_range = 0.4
+    filter_median_window = 3
+    filter_normal_sigma = 0.5
+    
+    freq_power = 0.5
+    
+    result = np_ma_zeros_like(angle, mask=angle.mask)
+  
+    # ---- Pre-processing ----------------------------------------------
+    gfilter_radius = filter_normal_sigma / param.frequency ** freq_power
+    angle = medfilt(angle, filter_median_window)
+    angle = np.ma.masked_array(filters.gaussian_filter1d(angle, gfilter_radius))
+    
+    metrics = np.full(len(angle), np.Inf)
+    for l in np.array([2, 3, 4, 5, 6, 8, 12, 16]):
+        maxy = filters.maximum_filter1d(angle, l)
+        miny = filters.minimum_filter1d(angle, l)
+        m = np.log(maxy - miny +  1) / np.log(l)
+        metrics = np.minimum(metrics, m)
+
+    metrics = medfilt(metrics,3)
+    metrics *= 200.0
+    
+    c1 = metrics < angle
+    c2 = metrics < thresh_main_metrics
+    angle.mask = (c1 | c2)
+
+    # ---- First pass: flat transitions are not transitions ------------
+    flat_slices = np.ma.clump_masked(angle)
+    tran_slices = np.ma.clump_unmasked(angle)
+
+    for s in tran_slices:
+        if np.abs(np.max(angle[s]) - np.min(angle[s])) < thresh_angle_range:
+            angle.mask[s] = True
+    
+    # ---- Second pass: re-assign flap ----------------------------------
+    flat_slices = np.ma.clump_masked(angle)
+    tran_slices = np.ma.clump_unmasked(angle)
+
+    for s in flat_slices:
+        avg = np.mean(angle.data[s])
+        index = np.argmin(np.abs(avg - detents))
+        result[s] = detents[index]
+
+    for s in tran_slices:
+        
+        lo = angle[s][0]
+        hi = angle[s][-1]
+        
+        detents_lo = detents[np.argmin(abs(lo - detents))]
+        detents_hi = detents[np.argmin(abs(hi - detents))]
+        
+        if mode == 'lever':
+            result[s] = detents_hi
+            continue
+        
+        if detents_hi > detents_lo:
+            result[s] = detents_lo if mode == 'excluding' else detents_hi
+        elif detents_hi < detents_lo:
+            result[s] = detents_hi if mode == 'excluding' else detents_lo
+        else:
+            # If equal fill with either hi or lo.
+            result[s] = detents_lo
+    
+    # ---- Set-up the output --------------------------------------------
+    # Re-apply the original mask.
+    result.mask = mask
+    return result, freq, offset
 
 
 def calculate_timebase(years, months, days, hours, mins, secs):
@@ -7021,9 +7185,11 @@ def alt2press(alt_ft):
     return press
 
 def alt2press_ratio(alt_ft):
-    return np.ma.where(alt_ft <= H1, \
-                       _alt2press_ratio_gradient(alt_ft),
-                       _alt2press_ratio_isothermal(alt_ft))
+    return np.ma.where(
+        alt_ft <= H1,
+        _alt2press_ratio_gradient(alt_ft),
+        _alt2press_ratio_isothermal(alt_ft),
+    )
 
 def air_density(alt, sat):
     pr = alt2press_ratio(alt)
@@ -7122,11 +7288,11 @@ def press2alt(P):
     Pressure is assumed to be in psi, and height is returned in feet.
     """
     Pmb = P * 68.947
-    H = np.ma.where(Pmb > P11,
-                    _press2alt_gradient(Pmb),
-                    _press2alt_isothermal(Pmb)
-                    )
-
+    H = np.ma.where(
+        Pmb > P11,
+        _press2alt_gradient(Pmb),
+        _press2alt_isothermal(Pmb),
+    )
     return H
 
 def _press2alt_gradient(Pmb):

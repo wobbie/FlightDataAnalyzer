@@ -24,7 +24,7 @@ from analysis_engine.settings import (ACCEL_LAT_OFFSET_LIMIT,
                                       NAME_VALUES_CONF,
                                       NAME_VALUES_ENGINE,
                                       NAME_VALUES_LEVER,
-                                      RATE_OF_TURN_FOR_TAXI_TURNS,
+                                      HEADING_RATE_FOR_TAXI_TURNS,
                                       REVERSE_THRUST_EFFECTIVE_EPR,
                                       REVERSE_THRUST_EFFECTIVE_N1,
                                       SPOILER_DEPLOYED,
@@ -80,7 +80,6 @@ from analysis_engine.library import (ambiguous_runway,
                                      slice_midpoint,
                                      slice_samples,
                                      slices_and_not,
-                                     slices_below,
                                      slices_from_ktis,
                                      slices_from_to,
                                      slices_not,
@@ -3587,7 +3586,6 @@ class AltitudeOvershootAtSuspectedLevelBust(KeyPointValueNode):
     def derive(self,
                alt_std=P('Altitude STD Smoothed'),
                level_flights=S('Level Flight')):
-               #alt_aal=P('Altitude AAL')):
         
         bust = 300  # ft
         bust_time = 4 * 60  # 3 mins + 1 min to account for late level flight stabilisation.
@@ -3595,8 +3593,6 @@ class AltitudeOvershootAtSuspectedLevelBust(KeyPointValueNode):
         
         def bust_value(bust_slice, lvl_flt_val):
             
-            #bust_midpoint_idx = slice_midpoint(bust_slice)
-            #bust_midpoint_val = alt_std.array[bust_midpoint_idx]
             func = max_value if np.ma.mean(alt_std.array[bust_slice]) > lvl_flt_val else min_value
             value = func(alt_std.array, _slice=bust_slice)
             if value.index and abs(value.value - lvl_flt_val) >= bust:
@@ -8839,7 +8835,7 @@ class GroundspeedWhileTaxiingTurnMax(KeyPointValueNode):
     '''
     The rate of change of heading used to detect a turn during taxi is %.2f
     degrees per second.
-    ''' % RATE_OF_TURN_FOR_TAXI_TURNS
+    ''' % HEADING_RATE_FOR_TAXI_TURNS
 
     units = ut.KT
 

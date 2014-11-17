@@ -327,7 +327,7 @@ class TestSplitSegments(unittest.TestCase):
         settings.MINIMUM_SPLIT_DURATION = 100
         settings.MINIMUM_FAST_DURATION = 0
         settings.MINIMUM_SPLIT_PARAM_VALUE = 0.175
-        settings.RATE_OF_TURN_SPLITTING_THRESHOLD = 0.1
+        settings.HEADING_RATE_SPLITTING_THRESHOLD = 0.1
         settings.MAX_TIMEBASE_AGE = 365 * 10
         
         hdf_path = os.path.join(test_data_path, "split_segments_multiple_types.hdf5")
