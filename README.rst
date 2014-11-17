@@ -7,7 +7,7 @@ flight data. It provides the following utilities:
 * Flight phase detection.
 * Split flight data into multiple flight segments.
 * Deriving parameters from others.
-* Creation of flight attributes, such as take and landing runways.
+* Creation of flight attributes, such as takeoff and landing runways.
 * Calculation and creation of KPVs and KTIs.
 
 Project sponsored by `Flight Data Services`_ and released under the Open

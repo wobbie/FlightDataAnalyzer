@@ -1106,7 +1106,7 @@ class TestFlap(unittest.TestCase, NodeTest):
             ('Altitude AAL',),
             frame=A('Frame', 'L382-Hercules'),
         ))
-
+    
     @patch('analysis_engine.library.at')
     def test_derive(self, at):
         at.get_flap_map.return_value = {f: str(f) for f in (0, 1, 2, 5, 10, 15, 25, 30, 40)}
@@ -1115,7 +1115,7 @@ class TestFlap(unittest.TestCase, NodeTest):
         _af = A('Family', 'B737 Classic')
         attributes = (_am, _as, _af)
         array = np.ma.array([0] * 5 + range(50))
-        flap = P(name='Flap Angle', array=array)
+        flap = P(name='Flap Angle', array=array, frequency=2)
         node = self.node_class()
         node.derive(flap, *attributes)
         attributes = (a.value for a in attributes)
@@ -1133,7 +1133,7 @@ class TestFlap(unittest.TestCase, NodeTest):
         _af = A('Family', 'DC-9')
         attributes = (_am, _as, _af)
         array = np.ma.array(range(50) + range(-5, 0) + [13.1, 1.3, 10, 10])
-        flap = P(name='Flap Angle', array=array)
+        flap = P(name='Flap Angle', array=array, frequency=2)
         for index in (1, 57, 58):
             flap.array[index] = np.ma.masked
         node = self.node_class()
@@ -1158,7 +1158,7 @@ class TestFlap(unittest.TestCase, NodeTest):
         _af = A('Family', '1900')
         attributes = (_am, _as, _af)
         array = np.ma.array((0, 5, 7.2, 17, 17.4, 17.4, 17.4, 17.4, 17.4, 17.9, 20, 30, 30))
-        flap = P(name='Flap Angle', array=array)
+        flap = P(name='Flap Angle', array=array, frequency=2)
         node = self.node_class()
         node.derive(flap, *attributes)
         attributes = (a.value for a in attributes)
@@ -1219,7 +1219,7 @@ class TestFlapExcludingTransition(unittest.TestCase, NodeTest):
         _af = A('Family', 'B737 Classic')
         attributes = (_am, _as, _af)
         array = np.ma.array([0] * 5 + range(50))
-        flap = P(name='Flap Angle', array=array)
+        flap = P(name='Flap Angle', array=array, frequency=2)
         node = self.node_class()
         node.derive(flap, *attributes)
         attributes = (a.value for a in attributes)
@@ -1250,7 +1250,7 @@ class TestFlapIncludingTransition(unittest.TestCase, NodeTest):
             series=A('Series', None),
             family=A('Family', None),
         ))
-
+    
     @patch('analysis_engine.library.at')
     def test_derive(self, at):
         at.get_flap_map.return_value = {f: str(f) for f in (0, 1, 2, 5, 10, 15, 25, 30, 40)}
@@ -1259,7 +1259,7 @@ class TestFlapIncludingTransition(unittest.TestCase, NodeTest):
         _af = A('Family', 'B737 Classic')
         attributes = (_am, _as, _af)
         array = np.ma.array([0] * 5 + range(50))
-        flap = P(name='Flap Angle', array=array)
+        flap = P(name='Flap Angle', array=array, frequency=2)
         node = self.node_class()
         node.derive(flap, *attributes)
         attributes = (a.value for a in attributes)
@@ -1650,6 +1650,8 @@ class TestFlaperon(unittest.TestCase):
     def test_derive(self):
         al = load(os.path.join(test_data_path, 'aileron_left.nod'))
         ar = load(os.path.join(test_data_path, 'aileron_right.nod'))
+        al.frequency = 2
+        ar.frequency = 2
         model = A('Model', 'A330-222')
         series = A('Series', 'A330-200')
         family = A('Family', 'A330')
@@ -2121,7 +2123,7 @@ class TestSlat(unittest.TestCase, NodeTest):
         _af = A('Family', 'A300')
         attributes = (_am, _as, _af)
         array = np.ma.array([0] * 5 + range(50))
-        slat = P(name='Slat Angle', array=array)
+        slat = P(name='Slat Angle', array=array, frequency=2)
         node = self.node_class()
         node.derive(slat, *attributes)
         attributes = (a.value for a in attributes)
@@ -2161,7 +2163,7 @@ class TestSlatExcludingTransition(unittest.TestCase, NodeTest):
         _af = A('Family', 'A300')
         attributes = (_am, _as, _af)
         array = np.ma.array([0] * 5 + range(50))
-        slat = P(name='Slat Angle', array=array)
+        slat = P(name='Slat Angle', array=array, frequency=2)
         node = self.node_class()
         node.derive(slat, *attributes)
         attributes = (a.value for a in attributes)
@@ -2201,7 +2203,7 @@ class TestSlatIncludingTransition(unittest.TestCase, NodeTest):
         _af = A('Family', 'A300')
         attributes = (_am, _as, _af)
         array = np.ma.array([0] * 5 + range(50))
-        slat = P(name='Slat Angle', array=array)
+        slat = P(name='Slat Angle', array=array, frequency=2)
         node = self.node_class()
         node.derive(slat, *attributes)
         attributes = (a.value for a in attributes)
