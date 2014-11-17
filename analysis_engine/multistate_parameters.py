@@ -2100,6 +2100,11 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
         elif family_name == 'Learjet':
             self.array = self.learjet_speedbrake(spdsw)
 
+        elif family_name == 'G-IV' and spdbrk and handle:
+            # based on data seen for G450, clean handle signal with no armed position.
+            self.array = np.ma.where((handle.array >= 1.0) | (spdbrk.array > 25.0),
+                                'Deployed/Cmd Up', 'Stowed')
+
         elif family_name in ['G-IV',
                              'G-V',
                              'Global',
