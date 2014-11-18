@@ -440,7 +440,7 @@ class TestILSLocalizerEstablished(unittest.TestCase):
         self.assertEqual(establish.derive(ils, alt_aal, app, None), None)
 
     def test_ils_localizer_established_always_on_loc(self):
-        ils = P('ILS Localizer',np.ma.array([-0.2]*10))
+        ils = P('ILS Localizer',np.ma.array([-0.2]*10), frequency=0.5)
         alt_aal = P('Altitude AAL For Flight Phases', np.ma.arange(1000, 0,-100))
         app = S(items=[Section('Approach', slice(2, 9), 2, 9)])
         establish = ILSLocalizerEstablished()
@@ -451,11 +451,15 @@ class TestILSLocalizerEstablished(unittest.TestCase):
     def test_ils_localizer_established_only_last_segment(self):
         app = S(items=[Section('Approach', slice(2, 9), 2, 9)])
         alt_aal = P('Alttiude AAL For Flight Phases', np.ma.arange(1000, 0,-100))
-        ils = P('ILS Localizer',np.ma.array([0,0,0,1,3,3,2,1,0,0]))
+        ils = P('ILS Localizer',np.ma.array([0,0,0,1,3,3,2,1,0,0]), frequency=0.5)
         establish = ILSLocalizerEstablished()
         establish.derive(ils, alt_aal, app, None)
         expected = buildsection('ILS Localizer Established', 7, 9)
-        self.assertEqual(establish.get_slices(), expected.get_slices())
+        self.assertEqual(int(establish.get_slices()[0].start), 
+                         expected.get_slices()[0].start)
+        self.assertEqual(establish.get_slices()[0].stop, 
+                         expected.get_slices()[0].stop)
+
 
     def test_ils_localizer_stays_established_with_large_visible_deviations(self):
         app = S(items=[Section('Approach', slice(1, 9), 1, 9)])

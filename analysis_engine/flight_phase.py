@@ -33,7 +33,7 @@ from analysis_engine.library import (
     slices_remove_small_slices,
 )
 
-from analysis_engine.node import A, FlightPhaseNode, P, S, KTI, M
+from analysis_engine.node import A, FlightPhaseNode, P, S, KTI, KPV, M
 
 from analysis_engine.settings import (
     AIRBORNE_THRESHOLD_TIME,
@@ -657,26 +657,50 @@ class GearRetracted(FlightPhaseNode):
         self.create_phases(slices_remove_small_bits(gear_up))
 
 
-def scan_ils(beam, ils_dots, height, scan_slice, frequency, duration=10):
+def scan_ils(beam, ils_dots, height, scan_slice, frequency, 
+             hdg=None, hdg_ldg=None, duration=10):
     '''
     Scans ils dots and returns last slice where ils dots fall below ILS_CAPTURE and remain below 2.5 dots
     if beam is glideslope slice will not extend below 200ft.
 
     :param beam: 'localizer' or 'glideslope'
     :type beam: str
-    :param ils_dots: 'localizer' or 'glideslope'
-    :type ils_dots: str
-    :param height: 'localizer' or 'glideslope'
-    :type height: str
-    :param scan_slice: 'localizer' or 'glideslope'
-    :type scan_slice: str
+    :param ils_dots: localizer deviation in dots
+    :type ils_dots: Numpy array
+    :param height: Height above airfield
+    :type height: Numpy array
+    :param scan_slice: slice to be inspected
+    :type scan_slice: python slice
     :param frequency: input signal sample rate
     :type frequency: float
+    :param hdg: aircraft heaing
+    :type hdg: Numpy array
+    :param hdg_ldg: Heading on the landing roll
+    :type hdg_ldg: list fo Key Point Values
     :param duration: Minimum duration for the ILS to be established
     :type duration: float, default = 10 seconds.
     '''
     if beam not in ['localizer', 'glideslope']:
         raise ValueError('Unrecognised beam type in scan_ils')
+
+    if beam=='localizer':
+        # Restrict the scan to approaches facing the runway This restriction
+        # will be carried forward into the glideslope calculation by the
+        # restricted duration of localizer established, hence does not need
+        # to be repeated.
+        hdg_landing = None
+        for each_ldg in hdg_ldg:
+            if is_index_within_slice(each_ldg.index, scan_slice):
+                hdg_landing = each_ldg.value
+                break
+        
+        if hdg_landing:
+            diff = np.ma.abs(hdg[scan_slice] - hdg_landing)
+            facing = shift_slices(
+                np.ma.clump_unmasked(np.ma.masked_greater(diff, 90.0)),
+                scan_slice.start)
+            scan_slice = slices_and([scan_slice], facing)[-1]
+
 
     if np.ma.count(ils_dots[scan_slice]) < duration*frequency:
         # less than duration seconds of valid data within slice
@@ -780,12 +804,15 @@ class ILSLocalizerEstablished(FlightPhaseNode):
     def derive(self, ils_loc=P('ILS Localizer'),
                alt_aal=P('Altitude AAL For Flight Phases'),
                apps=S('Approach And Landing'),
-               ils_freq=P('ILS Frequency'),):
+               ils_freq=P('ILS Frequency'),
+               hdg=P('Heading'),
+               hdg_ldg=KPV('Heading During Landing')):
         
         def create_ils_phases(slices):
             for _slice in slices:
                 ils_slice = scan_ils('localizer', ils_loc.array, alt_aal.array,
-                                   _slice, ils_loc.frequency)
+                                   _slice, ils_loc.frequency,
+                                   hdg=hdg.array, hdg_ldg=hdg_ldg)
                 if ils_slice is not None:
                     self.create_phase(ils_slice)
         
