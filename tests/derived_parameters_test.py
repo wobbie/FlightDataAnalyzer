@@ -4453,9 +4453,8 @@ class TestRoll(unittest.TestCase):
         hdg_values = np.concatenate([20.0*(np.sin(time*np.pi*0.03)), zero])
         hdg_values += 120 # Datum heading offset
         hdg=P('Heading', array=np.ma.array(hdg_values), frequency=1.0)
-        herc = A('Frame', 'L382-Hercules')
         derroll=Roll()
-        derroll.derive(None, None, hdg, ht, herc)
+        derroll.derive(None, None, hdg, ht)
         self.assertLess(derroll.array[40], 0.25)
         self.assertLess(np.ma.max(derroll.array),13.0)
         self.assertGreater(np.ma.max(derroll.array),11.0)
