@@ -5119,17 +5119,14 @@ class Roll(DerivedParameterNode):
                r1=P('Roll (1)'),
                r2=P('Roll (2)'),
                hdg=P('Heading Continuous'),
-               alt_aal=P('Altitude AAL'),
-               frame=A('Frame')):
-
-        frame_name = frame.value if frame else ''
+               alt_aal=P('Altitude AAL')):
 
         if r1 and r2:
             # Merge data from two sources.
             self.array, self.frequency, self.offset = \
                 blend_two_parameters(r1, r2)
 
-        elif frame_name in ['L382-Hercules', '1900D-SS542A']:
+        else:
             # Added Beechcraft as had inoperable Roll.
             # Many Hercules aircraft do not have roll recorded. This is a
             # simple substitute, derived from examination of the roll vs
@@ -5152,9 +5149,6 @@ class Roll(DerivedParameterNode):
             plt.plot(self.array,'b')
             plt.show()
             '''
-
-        else:
-            raise DataFrameError(self.name, frame_name)
 
 
 class RollRate(DerivedParameterNode):
