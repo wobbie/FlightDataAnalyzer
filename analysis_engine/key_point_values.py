@@ -4023,16 +4023,25 @@ class AltitudeAtLastFlapChangeBeforeTouchdown(KeyPointValueNode):
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
                alt_aal=P('Altitude AAL'),
-               touchdowns=KTI('Touchdown')):
+               touchdowns=KTI('Touchdown'),
+               far=P('Flap Automatic Retraction')):
 
         flap = flap_lever or flap_synth
 
         for touchdown in touchdowns:
-            # using 2 samples prior to touchdown to avoid auto flap
-            # retraction at touchdown
-            land_flap = flap.array.raw[touchdown.index]
+            endpoint = touchdown.index
+            if far:
+                # This is an aircraft with automatic flap retraction. If the
+                # auto retraction happened within three seconds of the
+                # touchdown, set the endpoint to three seconds before touchdown.
+                delta = int(3*flap.hz)
+                if far.array.raw[endpoint-delta]==0 and \
+                    far.array.raw[endpoint+delta]==1:
+                    endpoint = endpoint - delta
+                
+            land_flap = flap.array.raw[endpoint]
             flap_move = abs(flap.array.raw - land_flap)
-            rough_index = index_at_value(flap_move, 0.5, slice(touchdown.index - 2 * self.hz, 0, -1))
+            rough_index = index_at_value(flap_move, 0.5, slice(endpoint, 0, -1))
             # index_at_value tries to be precise, but in this case we really
             # just want the index at the new flap setting.
             if rough_index:
