@@ -3533,6 +3533,7 @@ class GrossWeightSmoothed(DerivedParameterNode):
 
     units = ut.KG
 
+    @classmethod
     def can_operate(cls, available):
         return 'Gross Weight' in available
 
