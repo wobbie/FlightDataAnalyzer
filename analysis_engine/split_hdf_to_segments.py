@@ -512,7 +512,40 @@ def _mask_invalid_years(array, latest_year):
     return array
 
 
-def _calculate_start_datetime(hdf, fallback_dt=None):
+def get_dt_arrays(hdf, fallback_dt):
+    now = datetime.utcnow().replace(tzinfo=pytz.utc)
+
+    onehz = P(frequency=1)
+    dt_arrays = []
+    for name in ('Year', 'Month', 'Day', 'Hour', 'Minute', 'Second'):
+        param = hdf.get(name)
+        if param:
+            if name == 'Year':
+                year = getattr(fallback_dt, 'year', None) or now.year
+                param.array = _mask_invalid_years(param.array, year)
+            # do not interpolate date/time parameters to avoid rollover issues
+            array = align(param, onehz, interpolate=False)
+            if len(array) == 0 or np.ma.count(array) == 0 \
+                    or np.ma.all(array == 0):
+                # Other than the year 2000 or possibly 2100, no date values
+                # can be all 0's
+                logger.warning("No valid values returned for %s", name)
+            else:
+                # values returned, continue
+                dt_arrays.append(array)
+                continue
+        if fallback_dt:
+            array = [getattr(fallback_dt, name.lower())]
+            logger.warning("%s not available, using %d from fallback_dt %s",
+                           name, array[0], fallback_dt)
+            dt_arrays.append(array)
+            continue
+        else:
+            raise TimebaseError("Required parameter '%s' not available" % name)
+    return dt_arrays
+
+
+def _calculate_start_datetime(hdf, fallback_dt):
     """
     Calculate start datetime.
 
@@ -544,33 +577,7 @@ def _calculate_start_datetime(hdf, fallback_dt=None):
             "Fallback time '%s' in the future is not allowed. Current time "
             "is '%s'." % (fallback_dt, now))
     # align required parameters to 1Hz
-    onehz = P(frequency=1)
-    dt_arrays = []
-    for name in ('Year', 'Month', 'Day', 'Hour', 'Minute', 'Second'):
-        param = hdf.get(name)
-        if param:
-            if name == 'Year':
-                year = getattr(fallback_dt, 'year', None) or now.year
-                param.array = _mask_invalid_years(param.array, year)
-            # do not interpolate date/time parameters to avoid rollover issues
-            array = align(param, onehz, interpolate=False)
-            if len(array) == 0 or np.ma.count(array) == 0 \
-                    or np.ma.all(array == 0):
-                # Other than the year 2000 or possibly 2100, no date values
-                # can be all 0's
-                logger.warning("No valid values returned for %s", name)
-            else:
-                # values returned, continue
-                dt_arrays.append(array)
-                continue
-        if fallback_dt:
-            array = [getattr(fallback_dt, name.lower())]
-            logger.warning("%s not available, using %d from fallback_dt %s",
-                           name, array[0], fallback_dt)
-            dt_arrays.append(array)
-            continue
-        else:
-            raise TimebaseError("Required parameter '%s' not available" % name)
+    dt_arrays = get_dt_arrays(hdf, fallback_dt)
 
     length = max([len(a) for a in dt_arrays])
     if length > 1:
