@@ -2702,6 +2702,21 @@ class TestGrossWeightSmoothed(unittest.TestCase):
         self.assertEqual(gws.frequency, fuel_flow.frequency)
         self.assertEqual(gws.offset, fuel_flow.offset)
 
+    def test_gw_no_fuel_flow(self):
+        weight = P('Gross Weight',np.ma.array(data=[0],
+                                              mask=[1],dtype=float),
+                   offset=0.0,frequency=1/64.0)
+        fuel_flow = None
+        gws = GrossWeightSmoothed()
+        climb = S('Climbing')
+        descend = S('Descending')
+        fast = buildsection('Fast', 0, 1)
+        gws = GrossWeightSmoothed()
+        gws.get_derived([fuel_flow, weight, climb, descend, fast])
+        self.assertEqual(gws.array, weight.array)
+        self.assertEqual(gws.frequency, weight.frequency)
+        self.assertEqual(gws.offset, weight.offset)
+
 class TestGroundspeed(unittest.TestCase):
     
     def test_can_operate(self):

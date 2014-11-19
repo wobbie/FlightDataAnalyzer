@@ -3527,11 +3527,14 @@ class GrossWeightSmoothed(DerivedParameterNode):
     
     We avoid using the recorded fuel weight in this calculation, however it
     is used in the Zero Fuel Weight calculation.
+    
+    If we do not have Fuel Flow we fall back to the unsmoothed Gross Weight.
     '''
 
-    # TODO: What should we do if gross weight is recorded and fuel flow is not?
-
     units = ut.KG
+
+    def can_operate(cls, available):
+        return 'Gross Weight' in available
 
     def derive(self,
                ff=P('Eng (*) Fuel Flow'),
@@ -3541,40 +3544,44 @@ class GrossWeightSmoothed(DerivedParameterNode):
                airs=S('Airborne')):
 
         gw_masked = gw.array.copy()
-        gw_masked = mask_inside_slices(gw_masked, climbs.get_slices())
-        gw_masked = mask_outside_slices(gw_masked, airs.get_slices())
 
-        gw_nonzero = gw.array.nonzero()[0]
-        
-        flow = repair_mask(ff.array)
-        fuel_to_burn = np.ma.array(integrate(flow / 3600.0, ff.frequency,
-                                             direction='reverse'))
-        
-        try:
-            # Find the last point where the two arrays intercept
-            valid_index = np.ma.intersect1d(gw_masked.nonzero()[0],
-                                            fuel_to_burn.nonzero()[0])[-1]
-        except IndexError:
-            self.warning(
-                "'%s' had no valid samples. Reverting to '%s'.", self.name,
-                gw.name)
+        if ff:
+            gw_masked = mask_inside_slices(gw_masked, climbs.get_slices())
+            gw_masked = mask_outside_slices(gw_masked, airs.get_slices())
+
+            gw_nonzero = gw.array.nonzero()[0]
+
+            flow = repair_mask(ff.array)
+            fuel_to_burn = np.ma.array(integrate(flow / 3600.0, ff.frequency,
+                                                 direction='reverse'))
+
+            try:
+                # Find the last point where the two arrays intercept
+                valid_index = np.ma.intersect1d(gw_masked.nonzero()[0],
+                                                fuel_to_burn.nonzero()[0])[-1]
+            except IndexError:
+                self.warning(
+                    "'%s' had no valid samples. Reverting to '%s'.", self.name,
+                    gw.name)
+                self.array = gw.array
+                return
+
+            offset = gw_masked[valid_index] - fuel_to_burn[valid_index]
+
+            self.array = fuel_to_burn + offset
+
+            # Test that the resulting array is sensible compared with Gross Weight.
+            where_array = np.ma.where(self.array)[0]
+            test_index = where_array[len(where_array) / 2]
+            #test_index = len(gw_nonzero) / 2
+            test_difference = \
+                abs(gw.array[test_index] - self.array[test_index]) > 1000
+            if test_difference > 1000: # Q: Is 1000 too large?
+                raise ValueError(
+                    "'%s' difference from '%s' at half-way point is greater than "
+                    "'%s': '%s'." % self.name, gw.name, 1000, test_difference)
+        else:
             self.array = gw.array
-            return
-
-        offset = gw_masked[valid_index] - fuel_to_burn[valid_index]
-
-        self.array = fuel_to_burn + offset
-
-        # Test that the resulting array is sensible compared with Gross Weight.
-        where_array = np.ma.where(self.array)[0]
-        test_index = where_array[len(where_array) / 2]
-        #test_index = len(gw_nonzero) / 2
-        test_difference = \
-            abs(gw.array[test_index] - self.array[test_index]) > 1000
-        if test_difference > 1000: # Q: Is 1000 too large?
-            raise ValueError(
-                "'%s' difference from '%s' at half-way point is greater than "
-                "'%s': '%s'." % self.name, gw.name, 1000, test_difference)
 
 
 class Groundspeed(DerivedParameterNode):
