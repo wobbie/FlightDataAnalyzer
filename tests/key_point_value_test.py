@@ -4075,9 +4075,57 @@ class TestAltitudeAtLastFlapChangeBeforeTouchdown(unittest.TestCase, NodeTest):
         touchdowns = KTI('Touchdown', items=[KeyTimeInstance(10)])
         name = self.node_class.get_name()
         node = self.node_class()
-        node.derive(flap_lever, None, alt_aal, touchdowns)
+        node.derive(flap_lever, None, alt_aal, touchdowns, None)
         self.assertEqual(node, KPV(name=name, items=[
             KeyPointValue(index=8.0, value=200.0, name=name),
+        ]))
+
+    def test_late_retraction(self):
+        array = np.ma.array([15] * 8 + [10] * 7)
+        mapping = {0: '0', 10: '10', 15: '15'}
+        flap_lever = M(name='Flap Lever', array=array, values_mapping=mapping)
+        array = np.ma.concatenate((np.ma.arange(1000, 0, -100), [0] * 5))
+        alt_aal = P(name='Altitude AAL', array=array)
+        touchdowns = KTI('Touchdown', items=[KeyTimeInstance(10)])
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(flap_lever, None, alt_aal, touchdowns, None)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=8.0, value=200.0, name=name),
+        ]))
+
+    def test_derive_auto_retract_after_touchdown(self):
+        array = np.ma.array([10] * 6 + [15] * 3 + [10] * 6)
+        mapping = {0: '0', 10: '10', 15: '15'}
+        flap_lever = M(name='Flap Lever', array=array, values_mapping=mapping)
+        array = np.ma.concatenate((np.ma.arange(1000, 0, -100), [0] * 5))
+        alt_aal = P(name='Altitude AAL', array=array)
+        far = M('Flap Automatic Retraction', 
+                array=np.ma.array([0]*10+[1]*5),
+                values_mapping={0:'-', 1:'Retract'})
+        touchdowns = KTI('Touchdown', items=[KeyTimeInstance(10)])
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(flap_lever, None, alt_aal, touchdowns, far)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=6.0, value=400.0, name=name),
+        ]))
+
+    def test_derive_auto_retract_before_touchdown(self):
+        array = np.ma.array([10] * 6 + [15] * 3 + [10] * 6)
+        mapping = {0: '0', 10: '10', 15: '15'}
+        flap_lever = M(name='Flap Lever', array=array, values_mapping=mapping)
+        array = np.ma.concatenate((np.ma.arange(1000, 0, -100), [0] * 5))
+        alt_aal = P(name='Altitude AAL', array=array)
+        far = M('Flap Automatic Retraction', 
+                array=np.ma.array([0]*9+[1]*6),
+                values_mapping={0:'-', 1:'Retract'})
+        touchdowns = KTI('Touchdown', items=[KeyTimeInstance(10)])
+        name = self.node_class.get_name()
+        node = self.node_class()
+        node.derive(flap_lever, None, alt_aal, touchdowns, far)
+        self.assertEqual(node, KPV(name=name, items=[
+            KeyPointValue(index=6.0, value=400.0, name=name),
         ]))
 
 
