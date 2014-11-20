@@ -8425,9 +8425,11 @@ class HeadingVariationTouchdownPlus4SecTo60KtsAirspeed(KeyPointValueNode):
                 dev = np.ma.ptp(values)
                 # Which happened at...
                 wander = np.ma.abs(to_scan[:indexes[-1]] - np.ma.average(to_scan[:indexes[-1]]))
-                index = np.ma.argmax(wander)
-                # Create the KPV.
-                self.create_kpv(begin+index, dev)
+                # check if there is any wandering
+                if len(wander):
+                    index = np.ma.argmax(wander)
+                    # Create the KPV.
+                    self.create_kpv(begin+index, dev)
 
 
 class HeadingVacatingRunway(KeyPointValueNode):
