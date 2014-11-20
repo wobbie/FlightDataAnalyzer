@@ -10,7 +10,36 @@ You can view the differences in tagged versions as follows:
 
 
 
-v0.18.1
+v0.17.2
+-------
+
+ - Fixed
+   - Fixes to v2 and airspeed at liftoff kpvs to handle fully masked phases
+   - Reverted FlapLever and Flaperon to step_values
+   - Fix to HeadingVariationTouchdownPlus4SecTo60KtsAirspeed for straight
+     landings
+   - Altitude At Last Flap Change Before Touchdown amended to ignore automatic
+     flap extension (Saab 2000 is a case in point)
+   - Calculate angles: angle fix stops invalid offsets
+   - Fix calculate_angle parameter offsets
+ - Improved
+   - Gross Weight Smoothed: Fall back to Gross Weight if no Fuel Flow
+   - ILS Approach Flight Phase amended to ensure aircraft is facing the ILS
+     localizer in order to become established
+   - Heading Variation on landing altered to ignore final turnoff
+   - Amended speedbrake selected for G450 to take into account speedbrake
+     handle
+   - Calculate_surface_angle: align to angle frequency
+   - Renamed "Rate Of Turn" with "Heading Rate" globally
+   - Thrust reverser change for Embraer legacy
+ - Added
+   - G450 speedbrake addition
+   - New surface angle algorithm
+ - Other
+   - Updated numpy requirements as numpy.full is used
+
+
+v0.17.1
 -------
 
  - Improved
