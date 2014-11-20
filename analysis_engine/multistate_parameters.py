@@ -854,12 +854,16 @@ class FlapLever(MultistateDerivedParameterNode):
     def derive(self, flap_lever=P('Flap Lever Angle'),
                model=A('Model'), series=A('Series'), family=A('Family')):
 
+        #self.values_mapping = at.get_lever_map(model.value, series.value, family.value)
+        #self.array, self.frequency, self.offset = calculate_surface_angle(
+            #'lever',
+            #flap_lever,
+            #self.values_mapping.keys(),
+        #)
         self.values_mapping = at.get_lever_map(model.value, series.value, family.value)
-        self.array, self.frequency, self.offset = calculate_surface_angle(
-            'lever',
-            flap_lever,
-            self.values_mapping.keys(),
-        )
+        self.array = step_values(repair_mask(flap_lever.array),
+                                 self.values_mapping.keys(),
+                                 flap_lever.hz, step_at='move_start')
 
 
 
@@ -1058,14 +1062,19 @@ class Flaperon(MultistateDerivedParameterNode):
         # Take the difference of the two signals (which should cancel each
         # other out when rolling) and divide the range by two (to account for
         # the left going negative and right going positive when flaperons set)
-        al.array = (al.array - ar.array) / 2
+        #al.array = (al.array - ar.array) / 2
 
+        #self.values_mapping = at.get_aileron_map(model.value, series.value, family.value)
+        #self.array, self.frequency, self.offset = calculate_surface_angle(
+            #'lever',
+            #al,
+            #self.values_mapping.keys(),
+        #)
+        flaperon_angle = (al.array - ar.array) / 2
         self.values_mapping = at.get_aileron_map(model.value, series.value, family.value)
-        self.array, self.frequency, self.offset = calculate_surface_angle(
-            'lever',
-            al,
-            self.values_mapping.keys(),
-        )
+        self.array = step_values(flaperon_angle,
+                                 self.values_mapping.keys(),
+                                 al.hz, step_at='move_start')
 
 
 class FuelQty_Low(MultistateDerivedParameterNode):
