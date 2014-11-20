@@ -1942,6 +1942,20 @@ class TestV2AtLiftoff(unittest.TestCase, NodeTest):
         self.assertEqual(node[1].index, 860)
         self.assertEqual(node[1].value, 170)
 
+    def test_derive__fully_masked(self):
+        '''
+        Test values were chosen to reflect real data seen and fail if
+        incorrect methods are used
+        '''
+        v2 = P('V2', np.ma.repeat((400, 120, 170, 400, 170), (190, 130, 192, 192, 448)))
+        # fully mask first liftoff airspeed selected
+        v2.array[0:353] = np.ma.masked
+        node = self.node_class()
+        node.derive(v2, None, None, None, None, self.liftoffs, self.climbs, None)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 860)
+        self.assertEqual(node[0].value, 170)
+
 class TestV2LookupAtLiftoff(unittest.TestCase, NodeTest):
 
     class VSX(VelocitySpeed):
@@ -2174,6 +2188,19 @@ class TestAirspeedSelectedAtLiftoff(unittest.TestCase, NodeTest):
         self.assertEqual(node[1].index, 860)
         self.assertEqual(node[1].value, 170)
 
+    def test_derive__fully_masked(self):
+        '''
+        Test values were chosen to reflect real data seen and fail if
+        incorrect methods are used
+        '''
+        spd_sel = P(' Airspeed Selected', np.ma.repeat((400, 120, 170, 400, 170), (190, 130, 192, 192, 448)))
+        # fully mask first liftoff airspeed selected
+        spd_sel.array[0:353] = np.ma.masked
+        node = self.node_class()
+        node.derive(spd_sel, self.liftoffs, self.climbs)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 860)
+        self.assertEqual(node[0].value, 170)
 
     def test_derive__real(self):
         '''
