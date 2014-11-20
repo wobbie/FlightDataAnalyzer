@@ -7686,8 +7686,21 @@ class TestHeadingVariationTouchdownPlus4SecTo60KtsAirspeed(unittest.TestCase, No
         hvt.derive(heading, airspeed, tdwns)
         self.assertEqual(hvt[0].value, 10)
         self.assertEqual(hvt[0].index, 10)
-        
-        
+
+    def test_derive_straight(self):
+
+        heading = P('Heading Continuous', np.ma.array([253.8]*35))
+        spd_array = np.ma.array([np.ma.masked]*35)
+        spd_array[:26] = np.ma.arange(118.8, 61.6, -2.2)
+        airspeed = P('Airspeed', spd_array)
+        tdwns = KTI(name='Touchdown', items=[
+            KeyTimeInstance(index=6, name='Touchdown'),
+            ])
+        node = self.node_class()
+        node.derive(heading, airspeed, tdwns)
+        self.assertEqual(len(node), 0, msg="Expected zero KPVs got %s" % len(node))
+
+
 class TestHeadingVacatingRunway(unittest.TestCase, NodeTest):
 
     def setUp(self):
