@@ -6,6 +6,8 @@ import geomag
 from copy import deepcopy
 from math import radians
 from scipy.interpolate import InterpolatedUnivariateSpline
+from scipy.signal import medfilt
+from scipy.stats import mode
 
 from flightdatautilities import aircrafttables as at, units as ut
 
@@ -984,39 +986,16 @@ class AltitudeRadioOffsetRemoved(DerivedParameterNode):
     the ground.
     '''
     def derive(self, alt_rad=P('Altitude Radio')):
-        adjust = np_ma_masked_zeros_like(alt_rad.array)
+        self.array = alt_rad.array
+        smoothed = np.ma.copy(alt_rad.array)
+        smoothed = medfilt(smoothed, 21)
+        smoothed = np.ma.masked_greater(smoothed, 20)
+        if not np.ma.count(smoothed):
+            return
+        offset = mode(smoothed.compressed())[0][0] # TODO: is there a nicer way to index???
+        if abs(offset) < ALTITUDE_RADIO_OFFSET_LIMIT:
+            self.array = alt_rad.array - offset
 
-        '''
-        The line below retains the existing alt_rad mask, so the slices are all valid data below 20ft.
-        a=np.ma.array(data=[1,2,3,4,5,6,7,8],mask=[0,1,1,0,0,0,0,0])
-        np.ma.clump_unmasked(np.ma.masked_greater(a, 5))
-        [slice(0, 1, None), slice(3, 5, None)]
-        '''
-        high_slices = np.ma.clump_unmasked(alt_rad.array)
-        for high_slice in high_slices:
-            low_slices = np.ma.clump_unmasked(np.ma.masked_greater(alt_rad.array[high_slice], 20.0))
-            for low_slice in low_slices:
-                adjustment = np.ma.median(alt_rad.array[high_slice][low_slice])
-                slice_len = low_slice.stop - low_slice.start
-                if 0.0 < adjustment < ALTITUDE_RADIO_OFFSET_LIMIT \
-                   and slice_len > 10:
-                    # Correct for this amount.
-                    adjust.data[high_slice][low_slice] = adjustment
-                else:
-                    # No adjustment will be applied.
-                    adjust.data[high_slice][low_slice] = 0.0
-                # In either case, this is what we are going to use.
-                adjust.mask[high_slice][low_slice] = False
-            adjust[high_slice] = repair_mask(adjust[high_slice],
-                                             repair_duration=None, 
-                                             extrapolate=True,
-                                             raise_entirely_masked=False)
-            
-        ##adjust_array = repair_mask(adjust, 
-                                   ##repair_duration=None, 
-                                   ##extrapolate=True,
-                                   ##raise_entirely_masked=False)
-        self.array = alt_rad.array - adjust
 
 
 class AltitudeSTDSmoothed(DerivedParameterNode):

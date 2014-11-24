@@ -1472,8 +1472,7 @@ class TestAltitudeRadioOffsetRemoved(unittest.TestCase):
         aor = AltitudeRadioOffsetRemoved()
         aor.derive(ralt)
         expected = np_ma_masked_zeros_like(testwave)
-        expected [:40] = testwave[:40]
-        expected[40:] = testwave[40:]-1.2
+        expected = testwave - 1.2
         
         '''
         # Plot to check shape of test waveform
@@ -1500,10 +1499,9 @@ class TestAltitudeRadioOffsetRemoved(unittest.TestCase):
         plt.show()
         '''
         
-        ma_test.assert_masked_array_equal(aor.array, testwave)
-        self.assertTrue(False) # The test above passes, but the arrays are NOT the same.
+        ma_test.assert_masked_array_equal(aor.array, testwave.copy())
 
-        
+
     def test_no_change_for_mask_near_liftoff(self):
         ralt = P('Altitude Radio', np.ma.array(data=[1,1,1,1,3,8,13,28,67],
                                                mask=[0,0,1,0,0,0, 0, 0, 0]))
@@ -2563,6 +2561,13 @@ class TestFuelQtyR(unittest.TestCase):
 
 
 class TestGrossWeightSmoothed(unittest.TestCase):
+
+    def test_can_operate(self):
+        expected = [('Groundspeed','Acceleration Along Track', 'Altitude AAL',
+                     'ILS Glideslope')]
+        opts = GrossWeightSmoothed.get_operational_combinations()
+        self.assertEqual(opts, expected)
+
     def test_gw_real_data_1(self):
         ff = load(os.path.join(test_data_path,
                                'gross_weight_smoothed_1_ff.nod'))
