@@ -618,7 +618,7 @@ class AltitudeAAL(DerivedParameterNode):
 
         return alt_result
 
-    def derive(self, alt_rad=P('Altitude Radio'),
+    def derive(self, alt_rad=P('Altitude Radio Offset Removed'),
                alt_std=P('Altitude STD Smoothed'),
                speedies=S('Fast'),
                pitch=P('Pitch')):

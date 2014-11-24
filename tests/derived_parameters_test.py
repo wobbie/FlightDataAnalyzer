@@ -703,7 +703,7 @@ class TestAltitudeAAL(unittest.TestCase):
     def test_can_operate(self):
         opts = AltitudeAAL.get_operational_combinations()
         self.assertTrue(('Altitude STD Smoothed', 'Fast') in opts)
-        self.assertTrue(('Altitude Radio', 'Altitude STD Smoothed', 'Fast') in opts)
+        self.assertTrue(('Altitude Radio Offset Removed', 'Altitude STD Smoothed', 'Fast') in opts)
         
     def test_alt_aal_basic(self):
         data = np.ma.array([-3, 0, 30, 80, 250, 560, 220, 70, 20, -5])
