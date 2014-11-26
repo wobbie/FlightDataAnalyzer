@@ -703,7 +703,7 @@ class TestAltitudeAAL(unittest.TestCase):
     def test_can_operate(self):
         opts = AltitudeAAL.get_operational_combinations()
         self.assertTrue(('Altitude STD Smoothed', 'Fast') in opts)
-        self.assertTrue(('Altitude Radio', 'Altitude STD Smoothed', 'Fast') in opts)
+        self.assertTrue(('Altitude Radio Offset Removed', 'Altitude STD Smoothed', 'Fast') in opts)
         
     def test_alt_aal_basic(self):
         data = np.ma.array([-3, 0, 30, 80, 250, 560, 220, 70, 20, -5])
@@ -1472,8 +1472,7 @@ class TestAltitudeRadioOffsetRemoved(unittest.TestCase):
         aor = AltitudeRadioOffsetRemoved()
         aor.derive(ralt)
         expected = np_ma_masked_zeros_like(testwave)
-        expected [:40] = testwave[:40]
-        expected[40:] = testwave[40:]-1.2
+        expected = testwave - 1.2
         
         '''
         # Plot to check shape of test waveform
@@ -1500,10 +1499,9 @@ class TestAltitudeRadioOffsetRemoved(unittest.TestCase):
         plt.show()
         '''
         
-        ma_test.assert_masked_array_equal(aor.array, testwave)
-        self.assertTrue(False) # The test above passes, but the arrays are NOT the same.
+        ma_test.assert_masked_array_equal(aor.array, testwave.copy())
 
-        
+
     def test_no_change_for_mask_near_liftoff(self):
         ralt = P('Altitude Radio', np.ma.array(data=[1,1,1,1,3,8,13,28,67],
                                                mask=[0,0,1,0,0,0, 0, 0, 0]))
@@ -2563,6 +2561,13 @@ class TestFuelQtyR(unittest.TestCase):
 
 
 class TestGrossWeightSmoothed(unittest.TestCase):
+
+    def test_can_operate(self):
+        expected = [('Groundspeed','Acceleration Along Track', 'Altitude AAL',
+                     'ILS Glideslope')]
+        opts = GrossWeightSmoothed.get_operational_combinations()
+        self.assertEqual(opts, expected)
+
     def test_gw_real_data_1(self):
         ff = load(os.path.join(test_data_path,
                                'gross_weight_smoothed_1_ff.nod'))
@@ -5179,12 +5184,16 @@ class TestGrossWeight(unittest.TestCase):
                          'AFR Takeoff Gross Weight',
                          'Touchdown',
                          'Liftoff') in combinations)
+        self.assertTrue(('HDF Duration',
+                         'AFR Takeoff Gross Weight',
+                         'AFR Landing Fuel',
+                         'AFR Takeoff Fuel') in combinations)
     
     def test_derive_fuel_qty_zfw(self):
         fq = P('Fuel Qty', array=np.ma.array([40,30,20,10]))
         zfw = P('Zero Fuel Weight', array=np.ma.array([990, 1000, 1000, 1100]))
         node = GrossWeight()
-        node.derive(zfw, fq, None, None, None, None, None)
+        node.derive(zfw, fq, None, None, None, None, None, None, None)
         self.assertEqual(node.array.tolist(), [1040, 1030, 1020, 1010])
     
     def test_derive_afr_land_wgt(self):
@@ -5192,7 +5201,7 @@ class TestGrossWeight(unittest.TestCase):
         afr_land_wgt = A('AFR Landing Gross Weight', 1000)
         
         node = GrossWeight()
-        node.derive(None, None, duration, afr_land_wgt, None, None, None)
+        node.derive(None, None, duration, afr_land_wgt, None, None, None, None, None)
         
         self.assertEqual(node.array.tolist(), [1000] * 100)
     
@@ -5205,15 +5214,15 @@ class TestGrossWeight(unittest.TestCase):
         
         node = GrossWeight()
         node.derive(None, None, duration, afr_land_wgt, afr_takeoff_wgt,
-                    touchdowns, liftoffs)
+                    None, None, touchdowns, liftoffs)
         
         result = node.array.tolist()
         self.assertEqual(result[:10], [None] * 10)
-        self.assertEqual(result[-10:], [None] * 10)
+        self.assertEqual(result[-9:], [None] * 9)
         self.assertEqual(result[10], 2000)
-        self.assertEqual(result[-11], 1000)
+        self.assertEqual(result[-10], 1000)
         self.assertEqual(result[:10], [None] * 10)
-        self.assertAlmostEqual(result[50], 1493.7, 1)
+        self.assertAlmostEqual(result[50], 1500.0, 1)
     
     def test_using_zero_fuel_weight(self):
         fuel_qty_array = np.ma.arange(10000, 4000, -100)
@@ -5224,7 +5233,7 @@ class TestGrossWeight(unittest.TestCase):
         zfw = P('Zero Fuel Weight', array=zfw_array)
         
         gw = GrossWeight()
-        gw.derive(zfw, fuel_qty, None, None, None, None, None)
+        gw.derive(zfw, fuel_qty, None, None, None, None, None, None, None)
         
         self.assertEquals(len(gw.array), 60)
         self.assertEqual(gw.array[4], (10000-(4*100)+17400))
@@ -5235,6 +5244,24 @@ class TestGrossWeight(unittest.TestCase):
         self.assertGreater(gw.array[10], (10000-(10*100)+17400)*0.96) 
         self.assertEqual(gw.array[25], (10000-(25*100)+17400))
 
+    def test_derive_afr_interpolated_ldg_wgt(self):
+        duration = A('HDF Duration', 300)
+        afr_takeoff_wgt = A('AFR Takeoff Gross Weight', 20000)
+        afr_takeoff_fuel = A('AFR Takeoff Fuel', 5000)
+        afr_land_fuel = A('AFR Landing Fuel', 2500)
+        liftoffs = KTI('Liftoff', items=[KeyTimeInstance(25)])
+        touchdowns = KTI('Touchdown', items=[KeyTimeInstance(275)])
+
+        node = GrossWeight()
+        node.derive(None, None, duration, None, afr_takeoff_wgt,
+                    afr_land_fuel, afr_takeoff_fuel, touchdowns, liftoffs)
+
+        self.assertTrue(node.array[10] is np.ma.masked)
+        self.assertEqual(node.array[25], 20000)
+        self.assertAlmostEqual(node.array[50], 19750, delta=10) # delta 10 = 1 sample
+        self.assertAlmostEqual(node.array[250], 17750, delta=10) # delta 10 = 1 sample
+        self.assertEqual(node.array[275], 17500)
+        self.assertTrue(node.array[290] is np.ma.masked)
 
 ##############################################################################
 # Velocity Speeds

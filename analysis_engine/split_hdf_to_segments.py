@@ -512,7 +512,82 @@ def _mask_invalid_years(array, latest_year):
     return array
 
 
-def _calculate_start_datetime(hdf, fallback_dt=None):
+def get_dt_arrays(hdf, fallback_dt):
+    now = datetime.utcnow().replace(tzinfo=pytz.utc)
+
+    onehz = P(frequency=1)
+    dt_arrays = []
+    for name in ('Year', 'Month', 'Day', 'Hour', 'Minute', 'Second'):
+        param = hdf.get(name)
+        if param:
+            if name == 'Year':
+                year = getattr(fallback_dt, 'year', None) or now.year
+                param.array = _mask_invalid_years(param.array, year)
+            # do not interpolate date/time parameters to avoid rollover issues
+            array = align(param, onehz, interpolate=False)
+            if len(array) == 0 or np.ma.count(array) == 0 \
+                    or np.ma.all(array == 0):
+                # Other than the year 2000 or possibly 2100, no date values
+                # can be all 0's
+                logger.warning("No valid values returned for %s", name)
+            else:
+                # values returned, continue
+                dt_arrays.append(array)
+                continue
+        if fallback_dt:
+            array = [getattr(fallback_dt, name.lower())]
+            logger.warning("%s not available, using %d from fallback_dt %s",
+                           name, array[0], fallback_dt)
+            dt_arrays.append(array)
+            continue
+        else:
+            raise TimebaseError("Required parameter '%s' not available" % name)
+    return dt_arrays
+
+
+def is_moving_timebase(hdf):
+    """
+    Test if the time is changing in the time base parameters.
+
+    In some cases we have access to initial datetime for the whole recording.
+    It manifests itself by "flat" time characteristics: the time is recorded in
+    the flights, but it is constant. In those cases we assume that the initial
+    time is the actual time of the recorder power-on.  We use it as the more
+    precise fallback_dt.
+    """
+    minutes = hdf.get('Minute')
+    if minutes is None:
+        # We don't know
+        return True
+
+    num_samples = len(minutes.array)
+    duration = num_samples * minutes.hz
+    if num_samples > 5 and duration > 5 and np.ptp(minutes.array) == 0:
+        return False
+
+    return True
+
+
+def calculate_fallback_dt(hdf, fallback_dt=None):
+    """
+    Check the time base parameters in the HDF5 file and update the fallback_dt.
+    """
+    if not is_moving_timebase(hdf):
+        try:
+            timebase = calculate_timebase(*get_dt_arrays(hdf, fallback_dt))
+        except (KeyError, ValueError):
+            # The time parameters are not available/operational
+            return fallback_dt
+
+        # Minute parameter has constant value, use the initial value as the new
+        # fallback_dt
+        logger.warning(
+            "Time base doesn't change, using the starting time as the fallback_dt")
+        return timebase + timedelta(seconds=hdf.duration)
+    return fallback_dt
+
+
+def _calculate_start_datetime(hdf, fallback_dt):
     """
     Calculate start datetime.
 
@@ -544,33 +619,7 @@ def _calculate_start_datetime(hdf, fallback_dt=None):
             "Fallback time '%s' in the future is not allowed. Current time "
             "is '%s'." % (fallback_dt, now))
     # align required parameters to 1Hz
-    onehz = P(frequency=1)
-    dt_arrays = []
-    for name in ('Year', 'Month', 'Day', 'Hour', 'Minute', 'Second'):
-        param = hdf.get(name)
-        if param:
-            if name == 'Year':
-                year = getattr(fallback_dt, 'year', None) or now.year
-                param.array = _mask_invalid_years(param.array, year)
-            # do not interpolate date/time parameters to avoid rollover issues
-            array = align(param, onehz, interpolate=False)
-            if len(array) == 0 or np.ma.count(array) == 0 \
-                    or np.ma.all(array == 0):
-                # Other than the year 2000 or possibly 2100, no date values
-                # can be all 0's
-                logger.warning("No valid values returned for %s", name)
-            else:
-                # values returned, continue
-                dt_arrays.append(array)
-                continue
-        if fallback_dt:
-            array = [getattr(fallback_dt, name.lower())]
-            logger.warning("%s not available, using %d from fallback_dt %s",
-                           name, array[0], fallback_dt)
-            dt_arrays.append(array)
-            continue
-        else:
-            raise TimebaseError("Required parameter '%s' not available" % name)
+    dt_arrays = get_dt_arrays(hdf, fallback_dt)
 
     length = max([len(a) for a in dt_arrays])
     if length > 1:
@@ -587,10 +636,13 @@ def _calculate_start_datetime(hdf, fallback_dt=None):
                 pass
 
     # establish timebase for start of data
-    try:
-        timebase = calculate_timebase(*dt_arrays)
-    except (KeyError, ValueError) as err:
-        raise TimebaseError("Error with timestamp values: %s" % err)
+    if is_moving_timebase(hdf):
+        try:
+            timebase = calculate_timebase(*dt_arrays)
+        except (KeyError, ValueError) as err:
+            raise TimebaseError("Error with timestamp values: %s" % err)
+    else:
+        timebase = fallback_dt
 
     if timebase > now:
         # Flight Data Analysis in the future is a challenge, lets see if we
@@ -746,6 +798,7 @@ def split_hdf_to_segments(hdf_path, aircraft_info, fallback_dt=None,
         else:
             logger.info("No PRE_FILE_ANALYSIS actions to perform")
 
+        fallback_dt = calculate_fallback_dt(hdf, fallback_dt)
         segment_tuples = split_segments(hdf)
         if fallback_dt:
             # fallback_dt is relative to the end of the data; remove the data

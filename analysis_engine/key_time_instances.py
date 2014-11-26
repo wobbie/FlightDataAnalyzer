@@ -1276,8 +1276,9 @@ class Touchdown(KeyTimeInstanceNode):
     suggestion from a Boeing engineer was to add a longitudinal acceleration
     term as there is always an instantaneous drag when the mainwheels touch.
     
-    This was added in the form of two triggers, one detecting the short dip
-    in Ax and another for larger changes which are less common.
+    This was added in the form of three triggers, one detecting the short dip
+    in Ax, a second for the point of onset of deceleration and a third for
+    braking deceleration.
     
     So, we look for the weight on wheels switch if this is the first indication,
     or the second indication of:
@@ -1296,7 +1297,7 @@ class Touchdown(KeyTimeInstanceNode):
         return all_of(('Altitude AAL', 'Landing'), available)
 
     def derive(self, acc_norm=P('Acceleration Normal'),
-               acc_long=P('Acceleration Longitudinal'),
+               acc_long=P('Acceleration Longitudinal Offset Removed'),
                alt=P('Altitude AAL'), 
                gog=M('Gear On Ground'), 
                lands=S('Landing'),
@@ -1310,10 +1311,11 @@ class Touchdown(KeyTimeInstanceNode):
         # signal changes state on raising the gear (OK, if they do a gear-up
         # landing it won't work, but this will be the least of the problems).
 
-        dt_pre = 4.0 # Seconds to scan before estimate.
-        dt_post = 3.0 # Seconds to scan after estimate.
+        dt_pre = 10.0 # Seconds to scan before estimate.
+        dt_post = 4.0 # Seconds to scan after estimate.
         hz = alt.frequency
-        index_gog = index_ax = index_az = index_daz = index_dax = index_z = None
+        index_gog = index_wheel_touch = index_brake = index_decel = None
+        index_dax = index_z = index_az = index_daz = None
         peak_ax = peak_az = delta = 0.0
         
         for land in lands:
@@ -1353,16 +1355,16 @@ class Touchdown(KeyTimeInstanceNode):
             
             if acc_long:
                 drag = acc_long.array[period]
-                touch = np_ma_masked_zeros_like(drag)
                 
-                # Look for inital wheel contact
+                # Look for inital wheel contact where there is a sudden spike in Ax.
+                
+                touch = np_ma_masked_zeros_like(drag)
                 for i in range(2, len(touch)-2):
                     # Looking for a downward pointing "V" shape over half the
                     # Az sample rate. This is a common feature at the point
                     # of wheel touch.
                     touch[i-2] = max(0.0,drag[i-2]-drag[i]) * max(0.0,drag[i+2]-drag[i])
                 peak_ax = np.max(touch)
-
                 # Only use this if the value was significant.
                 if peak_ax>0.0005:
                     ix_ax2 = np.argmax(touch)
@@ -1376,16 +1378,19 @@ class Touchdown(KeyTimeInstanceNode):
                             peak_ax = touch[ix_ax1]
                             ix_ax = ix_ax1 
                                 
-                    index_ax = ix_ax+1+index_ref-dt_pre*hz
+                    index_wheel_touch = ix_ax+1+index_ref-dt_pre*hz
 
-                # Trap landings with immediate braking where there is no skip effect.
-                for i in range(0, len(drag)-4):
-                    if drag[i] and drag[i+4]:
-                        delta=drag[i]-drag[i+4]
-                        if delta > 0.1:
-                            index_dax = i+2+index_ref-dt_pre*hz
-                            break
-            
+                # Look for the onset of braking
+                
+                index_brake = peak_curvature(drag, 
+                                             curve_sense='Convex', 
+                                             gap=1*hz, 
+                                             ttp=3*hz) + index_ref-dt_pre*hz
+                
+                # Look for substantial deceleration
+                
+                index_decel = index_at_value(drag, -0.1)+ index_ref-dt_pre*hz
+                
             if acc_norm:
                 lift = acc_norm.array[period]
                 mean = np.mean(lift)
@@ -1423,7 +1428,9 @@ class Touchdown(KeyTimeInstanceNode):
             # ...then collect the estimates of the touchdown point...
             index_list = sorted_valid_list([index_alt,
                                             index_gog,
-                                            index_ax,
+                                            index_wheel_touch,
+                                            index_brake,
+                                            index_decel,
                                             index_dax,
                                             index_z])
             
@@ -1441,13 +1448,13 @@ class Touchdown(KeyTimeInstanceNode):
             
             self.create_kti(index_tdn)
 
-            '''
+            
             # Plotting process to view the results in an easy manner.
             import matplotlib.pyplot as plt
             import os
             name = 'Touchdown with values Ax=%.4f, Az=%.4f and dAz=%.4f' %(peak_ax, peak_az, delta)
             self.info(name)
-            timebase=np.linspace(-dt_pre*hz, dt_pre*hz, 2*dt_pre*hz+1)
+            timebase=np.linspace(-dt_pre*hz, dt_post*hz, (dt_pre+dt_post)*hz+1)
             plot_period = slice(floor(index_ref-dt_pre*hz), floor(index_ref-dt_pre*hz+len(timebase)))
             plt.figure()
             if alt:
@@ -1460,8 +1467,12 @@ class Touchdown(KeyTimeInstanceNode):
                 plt.plot(timebase, gog.array[plot_period]*10, 'o-k')
             if index_gog:
                 plt.plot(index_gog-index_ref, 2.0,'ok', markersize=8)
-            if index_ax:
-                plt.plot(index_ax-index_ref, 3.0,'om', markersize=8)
+            if index_brake:
+                plt.plot(index_brake-index_ref, 3.0,'oy', markersize=8)
+            if index_wheel_touch:
+                plt.plot(index_wheel_touch-index_ref, 3.0,'om', markersize=8)
+            if index_decel:
+                plt.plot(index_decel-index_ref, 3.0,'oc', markersize=8)
             if index_az:
                 plt.plot(index_az-index_ref, 4.0,'og', markersize=8)
             if index_dax:
@@ -1474,19 +1485,18 @@ class Touchdown(KeyTimeInstanceNode):
                 plt.plot(index_tdn-index_ref, -2.0,'db', markersize=10)
             plt.title(name)
             plt.grid()
-            filename = name
+            filename = 'One-ax-Touchdown-%s' % os.path.basename(self._h.file_path)
             print name
             WORKING_DIR = "C:\Temp"
             output_dir = os.path.join(WORKING_DIR, 'Touchdown_graphs')
             if not os.path.exists(output_dir):
                 os.mkdir(output_dir)
             plt.savefig(os.path.join(output_dir, filename + '.png'))
-            plt.show()
+            #plt.show()
             plt.clf()
-            plt.close()
-            '''
-
-
+            plt.close()            
+            
+            
 class LandingDecelerationEnd(KeyTimeInstanceNode):
     '''
     Whereas peak acceleration at takeoff is a good measure of the start of

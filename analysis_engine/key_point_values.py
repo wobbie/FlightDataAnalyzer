@@ -1433,10 +1433,11 @@ class V2AtLiftoff(KeyPointValueNode):
             for phase in phases:
                 index = liftoffs.get_last(within_slice=phase).index
                 if v2.frequency >= 0.125:
-                    _, value = closest_unmasked_value(v2.array, index, 
-                                                  start_index=phase.start, 
+                    v2_liftoff = closest_unmasked_value(v2.array, index,
+                                                  start_index=phase.start,
                                                   stop_index=phase.stop)
-                    self.create_kpv(index, value)
+                    if v2_liftoff:
+                        self.create_kpv(index, v2_liftoff.value)
                 else:
                     value = most_common_value(v2.array[phase].astype(np.int))
                     self.create_kpv(index, value)
@@ -1579,15 +1580,16 @@ class AirspeedSelectedAtLiftoff(KeyPointValueNode):
         for phase in phases:
             index = liftoffs.get_last(within_slice=phase).index
             if spd_sel.frequency >= 0.125:
-                _, value = closest_unmasked_value(spd_sel.array, index, 
-                                              start_index=phase.start, 
+                spd_sel_liftoff = closest_unmasked_value(spd_sel.array, index,
+                                              start_index=phase.start,
                                               stop_index=phase.stop)
+                value = spd_sel_liftoff.value if spd_sel_liftoff else None
             else:
                 value = most_common_value(spd_sel.array[phase].astype(np.int))
             if value:
                 self.create_kpv(index, value)
             else:
-                self.warning("%s is entirely mased within %s", spd_sel.__class__.__name__, phase)
+                self.warning("%s is entirely masked within %s", spd_sel.__class__.__name__, phase)
 
 ########################################
 # Airspeed: Minus V2
