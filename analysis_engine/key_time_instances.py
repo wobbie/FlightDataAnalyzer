@@ -1434,21 +1434,13 @@ class Touchdown(KeyTimeInstanceNode):
                                             index_dax,
                                             index_z])
             
-            # ...and use the second where possible, as this has been found to
-            # be more reliable than the first which may be erroneous.
-            if len(index_list)>1:
-                index_tdn = index_list[1]
-            else:
-                index_tdn = index_list[0]
-            
-            ### but in any case, if we have a gear on ground signal which goes
-            ### off first, adopt that.
-            ##if index_gog and index_gog<index_tdn:
-                ##index_tdn = index_gog
-            
+            # ...and use the third where possible, to pass by erroneous
+            # earlier measures.
+            index_tdn = index_list[min(2, len(index_list))]
+
             self.create_kti(index_tdn)
 
-            
+            '''
             # Plotting process to view the results in an easy manner.
             import matplotlib.pyplot as plt
             import os
@@ -1485,7 +1477,7 @@ class Touchdown(KeyTimeInstanceNode):
                 plt.plot(index_tdn-index_ref, -2.0,'db', markersize=10)
             plt.title(name)
             plt.grid()
-            filename = 'One-ax-Touchdown-%s' % os.path.basename(self._h.file_path)
+            filename = 'One-ax-Touchdown-%s' % os.path.basename(self._h.file_path) if getattr(self, '_h', None) else 'Plot'
             print name
             WORKING_DIR = "C:\Temp"
             output_dir = os.path.join(WORKING_DIR, 'Touchdown_graphs')
@@ -1494,8 +1486,8 @@ class Touchdown(KeyTimeInstanceNode):
             plt.savefig(os.path.join(output_dir, filename + '.png'))
             #plt.show()
             plt.clf()
-            plt.close()            
-            
+            plt.close()
+            '''
             
 class LandingDecelerationEnd(KeyTimeInstanceNode):
     '''
