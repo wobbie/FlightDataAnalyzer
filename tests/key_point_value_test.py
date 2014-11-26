@@ -1496,7 +1496,7 @@ class TestAirspeed1000To5000FtMax(unittest.TestCase):
     def setUp(self):
         self.node_class = Airspeed1000To5000FtMax
         self.operational_combinations = [
-            ('Airspeed', 'Altitude AAL For Flight Phases', 'Climb')]
+            ('Airspeed', 'Altitude AAL For Flight Phases', 'Combined Climb')]
         self.function = max_value
 
     def test_can_operate(self):
@@ -1529,7 +1529,7 @@ class TestAirspeed1000To8000FtMax(unittest.TestCase, CreateKPVFromSlicesTest):
     def setUp(self):
         self.node_class = Airspeed1000To8000FtMax
         self.operational_combinations = [('Airspeed', 'Altitude AAL For Flight Phases',
-                                          'Altitude STD Smoothed', 'Climb')]
+                                          'Altitude STD Smoothed', 'Combined Climb')]
         self.function = max_value
         self.second_param_method_calls = [('slices_from_to', (1000, 8000), {})]
 
@@ -1539,7 +1539,7 @@ class TestAirspeed1000To8000FtMax(unittest.TestCase, CreateKPVFromSlicesTest):
         spd = P('Airspeed', np.ma.array(testwave))
         alt_aal = P('Altitude AAL For Flight Phases', np.ma.array(testwave) * 50)
         alt_std = P('Altitude STD Smoothed', np.ma.array(testwave) * 50 + 2000)
-        climb = buildsections('Climb', [3, 28], [65, 91])
+        climb = buildsections('Combined Climb', [3, 28], [65, 91])
         event = Airspeed1000To8000FtMax()
         event.derive(spd, alt_aal, alt_std, climb)
         self.assertEqual(event[0].index, 17)
@@ -1554,7 +1554,7 @@ class TestAirspeed5000To10000FtMax(unittest.TestCase):
         self.node_class = Airspeed5000To10000FtMax
         self.operational_combinations = [
             ('Airspeed', 'Altitude AAL For Flight Phases',
-             'Altitude STD Smoothed', 'Climb')
+             'Altitude STD Smoothed', 'Combined Climb')
         ]
         self.function = max_value
 
@@ -1571,7 +1571,7 @@ class TestAirspeed8000To10000FtMax(unittest.TestCase):
 
     def setUp(self):
         self.node_class = Airspeed8000To10000FtMax
-        self.operational_combinations = [('Airspeed', 'Altitude STD Smoothed', 'Climb')]
+        self.operational_combinations = [('Airspeed', 'Altitude STD Smoothed', 'Combined Climb')]
         self.function = max_value
 
     def test_can_operate(self):
@@ -1591,7 +1591,7 @@ class TestAirspeed10000To8000FtMax(unittest.TestCase):
 
     def setUp(self):
         self.node_class = Airspeed10000To8000FtMax
-        self.operational_combinations = [('Airspeed', 'Altitude STD Smoothed', 'Descent')]
+        self.operational_combinations = [('Airspeed', 'Altitude STD Smoothed', 'Combined Descent')]
         self.function = max_value
 
     def test_can_operate(self):
@@ -1607,7 +1607,7 @@ class TestAirspeed8000To5000FtMax(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = Airspeed8000To5000FtMax
-        self.operational_combinations = [('Airspeed', 'Altitude AAL For Flight Phases', 'Altitude STD Smoothed', 'Descent')]
+        self.operational_combinations = [('Airspeed', 'Altitude AAL For Flight Phases', 'Altitude STD Smoothed', 'Combined Descent')]
         self.function = max_value
         self.second_param_method_calls = [('slices_from_to', (8000, 5000), {})]
 
@@ -1622,7 +1622,7 @@ class TestAirspeed10000To5000FtMax(unittest.TestCase, NodeTest):
         self.node_class = Airspeed10000To5000FtMax
         self.operational_combinations = [
             ('Airspeed', 'Altitude AAL For Flight Phases',
-             'Altitude STD Smoothed', 'Descent')
+             'Altitude STD Smoothed', 'Combined Descent')
         ]
         self.function = max_value
         self.second_param_method_calls = [('slices_from_to', (1000, 5000), {})]
@@ -1636,7 +1636,7 @@ class TestAirspeed5000To3000FtMax(unittest.TestCase):
 
     def setUp(self):
         self.node_class = Airspeed5000To3000FtMax
-        self.operational_combinations = [('Airspeed', 'Altitude AAL For Flight Phases', 'Descent')]
+        self.operational_combinations = [('Airspeed', 'Altitude AAL For Flight Phases', 'Combined Descent')]
         self.function = max_value
 
     def test_can_operate(self):
@@ -1652,7 +1652,7 @@ class TestAirspeed3000To1000FtMax(unittest.TestCase):
 
     def setUp(self):
         self.node_class = Airspeed3000To1000FtMax
-        self.operational_combinations = [('Airspeed', 'Altitude AAL For Flight Phases', 'Initial Approach')]
+        self.operational_combinations = [('Airspeed', 'Altitude AAL For Flight Phases')]
         self.function = max_value
 
     def test_can_operate(self):
@@ -2947,7 +2947,7 @@ class TestAirspeedSelectedFMCMinusFlapManoeuvreSpeed1000to5000FtMin(unittest.Tes
         self.node_class = AirspeedSelectedFMCMinusFlapManoeuvreSpeed1000to5000FtMin
 
     def test_can_operate(self):
-        expected = [('Airspeed Selected (FMC)', 'Flap Manoeuvre Speed', 'Altitude AAL For Flight Phases', 'Climb')]
+        expected = [('Airspeed Selected (FMC)', 'Flap Manoeuvre Speed', 'Altitude AAL For Flight Phases', 'Combined Climb')]
         self.assertEqual(self.node_class().get_operational_combinations(),
                          expected)
 
@@ -9243,7 +9243,7 @@ class TestRateOfDescent3000To2000FtMax(unittest.TestCase):
 
     def test_can_operate(self):
         opts = RateOfDescent3000To2000FtMax.get_operational_combinations()
-        self.assertEqual(opts, [('Vertical Speed', 'Altitude AAL For Flight Phases', 'Initial Approach')])
+        self.assertEqual(opts, [('Vertical Speed', 'Altitude AAL For Flight Phases')])
 
     def test_derive(self):
         array = np.ma.concatenate((np.ma.arange(0, 1500, 100), np.ma.arange(1500, 3000, 200), [3050, 2850, 2990], [3150]*5))
@@ -9253,12 +9253,11 @@ class TestRateOfDescent3000To2000FtMax(unittest.TestCase):
         roc_array = np.ma.concatenate((roc_array, -roc_array[::-1]))
         vert_spd = P('Vertical Speed', roc_array)
 
-        descents = buildsection('Initial Approach', 38, 62)
-
         node = RateOfDescent3000To2000FtMax()
-        node.derive(vert_spd, alt, descents)
+        node.derive(vert_spd, alt)
 
         expected = KPV('Rate Of Descent 3000 To 2000 Ft Max', items=[
+            KeyPointValue(name='Rate Of Descent 3000 To 2000 Ft Max', index=36, value=-25),
             KeyPointValue(name='Rate Of Descent 3000 To 2000 Ft Max', index=41, value=-200),
         ])
         self.assertEqual(node, expected)
@@ -9270,7 +9269,7 @@ class TestRateOfDescent2000To1000FtMax(unittest.TestCase):
 
     def test_can_operate(self):
         opts = RateOfDescent2000To1000FtMax.get_operational_combinations()
-        self.assertEqual(opts, [('Vertical Speed', 'Altitude AAL For Flight Phases', 'Initial Approach')])
+        self.assertEqual(opts, [('Vertical Speed', 'Altitude AAL For Flight Phases')])
 
     def test_derive(self):
         array = np.ma.concatenate((np.ma.arange(0, 500, 25), np.ma.arange(500, 2000, 100), [2050, 1850, 1990], [2150]*5))
@@ -9280,13 +9279,11 @@ class TestRateOfDescent2000To1000FtMax(unittest.TestCase):
         roc_array = np.ma.concatenate((roc_array, -roc_array[::-1]))
         vert_spd = P('Vertical Speed', roc_array)
 
-        descents = buildsection('Initial Approach', 48, 60)
-
         node = RateOfDescent2000To1000FtMax()
-        node.derive(vert_spd, alt, descents)
+        node.derive(vert_spd, alt)
 
         expected = KPV('Rate Of Descent 2000 To 1000 Ft Max', items=[
-            KeyPointValue(name='Rate Of Descent 2000 To 1000 Ft Max', index=49, value=-62),
+            KeyPointValue(name='Rate Of Descent 2000 To 1000 Ft Max', index=48, value=-25),
             KeyPointValue(name='Rate Of Descent 2000 To 1000 Ft Max', index=52, value=-112),
         ])
         self.assertEqual(node, expected)
