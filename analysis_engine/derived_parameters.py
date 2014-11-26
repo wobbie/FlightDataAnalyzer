@@ -3426,28 +3426,50 @@ class GrossWeight(DerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
         return (all_of(('AFR Landing Gross Weight', 'HDF Duration'), available) or
+                all_of(('AFR Takeoff Gross Weight', 'HDF Duration', 'AFR Takeoff Fuel', 'AFR Landing Fuel'), available) or
                 all_of(('Zero Fuel Weight', 'Fuel Qty'), available))
     
     def derive(self, zfw=P('Zero Fuel Weight'), fq=P('Fuel Qty'),
-               duration=A('HDF Duration'),
+               hdf_duration=A('HDF Duration'),
                afr_land_wgt=A('AFR Landing Gross Weight'),
                afr_takeoff_wgt=A('AFR Takeoff Gross Weight'),
+               afr_land_fuel=A('AFR Landing Fuel'),
+               afr_takeoff_fuel=A('AFR Takeoff Fuel'),
                touchdowns=KTI('Touchdown'),
                liftoffs=KTI('Liftoff')):
-        if afr_land_wgt and afr_land_wgt.value and duration and duration.value:
-            self.array = np.ma.zeros(duration.value)
-            if (liftoffs and touchdowns and
-                afr_takeoff_wgt and afr_takeoff_wgt.value):
+
+        land_weight = afr_land_wgt.value if afr_land_wgt else None
+        takeoff_weight = afr_takeoff_wgt.value if afr_takeoff_wgt else None
+        land_fuel = afr_land_fuel.value if afr_land_fuel else None
+        takeoff_fuel = afr_takeoff_fuel.value if afr_takeoff_fuel else None
+        duration = hdf_duration.value if hdf_duration else None
+
+        if land_weight and duration:
+            self.array = np.ma.zeros(duration)
+            if (liftoffs and touchdowns and takeoff_weight):
                 liftoff_index = int(liftoffs.get_first().index)
                 touchdown_index = int(touchdowns.get_last().index)
                 self.array[:liftoff_index] = np.ma.masked
                 self.array[touchdown_index:] = np.ma.masked
-                index_difference = touchdown_index - liftoff_index
-                self.array[liftoff_index:touchdown_index] = \
-                    np.linspace(afr_takeoff_wgt.value, afr_land_wgt.value,
-                                index_difference)
+                index_difference = touchdown_index+1 - liftoff_index
+                self.array[liftoff_index:touchdown_index+1] = \
+                    np.linspace(takeoff_weight, land_weight, index_difference)
             else:
-                self.array.fill(afr_land_wgt.value)
+                self.array.fill(land_weight)
+
+        elif takeoff_weight and land_fuel and takeoff_fuel and duration:
+            self.array = np.ma.zeros(duration)
+            land_weight = takeoff_weight - takeoff_fuel + land_fuel
+            if liftoffs and touchdowns:
+                liftoff_index = int(liftoffs.get_first().index)
+                touchdown_index = int(touchdowns.get_last().index)
+                self.array[:liftoff_index] = np.ma.masked
+                self.array[touchdown_index:] = np.ma.masked
+                index_difference = touchdown_index+1 - liftoff_index
+                self.array[liftoff_index:touchdown_index+1] = \
+                    np.linspace(takeoff_weight, land_weight, index_difference)
+            else:
+                self.array.fill(land_weight)
         else:
             zfw_value = np.bincount(zfw.array.compressed().astype(np.int)).argmax()
             self.array = fq.array + zfw_value
@@ -5728,6 +5750,10 @@ class Speedbrake(DerivedParameterNode):
                 'Spoiler (4)' in available and
                 'Spoiler (9)' in available
             ) or
+            family_name == 'A318' and (
+                'Spoiler (4)' in available and
+                'Spoiler (8)' in available
+            ) or
             family_name in ['B737 Classic', 'A319', 'A320', 'A321', 'Global'] and (
                 'Spoiler (2)' in available and
                 'Spoiler (7)' in available
@@ -5780,6 +5806,7 @@ class Speedbrake(DerivedParameterNode):
                spoiler_2=P('Spoiler (2)'),
                spoiler_4=P('Spoiler (4)'),
                spoiler_7=P('Spoiler (7)'),
+               spoiler_8=P('Spoiler (8)'),
                spoiler_9=P('Spoiler (9)'),
                spoiler_14=P('Spoiler (14)'),
                spoiler_L=P('Spoiler (L)'),
@@ -5797,7 +5824,8 @@ class Speedbrake(DerivedParameterNode):
 
         if family_name == 'B737 NG':
             self.merge_spoiler(spoiler_4, spoiler_9)
-            
+        elif family_name == 'A318':
+            self.merge_spoiler(spoiler_4, spoiler_8)
         elif family_name in ['B737 Classic', 'A319', 'A320', 'A321', 'Global']:
             self.merge_spoiler(spoiler_2, spoiler_7)
 
