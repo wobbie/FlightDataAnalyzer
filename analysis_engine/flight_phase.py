@@ -348,7 +348,6 @@ class ClimbCruiseDescent(FlightPhaseNode):
                             n += 1
 
 
-"""
 class CombinedClimb(FlightPhaseNode):
     '''
     Climb phase from liftoff or go around to top of climb
@@ -358,7 +357,7 @@ class CombinedClimb(FlightPhaseNode):
                ga=KTI('Go Around'),
                lo=KTI('Liftoff'),
                touchdown=KTI('Touchdown')):
-
+        
         end_list = [x.index for x in toc.get_ordered_by_index()]
         start_list = [y.index for y in [lo.get_first()] + ga.get_ordered_by_index()]
         assert len(start_list) == len(end_list)
@@ -366,7 +365,7 @@ class CombinedClimb(FlightPhaseNode):
         slice_idxs = zip(start_list, end_list)
         for slice_tuple in slice_idxs:
             self.create_phase(slice(*slice_tuple))
-"""
+
 
 class Climb(FlightPhaseNode):
     '''
