@@ -5035,8 +5035,8 @@ def peak_curvature(array, _slice=slice(None), curve_sense='Concave',
         raise ValueError('Curve Sense %s not supported' % curve_sense)
     if gap%2 - 1:
         gap -= 1  #  Ensure gap is odd
-    trailer = ttp+gap
-    overall = 2*ttp + gap
+    trailer = int(ttp)+int(gap)
+    overall = 2*int(ttp) + int(gap)
 
     input_data = array[_slice]
     if np.ma.count(input_data)==0:
@@ -5055,7 +5055,7 @@ def peak_curvature(array, _slice=slice(None), curve_sense='Concave',
             # Use truck and trailer as we have plenty of data
             data = array[_slice][valid_slice]
             # The normal path is to go and process this data.
-            corner = truck_and_trailer(data, ttp, overall, trailer, curve_sense, _slice)  #Q: What is _slice going to do if we've already subsliced it?
+            corner = truck_and_trailer(data, int(ttp), overall, trailer, curve_sense, _slice)  #Q: What is _slice going to do if we've already subsliced it?
             if corner:
                 # Found curve
                 return corner + valid_slice.start
