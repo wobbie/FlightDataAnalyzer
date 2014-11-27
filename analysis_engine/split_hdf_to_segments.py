@@ -545,46 +545,40 @@ def get_dt_arrays(hdf, fallback_dt):
     return dt_arrays
 
 
-def is_moving_timebase(hdf):
+def has_constant_time(hdf):
     """
-    Test if the time is changing in the time base parameters.
+    Test if the time is not changing in the time base parameters.
 
     In some cases we have access to initial datetime for the whole recording.
     It manifests itself by "flat" time characteristics: the time is recorded in
     the flights, but it is constant. In those cases we assume that the initial
-    time is the actual time of the recorder power-on.  We use it as the more
-    precise fallback_dt.
+    time is the actual time of the recorder power-on.  We can use it as the
+    more precise fallback_dt.
     """
     minutes = hdf.get('Minute')
     if minutes is None:
-        # We don't know
-        return True
+        return False  # We don't know
 
-    num_samples = len(minutes.array)
-    duration = num_samples * minutes.hz
-    if num_samples > 5 and duration > 5 and np.ptp(minutes.array) == 0:
-        return False
-
-    return True
+    samples = minutes.array.size
+    duration = samples * minutes.hz
+    return samples > 5 and duration > 5 and np.ptp(minutes.array) == 0
 
 
 def calculate_fallback_dt(hdf, fallback_dt=None):
     """
-    Check the time base parameters in the HDF5 file and update the fallback_dt.
+    Check the time parameters in the HDF5 file and update the fallback_dt.
     """
-    if not is_moving_timebase(hdf):
-        try:
-            timebase = calculate_timebase(*get_dt_arrays(hdf, fallback_dt))
-        except (KeyError, ValueError):
-            # The time parameters are not available/operational
-            return fallback_dt
+    if not has_constant_time(hdf):
+        return fallback_dt
 
-        # Minute parameter has constant value, use the initial value as the new
-        # fallback_dt
-        logger.warning(
-            "Time base doesn't change, using the starting time as the fallback_dt")
+    try:
+        timebase = calculate_timebase(*get_dt_arrays(hdf, fallback_dt))
+    except (KeyError, ValueError):
+        # The time parameters are not available/operational
+        return fallback_dt
+    else:
+        logger.warning("Time doesn't change, using the starting time as the fallback_dt")
         return timebase + timedelta(seconds=hdf.duration)
-    return fallback_dt
 
 
 def _calculate_start_datetime(hdf, fallback_dt):
@@ -636,13 +630,13 @@ def _calculate_start_datetime(hdf, fallback_dt):
                 pass
 
     # establish timebase for start of data
-    if is_moving_timebase(hdf):
+    if has_constant_time(hdf):
+        timebase = fallback_dt
+    else:
         try:
             timebase = calculate_timebase(*dt_arrays)
         except (KeyError, ValueError) as err:
             raise TimebaseError("Error with timestamp values: %s" % err)
-    else:
-        timebase = fallback_dt
 
     if timebase > now:
         # Flight Data Analysis in the future is a challenge, lets see if we
