@@ -1311,8 +1311,8 @@ class Touchdown(KeyTimeInstanceNode):
         # signal changes state on raising the gear (OK, if they do a gear-up
         # landing it won't work, but this will be the least of the problems).
 
-        dt_pre = 10.0 # Seconds to scan before estimate.
-        dt_post = 4.0 # Seconds to scan after estimate.
+        dt_pre = 6.0 # Seconds to scan before estimate.
+        dt_post = 3.0 # Seconds to scan after estimate.
         hz = alt.frequency
         index_gog = index_wheel_touch = index_brake = index_decel = None
         index_dax = index_z = index_az = index_daz = None
@@ -1386,11 +1386,15 @@ class Touchdown(KeyTimeInstanceNode):
                 index_brake = peak_curvature(drag, 
                                              curve_sense='Convex', 
                                              gap=1*hz, 
-                                             ttp=3*hz) + index_ref-dt_pre*hz
+                                             ttp=3*hz)
+                if index_brake:
+                    index_brake += index_ref-dt_pre*hz
                 
                 # Look for substantial deceleration
                 
-                index_decel = index_at_value(drag, -0.1)+ index_ref-dt_pre*hz
+                index_decel = index_at_value(drag, -0.1)
+                if index_decel:
+                    index_decel += index_ref-dt_pre*hz
                 
             if acc_norm:
                 lift = acc_norm.array[period]
@@ -1426,7 +1430,7 @@ class Touchdown(KeyTimeInstanceNode):
             if index_z_list:
                 index_z = min(index_z_list)
                 
-            # ...then collect the estimates of the touchdown point...
+            # ...then collect the valid estimates of the touchdown point...
             index_list = sorted_valid_list([index_alt,
                                             index_gog,
                                             index_wheel_touch,
@@ -1434,14 +1438,12 @@ class Touchdown(KeyTimeInstanceNode):
                                             index_decel,
                                             index_dax,
                                             index_z])
-            
-            # ...and use the third where possible, to pass by erroneous
-            # earlier measures.
-            index_tdn = index_list[min(2, len(index_list))]
 
+            # ...to find the best estimate...
+            index_tdn = np.ma.median(index_list)
             self.create_kti(index_tdn)
 
-            '''
+
             # Plotting process to view the results in an easy manner.
             import matplotlib.pyplot as plt
             import os
@@ -1488,7 +1490,7 @@ class Touchdown(KeyTimeInstanceNode):
             #plt.show()
             plt.clf()
             plt.close()
-            '''
+            
             
 class LandingDecelerationEnd(KeyTimeInstanceNode):
     '''
