@@ -1354,7 +1354,8 @@ class Touchdown(KeyTimeInstanceNode):
             period = slice(max(floor(index_ref-dt_pre*hz), 0), ceil(index_ref+dt_post*hz))
             
             if acc_long:
-                drag = acc_long.array[period]
+                drag = np.ma.copy(acc_long.array[period])
+                drag = np.ma.where(drag > 0.0, 0.0, drag)
                 
                 # Look for inital wheel contact where there is a sudden spike in Ax.
                 
