@@ -1,5 +1,6 @@
 import numpy as np
 from math import ceil, floor
+import tempfile
 
 from analysis_engine.library import (all_of,
                                      any_of,
@@ -1208,7 +1209,7 @@ class Liftoff(KeyTimeInstanceNode):
             print name
             # Two lines to quickly make this work.
             import os
-            WORKING_DIR = 'C:\Temp'
+            WORKING_DIR = tempfile.gettempdir()
             output_dir = os.path.join(WORKING_DIR, 'Liftoff_graphs')
             if not os.path.exists(output_dir):
                 os.mkdir(output_dir)
@@ -1443,7 +1444,7 @@ class Touchdown(KeyTimeInstanceNode):
             index_tdn = np.ma.median(index_list)
             self.create_kti(index_tdn)
 
-
+            """
             # Plotting process to view the results in an easy manner.
             import matplotlib.pyplot as plt
             import os
@@ -1482,7 +1483,7 @@ class Touchdown(KeyTimeInstanceNode):
             plt.grid()
             filename = 'One-ax-Touchdown-%s' % os.path.basename(self._h.file_path) if getattr(self, '_h', None) else 'Plot'
             print name
-            WORKING_DIR = "C:\Temp"
+            WORKING_DIR = tempfile.gettempdir()
             output_dir = os.path.join(WORKING_DIR, 'Touchdown_graphs')
             if not os.path.exists(output_dir):
                 os.mkdir(output_dir)
@@ -1490,8 +1491,9 @@ class Touchdown(KeyTimeInstanceNode):
             #plt.show()
             plt.clf()
             plt.close()
-            
-            
+            """
+
+
 class LandingDecelerationEnd(KeyTimeInstanceNode):
     '''
     Whereas peak acceleration at takeoff is a good measure of the start of
