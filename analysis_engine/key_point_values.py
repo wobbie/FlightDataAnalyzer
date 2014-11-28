@@ -10468,13 +10468,14 @@ class SpeedbrakeDeployedWithPowerOnDuration(KeyPointValueNode):
     units = ut.SECOND
 
     def derive(self, spd_brk=M('Speedbrake Selected'),
-               power=P('Eng (*) N1 Avg'), airborne=S('Airborne')):
+               power=P('Eng (*) N1 Avg'), alt_aal=S('Altitude AAL For Flight Phases')):
         power_on_percent = 60.0
+        airborne = np.ma.clump_unmasked(np.ma.masked_less(alt_aal.array, 50)) # only interested when airborne
         for air in airborne:
-            spd_brk_dep = spd_brk.array[air.slice] == 'Deployed/Cmd Up'
-            high_power = power.array[air.slice] >= power_on_percent 
+            spd_brk_dep = spd_brk.array[air] == 'Deployed/Cmd Up'
+            high_power = power.array[air] >= power_on_percent
             array = spd_brk_dep & high_power
-            slices = shift_slices(runs_of_ones(array), air.slice.start)
+            slices = shift_slices(runs_of_ones(array), air.start)
             self.create_kpvs_from_slice_durations(slices, self.frequency,
                                                   mark='start')
 

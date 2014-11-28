@@ -9714,7 +9714,7 @@ class TestSpeedbrakeDeployedWithPowerOnDuration(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = SpeedbrakeDeployedWithPowerOnDuration
-        self.operational_combinations = [('Speedbrake Selected', 'Eng (*) N1 Avg', 'Airborne')]
+        self.operational_combinations = [('Speedbrake Selected', 'Eng (*) N1 Avg', 'Altitude AAL For Flight Phases')]
 
     def test_derive_basic(self):
         spd_brk_loop = [0] * 4 + [1] * 2 + [0] * 4
@@ -9724,9 +9724,10 @@ class TestSpeedbrakeDeployedWithPowerOnDuration(unittest.TestCase, NodeTest):
             array=np.ma.array(spd_brk_loop * 3))
         power = P('Eng (*) N1 Avg',
                  array=np.ma.array([40] * 10 + [60] * 10 + [50] * 10))
-        airborne = buildsection('Airborne', 10, 20)
+        aal = P('Altitude AAL For Flight Phases',
+                 array=np.ma.concatenate((np.ma.arange(0, 75, 5), np.ma.arange(70, -5, -5))))
         node = self.node_class()
-        node.derive(spd_brk, power, airborne)
+        node.derive(spd_brk, power, aal)
         self.assertEqual(node, [
             KeyPointValue(14, 2.0,
                           'Speedbrake Deployed With Power On Duration')])
