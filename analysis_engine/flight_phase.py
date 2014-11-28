@@ -119,6 +119,9 @@ class GoAroundAndClimbout(FlightPhaseNode):
     lowest point of the go-around, and that it lies below the 3000ft
     approach thresholds. The function here is to expand the phase 500ft before
     to the first level off after (up to 2000ft above minimum altitude).
+    
+    Uses find_low_alts to exclude level offs and level flight sections, therefore
+    approach sections may finish before reaching 2000 ft above the go around.
     '''
     
     @classmethod
@@ -130,8 +133,10 @@ class GoAroundAndClimbout(FlightPhaseNode):
         # Find the ups and downs in the height trace.
         level_flights = level_flights.get_slices() if level_flights else None
         low_alt_slices = find_low_alts(
-            alt_aal.array, 3000, start_alt=500, stop_alt=2000, level_flights=level_flights,
-            relative_start=True, relative_stop=True,
+            alt_aal.array, 3000, start_alt=500, stop_alt=2000,
+            level_flights=level_flights,
+            relative_start=True,
+            relative_stop=True,
         )
         dlc_slices = []
         for low_alt in low_alt_slices:
@@ -212,6 +217,9 @@ class ApproachAndLanding(FlightPhaseNode):
     Approaches from 3000ft to lowest point in the approach (where a go around
     is performed) or down to and including the landing phase.
     
+    Uses find_low_alts to exclude level offs and level flight sections, therefore
+    approach sections may start below 3000 ft.
+    
     Q: Suitable to replace this with BottomOfDescent and working back from
     those KTIs rather than having to deal with GoAround AND Landings?
     '''
@@ -253,6 +261,7 @@ class Approach(FlightPhaseNode):
     climbout afterwards.
     
     Landing starts at 50ft, therefore this phase is until 50ft.
+    Uses find_low_alts to exclude level offs and level flight sections.
     """
     @classmethod
     def can_operate(cls, available):
