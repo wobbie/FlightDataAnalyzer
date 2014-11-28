@@ -1062,8 +1062,7 @@ class Airspeed5000To3000FtMax(KeyPointValueNode):
 
 class Airspeed3000To1000FtMax(KeyPointValueNode):
     '''
-    Maximum airspeed during the Initial Approach from 3,000ft above the
-    airfield to 1,000ft above the airfield.
+    Maximum airspeed from 3,000ft to 1,000ft above the airfield.
     '''
 
     units = ut.KT
@@ -1071,7 +1070,7 @@ class Airspeed3000To1000FtMax(KeyPointValueNode):
     def derive(self,
                air_spd=P('Airspeed'),
                alt_aal=P('Altitude AAL For Flight Phases')):
-
+        # TODO: Include level flight once Sections use intervals.
         self.create_kpvs_within_slices(
             air_spd.array,
             alt_aal.slices_from_to(3000, 1000),
@@ -1190,7 +1189,7 @@ class Airspeed500To20FtMax(KeyPointValueNode):
 
     def derive(self, air_spd=P('Airspeed'),
                alt_aal=P('Altitude AAL For Flight Phases')):
-
+        # TODO: Include level flight once Sections use intervals.
         self.create_kpvs_within_slices(
             air_spd.array,
             alt_aal.slices_from_to(500, 20),
@@ -1208,7 +1207,7 @@ class Airspeed500To20FtMin(KeyPointValueNode):
 
     def derive(self, air_spd=P('Airspeed'),
                alt_aal=P('Altitude AAL For Flight Phases')):
-
+        # TODO: Include level flight once Sections use intervals.
         self.create_kpvs_within_slices(
             air_spd.array,
             alt_aal.slices_from_to(500, 20),
@@ -1227,6 +1226,7 @@ class Airspeed500To50FtMedian(KeyPointValueNode):
 
     def derive(self, air_spd=P('Airspeed'),
                alt_aal=P('Altitude AAL For Flight Phases')):
+        # TODO: Include level flight once Sections use intervals.
         #TODO: Round to the nearest Integer value if using for Airspeed
         #Selected (pilots select whole numbers!)
         self.create_kpvs_within_slices(

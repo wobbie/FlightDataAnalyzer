@@ -1855,8 +1855,10 @@ class TestDerivedParameterNode(unittest.TestCase):
         slices_from_to.return_value = (array, [slice(0, 10)])
         param = DerivedParameterNode('Param', array=array)
         slices = param.slices_from_to(5, 15)
-        slices_from_to.assert_called_once_with(array, 5, 15)
+        slices_from_to.assert_called_once_with(array, 5, 15, threshold=0.05)
         self.assertEqual(slices, slices_from_to.return_value[1])
+        slices = param.slices_from_to(4, -2, threshold=0.2)
+        slices_from_to.assert_called_with(array, 4, -2, threshold=0.2)
 
     def test_slices_to_touchdown_basic(self):
         heights = np.ma.arange(100,-10,-10)

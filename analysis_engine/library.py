@@ -5888,7 +5888,7 @@ def slices_between(array, min_, max_):
     return repaired_array, slices
 
 
-def slices_from_to(array, from_, to):
+def slices_from_to(array, from_, to, threshold=0.1):
     '''
     Get slices of the array where values are between from_ and to, and either
     ascending or descending depending on whether from_ is greater than or less
@@ -5901,18 +5901,26 @@ def slices_from_to(array, from_, to):
     :type from_: float or int
     :param to: Value to.
     :type to: float or int
+    :param threshold: Minimum threshold to detect dips and peaks into the range defined as a ratio from 0 (no threshold) to 1 (full range).
+    :type threshold: float or int
     :returns: Slices of the array where values are between from_ and to and either ascending or descending depending on comparing from_ and to.
     :rtype: list of slice
     '''
-    
     if from_ == to:
         raise ValueError('From and to values should not be equal.')
+    elif threshold > 1 or threshold < 0:
+        raise ValueError('threshold must be within the range 0-1.')
     elif len(array) == 0:
         return array, []
     
     # Find the minimum and maximum of the range without knowing direction.
     range_min = min(from_, to)
     range_max = max(from_, to)
+    
+    # Find the threshold min and max.
+    threshold = (range_max - range_min) * threshold
+    threshold_max = range_max - threshold
+    threshold_min = range_min + threshold
     
     rep_array, slices = slices_between(array, from_, to)
     rep_array.mask = np.ma.getmaskarray(rep_array)
@@ -5968,24 +5976,30 @@ def slices_from_to(array, from_, to):
               (stops_within_range and start_max) or 
               (start_max and stop_max)):
             # treat as dip
-            min_index = min_value(rep_array, _slice=test_slice).index
+            value = min_value(rep_array, _slice=test_slice)
+            if value.value > threshold_max:
+                # value does not dip below threshold
+                continue
             if from_ > to:
                 # descending
-                slice_stop = min_index
+                slice_stop = value.index
             else:
                 # climbing
-                slice_start = min_index
+                slice_start = value.index
         elif ((starts_within_range and not stop_max) or
               (stops_within_range and not start_max) or
               (not start_max and not stop_max)):
             # treat as peak
-            max_index = max_value(rep_array, _slice=test_slice).index
+            value = max_value(rep_array, _slice=test_slice)
+            if value.value < threshold_min:
+                # value does not peak above threshold
+                continue
             if from_ > to:
                 # descending
-                slice_start = max_index
+                slice_start = value.index
             else:
                 # climbing
-                slice_stop = max_index
+                slice_stop = value.index
 
         filtered_slices.append(slice(slice_start, slice_stop))
     

@@ -1,5 +1,6 @@
 import numpy as np
 from math import ceil, floor
+import tempfile
 
 from analysis_engine.library import (all_of,
                                      any_of,
@@ -1208,7 +1209,7 @@ class Liftoff(KeyTimeInstanceNode):
             print name
             # Two lines to quickly make this work.
             import os
-            WORKING_DIR = 'C:\Temp'
+            WORKING_DIR = tempfile.gettempdir()
             output_dir = os.path.join(WORKING_DIR, 'Liftoff_graphs')
             if not os.path.exists(output_dir):
                 os.mkdir(output_dir)
@@ -1311,7 +1312,7 @@ class Touchdown(KeyTimeInstanceNode):
         # signal changes state on raising the gear (OK, if they do a gear-up
         # landing it won't work, but this will be the least of the problems).
 
-        dt_pre = 6.0 # Seconds to scan before estimate.
+        dt_pre = 10.0 # Seconds to scan before estimate.
         dt_post = 3.0 # Seconds to scan after estimate.
         hz = alt.frequency
         index_gog = index_wheel_touch = index_brake = index_decel = None
@@ -1332,7 +1333,7 @@ class Touchdown(KeyTimeInstanceNode):
                     # (i.e. we ignore bounces)
                     index = edges[0] + land.slice.start
                     # Check we were within 5ft of the ground when the switch triggered.
-                    if not alt or alt.array[index] < 5.0:
+                    if not alt or alt.array[index] < 7.0:
                         index_gog = index
                         
             if manufacturer and manufacturer.value in ('Saab') and \
@@ -1440,10 +1441,11 @@ class Touchdown(KeyTimeInstanceNode):
                                             index_z])
 
             # ...to find the best estimate...
-            index_tdn = np.ma.median(index_list)
+            # If we have lots of measures, bias towards the earlier ones.
+            index_tdn = np.ma.median(index_list[:4]) 
             self.create_kti(index_tdn)
 
-
+            '''
             # Plotting process to view the results in an easy manner.
             import matplotlib.pyplot as plt
             import os
@@ -1482,16 +1484,17 @@ class Touchdown(KeyTimeInstanceNode):
             plt.grid()
             filename = 'One-ax-Touchdown-%s' % os.path.basename(self._h.file_path) if getattr(self, '_h', None) else 'Plot'
             print name
-            WORKING_DIR = "C:\Temp"
+            WORKING_DIR = tempfile.gettempdir()
             output_dir = os.path.join(WORKING_DIR, 'Touchdown_graphs')
             if not os.path.exists(output_dir):
                 os.mkdir(output_dir)
-            plt.savefig(os.path.join(output_dir, filename + '.png'))
-            #plt.show()
+            #plt.savefig(os.path.join(output_dir, filename + '.png'))
+            plt.show()
             plt.clf()
             plt.close()
-            
-            
+            '''
+
+
 class LandingDecelerationEnd(KeyTimeInstanceNode):
     '''
     Whereas peak acceleration at takeoff is a good measure of the start of
