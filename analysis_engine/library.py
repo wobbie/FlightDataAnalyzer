@@ -6,6 +6,7 @@ import math
 from collections import OrderedDict, namedtuple
 from copy import copy
 from datetime import datetime, timedelta
+from decimal import Decimal
 from hashlib import sha256
 from itertools import izip, izip_longest, tee
 from math import asin, atan2, ceil, cos, degrees, floor, log, radians, sin, sqrt
@@ -1426,6 +1427,24 @@ def unique_values(array):
     else:
         keys = vals
     return dict(zip(keys, counts[vals]))
+
+
+def modulo(value1, value2):
+    '''
+    Accurate modulo operation avoiding IEEE 754 floating point errors.
+    
+    >>> 6 % 0.2
+    0.19999999999999968
+    >>> Decimal( 6) % Decimal(0.2) # IEEE 754 error already present
+    Decimal('0.1999999999999996780353228587')
+    >>> Decimal('6') % Decimal('0.2')
+    Decimal('0.0')
+    
+    :type value1: float or int
+    :type value2: float or int
+    :rtype: float
+    '''
+    return float(Decimal(str(value1)) % Decimal(str(value2)))
 
 
 def most_common_value(array):
@@ -7102,7 +7121,7 @@ def second_window(array, frequency, seconds, extend_window=False):
     :type extend_window: bool
     '''
     min_window_size = 2.0 / frequency
-    if seconds % min_window_size != 0:
+    if modulo(seconds, min_window_size) != 0:
         if extend_window:
             seconds = seconds - seconds % min_window_size + min_window_size
         else:

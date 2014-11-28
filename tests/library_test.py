@@ -3765,6 +3765,16 @@ class TestBlendTwoParameters(unittest.TestCase):
         self.assertAlmostEqual(off, 0.4)
 
 
+class TestModulo(unittest.TestCase):
+    def test_modulo(self):
+        self.assertEqual(modulo(10, 2), 0)
+        self.assertEqual(modulo(11, 2), 1)
+        
+        # Fails with floats due to IEEE 754 imprecision.
+        self.assertNotEqual(6 % 0.2, 0)
+        self.assertEqual(modulo(6, 0.2), 0)
+
+
 class TestMostPointsCost(unittest.TestCase):
     def test_mpc_assertion(self):
         coefs=[0.0,0.0]
@@ -3821,8 +3831,8 @@ class TestMovingAverage(unittest.TestCase):
         res = moving_average(array)
         expected = np.ma.array([6, 7, 8, 9])/3.0
         ma_test.assert_masked_array_approx_equal(res, expected)
-        
-        
+
+
 class TestNearestNeighbourMaskRepair(unittest.TestCase):
     def test_nn_mask_repair(self):
         array = np.ma.arange(30)
@@ -6786,15 +6796,23 @@ class TestSecondWindow(unittest.TestCase):
         expected = np.ma.masked_array([0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 3.5, 3.5, 3.5,
                                        3.5, 3.5, 3.5] + [0] * 6,
                                       mask=14 * [False] + 6 * [True])
+        # Test multiple frequencies abiding to 2/frequency.
         ma_test.assert_masked_array_almost_equal(
             second_window(data, 2, 3),
             expected)
         ma_test.assert_masked_array_almost_equal(
             second_window(data, 1, 6),
             expected)
+        ma_test.assert_masked_array_almost_equal(
+            second_window(data, 1, 5, extend_window=True),
+            expected)
     
-    def test_second_window_invalid_frequency(self):
+    def test_second_window_invalid_args(self):
+        self.assertRaises(ValueError, second_window, np.ma.arange(10), 0.25, 1)
+        self.assertRaises(ValueError, second_window, np.ma.arange(10), 0.5, 3)
         self.assertRaises(ValueError, second_window, np.ma.arange(10), 1, 3)
+        self.assertRaises(ValueError, second_window, np.ma.arange(10), 2, 3.5)
+        self.assertRaises(ValueError, second_window, np.ma.arange(10), 10, 3.1292577)
     
     def test_three_second_window_basic_trough(self):
         ma_test.assert_masked_array_almost_equal(
