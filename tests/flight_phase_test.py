@@ -252,7 +252,7 @@ class TestApproachAndLanding(unittest.TestCase):
         self.assertEqual(len(app_ldg), 4)
         self.assertAlmostEqual(app_ldg[0].slice.start, 3425, places=0)
         self.assertAlmostEqual(app_ldg[0].slice.stop, 3632, places=0)
-        self.assertAlmostEqual(app_ldg[1].slice.start, 4807, places=0)
+        self.assertAlmostEqual(app_ldg[1].slice.start, 4805, places=0)
         self.assertAlmostEqual(app_ldg[1].slice.stop, 4941, places=0)
         self.assertAlmostEqual(app_ldg[2].slice.start, 6883, places=0)
         self.assertAlmostEqual(app_ldg[2].slice.stop, 7171, places=0)
@@ -282,7 +282,7 @@ class TestApproach(unittest.TestCase):
             ('Altitude AAL For Flight Phases', 'Level Flight', 'Landing',) in opts)
         self.assertTrue(('Altitude AAL For Flight Phases',) in opts)
         self.assertTrue(('Altitude AAL For Flight Phases', 'Landing') in opts)
-        self.assertTrue(('Altitude AAL For Flight Phases', 'Level Flight') in opts)        
+        self.assertTrue(('Altitude AAL For Flight Phases', 'Level Flight') in opts)
 
     def test_approach_basic(self):
         alt = np.ma.array(range(5000, 500, -500) + [50] + [0] * 10)
@@ -301,16 +301,30 @@ class TestApproach(unittest.TestCase):
     def test_with_go_around_and_climbout_atr42_data(self):
         alt_aal = load(os.path.join(test_data_path,
                                     'AltitudeAAL_ATR42_two_goarounds.nod'))
+        #alt_aal.array[9860:10180] = 2560
         landing = buildsection('Landing', 27350, 27400)
+        level_flights = buildsections('Level Flight',
+            (8754, 8971),
+            (9844, 10207),
+            (11108, 11241),
+            (11256, 11489),
+            (14887, 20037),
+            (20127, 22946),
+            (22947, 23587),
+            (23701, 24428),
+            (25208, 25356),
+            (25376, 25837),
+        )
         app = Approach()
-        app.derive(alt_aal, None, landing)
+        app.derive(alt_aal, level_flights, landing)
+        
         self.assertEqual(len(app), 3)
         self.assertAlmostEqual(app[0].slice.start, 9771, places=0)
         self.assertAlmostEqual(app[0].slice.stop, 10810, places=0)
         self.assertAlmostEqual(app[1].slice.start, 12056, places=0)
         self.assertAlmostEqual(app[1].slice.stop, 12631, places=0)
         self.assertAlmostEqual(app[2].slice.start, 26926, places=0)
-        self.assertAlmostEqual(app[2].slice.stop, 27343, places=0)
+        self.assertAlmostEqual(app[2].slice.stop, 27342, places=0)
 
 
 class TestBouncedLanding(unittest.TestCase):

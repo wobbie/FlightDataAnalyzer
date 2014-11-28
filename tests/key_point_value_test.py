@@ -9273,7 +9273,7 @@ class TestRateOfDescent3000To2000FtMax(unittest.TestCase):
         self.assertEqual(opts, [('Vertical Speed', 'Altitude AAL For Flight Phases')])
 
     def test_derive(self):
-        array = np.ma.concatenate((np.ma.arange(0, 1500, 100), np.ma.arange(1500, 3000, 200), [3050, 2850, 2990], [3150]*5))
+        array = np.ma.concatenate((np.ma.arange(0, 1500, 100), np.ma.arange(1500, 3000, 200), [3050, 2910, 2990], [3150]*5))
         array = np.ma.concatenate((array, array[::-1]))
         alt = P('Altitude AAL For Flight Phases', array)
         roc_array = np.ma.concatenate(([100]*14, [125, 150, 175, 200, 200, 200, 200, 187, 87, 72, 62, 25, 75, 40, 0, 0, 0]))
@@ -9284,7 +9284,6 @@ class TestRateOfDescent3000To2000FtMax(unittest.TestCase):
         node.derive(vert_spd, alt)
 
         expected = KPV('Rate Of Descent 3000 To 2000 Ft Max', items=[
-            KeyPointValue(name='Rate Of Descent 3000 To 2000 Ft Max', index=36, value=-25),
             KeyPointValue(name='Rate Of Descent 3000 To 2000 Ft Max', index=41, value=-200),
         ])
         self.assertEqual(node, expected)

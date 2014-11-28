@@ -5888,7 +5888,7 @@ def slices_between(array, min_, max_):
     return repaired_array, slices
 
 
-def slices_from_to(array, from_, to, threshold=0.05):
+def slices_from_to(array, from_, to, threshold=0.1):
     '''
     Get slices of the array where values are between from_ and to, and either
     ascending or descending depending on whether from_ is greater than or less
