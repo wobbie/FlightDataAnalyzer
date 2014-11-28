@@ -7088,7 +7088,7 @@ def second_window(array, frequency, seconds, extend_window=False):
     Only include values which are maintained for a number of seconds, shorter
     exceedances are excluded.
 
-    Only supports odd numbers of seconds and frequencies of whole numbers.
+    Only supports odd numbers of seconds 
 
     e.g. [0, 1, 2, 3, 2, 1, 2, 3] -> [0, 1, 2, 2, 2, 2, 2, 2]
 
@@ -7096,8 +7096,7 @@ def second_window(array, frequency, seconds, extend_window=False):
     :param extend_window: Extend window by 1 second if frequency is incompatible.
     :type extend_window: bool
     '''
-    if ((seconds % 2 == 0 and not frequency % 2 == 1) or
-        (seconds % 2 == 1 and not frequency % 2 == 0)):
+    if frequency == 1 and seconds % 2 == 1:
         if extend_window:
             seconds += 1
         else:

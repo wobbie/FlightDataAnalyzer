@@ -6781,12 +6781,17 @@ class TestSecondWindow(unittest.TestCase):
                                mask=[False] * 14 + [True] * 6))
     
     def test_three_second_window_peak(self):
+        data = np.ma.concatenate([np.ma.arange(0, 5, 0.5),
+                                  np.ma.arange(5, 0, -0.5)])
+        expected = np.ma.masked_array([0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 3.5, 3.5, 3.5,
+                                       3.5, 3.5, 3.5] + [0] * 6,
+                                      mask=14 * [False] + 6 * [True])
         ma_test.assert_masked_array_almost_equal(
-            second_window(np.ma.concatenate([np.ma.arange(0, 5, 0.5),
-                                             np.ma.arange(5, 0, -0.5)]), 2, 3),
-            np.ma.masked_array([0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 3.5, 3.5, 3.5,
-                                3.5, 3.5, 3.5] + [0] * 6,
-                               mask=14 * [False] + 6 * [True]))
+            second_window(data, 2, 3),
+            expected)
+        ma_test.assert_masked_array_almost_equal(
+            second_window(data, 1, 6),
+            expected)
     
     def test_second_window_invalid_frequency(self):
         self.assertRaises(ValueError, second_window, np.ma.arange(10), 1, 3)
