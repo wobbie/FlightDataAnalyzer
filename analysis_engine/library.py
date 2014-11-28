@@ -7027,18 +7027,18 @@ def vstack_params_filtered(window, *params, **kw):
             'currently supported')
 
     params = [p for p in params if p is not None]
-    window = int(window * params[0].frequency)
-    if not window % 2:
-        window += 1
 
-    if window > 1:
-        if method == 'moving_average':
+    if method == 'moving_average':
+        window = int(window * params[0].frequency)
+        if not window % 2:
+            window += 1
+        if window > 1:
             arrays = [moving_average(p.array, window) for p in params]
-        elif method == 'second_window':
-            arrays = [
-                second_window(p.array, p.hz, window, extend_window=True) for p in params]
-    else:
-        arrays = [p.array for p in params]
+        else:
+            [p.array for p in params]
+    elif method == 'second_window':
+        arrays = [
+            second_window(p.array, p.hz, window, extend_window=True) for p in params]
 
     return np.ma.vstack(arrays)
 
@@ -7088,25 +7088,29 @@ def second_window(array, frequency, seconds, extend_window=False):
     Only include values which are maintained for a number of seconds, shorter
     exceedances are excluded.
 
-    Only supports odd numbers of seconds 
+    Only supports odd numbers of seconds when frequency is 1.
 
     e.g. [0, 1, 2, 3, 2, 1, 2, 3] -> [0, 1, 2, 2, 2, 2, 2, 2]
 
+    :param array: ...
     :type array: np.ma.masked_array
-    :param extend_window: Extend window by 1 second if frequency is incompatible.
+    :param frequncy: frequency of the array data
+    :type frequency: float or int
+    :param seconds: window size in seconds
+    :type seconds: float or int
+    :param extend_window: extend window to next boundary.
     :type extend_window: bool
     '''
-    if frequency == 1 and seconds % 2 == 1:
+    min_window_size = 2.0 / frequency
+    if seconds % min_window_size != 0:
         if extend_window:
-            seconds += 1
+            seconds = seconds - seconds % min_window_size + min_window_size
         else:
-            raise ValueError('Invalid seconds for frequency')
+            raise ValueError('%s seconds is not valid for the frequency %s Hz.\n'
+                             'Value of seconds must be a multiple of 2 / frequency.'
+                             % (seconds, frequency))
     
-    samples = int(seconds * frequency)
-    
-    if seconds * frequency != samples:
-        raise ValueError('Only whole number vales for frequency and seconds '
-                         'are supported.')
+    samples = int(frequency * seconds)
     
     window_array = np_ma_masked_zeros_like(array)
     
