@@ -1,4 +1,4 @@
- 
+import csv
 import mock
 import numpy as np
 import os
@@ -2122,13 +2122,11 @@ class TestFindEdges(unittest.TestCase):
         self.assertEqual(expected, result)
         
     def test_find_edges_masked_edge(self):
-        edges = np.ma.array([1,1,0,0,0,1,1], mask=\
-                            [0,0,0,0,1,1,0])
+        edges = np.ma.array([1,1,0,0,0,1,1], mask=[0,0,0,0,1,1,0])
         self.assertEqual(find_edges(edges, direction='all_edges'),
                          [1.5, 3.5])
         
-        no_edges = np.ma.array([1,1,0,0,0,1,1], mask=\
-                               [0,0,1,1,1,0,0])
+        no_edges = np.ma.array([1,1,0,0,0,1,1], mask=[0,0,1,1,1,0,0])
         self.assertFalse(find_edges(no_edges, direction='all_edges'))
     
     def test_find_edges_too_small_slice(self):
@@ -2138,7 +2136,6 @@ class TestFindEdges(unittest.TestCase):
         self.assertEqual(find_edges(edges, _slice=slice(5, 6)), [])
         self.assertEqual(find_edges(edges, _slice=slice(None, 1)), [])
         self.assertEqual(find_edges(edges, _slice=slice(9, None)), [])
-        
 
 
 class TestFindEdgesOnStateChange(unittest.TestCase):
@@ -5074,6 +5071,12 @@ class TestSliceSamples(unittest.TestCase):
 
 
 class TestSlicesFromTo(unittest.TestCase):
+    def test_slices_from_to_invalid_threshold(self):
+        array = mock.Mock()
+        self.assertRaises(ValueError, slices_from_to, array, 0, 10, threshold=-0.1)
+        self.assertRaises(ValueError, slices_from_to, array, 0, 10, threshold=1.1)
+        self.assertRaises(ValueError, slices_from_to, array, 0, 10, threshold=100)
+    
     def test_slices_from_to(self):
         array = np.ma.arange(20)
         array.mask = [True] * 10 + [False] * 10
@@ -5213,6 +5216,14 @@ class TestSlicesFromTo(unittest.TestCase):
         self.assertEqual(slices, [slice(1, 4)])
         _, slices = slices_from_to(array, 1, 9)
         self.assertEqual(slices, [slice(4, 17)])
+        # threshold
+        array = np.ma.array([10, 8, 6, 4, 2, 4, 6, 8, 10, 8, 7, 8, 10])
+        _, slices = slices_from_to(array, 8, 0)
+        self.assertEqual(slices, [slice(2, 4), slice(10, 10)])
+        _, slices = slices_from_to(array, 8, 0, threshold=0.2)
+        self.assertEqual(slices, [slice(2, 4)])
+        _, slices = slices_from_to(array, 8, 0, threshold=0.8)
+        self.assertEqual(slices, [])
     
     def test_slices_from_to_peak(self):
         array = np.ma.array([2, 4, 6, 8, 10, 8, 6, 4, 2])
@@ -5224,6 +5235,16 @@ class TestSlicesFromTo(unittest.TestCase):
         self.assertEqual(slices, [slice(1, 4)])
         _, slices = slices_from_to(array, 0, 9)
         self.assertEqual(slices, [slice(0, 4)])
+        # threshold
+        array = np.ma.array([10, 12, 14, 16, 18, 16, 14, 12, 10, 12, 13, 12, 10, 10, 12, 14, 16, 18, 20, 22])
+        _, slices = slices_from_to(array, 12, 20)
+        self.assertEqual(slices, [slice(2, 4), slice(10, 10), slice(15, 18)])
+        _, slices = slices_from_to(array, 12, 20, threshold=0.2)
+        self.assertEqual(slices, [slice(2, 4), slice(15, 18)])
+        _, slices = slices_from_to(array, 12, 20, threshold=0.8)
+        self.assertEqual(slices, [slice(15, 18)])
+        _, slices = slices_from_to(array, 12, 20, threshold=1)
+        self.assertEqual(slices, [slice(15, 18)])
     
     def test_slices_from_to_only_within_range(self):
         array = np.ma.array([5, 5, 5, 5, 5, 5, 5, 5, 5])

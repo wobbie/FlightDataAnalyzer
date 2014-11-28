@@ -641,7 +641,7 @@ class DerivedParameterNode(Node):
         '''
         return slices_between(self.array, min_, max_)[1]
 
-    def slices_from_to(self, from_, to):
+    def slices_from_to(self, from_, to, threshold=0.05):
         '''
         Get slices of the parameter's array where values are between from_
         and to, and either ascending or descending depending on whether from_
@@ -658,10 +658,12 @@ class DerivedParameterNode(Node):
         :type from_: float or int
         :param to: Value to.
         :type to: float or int
+        :param threshold: Minimum threshold to detect dips and peaks into the range defined as a ratio from 0 (no threshold) to 1 (full range).
+        :type threshold: float or int
         :returns: Slices of the array where values are between from_ and to and either ascending or descending depending on comparing from_ and to.
         :rtype: list of slice
         '''
-        return slices_from_to(self.array, from_, to)[1]
+        return slices_from_to(self.array, from_, to, threshold=threshold)[1]
 
     def slices_to_kti(self, ht, tdwns):
         '''
