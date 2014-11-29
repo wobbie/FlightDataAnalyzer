@@ -3610,46 +3610,102 @@ class TestBlendParameters(unittest.TestCase):
         
         self.params = (p_alt_a, p_alt_b, p_alt_c)
         
-    def test_blend_params_complex_example(self):
-        result = blend_parameters(self.params, offset=0.0, frequency=2.0, debug=False)
+    def test_blend_parameters_assertion_errors(self):
+        p1 = P(array=[0,0,0,1.0,2], frequency=1, offset=0.9)
+        p2 = P(array=[1,2,3,4.0,5], frequency=1, offset=0.4)
+        self.assertRaises(AssertionError, blend_parameters, (p1, p2), frequency=0.0)
+        self.assertRaises(AssertionError, blend_parameters, (None, None))
+        self.assertRaises(ValueError, blend_parameters, (p1, p2), mode='silly')
+
+    def test_blend_linear_params_complex_example(self):
+        result = blend_parameters(self.params, offset=0.0, frequency=2.0)
         expected = []
-        self.assertAlmostEqual(result[30], 14.225, places=2)
-        self.assertAlmostEqual(result[80], 1208.451, places=2)
+        self.assertAlmostEqual(result[30], 19.45, places=2)
+        self.assertAlmostEqual(result[80], 1208, places=0)
         
-    def test_blend_two_parameters_p2_before_p1_equal_spacing(self):
+    def test_blend_linear_two_parameters_p2_before_p1_equal_spacing(self):
         p1 = P(array=[0,0,0,1.0,2], frequency=1, offset=0.9)
         p2 = P(array=[1,2,3,4.0,5], frequency=1, offset=0.4)
         result = blend_parameters((p1, p2))
         self.assertGreater(result[1], 0.75)
         self.assertLess(result[1], 0.85)
 
-    def test_blend_two_parameters_offset_p2_before_p1_unequal_spacing(self):
+    def test_blend_linear_two_parameters_offset_p2_before_p1_unequal_spacing(self):
         p1 = P(array=[5,10,7,8.0,8], frequency=1, offset=0.1)
         p2 = P(array=[1,2,3,4.0,5], frequency=1, offset=0.0)
         result = blend_parameters((p1, p2))
         self.assertGreater(result[2], 4.5)
         self.assertLess(result[2], 5.5)
         
-    def test_blend_two_parameters_offset_order_back_low_freq(self):
+    def test_blend_linear_two_parameters_offset_order_back_low_freq(self):
         p1 = P(array=[5,10,7,8.0,8], frequency=0.25, offset=0.1)
         p2 = P(array=[1,2,3,4.0,5], frequency=0.25, offset=0.0)
         result = blend_parameters((p1, p2))
-        self.assertGreater(result[2], 4.5)
+        self.assertGreater(result[2], 4.4)
         self.assertLess(result[2], 5.5)
 
-    def test_blend_two_parameters_param_one_rubbish(self):
+    def test_blend_linear_two_parameters_param_one_rubbish(self):
         p1 = P(array=[5,10,7,8,9], frequency=1, offset=0.1, name='First')
         p2 = P(array=[1,2,3,4,5], frequency=1, offset=0.0, name='Second')
         p1.array.mask = True
         result = blend_parameters((p1, None, p2))  # random None parameter too
         self.assertAlmostEqual(result[2], 3)
         
-    def test_blend_two_parameters_lower_op_freq(self):
+    def test_blend_linear_two_parameters_lower_op_freq(self):
         p1 = P(array=[5,10,7,8,5,7,4,2], frequency=2, offset=0.1, name='First')
         p2 = P(array=[1,2,3,4,5,4,3,2], frequency=2, offset=0.0, name='Second')
         p1.array[5:] = np.ma.masked
         result = blend_parameters((p1, p2))
         self.assertAlmostEqual(len(result), 4)
+
+    def test_blend_linear_check_weighting(self):
+        p1 = P(array=[1.0]*5, frequency = 1.0, offset = 0.2, name='First')
+        p2 = P(array=[4.0]*10, frequency = 2.0, offset = 0.05, name='Second')
+        result = blend_parameters((p1, p2))
+        self.assertEqual(result.mask[0], True)
+        self.assertEqual(result[4], 3)
+
+    def test_blend_cubic_complex_example(self):
+        result = blend_parameters(self.params, offset=0.0, frequency=2.0, mode='cubic')
+        expected = []
+        self.assertAlmostEqual(result[30], 14.225, places=2)
+        self.assertAlmostEqual(result[80], 1208, places=0)
+        
+    def test_blend_cubic_two_parameters_p2_before_p1_equal_spacing(self):
+        p1 = P(array=[0,0,0,1.0,2], frequency=1, offset=0.9)
+        p2 = P(array=[1,2,3,4.0,5], frequency=1, offset=0.4)
+        result = blend_parameters((p1, p2), mode='cubic')
+        self.assertGreater(result[1], 0.75)
+        self.assertLess(result[1], 0.85)
+
+    def test_blend_cubic_two_parameters_offset_p2_before_p1_unequal_spacing(self):
+        p1 = P(array=[5,10,7,8.0,8], frequency=1, offset=0.1)
+        p2 = P(array=[1,2,3,4.0,5], frequency=1, offset=0.0)
+        result = blend_parameters((p1, p2), mode='cubic')
+        self.assertGreater(result[2], 4.5)
+        self.assertLess(result[2], 5.5)
+        
+    def test_blend_cubic_two_parameters_offset_order_back_low_freq(self):
+        p1 = P(array=[5,10,7,8.0,8], frequency=0.25, offset=0.1)
+        p2 = P(array=[1,2,3,4.0,5], frequency=0.25, offset=0.0)
+        result = blend_parameters((p1, p2), mode='cubic')
+        self.assertGreater(result[2], 4.5)
+        self.assertLess(result[2], 5.5)
+
+    def test_blend_cubic_two_parameters_param_one_rubbish(self):
+        p1 = P(array=[5,10,7,8,9], frequency=1, offset=0.1, name='First')
+        p2 = P(array=[1,2,3,4,5], frequency=1, offset=0.0, name='Second')
+        p1.array.mask = True
+        result = blend_parameters((p1, None, p2), mode='cubic')  # random None parameter too
+        self.assertAlmostEqual(result[2], 3)
+        
+    def test_blend_cubic_two_parameters_lower_op_freq(self):
+        p1 = P(array=[5,10,7,8,5,7,4,2], frequency=2, offset=0.1, name='First')
+        p2 = P(array=[1,2,3,4,5,4,3,2], frequency=2, offset=0.0, name='Second')
+        p1.array[5:] = np.ma.masked
+        result = blend_parameters((p1, p2), mode='cubic')
+        self.assertAlmostEqual(len(result), 4)
+
 
 
 class TestBlendParametersWeighting(unittest.TestCase):

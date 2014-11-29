@@ -954,7 +954,7 @@ class AltitudeRadio(DerivedParameterNode):
                                       offset=self.offset,
                                       frequency=self.frequency,
                                       small_slice_duration=10,
-                                      debug=False)
+                                      mode='cubic')
 
         # For aircraft where the antennae are placed well away from the main
         # gear, and especially where it is aft of the main gear, compensation
