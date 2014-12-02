@@ -2135,7 +2135,7 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
                                      'Deployed/Cmd Up')
             if armed:
                 # G550 seen with recorded Speedbrake Armed parameter
-                array[armed.array == 'Armed'] = 1
+                self.array[armed.array == 'Armed'] = 1
 
         elif family_name in ['ERJ-170/175', 'ERJ-190/195'] and handle:
             self.array = np.ma.where(handle.array < -15.0,
