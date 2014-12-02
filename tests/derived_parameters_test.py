@@ -4221,16 +4221,49 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
             ('Flap Angle (L)', 'Flap Angle (R)'),
             ('Flap Angle (L) Inboard', 'Flap Angle (R) Inboard'),
             ('Flap Angle (L)', 'Flap Angle (R)', 'Flap Angle (C)', 'Flap Angle (MCP)'),
-            ('Flap Angle (L)', 'Flap Angle (R)', 'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard', 'Frame'),
+            ('Flap Angle (L)', 'Flap Angle (R)', 'Flap Angle (L) Inboard', 'Flap Angle (R) Inboard'),
         ]
 
     def test_hercules(self):
         parameter = P(array=np.ma.array(range(0, 5000, 100) + range(5000, 0, -200)))
-        frame = A('Frame', 'L382-Hercules')
+        ##frame = A('Frame', 'L382-Hercules')
         node = self.node_class()
-        node.derive(parameter, None, None, None, None, None, frame)
-        self.assertAlmostEqual(node.array[50], 2500, 1)
+        node.derive(parameter, None, None, None, None, None)
+        self.assertAlmostEqual(node.array[25], 2500, 1)
+        
+        
+    def test_single_parameter(self):
+        fr = P('Flap Angle (R)', array=np.ma.arange(10), offset=0.123, frequency=2)
+        fa = FlapAngle()
+        fa.get_derived([None, fr, None, None, None, None])
+        self.assertEqual(fa.offset, fr.offset)
+        self.assertEqual(fa.frequency, fr.frequency)
+        np.testing.assert_array_equal(fa.array, fr.array)
+    
+    def test_with_same_offsets(self):
+        fl = P('Flap Angle (L)', array=np.ma.arange(10, 20, 2), offset=0.123, frequency=0.5)
+        fr = P('Flap Angle (R)', array=np.ma.arange(11, 21, 2), offset=1.123, frequency=0.5)
+        fa = FlapAngle()
+        fa.apply_median_filter = False
+        fa.get_derived([fl, fr, None, None, None, None])
+        self.assertEqual(fa.offset, 0.123)
+        self.assertEqual(fa.frequency, 1)
+        np.testing.assert_array_equal(fa.array, np.ma.arange(10, 20, 1))
 
+    def test_with_different_offsets(self):
+        fl = P('Flap Angle (L)', array=np.ma.arange(10, 20, 1), offset=0.0, frequency=1)
+        fr = P('Flap Angle (R)', array=np.ma.arange(10, 20, 1), offset=0.0001, frequency=1)
+        # 3rd flap is ignored
+        fc = P('Flap Angle (C)', array=np.ma.arange(11, 21, 2), offset=2.123, frequency=1)
+        fa = FlapAngle()
+        fa.apply_median_filter = False
+        fa.get_derived([fl, fr, fc, None, None, None])
+        self.assertEqual(fa.offset, 0)
+        self.assertEqual(fa.frequency, 2)
+        # ignore last value as we have nothing to interpolate too
+        assert_array_within_tolerance(fa.array[:-1], np.ma.arange(10, 19.5, 0.5), 0.001, 99.9)
+        self.assertEqual(fa.array[-1], 19)
+    
 
 class TestHeadingTrueContinuous(unittest.TestCase):
     @unittest.skip('Test Not Implemented')
