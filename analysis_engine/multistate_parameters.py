@@ -765,6 +765,10 @@ class Flap(MultistateDerivedParameterNode):
     '''
 
     units = ut.DEGREE
+    # Currently uses the frequency of the Flap Angle parameter - might
+    # consider upsampling to 2Hz for the Kernal sizes in the calculate_flap
+    # function 
+    ##align_frequency = 2
 
     @classmethod
     def can_operate(cls, available, frame=A('Frame'),
@@ -894,11 +898,8 @@ class FlapIncludingTransition(MultistateDerivedParameterNode):
 
         return True
     
-    def derive(self,
-               flap_angle=P('Flap Angle'),
-               model=A('Model'),
-               series=A('Series'),
-               family=A('Family')):
+    def derive(self, flap_angle=P('Flap Angle'),
+               model=A('Model'), series=A('Series'), family=A('Family')):
         self.values_mapping, self.array, self.frequency, self.offset = calculate_flap(
             'including',
             flap_angle,
@@ -935,11 +936,8 @@ class FlapExcludingTransition(MultistateDerivedParameterNode):
 
         return True
     
-    def derive(self,
-               flap_angle=P('Flap Angle'),
-               model=A('Model'),
-               series=A('Series'),
-               family=A('Family')):
+    def derive(self, flap_angle=P('Flap Angle'),
+               model=A('Model'), series=A('Series'), family=A('Family')):
         self.values_mapping, self.array, self.frequency, self.offset = calculate_flap(
             'excluding',
             flap_angle,
@@ -951,6 +949,7 @@ class FlapExcludingTransition(MultistateDerivedParameterNode):
 
 class FlapLeverSynthetic(MultistateDerivedParameterNode):
     '''
+    Create a synthetic representation of the Flap Lever position.
     '''
 
     name = 'Flap Lever (Synthetic)'
