@@ -1262,10 +1262,18 @@ def positive_index(container, index):
     return index
 
 
+def power_ceil(x):
+    '''
+    :returns: The closest power of 2 greater than or equal to x.
+    '''
+    return 2**(ceil(log(x, 2)))
+
+
 def power_floor(x):
     '''
     :returns: The closest power of 2 less than or equal to x.
     '''
+    #Q: not sure why casting to an int is necessary
     return int(2**(floor(log(x, 2))))
 
 
@@ -7299,8 +7307,10 @@ def _dp2speed(dp, P, Rho):
     # Mask speeds over 661.48 kt
     return np.ma.masked_greater(speed_kt, 661.48)
 
+
 def dp2cas(dp):
     return np.ma.masked_greater(_dp2speed(dp, P0, Rhoref), 661.48)
+
 
 def dp2tas(dp, alt_ft, sat):
     P = alt2press(alt_ft)

@@ -1619,6 +1619,14 @@ class TestPowerFloor(unittest.TestCase):
         self.assertEqual(results, expected)
 
 
+class TestPowerCeil(unittest.TestCase):
+    def test_power_ceil(self):
+        self.assertEqual(power_ceil(0.2), 0.25)
+        self.assertEqual(power_ceil(0.25), 0.25)
+        self.assertEqual(power_ceil(2.4), 4)
+        self.assertEqual(power_ceil(35), 64)
+
+
 class TestNextUnmaskedValue(unittest.TestCase):
     def test_next_unmasked_value(self):
         # Entirely unmasked
