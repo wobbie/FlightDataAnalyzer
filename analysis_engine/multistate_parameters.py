@@ -2118,7 +2118,6 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
             # based on data seen for G450, clean handle signal with no armed position.
             self.array = np.ma.where((handle.array >= 1.0) | (spdbrk.array > 25.0),
                                 'Deployed/Cmd Up', 'Stowed')
-
         elif family_name in ['G-IV',
                              'G-V',
                              'Global',
@@ -2134,6 +2133,9 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
             self.array = np.ma.where(spdbrk.array < 2.0,
                                      'Stowed',
                                      'Deployed/Cmd Up')
+            if armed:
+                # G550 seen with recorded Speedbrake Armed parameter
+                array[armed.array == 'Armed'] = 1
 
         elif family_name in ['ERJ-170/175', 'ERJ-190/195'] and handle:
             self.array = np.ma.where(handle.array < -15.0,
