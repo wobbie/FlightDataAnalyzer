@@ -2126,17 +2126,17 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
                              'ERJ-170/175',
                              'ERJ-190/195',
                              'Phenom 300'] and spdbrk:
+            array = np.ma.zeros(len(spdbrk.array), dtype=np.short)
+            if armed:
+                # G550 seen with recorded Speedbrake Armed parameter
+                array[armed.array == 'Armed'] = 1
             # On the test aircraft SE-RDY the Speedbrake stored 0 at all
             # times and Speedbrake Handle was unresponsive with small numeric
             # variation. The Speedbrake (L) & (R) responded normally so we
             # simply accept over 30deg as deployed.
-            self.array = np.ma.where(spdbrk.array < 2.0,
-                                     'Stowed',
-                                     'Deployed/Cmd Up')
-            if armed:
-                # G550 seen with recorded Speedbrake Armed parameter
-                self.array[armed.array == 'Armed'] = 1
-
+            self.array = np.ma.where(spdbrk.array > 2.0,
+                                     'Deployed/Cmd Up',
+                                     array)
         elif family_name in ['ERJ-170/175', 'ERJ-190/195'] and handle:
             self.array = np.ma.where(handle.array < -15.0,
                                      'Stowed',
