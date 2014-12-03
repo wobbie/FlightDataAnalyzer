@@ -3665,10 +3665,9 @@ class FlapAngle(DerivedParameterNode):
             
         
         # sort parameters into ascending offsets
-        sources_in_order = sorted(sources, key=lambda f: f.offset)
+        sources = sorted(sources, key=lambda f: f.offset)
         
         # interleave data sources so that the x axes is in the correct order
-        
         self.hz = sources[0].hz * len(sources)
         self.offset = sources[0].offset
         base_hz = sources[0].hz
@@ -3677,7 +3676,10 @@ class FlapAngle(DerivedParameterNode):
         xx = []
         yy = []
         for flap in sources:
-            assert flap.hz == base_hz, "Can only operate with same frequencies - reshape requires same length arrays"
+            assert flap.hz == base_hz, "Can only operate with same flap " \
+                   "signals at same frequencies (reshape requires same " \
+                   "length arrays). We have: %s which should be at the base " \
+                   "frequency of %sHz" % (flap, base_hz)
             xaxis = np.arange(duration, step=1/flap.hz) + flap.offset
             xx.append(xaxis)
             yy.append(repair_mask(flap.array, repair_duration=None, extrapolate=True))

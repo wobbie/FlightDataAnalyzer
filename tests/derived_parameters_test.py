@@ -4251,8 +4251,8 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
         np.testing.assert_array_equal(fa.array, np.ma.arange(10, 20, 1))
 
     def test_with_different_offsets(self):
-        fl = P('Flap Angle (L)', array=np.ma.arange(10, 20, 1), offset=0.0, frequency=1)
-        fr = P('Flap Angle (R)', array=np.ma.arange(10, 20, 1), offset=0.0001, frequency=1)
+        fl = P('Flap Angle (L)', array=np.ma.arange(10, 20, 1), offset=0.0001, frequency=1)
+        fr = P('Flap Angle (R)', array=np.ma.arange(10, 20, 1), offset=0, frequency=1)
         # 3rd flap is ignored
         fc = P('Flap Angle (C)', array=np.ma.arange(11, 21, 2), offset=2.123, frequency=1)
         fa = FlapAngle()
