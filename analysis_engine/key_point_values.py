@@ -7623,11 +7623,29 @@ class EngOilPressMax(KeyPointValueNode):
 
     units = ut.PSI
 
-    def derive(self,
-               oil_press=P('Eng (*) Oil Press Max'),
+    def derive(self, oil_press=P('Eng (*) Oil Press Max'),
                airborne=S('Airborne')):
-
         self.create_kpvs_within_slices(oil_press.array, airborne, max_value)
+        
+
+class EngOilPressFor20SecDuringCruiseMax(KeyPointValueNode):
+    '''
+    Maximum oil pressure during the cruise for a 20 second period of flight.
+
+    High oil pressure in cruise is an indication of clogging orifices /
+    restriction in the oil supply lines to the aft sump due to oil cokeing
+    (carbon accumulation). Oil Supply Line clogging will elevate the oil
+    pressure and the result is decreased oil flow to the aft sump. The effect
+    is reduced cooling/lubrication of the bearings and hardwear.
+    '''
+
+    units = ut.PSI
+
+    def derive(self, oil_press=P('Eng (*) Oil Press Max'),
+               cruise=S('Cruise')):
+        press = second_window(oil_press.array, oil_press.hz, 20,
+                              extend_window=True)
+        self.create_kpvs_within_slices(press, cruise, max_value)
 
 
 class EngOilPressMin(KeyPointValueNode):
@@ -7636,10 +7654,8 @@ class EngOilPressMin(KeyPointValueNode):
 
     units = ut.PSI
 
-    def derive(self,
-               oil_press=P('Eng (*) Oil Press Min'),
+    def derive(self, oil_press=P('Eng (*) Oil Press Min'),
                airborne=S('Airborne')):
-
         # Only in flight to avoid zero pressure readings for stationary engines.
         self.create_kpvs_within_slices(oil_press.array, airborne, min_value)
 
