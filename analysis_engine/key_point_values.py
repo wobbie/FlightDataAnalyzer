@@ -886,7 +886,7 @@ class Airspeed1000To5000FtMax(KeyPointValueNode):
     def derive(self,
                air_spd=P('Airspeed'),
                alt_aal=P('Altitude AAL For Flight Phases'),
-               climbs=S('Combined Climb')):
+               climbs=S('Climb')):
 
         alt_band = np.ma.masked_outside(alt_aal.array, 1000, 5000)
         alt_climb_sections = valid_slices_within_array(alt_band, climbs)
@@ -907,7 +907,7 @@ class Airspeed5000To10000FtMax(KeyPointValueNode):
                air_spd=P('Airspeed'),
                alt_aal=P('Altitude AAL For Flight Phases'),
                alt_std=P('Altitude STD Smoothed'),
-               climbs=S('Combined Climb')):
+               climbs=S('Climb')):
 
         for climb in climbs:
             aal = np.ma.clump_unmasked(
@@ -931,7 +931,7 @@ class Airspeed1000To8000FtMax(KeyPointValueNode):
                air_spd=P('Airspeed'),
                alt_aal=P('Altitude AAL For Flight Phases'),
                alt_std=P('Altitude STD Smoothed'),
-               climbs=S('Combined Climb')):
+               climbs=S('Climb')):
 
         for climb in climbs:
             aal=np.ma.clump_unmasked(np.ma.masked_less(alt_aal.array[climb.slice], 1000.0))
@@ -953,7 +953,7 @@ class Airspeed8000To10000FtMax(KeyPointValueNode):
     def derive(self,
                air_spd=P('Airspeed'),
                alt_std=P('Altitude STD Smoothed'),
-               climb=S('Combined Climb')):
+               climb=S('Climb')):
 
         alt_band = np.ma.masked_outside(alt_std.array, 8000, 10000)
         alt_climb_sections = valid_slices_within_array(alt_band, climb)
@@ -1846,7 +1846,7 @@ class AirspeedMinusMinimumAirspeed35To10000FtMin(KeyPointValueNode):
                alt_aal=P('Altitude AAL For Flight Phases'),
                alt_std=P('Altitude STD Smoothed'),
                init_climbs=S('Initial Climb'),
-               climbs=S('Combined Climb')):
+               climbs=S('Climb')):
         std = np.ma.clump_unmasked(np.ma.masked_greater(alt_std.array, 10000.0))
         aal = np.ma.clump_unmasked(np.ma.masked_less(alt_aal.array, 35.0))
         alt_bands = slices_and(std, aal)
@@ -2569,7 +2569,7 @@ class AirspeedSelectedFMCMinusFlapManoeuvreSpeed1000to5000FtMin(KeyPointValueNod
     def derive(self, spd_sel=P('Airspeed Selected (FMC)'),
                flap_spd=P('Flap Manoeuvre Speed'), 
                alt_aal=P('Altitude AAL For Flight Phases'),
-               climbs=S('Combined Climb')):
+               climbs=S('Climb')):
         alt_band = np.ma.masked_outside(alt_aal.array, 1000, 5000)
         alt_climb_sections = valid_slices_within_array(alt_band, climbs)
         array = spd_sel.array - flap_spd.array

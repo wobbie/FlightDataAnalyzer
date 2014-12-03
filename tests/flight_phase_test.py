@@ -11,7 +11,6 @@ from analysis_engine.flight_phase import (
     BouncedLanding,
     ClimbCruiseDescent,
     Climbing,
-    CombinedClimb,
     Cruise,
     Descending,
     DescentLowClimb,
@@ -575,6 +574,7 @@ class TestInitialApproach(unittest.TestCase):
         self.assertEqual(app, expected)
 
 
+'''
 class TestCombinedClimb(unittest.TestCase):
     def test_can_operate(self):
         expected = [('Top Of Climb', 'Go Around', 'Liftoff', 'Touchdown')]
@@ -600,6 +600,7 @@ class TestCombinedClimb(unittest.TestCase):
         ]
 
         self.assertEqual(list(node), expected)
+'''
 
 
 class TestClimbCruiseDescent(unittest.TestCase):

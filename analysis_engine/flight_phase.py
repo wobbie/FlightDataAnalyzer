@@ -357,6 +357,7 @@ class ClimbCruiseDescent(FlightPhaseNode):
                             n += 1
 
 
+"""
 class CombinedClimb(FlightPhaseNode):
     '''
     Climb phase from liftoff or go around to top of climb
@@ -374,6 +375,7 @@ class CombinedClimb(FlightPhaseNode):
         slice_idxs = zip(start_list, end_list)
         for slice_tuple in slice_idxs:
             self.create_phase(slice(*slice_tuple))
+"""
 
 
 class Climb(FlightPhaseNode):
@@ -383,8 +385,7 @@ class Climb(FlightPhaseNode):
     '''
     def derive(self,
                toc=KTI('Top Of Climb'),
-               eot=KTI('Climb Start'), # AKA End Of Initial Climb
-               bod=KTI('Bottom Of Descent')):
+               eot=KTI('Climb Start')): # AKA End Of Initial Climb
         # First we extract the kti index values into simple lists.
         toc_list = []
         for this_toc in toc:

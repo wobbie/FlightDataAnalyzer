@@ -1496,7 +1496,7 @@ class TestAirspeed1000To5000FtMax(unittest.TestCase):
     def setUp(self):
         self.node_class = Airspeed1000To5000FtMax
         self.operational_combinations = [
-            ('Airspeed', 'Altitude AAL For Flight Phases', 'Combined Climb')]
+            ('Airspeed', 'Altitude AAL For Flight Phases', 'Climb')]
         self.function = max_value
 
     def test_can_operate(self):
@@ -1529,7 +1529,7 @@ class TestAirspeed1000To8000FtMax(unittest.TestCase, CreateKPVFromSlicesTest):
     def setUp(self):
         self.node_class = Airspeed1000To8000FtMax
         self.operational_combinations = [('Airspeed', 'Altitude AAL For Flight Phases',
-                                          'Altitude STD Smoothed', 'Combined Climb')]
+                                          'Altitude STD Smoothed', 'Climb')]
         self.function = max_value
         self.second_param_method_calls = [('slices_from_to', (1000, 8000), {})]
 
@@ -1539,7 +1539,7 @@ class TestAirspeed1000To8000FtMax(unittest.TestCase, CreateKPVFromSlicesTest):
         spd = P('Airspeed', np.ma.array(testwave))
         alt_aal = P('Altitude AAL For Flight Phases', np.ma.array(testwave) * 50)
         alt_std = P('Altitude STD Smoothed', np.ma.array(testwave) * 50 + 2000)
-        climb = buildsections('Combined Climb', [3, 28], [65, 91])
+        climb = buildsections('Climb', [3, 28], [65, 91])
         event = Airspeed1000To8000FtMax()
         event.derive(spd, alt_aal, alt_std, climb)
         self.assertEqual(event[0].index, 17)
@@ -1554,7 +1554,7 @@ class TestAirspeed5000To10000FtMax(unittest.TestCase):
         self.node_class = Airspeed5000To10000FtMax
         self.operational_combinations = [
             ('Airspeed', 'Altitude AAL For Flight Phases',
-             'Altitude STD Smoothed', 'Combined Climb')
+             'Altitude STD Smoothed', 'Climb')
         ]
         self.function = max_value
 
@@ -1571,7 +1571,7 @@ class TestAirspeed8000To10000FtMax(unittest.TestCase):
 
     def setUp(self):
         self.node_class = Airspeed8000To10000FtMax
-        self.operational_combinations = [('Airspeed', 'Altitude STD Smoothed', 'Combined Climb')]
+        self.operational_combinations = [('Airspeed', 'Altitude STD Smoothed', 'Climb')]
         self.function = max_value
 
     def test_can_operate(self):
@@ -2974,7 +2974,7 @@ class TestAirspeedSelectedFMCMinusFlapManoeuvreSpeed1000to5000FtMin(unittest.Tes
         self.node_class = AirspeedSelectedFMCMinusFlapManoeuvreSpeed1000to5000FtMin
 
     def test_can_operate(self):
-        expected = [('Airspeed Selected (FMC)', 'Flap Manoeuvre Speed', 'Altitude AAL For Flight Phases', 'Combined Climb')]
+        expected = [('Airspeed Selected (FMC)', 'Flap Manoeuvre Speed', 'Altitude AAL For Flight Phases', 'Climb')]
         self.assertEqual(self.node_class().get_operational_combinations(),
                          expected)
 
@@ -8756,7 +8756,7 @@ class TestPitch35To400FtMax(unittest.TestCase):
             name='Altitude AAL For Flight Phases',
             array=np.ma.array([100, 101, 102, 103, 700, 105, 104, 103, 102]),
         )
-        climb = buildsection('Combined Climb', 0, 4)
+        climb = buildsection('Climb', 0, 4)
         node = Pitch35To400FtMax()
         node.derive(pitch, alt_aal, climb)
         self.assertEqual(node, KPV('Pitch 35 To 400 Ft Max', items=[
