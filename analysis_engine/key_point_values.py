@@ -8523,12 +8523,12 @@ class FlapAtGearDownSelection(KeyPointValueNode):
     '''
     Flap angle at gear down selection.
     
-    Flap Including Transition is used to model Flap Lever selection for Flap setting increases.
+    Flap is used to model Flap Lever selection for Flap setting increases.
     '''
 
     units = ut.DEGREE
 
-    def derive(self, flap=M('Flap Including Transition'), gear_dn_sel=KTI('Gear Down Selection')):
+    def derive(self, flap=M('Flap'), gear_dn_sel=KTI('Gear Down Selection')):
 
         self.create_kpvs_at_ktis(flap.array, gear_dn_sel, interpolate=False)
 
@@ -8537,11 +8537,11 @@ class FlapAtGearUpSelectionDuringGoAround(KeyPointValueNode):
     '''
     Flap angle at gear up selection during go around.
 
-    Flap Including Transition is used to model Flap Lever selection for Flap setting increases.`
+    Flap is used to model Flap Lever selection for Flap setting decreases.
     '''
     units = ut.DEGREE
 
-    def derive(self, flap=M('Flap Including Transition'),
+    def derive(self, flap=M('Flap'),
                gear_up_sel=KTI('Gear Up Selection During Go Around')):
         self.create_kpvs_at_ktis(flap.array, gear_up_sel, interpolate=False)
 
