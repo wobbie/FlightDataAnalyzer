@@ -1262,10 +1262,18 @@ def positive_index(container, index):
     return index
 
 
+def power_ceil(x):
+    '''
+    :returns: The closest power of 2 greater than or equal to x.
+    '''
+    return 2**(ceil(log(x, 2)))
+
+
 def power_floor(x):
     '''
     :returns: The closest power of 2 less than or equal to x.
     '''
+    #Q: not sure why casting to an int is necessary
     return int(2**(floor(log(x, 2))))
 
 
@@ -4341,57 +4349,14 @@ def blend_two_parameters(param_one, param_two):
         return array, frequency, offset
 
 
-def blend_parameters_weighting(array, wt):
-    '''
-    A small function to relate masks to weights.
-
-    :param array: array to compute weights for
-    :type array: numpy masked array
-    :param wt: weighting factor =  ratio of sample rates
-    :type wt: float
-    '''
-    mask = np.ma.getmaskarray(array)
-    param_weight = (1.0 - mask)
-    result_weight = np_ma_masked_zeros_like(np.ma.arange(floor(len(param_weight) * wt)))
-    final_weight = np_ma_masked_zeros_like(np.ma.arange(floor(len(param_weight) * wt)))
-    result_weight[0] = param_weight[0] / wt
-    result_weight[-1] = param_weight[-1] / wt
-
-    for i in range(1, len(param_weight) - 1):
-        if param_weight[i] == 0.0:
-            result_weight[i * wt] = 0.0
-            continue
-        if param_weight[i - 1] == 0.0 or param_weight[i + 1] == 0.0:
-            result_weight[i * wt] = 0.1 # Low weight to tail of valid data. Non-zero to avoid problems of overlapping invalid sections.
-            continue
-        result_weight[i * wt] = 1.0 / wt
-
-    for i in range(1, len(result_weight) - 1):
-        if result_weight[i-1]==0.0 or result_weight[i + 1] == 0.0:
-            final_weight[i]=result_weight[i]/2.0
-        else:
-            final_weight[i]=result_weight[i]
-    final_weight[0]=result_weight[0]
-    final_weight[-1]=result_weight[-1]
-
-    return repair_mask(final_weight, repair_duration=None)
 
 
-def blend_parameters(params, offset=0.0, frequency=1.0, small_slice_duration=4, debug=False):
+def blend_parameters(params, offset=0.0, frequency=1.0, small_slice_duration=4, mode='linear'):
     '''
     This most general form of the blend options allows for multiple sources
     to be blended together even though the spacing, validity and even sample
     rate may be different. Furthermore the offset and frequency of the output
     parameter can be selected if required.
-
-    This uses cubic spline interpolation for each of the component
-    parameters, then applies weighting to reflect both the frequency of
-    samples of the parameter and it's mask. The multiple cubic splines are
-    then summed at the points where new samples are required.
-
-    We may change to use a different form of interpolation in the
-    future, allowing for control of the first derivative at the ends of
-    the data, but that's in the future...
 
     :param params: list of parameters to be merged, can be None if not available
     :type params: List of parameters
@@ -4401,18 +4366,16 @@ def blend_parameters(params, offset=0.0, frequency=1.0, small_slice_duration=4, 
     :type frequency: float (Hz)
     :param small_slice_duration = duration of short slices to ignore
     :type small_slice_duration: float (sec)
-    :param debug: flag to plot graphs for ease of testing
-    :type debug: boolean, default to False
+    :param mode: type of interpolation to use
+    :type mode: string, default 'linear' or 'cubic'. Anything else raises exception. 
     '''
-    if debug:
-        import matplotlib.pyplot as plt
-        plt.figure()
+
     assert frequency>0.0
 
     # accept as many params as required
     params = [p for p in params if p is not None]
     assert len(params), "No parameters to merge"
-
+    
     p_valid_slices = []
     p_offset = []
     p_freq = []
@@ -4454,67 +4417,138 @@ def blend_parameters(params, offset=0.0, frequency=1.0, small_slice_duration=4, 
 
     # Now we can work through each period of valid data.
     for this_valid in any_valid:
-
         result_slice = slice_multiply(this_valid, frequency/min_ip_freq)
 
-        new_t = np.linspace(result_slice.start / frequency,
-                            result_slice.stop / frequency,
-                            num=(result_slice.stop - result_slice.start),
-                            endpoint=False) + offset
+        if mode == 'linear':
+            result[result_slice] = blend_parameters_linear(this_valid, frequency, 
+                                                           min_ip_freq, params, 
+                                                           p_freq)
 
-        # Make space for the computed curves
-        curves=[]
-        weights=[]
-        resampled_masks = []
+        elif mode == 'cubic':
+            result[result_slice] = blend_parameters_cubic(this_valid, frequency, 
+                                                          min_ip_freq, offset, 
+                                                          params, p_freq, p_offset,result_slice)
+            # The endpoints of a cubic spline are generally unreliable, so trim
+            # them back.
+            result[result_slice][0] = np.ma.masked
+            result[result_slice][-1] = np.ma.masked
 
-        # Compute the individual splines
-        for seq, param in enumerate(params):
-            # The slice and timebase for this parameter...
-            my_slice = slice_multiply(this_valid, p_freq[seq] / min_ip_freq)
-            resampled_masks.append(
-                resample(np.ma.getmaskarray(param.array)[my_slice],
-                         param.frequency, frequency))
-            timebase = np.linspace(my_slice.start/p_freq[seq],
-                                   my_slice.stop/p_freq[seq],
-                                   num=my_slice.stop-my_slice.start,
-                                   endpoint=False) + p_offset[seq]
-            my_time = np.ma.array(
-                data=timebase, mask=np.ma.getmaskarray(param.array[my_slice]))
-            if len(my_time.compressed()) < 4:
-                continue
-            my_curve = scipy_interpolate.splrep(
-                my_time.compressed(), param.array[my_slice].compressed(), s=0)
-            # my_curve is the spline knot array, now compute the values for
-            # the output timebase.
-            curves.append(
-                scipy_interpolate.splev(new_t, my_curve, der=0, ext=0))
-
-            # Compute the weights
-            weights.append(blend_parameters_weighting(
-                param.array[my_slice], frequency/param.frequency))
-
-            if debug:
-                plt.plot(my_time,param.array[my_slice], 'o')
-                plt.plot(new_t,curves[seq], '-.')
-                plt.plot(new_t,weights[seq])
-
-        if curves==[]:
-            continue
-        a = np.vstack(tuple(curves))
-        result[result_slice] = np.average(a, axis=0, weights=weights)
-        # Q: Is this the right place? Should it be applied to this_valid slice?
-        result.mask[result_slice] = merge_masks(resampled_masks,
-                                                min_unmasked=2)
-        # The endpoints of a cubic spline are generally unreliable, so trim
-        # them back.
-        result[result_slice][0] = np.ma.masked
-        result[result_slice][-1] = np.ma.masked
-
-        if debug:
-            plt.plot(new_t,result[result_slice], '-')
-            plt.show()
+        else:
+            raise ValueError('Unknown mode request in blend_parameters')
 
     return result
+
+def blend_parameters_linear(this_valid, frequency, min_ip_freq, params, p_freq):
+    '''
+    This provides linear interpolation to support the generic routine
+    blend_parameters.
+    '''
+
+     # Make space for the computed curves
+    weights=[]
+    aligned = []
+
+    # Compute the individual splines
+    for seq, param in enumerate(params):
+        # The slice and timebase for this parameter...
+        my_slice = slice_multiply(this_valid, p_freq[seq] / min_ip_freq)
+        aligned.append(align_args(param.array[my_slice], param.frequency, param.offset, frequency))
+
+        # Remember the sample rate as this dictates the weighting
+        weights.append(param.frequency)
+
+    return np.ma.average(aligned, axis=0, weights=weights)
+
+
+def blend_parameters_cubic(this_valid, frequency, min_ip_freq, offset, params, p_freq, p_offset, result_slice):
+    '''
+    This provides cubic spline interpolation to support the generic routine
+    blend_parameters. It uses cubic spline interpolation for each of the
+    component parameters, then applies weighting to reflect both the
+    frequency of samples of the parameter and it's mask. The multiple cubic
+    splines are then summed at the points where new samples are required.
+
+    To be used with care as this both gives a smoother transition at sample
+    boundaries, but suffers from overswing which can cause problems.
+    '''
+
+    new_t = np.linspace(result_slice.start / frequency,
+                        result_slice.stop / frequency,
+                        num=(result_slice.stop - result_slice.start),
+                        endpoint=False) + offset
+
+    # Make space for the computed curves
+    curves=[]
+    weights=[]
+    resampled_masks = []
+
+    # Compute the individual splines
+    for seq, param in enumerate(params):
+        # The slice and timebase for this parameter...
+        my_slice = slice_multiply(this_valid, p_freq[seq] / min_ip_freq)
+        resampled_masks.append(
+            resample(np.ma.getmaskarray(param.array)[my_slice],
+                     param.frequency, frequency))
+        timebase = np.linspace(my_slice.start/p_freq[seq],
+                               my_slice.stop/p_freq[seq],
+                               num=my_slice.stop-my_slice.start,
+                               endpoint=False) + p_offset[seq]
+        my_time = np.ma.array(
+            data=timebase, mask=np.ma.getmaskarray(param.array[my_slice]))
+        if len(my_time.compressed()) < 4:
+            continue
+        my_curve = scipy_interpolate.splrep(
+            my_time.compressed(), param.array[my_slice].compressed(), s=0)
+        # my_curve is the spline knot array, now compute the values for
+        # the output timebase.
+        curves.append(
+            scipy_interpolate.splev(new_t, my_curve, der=0, ext=0))
+
+        # Compute the weights
+        weights.append(blend_parameters_weighting(
+            param.array[my_slice], frequency/param.frequency))
+
+    a = np.vstack(tuple(curves))
+
+    return np.ma.average(a, axis=0, weights=weights)
+
+
+def blend_parameters_weighting(array, wt):
+    '''
+    A small function to relate masks to weights. Used by
+    blend_parameters_cubic above.
+
+    :param array: array to compute weights for
+    :type array: numpy masked array
+    :param wt: weighting factor =  ratio of sample rates
+    :type wt: float
+    '''
+    mask = np.ma.getmaskarray(array)
+    param_weight = (1.0 - mask)
+    result_weight = np_ma_masked_zeros_like(np.ma.arange(floor(len(param_weight) * wt)))
+    final_weight = np_ma_masked_zeros_like(np.ma.arange(floor(len(param_weight) * wt)))
+    result_weight[0] = param_weight[0] / wt
+    result_weight[-1] = param_weight[-1] / wt
+
+    for i in range(1, len(param_weight) - 1):
+        if param_weight[i] == 0.0:
+            result_weight[i * wt] = 0.0
+            continue
+        if param_weight[i - 1] == 0.0 or param_weight[i + 1] == 0.0:
+            result_weight[i * wt] = 0.1 # Low weight to tail of valid data. Non-zero to avoid problems of overlapping invalid sections.
+            continue
+        result_weight[i * wt] = 1.0 / wt
+
+    for i in range(1, len(result_weight) - 1):
+        if result_weight[i-1]==0.0 or result_weight[i + 1] == 0.0:
+            final_weight[i]=result_weight[i]/2.0
+        else:
+            final_weight[i]=result_weight[i]
+    final_weight[0]=result_weight[0]
+    final_weight[-1]=result_weight[-1]
+
+    return repair_mask(final_weight, repair_duration=None)
+
 
 
 def most_points_cost(coefs, x, y):
@@ -7273,8 +7307,10 @@ def _dp2speed(dp, P, Rho):
     # Mask speeds over 661.48 kt
     return np.ma.masked_greater(speed_kt, 661.48)
 
+
 def dp2cas(dp):
     return np.ma.masked_greater(_dp2speed(dp, P0, Rhoref), 661.48)
+
 
 def dp2tas(dp, alt_ft, sat):
     P = alt2press(alt_ft)

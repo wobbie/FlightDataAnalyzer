@@ -5,6 +5,7 @@ import geomag
 
 from copy import deepcopy
 from math import radians
+from scipy import interp
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.signal import medfilt
 from scipy.stats import mode
@@ -954,7 +955,7 @@ class AltitudeRadio(DerivedParameterNode):
                                       offset=self.offset,
                                       frequency=self.frequency,
                                       small_slice_duration=10,
-                                      debug=False)
+                                      mode='cubic')
 
         # For aircraft where the antennae are placed well away from the main
         # gear, and especially where it is aft of the main gear, compensation
@@ -3616,11 +3617,18 @@ class Groundspeed(DerivedParameterNode):
 
 class FlapAngle(DerivedParameterNode):
     '''
-    Gather the recorded flap parameters and convert into a single analogue.
+    Gather the recorded flap angle parameters and convert into a single
+    analogue.
+    
+    Interleaves each of the available flap angle signals into one array, uses
+    the sampling offsets (parameters do not need to be evenly sampled in the
+    frame) to integrate the resulting array at the combined frequency.
     '''
 
     align = False
     units = ut.DEGREE
+    
+    apply_median_filter = True
 
     @classmethod
     def can_operate(cls, available):
@@ -3637,24 +3645,74 @@ class FlapAngle(DerivedParameterNode):
                flap_C=P('Flap Angle (C)'),
                flap_D=P('Flap Angle (MCP)'),
                flap_A_inboard=P('Flap Angle (L) Inboard'),
-               flap_B_inboard=P('Flap Angle (R) Inboard'),
-               frame=A('Frame')):
-
-        frame_name = frame.value if frame else ''
+               flap_B_inboard=P('Flap Angle (R) Inboard')):
         flap_A = flap_A or flap_A_inboard
         flap_B = flap_B or flap_B_inboard
+        
+        sources = [f for f in (flap_A, flap_B, flap_C, flap_D) if f]
+        
+        # if only one parameter, align and use that parameter - easy
+        if len(sources) == 1:
+            self.array = sources[0].array
+            self.offset = sources[0].offset
+            self.frequency = sources[0].frequency
+            return
+        
+        if len(sources) == 3:
+            # we can only work with 2 or 4 sources to make the math easier on 
+            # the hz and interpolation
+            sources = sources[:2]
+            
+        
+        # sort parameters into ascending offsets
+        sources = sorted(sources, key=lambda f: f.offset)
+        
+        # interleave data sources so that the x axes is in the correct order
+        self.hz = sources[0].hz * len(sources)
+        self.offset = sources[0].offset
+        base_hz = sources[0].hz
+        duration = len(sources[0].array) / float(sources[0].hz)  # duration of flight in seconds
+        
+        xx = []
+        yy = []
+        for flap in sources:
+            assert flap.hz == base_hz, "Can only operate with same flap " \
+                   "signals at same frequencies (reshape requires same " \
+                   "length arrays). We have: %s which should be at the base " \
+                   "frequency of %sHz" % (flap, base_hz)
+            xaxis = np.arange(duration, step=1/flap.hz) + flap.offset
+            xx.append(xaxis)
+            yy.append(repair_mask(flap.array, repair_duration=None, extrapolate=True))
+            ##scatter(xaxis, flap.array, edgecolor='none', c=col) # col was in zip with sources in for loop
 
-        if frame_name in ['747-200-GE', '747-200-PW', '747-200-AP-BIB']:
-            # Only the right inboard flap is instrumented.
-            self.array = flap_B.array
+        # if all have the same frequency, offsets are a multiple of the
+        # values and they complete they are all equally spaced, we don't need
+        # to do any interpolation
+        ##TODO: Couldn't work out how to do this in a pretty way!
+        
+        
+        # else we have an incomplete set of parameters or are unequally
+        # spaced, we need to resample the data with linear interpolation
+        # between all of the signals to obtain equally spaced data.
+        
+        # create new x axis same length in time but with twice the frequency (step)
+        new_xaxis = np.arange(duration, step=1/self.hz) + self.offset # check *2
+        
+        # rearrange data into order using ravel/reshape
+        new_yaxis = interp(new_xaxis, 
+                           np.vstack(xx).ravel(order='F'),  # numpy array works
+                           np.ma.vstack(yy).data.ravel(order='F'),
+                           ##np.ma.vstack(yy).reshape(len(flap.array)*2, order='F'),  # masked array doesn't support order argument yet!
+                           )
+        # apply median filter to remove spikes where interpolating between
+        # two similar but different values and convert to masked array
+        if self.apply_median_filter:
+            self.array = np.ma.array(medfilt(new_yaxis, 5))
         else:
-            # By default, blend all the available parameters.
-            sources = [flap_A, flap_B, flap_C, flap_D]
-            self.frequency = max([s.frequency for s in sources if s]) * 2
-            self.offset = 0.0
-            self.array = blend_parameters(sources, offset=self.offset, 
-                                          frequency=self.frequency)
-
+            self.array = np.ma.array(new_yaxis)
+        ##scatter(new_xaxis, self.array, edgecolor='none', c='r')
+        
+  
 
 '''
 class SlatAngle(DerivedParameterNode):
@@ -6033,8 +6091,8 @@ class ApproachRange(DerivedParameterNode):
             reg_slice = shift_slice(app_slices[0], this_app_slice.start)
             
             gs_est = approach.gs_est
-            # Check we have valid glideslope data for the regression slice.
-            if gs_est and np.ma.count(glide.array[reg_slice]):
+            # Check we have enough valid glideslope data for the regression slice.
+            if gs_est and np.ma.count(glide.array[reg_slice])>10:
                 # Compute best fit glidepath. The term (1-0.13 x glideslope
                 # deviation) caters for the aircraft deviating from the
                 # planned flightpath. 1 dot low is about 7% of a 3 degree
@@ -6081,25 +6139,27 @@ class ApproachRange(DerivedParameterNode):
                     # If no ILS antennae, put the touchdown point 1000ft from start of runway
                     extend = runway_length(runway) - 1000 / METRES_TO_FEET
 
-            ## This plot code allows the actual flightpath and regression line
-            ## to be viewed in case of concern about the performance of the
-            ## algorithm.
-            ## x-reference set to 0=g/s position or aiming point.
-            ## blue = Altitude AAL
-            ## red = corrected for glideslope deviations
-            ## black = fitted slope.
-            
-            #from analysis_engine.plot_flight import plot_parameter
-            #import matplotlib.pyplot as plt
-            #x1=app_range[gs_est.start:this_app_slice.stop] - offset
-            #y1=alt_aal.array[gs_est.start:this_app_slice.stop]
-            #x2=app_range[gs_est] - offset
-            ## 
-            #y2=alt_aal.array[gs_est] * (1-0.13*glide.array[gs_est])
-            #xnew = np.linspace(np.min(x2),np.max(x2),num=2)
-            #ynew = (xnew)/slope
-            #plt.plot(x1,y1,'b-',x2,y2,'r-',xnew,ynew,'k-')
-            #plt.show()
+
+            # This plot code allows the actual flightpath and regression line
+            # to be viewed in case of concern about the performance of the
+            # algorithm.
+            # x-reference set to 0=g/s position or aiming point.
+            # blue = Altitude AAL
+            # red = corrected for glideslope deviations
+            # black = fitted slope.
+            '''
+            from analysis_engine.plot_flight import plot_parameter
+            import matplotlib.pyplot as plt
+            x1=app_range[gs_est.start:this_app_slice.stop] - offset
+            y1=alt_aal.array[gs_est.start:this_app_slice.stop]
+            x2=app_range[gs_est] - offset
+            # 
+            y2=alt_aal.array[gs_est] * (1-0.13*glide.array[gs_est])
+            xnew = np.linspace(np.min(x2),np.max(x2),num=2)
+            ynew = (xnew)/slope
+            plt.plot(x1,y1,'b-',x2,y2,'r-',xnew,ynew,'k-')
+            plt.show()
+            '''
 
 
             # Shift the values in this approach so that the range = 0 at

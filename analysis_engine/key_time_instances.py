@@ -1442,7 +1442,7 @@ class Touchdown(KeyTimeInstanceNode):
 
             # ...to find the best estimate...
             # If we have lots of measures, bias towards the earlier ones.
-            index_tdn = np.ma.median(index_list[:4]) 
+            index_tdn = np.median(index_list[:4]) 
             self.create_kti(index_tdn)
 
             '''
