@@ -241,6 +241,7 @@ from analysis_engine.key_point_values import (
     EngNpDuringMaximumContinuousPowerMax,
     EngNpDuringTakeoff5MinRatingMax,
     EngNpDuringTaxiMax,
+    EngOilPressFor20SecDuringCruiseMax,
     EngOilPressMax,
     EngOilPressMin,
     EngOilQtyDuringTaxiInMax,
@@ -6410,6 +6411,23 @@ class TestEngOilPressMax(unittest.TestCase, NodeTest):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestEngOilPressFor20SecDuringCruiseMax(unittest.TestCase):
+
+    def test_can_operate(self):
+        node = EngOilPressFor20SecDuringCruiseMax
+        self.assertEqual(node.get_operational_combinations(),
+                         [('Eng (*) Oil Press Max', 'Cruise')])
+
+    def test_derive(self):
+        press = P('Eng (*) Oil Press Max', frequency=0.5,
+                  array=np.ma.array([22]*20 + [52]*13 + [17]*20 + [100]*100))
+        cruise = buildsection('Cruise', 22, 42)
+        under_pressure = EngOilPressFor20SecDuringCruiseMax()
+        under_pressure.derive(press, cruise)
+        self.assertEqual(len(under_pressure), 1)
+        self.assertEqual(under_pressure[0].value, 52)
 
 
 class TestEngOilPressMin(unittest.TestCase, CreateKPVsWithinSlicesTest):
