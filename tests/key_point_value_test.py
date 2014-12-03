@@ -7810,13 +7810,13 @@ class TestFlapAtGearDownSelection(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = FlapAtGearDownSelection
         self.operational_combinations = [
-            ('Flap Including Transition', 'Gear Down Selection'),
+            ('Flap', 'Gear Down Selection'),
         ]
 
     def test_derive(self):
         array = np.ma.repeat((0, 1, 5, 15, 20, 25, 30), 5)
         mapping = {int(f): str(f) for f in np.ma.unique(array)}
-        flap = M(name='Flap Including Transition', array=array, values_mapping=mapping)
+        flap = M(name='Flap', array=array, values_mapping=mapping)
         flap.array[29] = np.ma.masked
         gear = KTI(name='Gear Down Selection', items=[
             KeyTimeInstance(index=19.25, name='Gear Down Selection'),
@@ -7848,12 +7848,12 @@ class TestFlapAtGearUpSelectionDuringGoAround(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = FlapAtGearUpSelectionDuringGoAround
-        self.operational_combinations = [('Flap Including Transition', 'Gear Up Selection During Go Around')]
+        self.operational_combinations = [('Flap', 'Gear Up Selection During Go Around')]
 
     def test_derive(self):
         array = np.ma.repeat((0, 1, 5, 15, 20, 25, 30), 5)
         mapping = {int(f): str(f) for f in np.ma.unique(array)}
-        flap = M(name='Flap Including Transition', array=array, values_mapping=mapping)
+        flap = M(name='Flap', array=array, values_mapping=mapping)
         flap.array[29] = np.ma.masked
         gear = KTI(name='Gear Up Selection During Go Around', items=[
             KeyTimeInstance(index=19.25, name='Gear Up Selection During Go Around'),
