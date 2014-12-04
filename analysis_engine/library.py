@@ -640,7 +640,7 @@ def calculate_surface_angle(mode, param, detents):
     freq_multiplier = 4 if param.frequency < 2 else 2
     freq = param.frequency * freq_multiplier
     # No need to re-align if high frequency.
-    offset = param.offset * (float(param.frequency) / freq)
+    offset = param.offset / freq_multiplier
     param.array = align_args(
         param.array,
         param.frequency,

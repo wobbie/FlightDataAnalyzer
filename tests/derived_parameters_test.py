@@ -4246,9 +4246,9 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
         fa = FlapAngle()
         fa.apply_median_filter = False
         fa.get_derived([fl, fr, None, None, None, None])
-        self.assertEqual(fa.offset, 0.123)
+        self.assertEqual(fa.offset, 0.0615)
         self.assertEqual(fa.frequency, 1)
-        np.testing.assert_array_equal(fa.array, np.ma.arange(10, 20, 1))
+        np.testing.assert_array_almost_equal(fa.array, np.ma.arange(10, 20, 1), decimal=0)
 
     def test_with_different_offsets(self):
         fl = P('Flap Angle (L)', array=np.ma.arange(10, 20, 1), offset=0.0001, frequency=1)

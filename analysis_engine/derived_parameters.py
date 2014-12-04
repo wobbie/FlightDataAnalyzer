@@ -3669,7 +3669,8 @@ class FlapAngle(DerivedParameterNode):
         
         # interleave data sources so that the x axes is in the correct order
         self.hz = sources[0].hz * len(sources)
-        self.offset = sources[0].offset
+        # XXX: Offset has to be proportional to the frequency.
+        self.offset = sources[0].offset / len(sources)
         base_hz = sources[0].hz
         duration = len(sources[0].array) / float(sources[0].hz)  # duration of flight in seconds
         
