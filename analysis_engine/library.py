@@ -229,6 +229,7 @@ airspeed may be used.
     repair_mask(lon, repair_duration=None, extrapolate=True)
     return lat, lon
 
+
 def is_power2(number):
     """
     States if a number is a power of two. Forces floats to Int.
@@ -238,6 +239,11 @@ def is_power2(number):
         return False
     num = int(number)
     return num > 0 and ((num & (num - 1)) == 0)
+
+def is_power2_fraction(number):
+    if number < 1:
+        number = 1 / number
+    return is_power2(number)
 
 def is_5_10_20(number):
     """
@@ -4341,8 +4347,6 @@ def blend_two_parameters(param_one, param_two):
         return array, frequency, offset
 
 
-
-
 def blend_parameters(params, offset=0.0, frequency=1.0, small_slice_duration=4, mode='linear'):
     '''
     This most general form of the blend options allows for multiple sources
@@ -4362,11 +4366,17 @@ def blend_parameters(params, offset=0.0, frequency=1.0, small_slice_duration=4, 
     :type mode: string, default 'linear' or 'cubic'. Anything else raises exception. 
     '''
 
-    assert frequency>0.0
+    assert frequency > 0.0
+    assert mode in {'linear', 'cubic'}, 'blend_parameters mode must be either linear or cubic.'
 
     # accept as many params as required
     params = [p for p in params if p is not None]
     assert len(params), "No parameters to merge"
+    
+    if mode == 'linear':
+        return blend_parameters_linear(params, frequency, offset=offset)
+    
+    # mode is cubic
     
     p_valid_slices = []
     p_offset = []
@@ -4411,44 +4421,50 @@ def blend_parameters(params, offset=0.0, frequency=1.0, small_slice_duration=4, 
     for this_valid in any_valid:
         result_slice = slice_multiply(this_valid, frequency/min_ip_freq)
 
-        if mode == 'linear':
-            result[result_slice] = blend_parameters_linear(this_valid, frequency, 
-                                                           min_ip_freq, params, 
-                                                           p_freq)
-
-        elif mode == 'cubic':
-            result[result_slice] = blend_parameters_cubic(this_valid, frequency, 
-                                                          min_ip_freq, offset, 
-                                                          params, p_freq, p_offset,result_slice)
-            # The endpoints of a cubic spline are generally unreliable, so trim
-            # them back.
-            result[result_slice][0] = np.ma.masked
-            result[result_slice][-1] = np.ma.masked
-
-        else:
-            raise ValueError('Unknown mode request in blend_parameters')
+        result[result_slice] = blend_parameters_cubic(this_valid, frequency, 
+                                                      min_ip_freq, offset, 
+                                                      params, p_freq, p_offset,result_slice)
+        # The endpoints of a cubic spline are generally unreliable, so trim
+        # them back.
+        result[result_slice][0] = np.ma.masked
+        result[result_slice][-1] = np.ma.masked
 
     return result
 
-def blend_parameters_linear(this_valid, frequency, min_ip_freq, params, p_freq):
+
+def resample_mask(mask, orig_hz, resample_hz):
+    '''
+    Resample a boolean array by simply repeating or stepping.
+    '''
+    if np.isscalar(mask) or resample_hz == orig_hz:
+        return mask
+    elif not is_power2_fraction(orig_hz) or not is_power2_fraction(orig_hz):
+        raise ValueError("Both orig_hz '%f' and resample_hz '%f' must be powers of two.", orig_hz, resample_hz)
+    
+    if resample_hz > orig_hz:
+        resampled = mask.repeat(resample_hz / orig_hz)
+    elif resample_hz < orig_hz:
+        resampled = mask[::orig_hz / resample_hz]
+    
+    return resampled
+
+
+def blend_parameters_linear(params, frequency, offset=0):
     '''
     This provides linear interpolation to support the generic routine
     blend_parameters.
     '''
 
      # Make space for the computed curves
-    weights=[]
+    weights = []
     aligned = []
 
     # Compute the individual splines
-    for seq, param in enumerate(params):
-        # The slice and timebase for this parameter...
-        my_slice = slice_multiply(this_valid, p_freq[seq] / min_ip_freq)
-        aligned.append(align_args(param.array[my_slice], param.frequency, param.offset, frequency))
-
+    for param in params:
+        aligned.append(align_args(param.array, param.frequency, param.offset, frequency, offset))
         # Remember the sample rate as this dictates the weighting
         weights.append(param.frequency)
-
+    
     return np.ma.average(aligned, axis=0, weights=weights)
 
 
