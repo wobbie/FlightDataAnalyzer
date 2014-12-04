@@ -1122,7 +1122,9 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
     slat_map_2 = {0: '0', 50: '50', 100: '100'}
     
     @staticmethod
-    def _calculate(func, array):
+    @patch('analysis_engine.library.align_args')
+    def _calculate(func, array, align_args):
+        align_args.return_value = array
         parameter = P(array=array, frequency=2)
         args = [parameter, mock.Mock(), mock.Mock(), mock.Mock()]
         return (
@@ -1166,7 +1168,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         at.get_flap_map.return_value = self.flap_map_1
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_3.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
-        early = [0] * 10 + [15] * 23
+        early = [0] * 11 + [15] * 22
         late = [0] * 24 + [15] * 9
         self.assertEqual(flap_exc.tolist(), late)
         self.assertEqual(flap_inc.tolist(), early)
@@ -1199,7 +1201,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_6.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
         early = [30] * 11 + [0] * 38
-        late = [30] * 41 + [0] * 8
+        late = [30] * 40 + [0] * 9
         self.assertEqual(flap_exc.tolist(), early)
         self.assertEqual(flap_inc.tolist(), late)
         self.assertEqual(flap_lev.tolist(), early)
@@ -1340,7 +1342,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         at.get_flap_map.return_value = self.flap_map_2
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_19.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array)
-        early = [20] * 34 + [25] * 31
+        early = [20] * 35 + [25] * 30
         late = [20] * 41 + [25] * 24
         self.assertEqual(flap_exc.tolist(), late)
         self.assertEqual(flap_inc.tolist(), early)

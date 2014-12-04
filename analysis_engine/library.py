@@ -637,20 +637,17 @@ def calculate_surface_angle(mode, param, detents):
     :returns: array and frequency
     :rtype: np.ma.array, int or float
     '''
+    freq_multiplier = 4 if param.frequency < 2 else 2
+    freq = param.frequency * freq_multiplier
     # No need to re-align if high frequency.
-    if param.frequency < 2:
-        freq = 2
-        offset = param.offset * (float(param.frequency) / freq)
-        param.array = align_args(
-            param.array,
-            param.frequency,
-            param.offset,
-            freq,
-            offset,
-        )
-    else:
-        freq = param.frequency
-        offset = param.offset
+    offset = param.offset * (float(param.frequency) / freq)
+    param.array = align_args(
+        param.array,
+        param.frequency,
+        param.offset,
+        freq,
+        offset,
+    )
     
     angle = param.array
     mask = angle.mask.copy()
@@ -658,17 +655,12 @@ def calculate_surface_angle(mode, param, detents):
     angle = repair_mask(angle, repair_duration=None)
     thresh_main_metrics = 5
     thresh_angle_range = 0.4
-    filter_median_window = 3
-    filter_normal_sigma = 0.5
-    
-    freq_power = 0.5
+    filter_median_window = 5
     
     result = np_ma_zeros_like(angle, mask=angle.mask)
-  
+    
     # ---- Pre-processing ----------------------------------------------
-    gfilter_radius = filter_normal_sigma / param.frequency ** freq_power
-    angle = medfilt(angle, filter_median_window)
-    angle = np.ma.masked_array(filters.gaussian_filter1d(angle, gfilter_radius))
+    angle = np.ma.masked_array(medfilt(angle, filter_median_window))
     
     metrics = np.full(len(angle), np.Inf)
     for l in np.array([2, 3, 4, 5, 6, 8, 12, 16]):

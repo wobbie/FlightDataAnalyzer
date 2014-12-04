@@ -241,7 +241,7 @@ class TestApproachAndLanding(unittest.TestCase):
         level_flights.create_sections([
             slice(1629.0, 2299.0, None),
             slice(3722.0, 4708.0, None),
-            slice(4726.0, 4807.0, None),
+            slice(4726.0, 4805.0, None),
             slice(5009.0, 5071.0, None),
             slice(5168.0, 6883.0, None),
             slice(8433.0, 9058.0, None)])
