@@ -241,6 +241,13 @@ def is_power2(number):
     return num > 0 and ((num & (num - 1)) == 0)
 
 def is_power2_fraction(number):
+    '''
+    TODO: Tests
+    
+    :type number: int or float
+    :returns: if the number is either a power of 2 or a fraction, e.g. 4, 2, 1, 0.5, 0.25
+    :rtype: bool
+    '''
     if number < 1:
         number = 1 / number
     return is_power2(number)
@@ -4355,15 +4362,15 @@ def blend_parameters(params, offset=0.0, frequency=1.0, small_slice_duration=4, 
     parameter can be selected if required.
 
     :param params: list of parameters to be merged, can be None if not available
-    :type params: List of parameters
-    :param offset: the offset of the resulting parameter
-    :type offset: float (sec)
+    :type params: [Parameter]
+    :param offset: the offset of the resulting parameter in seconds
+    :type offset: float
     :param frequency: the frequency of the resulting parameter
-    :type frequency: float (Hz)
-    :param small_slice_duration = duration of short slices to ignore
-    :type small_slice_duration: float (sec)
-    :param mode: type of interpolation to use
-    :type mode: string, default 'linear' or 'cubic'. Anything else raises exception. 
+    :type frequency: float
+    :param small_slice_duration: duration of short slices to ignore in seconds (only applicable in mode cubic)
+    :type small_slice_duration: float
+    :param mode: type of interpolation to use - default 'linear' or 'cubic'. Anything else raises exception. 
+    :type mode: str
     '''
 
     assert frequency > 0.0
@@ -4435,6 +4442,16 @@ def blend_parameters(params, offset=0.0, frequency=1.0, small_slice_duration=4, 
 def resample_mask(mask, orig_hz, resample_hz):
     '''
     Resample a boolean array by simply repeating or stepping.
+    TODO: Tests
+    
+    :param mask: mask array or scalar
+    :type: np.array(dtype=bool)
+    :param orig_hz: original frequency of the mask array
+    :type orig_hz: int or float
+    :param resample_hz: target frequency
+    :type resample_hz: int or float
+    :returns: resampled mask array
+    :rtype: np.array(dtype=bool)
     '''
     if np.isscalar(mask) or resample_hz == orig_hz:
         return mask
@@ -4453,6 +4470,15 @@ def blend_parameters_linear(params, frequency, offset=0):
     '''
     This provides linear interpolation to support the generic routine
     blend_parameters.
+    
+    :param params: list of parameters to blend linearly
+    :type params: [Parameter]
+    :param frequency: target frequency in Hz
+    :type frequency: int or float
+    :param offset: target offset in seconds
+    :type offset: int or float
+    :returns: linearly blended parameter array
+    :rtype: np.ma.array
     '''
 
      # Make space for the computed curves
@@ -4486,8 +4512,8 @@ def blend_parameters_cubic(this_valid, frequency, min_ip_freq, offset, params, p
                         endpoint=False) + offset
 
     # Make space for the computed curves
-    curves=[]
-    weights=[]
+    curves = []
+    weights = []
     resampled_masks = []
 
     # Compute the individual splines
