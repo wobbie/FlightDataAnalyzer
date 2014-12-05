@@ -9,6 +9,38 @@ You can view the differences in tagged versions as follows:
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
 
+v0.18.1
+-------
+
+ - Fixed
+   - Touchdown will no longer trigger braking if the aircraft is accelerating forwards
+   - Windows temporary file paths
+ - Improved
+   - Approaches with too little valid glideslope data revert to "visual" approach estimation
+   - blend_parameters library function expanded to provide both linear and cubic interpolation
+   - calculate_surface_angle library function simplified to not apply a guassian filter and to always upscale the parameter frequency
+   - Changes to Altitude Radio Offset Removed from masking go-arounds
+   - Changed Altitude AAL to use Alt Radio Offset Removed
+   - Changed ascending Altitude band KPVs to use Combined Climb
+   - Changed descending Altitude KPVs between 3000 and 1000 Ft to use slices_from_to as Approach excluded level flight
+   - Flap Angle interleaves each of the signals and interpolates the resulting higher frequency resulting parameter - much more accurate than interpolating values before interleaving
+   - G550 Speedbrake Selected Armed state from Speedbrake Armed parameter
+   - Gear Up uses in transit for G-IV
+   - second_window applies correct 2 / frequency check to support more use cases
+   - slices_from_to function in library accepts threshold keyword argument to avoid triggering due to noise
+   - Switched to Flap instead of Flap Including Transition for Landing Gear Out of Sequence Key Point Values as Including Transition does not model the lever during flap setting decreases
+   - Touchdown refinements to cater for more difficult aircraft
+   - Touchdown KTI now uses third detected point and includes extra braking features
+   - Touchdown ignores positive acceleration and uses median to select actual touchdown point
+   - Touchdown uses standard median function rather than the masked array version as we should not have any masked values
+   - Truck and Trailer amended to accept floating point arguments
+ - Added
+   - A300 Altitude Radio overflow correction
+   - A318 Speedbrake
+   - Calculate new fallback datetime based on the "flat" timebase
+   - Eng Oil Press For 20 Sec During Cruise Max Key Point Value to measure high oil pressure in cruise is an indication of clogging orifices in the oil supply lines to the aft sump
+   - power_ceil function added to library to calculate the closest power of 2 greater than or equal to x
+
 
 v0.17.2
 -------
