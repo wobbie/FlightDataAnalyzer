@@ -149,15 +149,15 @@ class TestFindSlicesOverlap(unittest.TestCase):
 
 
 class TestFindLowAlts(unittest.TestCase):
-    def test_find_low_alts(self):
+    def test_find_low_alts_1(self):
         # Example flight with 3 approaches.
         array = load(os.path.join(test_data_path, 'alt_aal_goaround.nod')).array
-        level_flights = [slice(1629.0, 2299.0, None),
-                         slice(3722.0, 4708.0, None),
-                         slice(4726.0, 4807.0, None),
-                         slice(5009.0, 5071.0, None),
-                         slice(5168.0, 6883.0, None),
-                         slice(8433.0, 9058.0, None)]
+        level_flights = [slice(1629.0, 2299.0),
+                         slice(3722.0, 4708.0),
+                         slice(4726.0, 4807.0),
+                         slice(5009.0, 5071.0),
+                         slice(5168.0, 6883.0),
+                         slice(8433.0, 9058.0)]
         
         low_alts = find_low_alts(array, 500, 3000, 2000,
                                  level_flights=level_flights)
@@ -258,6 +258,60 @@ class TestFindLowAlts(unittest.TestCase):
         self.assertAlmostEqual(low_alts[2].stop, 7171, places=0)
         self.assertAlmostEqual(low_alts[3].start, 10362, places=0)
         self.assertAlmostEqual(low_alts[3].stop, 10569, places=0)
+        
+    def test_find_low_alts_2(self):
+        # Example flight with noisy alt aal
+        array = load_compressed(os.path.join(test_data_path, 'find_low_alts_alt_aal_1.npz'))
+        
+        level_flights = [
+            slice(1856.0, 2392.0),
+            slice(4062.0, 4382.0),
+            slice(4432.0, 4584.0),
+            slice(4606.0, 4856.0),
+            slice(5210.0, 5562.0),
+            slice(5576.0, 5700.0),
+            slice(5840.0, 5994.0),
+            slice(6152.0, 6598.0),
+            slice(7268.0, 7768.0),
+            slice(8908.0, 9124.0),
+            slice(9752.0, 9898.0),
+            slice(9944.0, 10210.0),
+            slice(10814.0, 11098.0),
+            slice(11150.0, 11332.0),
+            slice(11352.0, 11676.0),
+            slice(12122.0, 12346.0),
+            slice(12814.0, 12998.0),
+            slice(13028.0, 13194.0),
+            slice(13432.0, 13560.0),
+            slice(13716.0, 13888.0),
+            slice(13904.0, 14080.0),
+            slice(14122.0, 14348.0),
+            slice(14408.0, 14570.0),
+            slice(14596.0, 14786.0),
+            slice(15092.0, 15356.0),
+            slice(15364.0, 15544.0),
+            slice(15936.0, 16066.0),
+            slice(16078.0, 16250.0),
+            slice(16258.0, 16512.0),
+            slice(16632.0, 16782.0),
+            slice(16854.0, 16982.0),
+            slice(17924.0, 18112.0),
+            slice(18376.0, 18514.0),
+            slice(18654.0, 20582.0),
+            slice(21184.0, 21932.0),
+        ]
+        
+        low_alts = find_low_alts(array, 3000, stop_alt=0,
+                                 level_flights=level_flights)
+        self.assertEqual(len(low_alts), 4)
+        self.assertAlmostEqual(low_alts[0].start, 3037, places=0)
+        self.assertAlmostEqual(low_alts[0].stop, 4062, places=0)
+        self.assertAlmostEqual(low_alts[1].start, 6051, places=0)
+        self.assertAlmostEqual(low_alts[1].stop, 6152, places=0)
+        self.assertAlmostEqual(low_alts[2].start, 8176, places=0)
+        self.assertAlmostEqual(low_alts[2].stop, 8908, places=0)
+        self.assertAlmostEqual(low_alts[3].start, 21932, places=0)
+        self.assertAlmostEqual(low_alts[3].stop, 22316, places=0)
 
 
 class TestFindNearestSlice(unittest.TestCase):

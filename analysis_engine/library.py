@@ -1766,9 +1766,14 @@ def find_low_alts(array, threshold_alt, start_alt=None, stop_alt=None,
         if level_flights:
             # Exclude level flight.
             excluding_level_flight = slices_and_not([low_alt_slice], level_flights)
+            if not excluding_level_flight:
+                # can be caused by very noisy signals
+                continue
             low_alt_slice = find_nearest_slice(
-                max(dip_min_index-1, low_alt_slice.start), excluding_level_flight)
-        
+                max(dip_min_index-1, low_alt_slice.start),
+                excluding_level_flight,
+            )
+    
         low_alt_slices.append(low_alt_slice)
     
     return sorted(low_alt_slices)
@@ -3392,7 +3397,7 @@ def find_slices_containing_index(index, slices):
     return [s for s in slices if is_index_within_slice(index, s)]
 
 
-def  find_nearest_slice(index, slices):
+def find_nearest_slice(index, slices):
     '''
     :type index: int or float
     :type slices: a list of slices to search through
