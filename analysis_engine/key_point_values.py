@@ -7628,9 +7628,9 @@ class EngOilPressMax(KeyPointValueNode):
         self.create_kpvs_within_slices(oil_press.array, airborne, max_value)
         
 
-class EngOilPressFor20SecDuringCruiseMax(KeyPointValueNode):
+class EngOilPressFor60SecDuringCruiseMax(KeyPointValueNode):
     '''
-    Maximum oil pressure during the cruise for a 20 second period of flight.
+    Maximum oil pressure during the cruise for a 60 second period of flight.
 
     High oil pressure in cruise is an indication of clogging orifices /
     restriction in the oil supply lines to the aft sump due to oil cokeing
@@ -7643,7 +7643,7 @@ class EngOilPressFor20SecDuringCruiseMax(KeyPointValueNode):
 
     def derive(self, oil_press=P('Eng (*) Oil Press Max'),
                cruise=S('Cruise')):
-        press = second_window(oil_press.array, oil_press.hz, 20,
+        press = second_window(oil_press.array, oil_press.hz, 60,
                               extend_window=True)
         self.create_kpvs_within_slices(press, cruise, max_value)
 
