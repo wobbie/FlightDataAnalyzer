@@ -9,6 +9,14 @@ You can view the differences in tagged versions as follows:
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
 
+v0.18.2
+-------
+
+ - Fixed
+   - Flap Angle offset should not be changed unless really necessary
+   - EngOilPressFor20SecDuringCruiseMax is now for 60 seconds
+
+
 v0.18.1
 -------
 
