@@ -301,7 +301,7 @@ class TestFindLowAlts(unittest.TestCase):
             slice(21184.0, 21932.0),
         ]
         
-        low_alts = find_low_alts(array, 3000, stop_alt=0,
+        low_alts = find_low_alts(array, 3000, stop_alt=0, 
                                  level_flights=level_flights)
         self.assertEqual(len(low_alts), 4)
         self.assertAlmostEqual(low_alts[0].start, 3037, places=0)
