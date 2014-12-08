@@ -4264,6 +4264,17 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
         assert_array_within_tolerance(fa.array[:-1], np.ma.arange(10, 19.5, 0.5), 0.001, 99.9)
         self.assertEqual(fa.array[-1], 19)
     
+    def test_late_offset(self):
+        '''
+        Minimum Flap Angle offset is in the second half of the subframe at 1Hz.
+        Upscaling the frequency to 2Hz without also changing the offset will result in an invalid parameter.
+        '''
+        fl = P('Flap Angle (L)', array=np.ma.arange(10, 20, 1), offset=0.693359375, frequency=1)
+        fr = P('Flap Angle (R)', array=np.ma.arange(10, 20, 1), offset=0.697265625, frequency=1)
+        fa = FlapAngle()
+        fa.get_derived([fl, fr, None, None, None, None])
+        self.assertEqual(fa.frequency, 2)
+        self.assertEqual(fa.offset, 0.3466796875)
 
 class TestHeadingTrueContinuous(unittest.TestCase):
     @unittest.skip('Test Not Implemented')
