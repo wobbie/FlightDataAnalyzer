@@ -4246,7 +4246,7 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
         fa = FlapAngle()
         fa.apply_median_filter = False
         fa.get_derived([fl, fr, None, None, None, None])
-        self.assertEqual(fa.offset, 0.0615)
+        self.assertEqual(fa.offset, 0.123)
         self.assertEqual(fa.frequency, 1)
         np.testing.assert_array_almost_equal(fa.array, np.ma.arange(10, 20, 1), decimal=0)
 
@@ -4274,7 +4274,8 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
         fa = FlapAngle()
         fa.get_derived([fl, fr, None, None, None, None])
         self.assertEqual(fa.frequency, 2)
-        self.assertEqual(fa.offset, 0.3466796875)
+        self.assertEqual(fa.offset, 0.49999)
+
 
 class TestHeadingTrueContinuous(unittest.TestCase):
     @unittest.skip('Test Not Implemented')
