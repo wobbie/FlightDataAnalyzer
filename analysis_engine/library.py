@@ -229,6 +229,7 @@ airspeed may be used.
     repair_mask(lon, repair_duration=None, extrapolate=True)
     return lat, lon
 
+
 def is_power2(number):
     """
     States if a number is a power of two. Forces floats to Int.
@@ -238,6 +239,18 @@ def is_power2(number):
         return False
     num = int(number)
     return num > 0 and ((num & (num - 1)) == 0)
+
+def is_power2_fraction(number):
+    '''
+    TODO: Tests
+    
+    :type number: int or float
+    :returns: if the number is either a power of 2 or a fraction, e.g. 4, 2, 1, 0.5, 0.25
+    :rtype: bool
+    '''
+    if number < 1:
+        number = 1 / number
+    return is_power2(number)
 
 def is_5_10_20(number):
     """
@@ -637,20 +650,17 @@ def calculate_surface_angle(mode, param, detents):
     :returns: array and frequency
     :rtype: np.ma.array, int or float
     '''
+    freq_multiplier = 4 if param.frequency < 2 else 2
+    freq = param.frequency * freq_multiplier
     # No need to re-align if high frequency.
-    if param.frequency < 2:
-        freq = 2
-        offset = param.offset * (float(param.frequency) / freq)
-        param.array = align_args(
-            param.array,
-            param.frequency,
-            param.offset,
-            freq,
-            offset,
-        )
-    else:
-        freq = param.frequency
-        offset = param.offset
+    offset = param.offset / freq_multiplier
+    param.array = align_args(
+        param.array,
+        param.frequency,
+        param.offset,
+        freq,
+        offset,
+    )
     
     angle = param.array
     mask = angle.mask.copy()
@@ -658,17 +668,12 @@ def calculate_surface_angle(mode, param, detents):
     angle = repair_mask(angle, repair_duration=None)
     thresh_main_metrics = 5
     thresh_angle_range = 0.4
-    filter_median_window = 3
-    filter_normal_sigma = 0.5
-    
-    freq_power = 0.5
+    filter_median_window = 5
     
     result = np_ma_zeros_like(angle, mask=angle.mask)
-  
+    
     # ---- Pre-processing ----------------------------------------------
-    gfilter_radius = filter_normal_sigma / param.frequency ** freq_power
-    angle = medfilt(angle, filter_median_window)
-    angle = np.ma.masked_array(filters.gaussian_filter1d(angle, gfilter_radius))
+    angle = np.ma.masked_array(medfilt(angle, filter_median_window))
     
     metrics = np.full(len(angle), np.Inf)
     for l in np.array([2, 3, 4, 5, 6, 8, 12, 16]):
@@ -1262,10 +1267,18 @@ def positive_index(container, index):
     return index
 
 
+def power_ceil(x):
+    '''
+    :returns: The closest power of 2 greater than or equal to x.
+    '''
+    return 2**(ceil(log(x, 2)))
+
+
 def power_floor(x):
     '''
     :returns: The closest power of 2 less than or equal to x.
     '''
+    #Q: not sure why casting to an int is necessary
     return int(2**(floor(log(x, 2))))
 
 
@@ -1753,9 +1766,14 @@ def find_low_alts(array, threshold_alt, start_alt=None, stop_alt=None,
         if level_flights:
             # Exclude level flight.
             excluding_level_flight = slices_and_not([low_alt_slice], level_flights)
+            if not excluding_level_flight:
+                # can be caused by very noisy signals
+                continue
             low_alt_slice = find_nearest_slice(
-                max(dip_min_index-1, low_alt_slice.start), excluding_level_flight)
-        
+                max(dip_min_index-1, low_alt_slice.start),
+                excluding_level_flight,
+            )
+    
         low_alt_slices.append(low_alt_slice)
     
     return sorted(low_alt_slices)
@@ -3379,7 +3397,7 @@ def find_slices_containing_index(index, slices):
     return [s for s in slices if is_index_within_slice(index, s)]
 
 
-def  find_nearest_slice(index, slices):
+def find_nearest_slice(index, slices):
     '''
     :type index: int or float
     :type slices: a list of slices to search through
@@ -4341,8 +4359,6 @@ def blend_two_parameters(param_one, param_two):
         return array, frequency, offset
 
 
-
-
 def blend_parameters(params, offset=0.0, frequency=1.0, small_slice_duration=4, mode='linear'):
     '''
     This most general form of the blend options allows for multiple sources
@@ -4351,22 +4367,28 @@ def blend_parameters(params, offset=0.0, frequency=1.0, small_slice_duration=4, 
     parameter can be selected if required.
 
     :param params: list of parameters to be merged, can be None if not available
-    :type params: List of parameters
-    :param offset: the offset of the resulting parameter
-    :type offset: float (sec)
+    :type params: [Parameter]
+    :param offset: the offset of the resulting parameter in seconds
+    :type offset: float
     :param frequency: the frequency of the resulting parameter
-    :type frequency: float (Hz)
-    :param small_slice_duration = duration of short slices to ignore
-    :type small_slice_duration: float (sec)
-    :param mode: type of interpolation to use
-    :type mode: string, default 'linear' or 'cubic'. Anything else raises exception. 
+    :type frequency: float
+    :param small_slice_duration: duration of short slices to ignore in seconds (only applicable in mode cubic)
+    :type small_slice_duration: float
+    :param mode: type of interpolation to use - default 'linear' or 'cubic'. Anything else raises exception. 
+    :type mode: str
     '''
 
-    assert frequency>0.0
+    assert frequency > 0.0
+    assert mode in {'linear', 'cubic'}, 'blend_parameters mode must be either linear or cubic.'
 
     # accept as many params as required
     params = [p for p in params if p is not None]
     assert len(params), "No parameters to merge"
+    
+    if mode == 'linear':
+        return blend_parameters_linear(params, frequency, offset=offset)
+    
+    # mode is cubic
     
     p_valid_slices = []
     p_offset = []
@@ -4411,44 +4433,69 @@ def blend_parameters(params, offset=0.0, frequency=1.0, small_slice_duration=4, 
     for this_valid in any_valid:
         result_slice = slice_multiply(this_valid, frequency/min_ip_freq)
 
-        if mode == 'linear':
-            result[result_slice] = blend_parameters_linear(this_valid, frequency, 
-                                                           min_ip_freq, params, 
-                                                           p_freq)
-
-        elif mode == 'cubic':
-            result[result_slice] = blend_parameters_cubic(this_valid, frequency, 
-                                                          min_ip_freq, offset, 
-                                                          params, p_freq, p_offset,result_slice)
-            # The endpoints of a cubic spline are generally unreliable, so trim
-            # them back.
-            result[result_slice][0] = np.ma.masked
-            result[result_slice][-1] = np.ma.masked
-
-        else:
-            raise ValueError('Unknown mode request in blend_parameters')
+        result[result_slice] = blend_parameters_cubic(this_valid, frequency, 
+                                                      min_ip_freq, offset, 
+                                                      params, p_freq, p_offset,result_slice)
+        # The endpoints of a cubic spline are generally unreliable, so trim
+        # them back.
+        result[result_slice][0] = np.ma.masked
+        result[result_slice][-1] = np.ma.masked
 
     return result
 
-def blend_parameters_linear(this_valid, frequency, min_ip_freq, params, p_freq):
+
+def resample_mask(mask, orig_hz, resample_hz):
+    '''
+    Resample a boolean array by simply repeating or stepping.
+    TODO: Tests
+    
+    :param mask: mask array or scalar
+    :type: np.array(dtype=bool)
+    :param orig_hz: original frequency of the mask array
+    :type orig_hz: int or float
+    :param resample_hz: target frequency
+    :type resample_hz: int or float
+    :returns: resampled mask array
+    :rtype: np.array(dtype=bool)
+    '''
+    if np.isscalar(mask) or resample_hz == orig_hz:
+        return mask
+    elif not is_power2_fraction(orig_hz) or not is_power2_fraction(orig_hz):
+        raise ValueError("Both orig_hz '%f' and resample_hz '%f' must be powers of two.", orig_hz, resample_hz)
+    
+    if resample_hz > orig_hz:
+        resampled = mask.repeat(resample_hz / orig_hz)
+    elif resample_hz < orig_hz:
+        resampled = mask[::orig_hz / resample_hz]
+    
+    return resampled
+
+
+def blend_parameters_linear(params, frequency, offset=0):
     '''
     This provides linear interpolation to support the generic routine
     blend_parameters.
+    
+    :param params: list of parameters to blend linearly
+    :type params: [Parameter]
+    :param frequency: target frequency in Hz
+    :type frequency: int or float
+    :param offset: target offset in seconds
+    :type offset: int or float
+    :returns: linearly blended parameter array
+    :rtype: np.ma.array
     '''
 
      # Make space for the computed curves
-    weights=[]
+    weights = []
     aligned = []
 
     # Compute the individual splines
-    for seq, param in enumerate(params):
-        # The slice and timebase for this parameter...
-        my_slice = slice_multiply(this_valid, p_freq[seq] / min_ip_freq)
-        aligned.append(align_args(param.array[my_slice], param.frequency, param.offset, frequency))
-
+    for param in params:
+        aligned.append(align_args(param.array, param.frequency, param.offset, frequency, offset))
         # Remember the sample rate as this dictates the weighting
         weights.append(param.frequency)
-
+    
     return np.ma.average(aligned, axis=0, weights=weights)
 
 
@@ -4470,8 +4517,8 @@ def blend_parameters_cubic(this_valid, frequency, min_ip_freq, offset, params, p
                         endpoint=False) + offset
 
     # Make space for the computed curves
-    curves=[]
-    weights=[]
+    curves = []
+    weights = []
     resampled_masks = []
 
     # Compute the individual splines
@@ -7299,8 +7346,10 @@ def _dp2speed(dp, P, Rho):
     # Mask speeds over 661.48 kt
     return np.ma.masked_greater(speed_kt, 661.48)
 
+
 def dp2cas(dp):
     return np.ma.masked_greater(_dp2speed(dp, P0, Rhoref), 661.48)
+
 
 def dp2tas(dp, alt_ft, sat):
     P = alt2press(alt_ft)

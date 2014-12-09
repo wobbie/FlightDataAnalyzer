@@ -241,6 +241,7 @@ from analysis_engine.key_point_values import (
     EngNpDuringMaximumContinuousPowerMax,
     EngNpDuringTakeoff5MinRatingMax,
     EngNpDuringTaxiMax,
+    EngOilPressFor60SecDuringCruiseMax,
     EngOilPressMax,
     EngOilPressMin,
     EngOilQtyDuringTaxiInMax,
@@ -1496,7 +1497,7 @@ class TestAirspeed1000To5000FtMax(unittest.TestCase):
     def setUp(self):
         self.node_class = Airspeed1000To5000FtMax
         self.operational_combinations = [
-            ('Airspeed', 'Altitude AAL For Flight Phases', 'Combined Climb')]
+            ('Airspeed', 'Altitude AAL For Flight Phases', 'Climb')]
         self.function = max_value
 
     def test_can_operate(self):
@@ -1529,7 +1530,7 @@ class TestAirspeed1000To8000FtMax(unittest.TestCase, CreateKPVFromSlicesTest):
     def setUp(self):
         self.node_class = Airspeed1000To8000FtMax
         self.operational_combinations = [('Airspeed', 'Altitude AAL For Flight Phases',
-                                          'Altitude STD Smoothed', 'Combined Climb')]
+                                          'Altitude STD Smoothed', 'Climb')]
         self.function = max_value
         self.second_param_method_calls = [('slices_from_to', (1000, 8000), {})]
 
@@ -1539,7 +1540,7 @@ class TestAirspeed1000To8000FtMax(unittest.TestCase, CreateKPVFromSlicesTest):
         spd = P('Airspeed', np.ma.array(testwave))
         alt_aal = P('Altitude AAL For Flight Phases', np.ma.array(testwave) * 50)
         alt_std = P('Altitude STD Smoothed', np.ma.array(testwave) * 50 + 2000)
-        climb = buildsections('Combined Climb', [3, 28], [65, 91])
+        climb = buildsections('Climb', [3, 28], [65, 91])
         event = Airspeed1000To8000FtMax()
         event.derive(spd, alt_aal, alt_std, climb)
         self.assertEqual(event[0].index, 17)
@@ -1554,7 +1555,7 @@ class TestAirspeed5000To10000FtMax(unittest.TestCase):
         self.node_class = Airspeed5000To10000FtMax
         self.operational_combinations = [
             ('Airspeed', 'Altitude AAL For Flight Phases',
-             'Altitude STD Smoothed', 'Combined Climb')
+             'Altitude STD Smoothed', 'Climb')
         ]
         self.function = max_value
 
@@ -1571,7 +1572,7 @@ class TestAirspeed8000To10000FtMax(unittest.TestCase):
 
     def setUp(self):
         self.node_class = Airspeed8000To10000FtMax
-        self.operational_combinations = [('Airspeed', 'Altitude STD Smoothed', 'Combined Climb')]
+        self.operational_combinations = [('Airspeed', 'Altitude STD Smoothed', 'Climb')]
         self.function = max_value
 
     def test_can_operate(self):
@@ -2974,7 +2975,7 @@ class TestAirspeedSelectedFMCMinusFlapManoeuvreSpeed1000to5000FtMin(unittest.Tes
         self.node_class = AirspeedSelectedFMCMinusFlapManoeuvreSpeed1000to5000FtMin
 
     def test_can_operate(self):
-        expected = [('Airspeed Selected (FMC)', 'Flap Manoeuvre Speed', 'Altitude AAL For Flight Phases', 'Combined Climb')]
+        expected = [('Airspeed Selected (FMC)', 'Flap Manoeuvre Speed', 'Altitude AAL For Flight Phases', 'Climb')]
         self.assertEqual(self.node_class().get_operational_combinations(),
                          expected)
 
@@ -6412,6 +6413,23 @@ class TestEngOilPressMax(unittest.TestCase, NodeTest):
         self.assertTrue(False, msg='Test not implemented.')
 
 
+class TestEngOilPressFor60SecDuringCruiseMax(unittest.TestCase):
+
+    def test_can_operate(self):
+        node = EngOilPressFor60SecDuringCruiseMax
+        self.assertEqual(node.get_operational_combinations(),
+                         [('Eng (*) Oil Press Max', 'Cruise')])
+
+    def test_derive(self):
+        press = P('Eng (*) Oil Press Max', frequency=0.5,
+                  array=np.ma.array([22]*60 + [52]*39 + [17]*60 + [100]*300))
+        cruise = buildsection('Cruise', 66, 126)
+        under_pressure = EngOilPressFor60SecDuringCruiseMax()
+        under_pressure.derive(press, cruise)
+        self.assertEqual(len(under_pressure), 1)
+        self.assertEqual(under_pressure[0].value, 52)
+
+
 class TestEngOilPressMin(unittest.TestCase, CreateKPVsWithinSlicesTest):
 
     def setUp(self):
@@ -7810,13 +7828,13 @@ class TestFlapAtGearDownSelection(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = FlapAtGearDownSelection
         self.operational_combinations = [
-            ('Flap Including Transition', 'Gear Down Selection'),
+            ('Flap', 'Gear Down Selection'),
         ]
 
     def test_derive(self):
         array = np.ma.repeat((0, 1, 5, 15, 20, 25, 30), 5)
         mapping = {int(f): str(f) for f in np.ma.unique(array)}
-        flap = M(name='Flap Including Transition', array=array, values_mapping=mapping)
+        flap = M(name='Flap', array=array, values_mapping=mapping)
         flap.array[29] = np.ma.masked
         gear = KTI(name='Gear Down Selection', items=[
             KeyTimeInstance(index=19.25, name='Gear Down Selection'),
@@ -7848,12 +7866,12 @@ class TestFlapAtGearUpSelectionDuringGoAround(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = FlapAtGearUpSelectionDuringGoAround
-        self.operational_combinations = [('Flap Including Transition', 'Gear Up Selection During Go Around')]
+        self.operational_combinations = [('Flap', 'Gear Up Selection During Go Around')]
 
     def test_derive(self):
         array = np.ma.repeat((0, 1, 5, 15, 20, 25, 30), 5)
         mapping = {int(f): str(f) for f in np.ma.unique(array)}
-        flap = M(name='Flap Including Transition', array=array, values_mapping=mapping)
+        flap = M(name='Flap', array=array, values_mapping=mapping)
         flap.array[29] = np.ma.masked
         gear = KTI(name='Gear Up Selection During Go Around', items=[
             KeyTimeInstance(index=19.25, name='Gear Up Selection During Go Around'),
@@ -8756,7 +8774,7 @@ class TestPitch35To400FtMax(unittest.TestCase):
             name='Altitude AAL For Flight Phases',
             array=np.ma.array([100, 101, 102, 103, 700, 105, 104, 103, 102]),
         )
-        climb = buildsection('Combined Climb', 0, 4)
+        climb = buildsection('Climb', 0, 4)
         node = Pitch35To400FtMax()
         node.derive(pitch, alt_aal, climb)
         self.assertEqual(node, KPV('Pitch 35 To 400 Ft Max', items=[

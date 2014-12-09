@@ -886,7 +886,7 @@ class Airspeed1000To5000FtMax(KeyPointValueNode):
     def derive(self,
                air_spd=P('Airspeed'),
                alt_aal=P('Altitude AAL For Flight Phases'),
-               climbs=S('Combined Climb')):
+               climbs=S('Climb')):
 
         alt_band = np.ma.masked_outside(alt_aal.array, 1000, 5000)
         alt_climb_sections = valid_slices_within_array(alt_band, climbs)
@@ -907,7 +907,7 @@ class Airspeed5000To10000FtMax(KeyPointValueNode):
                air_spd=P('Airspeed'),
                alt_aal=P('Altitude AAL For Flight Phases'),
                alt_std=P('Altitude STD Smoothed'),
-               climbs=S('Combined Climb')):
+               climbs=S('Climb')):
 
         for climb in climbs:
             aal = np.ma.clump_unmasked(
@@ -931,7 +931,7 @@ class Airspeed1000To8000FtMax(KeyPointValueNode):
                air_spd=P('Airspeed'),
                alt_aal=P('Altitude AAL For Flight Phases'),
                alt_std=P('Altitude STD Smoothed'),
-               climbs=S('Combined Climb')):
+               climbs=S('Climb')):
 
         for climb in climbs:
             aal=np.ma.clump_unmasked(np.ma.masked_less(alt_aal.array[climb.slice], 1000.0))
@@ -953,7 +953,7 @@ class Airspeed8000To10000FtMax(KeyPointValueNode):
     def derive(self,
                air_spd=P('Airspeed'),
                alt_std=P('Altitude STD Smoothed'),
-               climb=S('Combined Climb')):
+               climb=S('Climb')):
 
         alt_band = np.ma.masked_outside(alt_std.array, 8000, 10000)
         alt_climb_sections = valid_slices_within_array(alt_band, climb)
@@ -1846,7 +1846,7 @@ class AirspeedMinusMinimumAirspeed35To10000FtMin(KeyPointValueNode):
                alt_aal=P('Altitude AAL For Flight Phases'),
                alt_std=P('Altitude STD Smoothed'),
                init_climbs=S('Initial Climb'),
-               climbs=S('Combined Climb')):
+               climbs=S('Climb')):
         std = np.ma.clump_unmasked(np.ma.masked_greater(alt_std.array, 10000.0))
         aal = np.ma.clump_unmasked(np.ma.masked_less(alt_aal.array, 35.0))
         alt_bands = slices_and(std, aal)
@@ -2569,7 +2569,7 @@ class AirspeedSelectedFMCMinusFlapManoeuvreSpeed1000to5000FtMin(KeyPointValueNod
     def derive(self, spd_sel=P('Airspeed Selected (FMC)'),
                flap_spd=P('Flap Manoeuvre Speed'), 
                alt_aal=P('Altitude AAL For Flight Phases'),
-               climbs=S('Combined Climb')):
+               climbs=S('Climb')):
         alt_band = np.ma.masked_outside(alt_aal.array, 1000, 5000)
         alt_climb_sections = valid_slices_within_array(alt_band, climbs)
         array = spd_sel.array - flap_spd.array
@@ -7623,11 +7623,29 @@ class EngOilPressMax(KeyPointValueNode):
 
     units = ut.PSI
 
-    def derive(self,
-               oil_press=P('Eng (*) Oil Press Max'),
+    def derive(self, oil_press=P('Eng (*) Oil Press Max'),
                airborne=S('Airborne')):
-
         self.create_kpvs_within_slices(oil_press.array, airborne, max_value)
+        
+
+class EngOilPressFor60SecDuringCruiseMax(KeyPointValueNode):
+    '''
+    Maximum oil pressure during the cruise for a 60 second period of flight.
+
+    High oil pressure in cruise is an indication of clogging orifices /
+    restriction in the oil supply lines to the aft sump due to oil cokeing
+    (carbon accumulation). Oil Supply Line clogging will elevate the oil
+    pressure and the result is decreased oil flow to the aft sump. The effect
+    is reduced cooling/lubrication of the bearings and hardwear.
+    '''
+
+    units = ut.PSI
+
+    def derive(self, oil_press=P('Eng (*) Oil Press Max'),
+               cruise=S('Cruise')):
+        press = second_window(oil_press.array, oil_press.hz, 60,
+                              extend_window=True)
+        self.create_kpvs_within_slices(press, cruise, max_value)
 
 
 class EngOilPressMin(KeyPointValueNode):
@@ -7636,10 +7654,8 @@ class EngOilPressMin(KeyPointValueNode):
 
     units = ut.PSI
 
-    def derive(self,
-               oil_press=P('Eng (*) Oil Press Min'),
+    def derive(self, oil_press=P('Eng (*) Oil Press Min'),
                airborne=S('Airborne')):
-
         # Only in flight to avoid zero pressure readings for stationary engines.
         self.create_kpvs_within_slices(oil_press.array, airborne, min_value)
 
@@ -8523,12 +8539,12 @@ class FlapAtGearDownSelection(KeyPointValueNode):
     '''
     Flap angle at gear down selection.
     
-    Flap Including Transition is used to model Flap Lever selection for Flap setting increases.
+    Flap is used to model Flap Lever selection for Flap setting increases.
     '''
 
     units = ut.DEGREE
 
-    def derive(self, flap=M('Flap Including Transition'), gear_dn_sel=KTI('Gear Down Selection')):
+    def derive(self, flap=M('Flap'), gear_dn_sel=KTI('Gear Down Selection')):
 
         self.create_kpvs_at_ktis(flap.array, gear_dn_sel, interpolate=False)
 
@@ -8537,11 +8553,11 @@ class FlapAtGearUpSelectionDuringGoAround(KeyPointValueNode):
     '''
     Flap angle at gear up selection during go around.
 
-    Flap Including Transition is used to model Flap Lever selection for Flap setting increases.`
+    Flap is used to model Flap Lever selection for Flap setting decreases.
     '''
     units = ut.DEGREE
 
-    def derive(self, flap=M('Flap Including Transition'),
+    def derive(self, flap=M('Flap'),
                gear_up_sel=KTI('Gear Up Selection During Go Around')):
         self.create_kpvs_at_ktis(flap.array, gear_up_sel, interpolate=False)
 

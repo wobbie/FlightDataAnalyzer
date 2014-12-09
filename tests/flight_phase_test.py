@@ -2,6 +2,7 @@ import numpy as np
 import os
 import unittest
 
+from flightdatautilities.array_operations import load_compressed
 from flightdatautilities.filesystem_tools import copy_file
 
 from analysis_engine.flight_phase import (
@@ -11,7 +12,6 @@ from analysis_engine.flight_phase import (
     BouncedLanding,
     ClimbCruiseDescent,
     Climbing,
-    CombinedClimb,
     Cruise,
     Descending,
     DescentLowClimb,
@@ -235,14 +235,13 @@ class TestApproachAndLanding(unittest.TestCase):
         self.assertAlmostEqual(app_ldg[5].slice.start, 2680, places=0)
         self.assertAlmostEqual(app_ldg[5].slice.stop, 2806, places=0)
         
-        
     def test_go_around_2(self):
         alt_aal = load(os.path.join(test_data_path, 'alt_aal_goaround.nod'))
         level_flights = SectionNode('Level Flight')
         level_flights.create_sections([
             slice(1629.0, 2299.0, None),
             slice(3722.0, 4708.0, None),
-            slice(4726.0, 4807.0, None),
+            slice(4726.0, 4805.0, None),
             slice(5009.0, 5071.0, None),
             slice(5168.0, 6883.0, None),
             slice(8433.0, 9058.0, None)])
@@ -272,6 +271,85 @@ class TestApproachAndLanding(unittest.TestCase):
         self.assertAlmostEqual(app_ldg[1].slice.stop, 12631, places=0)
         self.assertAlmostEqual(app_ldg[2].slice.start, 26926, places=0)
         self.assertAlmostEqual(app_ldg[2].slice.stop, 27359, places=0)
+    
+    def test_146_noise_1(self):
+        # Example flight with noisy alt aal
+        array = load_compressed(os.path.join(test_data_path, 'find_low_alts_alt_aal_1.npz'))
+        alt_aal = P('Altitude AAL For Flight Phases', frequency=2, array=array)
+        
+        level_flights = buildsections('Level Flight',
+            (1856.0, 2392.0),
+            (4062.0, 4382.0),
+            (4432.0, 4584.0),
+            (4606.0, 4856.0),
+            (5210.0, 5562.0),
+            (5576.0, 5700.0),
+            (5840.0, 5994.0),
+            (6152.0, 6598.0),
+            (7268.0, 7768.0),
+            (8908.0, 9124.0),
+            (9752.0, 9898.0),
+            (9944.0, 10210.0),
+            (10814.0, 11098.0),
+            (11150.0, 11332.0),
+            (11352.0, 11676.0),
+            (12122.0, 12346.0),
+            (12814.0, 12998.0),
+            (13028.0, 13194.0),
+            (13432.0, 13560.0),
+            (13716.0, 13888.0),
+            (13904.0, 14080.0),
+            (14122.0, 14348.0),
+            (14408.0, 14570.0),
+            (14596.0, 14786.0),
+            (15092.0, 15356.0),
+            (15364.0, 15544.0),
+            (15936.0, 16066.0),
+            (16078.0, 16250.0),
+            (16258.0, 16512.0),
+            (16632.0, 16782.0),
+            (16854.0, 16982.0),
+            (17924.0, 18112.0),
+            (18376.0, 18514.0),
+            (18654.0, 20582.0),
+            (21184.0, 21932.0),
+        )
+        level_flights.hz = 2
+        
+        lands = buildsection('Landing', 22296, 22400)
+        lands.hz = 2
+        
+        frame = Attribute('Frame', '146-301')
+        
+        app_lands = ApproachAndLanding(frequency=2)
+        
+        app_lands.get_derived([alt_aal, level_flights, lands, frame])
+        app_lands = app_lands.get_slices()
+        self.assertEqual(len(app_lands), 3)
+        self.assertAlmostEqual(app_lands[0].start, 3037, places=0)
+        self.assertAlmostEqual(app_lands[0].stop, 4294, places=0)
+        self.assertAlmostEqual(app_lands[1].start, 8176, places=0)
+        self.assertAlmostEqual(app_lands[1].stop, 8920, places=0)
+        self.assertAlmostEqual(app_lands[2].start, 21932, places=0)
+        self.assertAlmostEqual(app_lands[2].stop, 22400, places=0)
+    
+    def test_146_noise_2(self):
+        # Example flight with noisy alt aal
+        alt_aal = load(os.path.join(test_data_path, 'ApproachAndLanding_alt_aal_1.nod'))
+        level_flights = load(os.path.join(test_data_path, 'ApproachAndLanding_level_flights_1.nod'))
+        landings = load(os.path.join(test_data_path, 'ApproachAndLanding_landings_1.nod'))
+        
+        frame = Attribute('Frame', '146-301')
+        
+        app_lands = ApproachAndLanding(frequency=2)
+        
+        app_lands.get_derived([alt_aal, level_flights, landings, frame])
+        app_lands = app_lands.get_slices()
+        self.assertEqual(len(app_lands), 2)
+        self.assertAlmostEqual(app_lands[0].start, 8824, places=0)
+        self.assertAlmostEqual(app_lands[0].stop, 9980, places=0)
+        self.assertAlmostEqual(app_lands[1].start, 29173, places=0)
+        self.assertAlmostEqual(app_lands[1].stop, 29726, places=0)
 
 
 class TestApproach(unittest.TestCase):
@@ -575,6 +653,7 @@ class TestInitialApproach(unittest.TestCase):
         self.assertEqual(app, expected)
 
 
+'''
 class TestCombinedClimb(unittest.TestCase):
     def test_can_operate(self):
         expected = [('Top Of Climb', 'Go Around', 'Liftoff', 'Touchdown')]
@@ -600,6 +679,7 @@ class TestCombinedClimb(unittest.TestCase):
         ]
 
         self.assertEqual(list(node), expected)
+'''
 
 
 class TestClimbCruiseDescent(unittest.TestCase):
