@@ -207,6 +207,7 @@ class TestApproachAndLanding(unittest.TestCase):
         self.assertTrue(('Altitude AAL For Flight Phases',) in opts)
         self.assertTrue(('Altitude AAL For Flight Phases', 'Landing') in opts)
         self.assertTrue(('Altitude AAL For Flight Phases', 'Level Flight') in opts)
+        self.assertTrue(('Altitude AAL For Flight Phases', 'Level Flight', 'Frame') in opts)
         
     def test_approach_and_landing_basic(self):
         alt = np.ma.array(range(5000, 500, -500) + [0] * 10)
