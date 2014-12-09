@@ -1083,31 +1083,13 @@ class Mobile(FlightPhaseNode):
     def can_operate(cls, available):
         return 'Heading Rate' in available
 
-    def derive(self, rot=P('Heading Rate'), gspd=P('Groundspeed'),
-               toffs=S('Takeoff'), lands=S('Landing')):
+    def derive(self, rot=P('Heading Rate')):
         move = np.ma.flatnotmasked_edges(np.ma.masked_less\
                                          (np.ma.abs(rot.array),
                                           HEADING_RATE_FOR_MOBILE))
 
         if move is None:
             return # for the case where nothing happened
-
-        if gspd:
-            # We need to be outside the range where groundspeeds are detected.
-            move_gspd = np.ma.flatnotmasked_edges(np.ma.masked_less\
-                                                  (np.ma.abs(gspd.array),
-                                                   GROUNDSPEED_FOR_MOBILE))
-            # moving is a numpy array so needs to be converted to a list of one
-            # slice
-            move[0] = min(move[0], move_gspd[0])
-            move[1] = max(move[1], move_gspd[1])
-        else:
-            # Without a recorded groundspeed, fall back to the start of the
-            # takeoff run and end of the landing run as limits.
-            if toffs:
-                move[0] = min(move[0], toffs[0].slice.start)
-            if lands:
-                move[1] = max(move[1], lands[-1].slice.stop)
 
         self.create_phase(slice(move[0], move[1]))
 
