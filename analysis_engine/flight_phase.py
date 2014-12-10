@@ -233,29 +233,13 @@ class ApproachAndLanding(FlightPhaseNode):
 
     def derive(self, alt_aal=P('Altitude AAL For Flight Phases'),
                level_flights=S('Level Flight'),
-               landings=S('Landing'),
-               frame=A('Frame')):
-        frame_146_301 = frame and frame.value == '146-301'
+               landings=S('Landing')):
         # Prepare to extract the slices
         level_flights = level_flights.get_slices() if level_flights else None
-        
-        if level_flights and frame_146_301:
-            # Try to exclude noisy sections misidentified as level flight to
-            # allow the find_low_alts to calculate level offs.
-            level_flights = slices_remove_small_slices(
-                level_flights, 180, hz=alt_aal.hz)
         
         low_alt_slices = find_low_alts(
             alt_aal.array, 3000, stop_alt=0,
             level_flights=level_flights)
-        
-        if frame_146_301:
-            # Remove short approaches triggered by noisy signal.
-            low_alt_slices = slices_remove_small_slices(
-                low_alt_slices,
-                60,
-                hz=alt_aal.hz,
-            )
         
         for low_alt in low_alt_slices:
             if not alt_aal.array[low_alt.start]:
