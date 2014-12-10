@@ -4406,8 +4406,11 @@ class CoordinatesSmoothed(object):
             # not depend upon knowing the runway details.
             if approach.type == 'LANDING':
                 # This function returns the lowest non-None offset.
-                join_idx = min(filter(bool, [ils_join_offset,
+                try:
+                    join_idx = min(filter(bool, [ils_join_offset,
                                              approach.turnoff]))
+                except ValueError:
+                    join_idx = None
 
                 if join_idx and (len(lat_adj) > join_idx): # We have some room to extend over.
 

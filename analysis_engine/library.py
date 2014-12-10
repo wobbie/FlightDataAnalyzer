@@ -3569,6 +3569,9 @@ def slices_and_not(first, second):
 
     :returns: List of slices in the first but outside the second lists.
     '''
+    if not first:
+        return []
+    
     return slices_and(first,
                       slices_not(second,
                                  begin_at=min([s.start for s in first]),
