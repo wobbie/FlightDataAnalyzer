@@ -2565,7 +2565,7 @@ class TestStickShaker(unittest.TestCase):
                   values_mapping={0: '-', 1: 'Shake'})
         ss = StickShaker()
         ss.derive(left, right, None, None, None, None)
-        expected = np.ma.array([0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0])
+        expected = np.ma.array([0, 1, 0, 0, 1, 0])
         np.testing.assert_equal(ss.array.raw, expected)
 
     def test_single_source(self):
@@ -2595,13 +2595,13 @@ class TestStickPusher(unittest.TestCase):
     def test_derive(self):
         left = M('Stick Pusher (L)', np.ma.array([0, 1, 0, 0, 0, 0]),
                  offset=0.7, frequency=2.0,
-                 values_mapping={0: '-', 1: 'Shake'})
+                 values_mapping={0: '-', 1: 'Push'})
         right = M('Stick Pusher (R)', np.ma.array([0, 0, 0, 0, 1, 0]),
                   offset=0.2, frequency=2.0,
-                  values_mapping={0: '-', 1: 'Shake'})
+                  values_mapping={0: '-', 1: 'Push'})
         sp = StickPusher()
         sp.derive(left, right)
-        expected = np.ma.array([0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0])
+        expected = np.ma.array([0, 1, 0, 0, 1, 0,])
         np.testing.assert_equal(sp.array, expected)
 
     def test_single_source(self):

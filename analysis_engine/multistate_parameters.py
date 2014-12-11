@@ -1778,7 +1778,9 @@ class SlatIncludingTransition(MultistateDerivedParameterNode):
 
 class StickPusher(MultistateDerivedParameterNode):
     '''
-    Merge left and right stick pushers where fitted.
+    Where two Stick Pusher systems are recorded the results are OR'd to make
+    a single parameter which operates in response to either system
+    triggering.
     '''
 
     values_mapping = {
@@ -1796,9 +1798,8 @@ class StickPusher(MultistateDerivedParameterNode):
         available = [par for par in [spl, spr] if par]
 
         if len(available) > 1:
-            self.array = merge_sources(*[a.array for a in available])
-            self.offset = min([a.offset for a in available])
-            self.frequency = available[0].frequency * len(available)
+            shake_stack = vstack_params_where_state(*[(s, 'Push') for s in available])
+            self.array = shake_stack.any(axis=0)
         elif len(available) == 1:
             self.array = available[0].array
 
@@ -1807,11 +1808,9 @@ class StickShaker(MultistateDerivedParameterNode):
     '''
     This accounts for the different types of stick shaker system. Where two
     systems are recorded the results are OR'd to make a single parameter which
-    operates in response to either system triggering. Hence the removal of
-    automatic alignment of the signals.
+    operates in response to either system triggering.
     '''
 
-    align = False
     values_mapping = {
         0: '-',
         1: 'Shake',
@@ -1847,13 +1846,10 @@ class StickShaker(MultistateDerivedParameterNode):
                                      #b777_L1, b777_L2, b777_R1, b777_R2,
                                      ] if par]
         if len(available) > 1:
-            self.array = merge_sources(*[a.array for a in available])
-            self.offset = min([a.offset for a in available])
-            self.frequency = available[0].frequency * len(available)
+            shake_stack = vstack_params_where_state(*[(s, 'Shake') for s in available])
+            self.array = shake_stack.any(axis=0)
         elif len(available) == 1:
             self.array = available[0].array
-            self.offset = available[0].offset
-            self.frequency = available[0].frequency
 
 
 class SpeedbrakeDeployed(MultistateDerivedParameterNode):
