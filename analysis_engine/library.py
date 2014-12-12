@@ -3405,6 +3405,9 @@ def find_nearest_slice(index, slices):
     :returns: the first slice which contains index or None
     :rtype: [slice]
     '''
+    if len(slices) == 0:
+        return None
+
     if len(slices) == 1:
         return slices[0]
     

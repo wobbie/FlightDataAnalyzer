@@ -323,6 +323,10 @@ class TestFindNearestSlice(unittest.TestCase):
         nearest_slice = find_nearest_slice(18, slices)
         self.assertEqual(nearest_slice, slices[1])
 
+    def test_find_nearest_slice_nothing_to_search(self):
+        slices = []
+        nearest_slice = find_nearest_slice(5, slices)
+        self.assertEqual(nearest_slice, None)
 
 class TestAlignSlice(unittest.TestCase):
     @mock.patch('analysis_engine.library.align_slices')
