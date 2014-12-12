@@ -30,6 +30,7 @@ from analysis_engine.flight_phase import (
     ILSGlideslopeEstablished,
     ILSLocalizerEstablished,
     InitialApproach,
+    InitialClimb,
     InitialCruise,
     Landing,
     LandingRoll,
@@ -117,6 +118,15 @@ def buildsections(*args):
         new_section = builditem(name, a[0], a[1])
         built_list.append(new_section)
     return SectionNode(name, items=built_list)
+
+def build_kti(*args):
+    built_list=[]
+    name = args[0]
+    for a in args[1:]:
+        if a:
+            new_kti = KeyTimeInstance(a, name)
+            built_list.append(new_kti)
+    return KTI(items=built_list)
 
 
 ##############################################################################
@@ -883,6 +893,34 @@ class TestCruise(unittest.TestCase):
         self.assertEqual(test_phase, expected)
         self.assertEqual(len(toc), 1)
         self.assertEqual(len(tod), 0)
+
+
+class TestInitialClimb(unittest.TestCase):
+
+    def test_can_operate(self):
+        expected = [('Takeoff', 'Climb Start', 'Top Of Climb')]
+        opts = InitialClimb.get_operational_combinations()
+        self.assertEqual(opts, expected)
+    
+    def test_basic(self):
+        ini_clb = InitialClimb()
+        toff = buildsection('Takeoff', 10, 20)
+        clb_start = build_kti('Climb Start', 30)
+        toc = build_kti('Top Of Climb', 40)
+        ini_clb.derive(toff, clb_start, toc)
+        self.assertEqual(len(ini_clb.get_slices()), 1)
+        self.assertEqual(ini_clb.get_first().slice.start, 20)
+        self.assertEqual(ini_clb.get_first().slice.stop, 30)
+
+    def test_short_climb(self):
+        ini_clb = InitialClimb()
+        toff = buildsection('Takeoff', 10, 20)
+        clb_start = build_kti('Climb Start', None)
+        toc = build_kti('Top Of Climb', 40)
+        ini_clb.derive(toff, clb_start, toc)
+        self.assertEqual(len(ini_clb.get_slices()), 1)
+        self.assertEqual(ini_clb.get_first().slice.start, 20)
+        self.assertEqual(ini_clb.get_first().slice.stop, 40)
 
 
 class TestInitialCruise(unittest.TestCase):
