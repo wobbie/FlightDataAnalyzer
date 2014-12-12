@@ -1626,7 +1626,7 @@ class AirspeedMinusV2At35FtDuringTakeoff(KeyPointValueNode):
 
         for takeoff in takeoffs:
             index = takeoff.stop_edge  # Takeoff ends at 35ft!
-            value = spd_v2.array[index]
+            value = value_at_index(spd_v2.array,index)
             self.create_kpv(index, value)
 
 

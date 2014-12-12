@@ -2241,9 +2241,16 @@ class TestAirspeedMinusV2At35FtDuringTakeoff(unittest.TestCase, NodeTest):
         self.node_class = AirspeedMinusV2At35FtDuringTakeoff
         self.operational_combinations = [('Airspeed Minus V2', 'Takeoff')]
 
-    @unittest.skip('Test Not Implemented')
     def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+        spd = P('Airspeed Minus V2', np.ma.arange(0, 100, 4))
+        takeoff = buildsection('Takeoff', 1, 11.75)
+
+        node = self.node_class()
+        node.derive(spd, takeoff)
+
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].value, 47)
+        self.assertEqual(node[0].index, 11.75)
 
 
 class TestAirspeedMinusV235To1000FtMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
