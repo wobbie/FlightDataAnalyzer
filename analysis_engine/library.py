@@ -1763,19 +1763,16 @@ def find_low_alts(array, threshold_alt, start_alt=None, stop_alt=None,
         
         low_alt_slice = slice(start_index, stop_index)
         
+        
         if level_flights:
             # Exclude level flight.
             excluding_level_flight = slices_and_not([low_alt_slice], level_flights)
-            if not excluding_level_flight:
-                # can be caused by very noisy signals
-                continue
             low_alt_slice = find_nearest_slice(
-                max(dip_min_index-1, low_alt_slice.start),
-                excluding_level_flight,
-            )
-    
-        low_alt_slices.append(low_alt_slice)
-    
+                max(dip_min_index-1, low_alt_slice.start), excluding_level_flight)
+        
+        if low_alt_slice:
+            low_alt_slices.append(low_alt_slice)
+
     return sorted(low_alt_slices)
 
 
