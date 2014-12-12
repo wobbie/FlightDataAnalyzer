@@ -323,8 +323,10 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
             if alt_aal:
                 self.frequency = alt_aal.frequency
                 self.offset = alt_aal.offset
-                _slice = initial_climbs.get_aligned(alt_aal).get_first().slice
-                self.create_kti(index_at_value(alt_aal.array, alt, _slice=_slice))
+                ics = initial_climbs.get_aligned(alt_aal)
+                if ics.get_slices():
+                    _slice = ics.get_first().slice
+                    self.create_kti(index_at_value(alt_aal.array, alt, _slice=_slice))
 
 
 class ClimbThrustDerateDeselected(KeyTimeInstanceNode):
