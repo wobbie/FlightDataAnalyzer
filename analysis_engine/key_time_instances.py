@@ -6,7 +6,7 @@ from analysis_engine.library import (all_of,
                                      any_of,
                                      coreg,
                                      find_edges_on_state_change,
-                                     find_toc_tod,
+                                     find_boc_toc_tod_bod,
                                      first_valid_sample,
                                      hysteresis,
                                      index_at_value,
@@ -651,8 +651,8 @@ class TopOfClimb(KeyTimeInstanceNode):
         for ccd_phase in ccd:
             ccd_slice = ccd_phase.slice
             try:
-                n_toc = find_toc_tod(alt_std.array, ccd_slice, self.frequency,
-                                     mode='Climb')
+                n_toc = find_boc_toc_tod_bod(alt_std.array, ccd_slice, self.frequency,
+                                             mode='toc')
             except:
                 # altitude data does not have an increasing section, so quit.
                 continue
@@ -676,18 +676,14 @@ class TopOfDescent(KeyTimeInstanceNode):
                ccd=S('Climb Cruise Descent')):
         for ccd_phase in ccd:
             ccd_slice = ccd_phase.slice
-            try:
-                n_tod = find_toc_tod(alt_std.array, ccd_slice, self.frequency,
-                                     mode='Descent')
-            except ValueError:
-                # altitude data does not have a decreasing section, so quit.
-                continue
             # If this slice ended in mid-cruise, the ccd slice will end in None.
             if ccd_slice.stop is None:
                 continue
-            # if this is the last point in the slice, it's come from
-            # data that ends in the cruise, so we'll ignore this too.
-            if n_tod == ccd_slice.stop - 1:
+            try:
+                n_tod = find_boc_toc_tod_bod(alt_std.array, ccd_slice, self.frequency,
+                                             mode='tod')
+            except ValueError:
+                # altitude data does not have a decreasing section, so quit.
                 continue
             # Record the moment (with respect to this section of data)
             self.create_kti(n_tod)

@@ -1779,7 +1779,35 @@ def find_low_alts(array, frequency, threshold_alt,
     return sorted(low_alt_slices)
 
 
-def find_toc_tod(alt_data, ccd_slice, frequency, mode='Climb'):
+def find_level_off(array, frequency, _slice):
+    '''
+    :param array: Altitude array
+    :type array: np.ma.array
+    :param frequency: Altitude array sampling frequency
+    :type frequency: float
+    :param _slice: Slice of the array to be processed
+    :type _slice: Python slice
+    
+    :returns: index of level flight phase.
+    :type: integer
+    '''
+    if _slice.step == -1:
+        my_slice = slice(_slice.stop, _slice.start, 1)
+    else:
+        my_slice = _slice
+        
+    data = array[my_slice]
+    if data[0] < data[-1]:
+        # Treat as climbing
+        index = find_boc_toc_tod_bod(data, slice(None, None), frequency, mode='toc')
+        return my_slice.start + index
+    else:
+        # Treat as descending
+        index = find_boc_toc_tod_bod(data, slice(None, None), frequency, mode='tod')
+        return my_slice.start + index
+
+
+def find_boc_toc_tod_bod(alt_data, ccd_slice, frequency, mode=None):
     '''
     Find the Top Of Climb or Top Of Descent from an altitude trace.
 
@@ -1792,48 +1820,41 @@ def find_toc_tod(alt_data, ccd_slice, frequency, mode='Climb'):
     :returns: Index of location identified within slice, relative to start of alt_data
     :rtype: Int
     '''
-    #NOTE: If this is changed to support slices with negative step, be sure to
-    # update index_at_value_or_level_off() which currently reverses the slice.
-
-    # Find the maximum altitude in this slice to reduce the effort later
-    peak_index = max_value(alt_data, ccd_slice).index
-
-    # We shrink the section to exclude data under 500ft. The logic here is
-    # that all climb and descent phases will have been generated with at
-    # least 500ft changes in altitude.
-    #WARNING: 500ft STD is not AAL!
-    if mode == 'Climb':
-        start = floor(index_at_value(alt_data, 500,
-                    slice(ccd_slice.start, peak_index)) or ccd_slice.start or 0)
-        section = slice(start, peak_index + 1)
+    # Find the maximum, minimim and midpoint altitudes and their indexes in
+    # this slice
+    peak = max_value(alt_data, ccd_slice)
+    if mode in ['boc', 'toc']:
+        section_2 = slice(ccd_slice.start, peak.index+1)
         slope = SLOPE_FOR_TOC_TOD / frequency
-    else:
-        stop = ceil(index_at_value(alt_data, 500,
-                    slice(ccd_slice.stop, peak_index, -1)) or ccd_slice.stop or
-                    len(alt_data))
-        section = slice(peak_index, stop)
+    elif mode in ['tod', 'bod']:
+        # Descent case
+        section_2 = slice(peak.index, ccd_slice.stop or len(alt_data))
         slope = -SLOPE_FOR_TOC_TOD / frequency
+    else:
+        raise ValueError('Invalid mode in find_boc_toc_tod_bod')
 
-    # Quit if there is nothing to do here.
-    if section.start == section.stop:
-        raise ValueError('No range of data for top of climb or descent check')
+    # Find the midpoint to separate tops and bottoms of climbs and descents.
+    trough = min_value(alt_data, section_2)
+    mid_alt = (peak.value + trough.value) / 2.0
+    mid_index = int(index_at_value(alt_data[section_2], mid_alt) + (section_2.start or 0))
+    
+    if mode in ['boc', 'tod']:
+        # The first part is where the point of interest lies
+        section_4 = slice(section_2.start, mid_index)
+    else:
+        # we need to scan the second part of this half.
+        section_4 = slice(mid_index, section_2.stop+1)
 
     # Establish a simple monotonic timebase
-    timebase = np.arange(len(alt_data[section]))
+    timebase = np.arange(len(alt_data[section_4]))
     # Then scale this to the required altitude data slope
     ramp = timebase * slope
-    # For airborne data only, subtract the slope from the climb, then the
-    # peak is at the top of climb or descent.
 
-    alt_min = np.ma.min(alt_data[section])
-    test_slope = np.ma.masked_less(alt_data[section], alt_min) - ramp
-    if np.ma.count(test_slope):
-        return np.ma.argmax(test_slope) + section.start
+    test_slope = alt_data[section_4] - ramp
+    if mode in ['toc', 'tod']:
+        return np.ma.argmax(test_slope) + section_4.start
     else:
-        if mode == 'Climb':
-            return 0
-        else:
-            return ccd_slice.stop-1
+        return np.ma.argmin(test_slope) + section_4.start
 
 
 def find_edges(array, _slice=slice(None), direction='rising_edges'):

@@ -14,6 +14,7 @@ from analysis_engine.flight_phase import (
     Climbing,
     Cruise,
     Descending,
+    Descent,
     DescentLowClimb,
     DescentToFlare,
     EngHotelMode,
@@ -50,7 +51,7 @@ from analysis_engine.flight_phase import (
     TurningOnGround,
     TwoDegPitchTo35Ft,
 )
-from analysis_engine.key_time_instances import TopOfClimb, TopOfDescent
+from analysis_engine.key_time_instances import BottomOfDescent, TopOfClimb, TopOfDescent
 from analysis_engine.library import integrate
 from analysis_engine.node import (Attribute, KTI, KeyTimeInstance, M, Parameter,
                                   P, S, Section, SectionNode, load)
@@ -277,7 +278,7 @@ class TestApproachAndLanding(unittest.TestCase):
         self.assertEqual(len(app_ldg), 3)
         self.assertAlmostEqual(app_ldg[0].slice.start, 9771, places=0)
         self.assertAlmostEqual(app_ldg[0].slice.stop, 10810, places=0)
-        self.assertAlmostEqual(app_ldg[1].slice.start, 12056, places=0)
+        self.assertAlmostEqual(app_ldg[1].slice.start, 12050, places=0)
         self.assertAlmostEqual(app_ldg[1].slice.stop, 12631, places=0)
         self.assertAlmostEqual(app_ldg[2].slice.start, 26926, places=0)
         self.assertAlmostEqual(app_ldg[2].slice.stop, 27359, places=0)
@@ -405,11 +406,11 @@ class TestApproach(unittest.TestCase):
         app.derive(alt_aal, level_flights, landing)
         
         self.assertEqual(len(app), 3)
-        self.assertAlmostEqual(app[0].slice.start, 9771, places=0)
+        self.assertAlmostEqual(app[0].slice.start,10207, places=0)
         self.assertAlmostEqual(app[0].slice.stop, 10810, places=0)
-        self.assertAlmostEqual(app[1].slice.start, 12056, places=0)
+        self.assertAlmostEqual(app[1].slice.start,12050, places=0)
         self.assertAlmostEqual(app[1].slice.stop, 12631, places=0)
-        self.assertAlmostEqual(app[2].slice.start, 26926, places=0)
+        self.assertAlmostEqual(app[2].slice.start,26926, places=0)
         self.assertAlmostEqual(app[2].slice.stop, 27342, places=0)
 
 
@@ -736,9 +737,8 @@ class TestClimbCruiseDescent(unittest.TestCase):
         camel = ClimbCruiseDescent()
         # Needs to get above 15000ft and below 10000ft to create this phase.
         testwave = np.ma.cos(np.arange(0, 3.14 * 2, 0.1)) * (-3000) + 12500
-        # plot_parameter (testwave)
         air=buildsection('Airborne', 0, 62)
-        camel.derive(Parameter('Altitude AAL For Flight Phases',
+        camel.derive(Parameter('Altitude STD Smoothed',
                                np.ma.array(testwave)), air)
         self.assertEqual(len(camel), 1)
 
