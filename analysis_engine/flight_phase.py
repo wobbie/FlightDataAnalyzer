@@ -504,24 +504,14 @@ class Descent(FlightPhaseNode):
     def derive(self,
                tod_set=KTI('Top Of Descent'),
                bod_set=KTI('Bottom Of Descent')):
-        # First we extract the kti index values into simple lists.
-        tod_list = []
-        for this_tod in tod_set:
-            tod_list.append(this_tod.index)
 
-        # Now see which preceded this minimum
-        for this_bod in bod_set:
-            bod = this_bod.index
-            # Scan the TODs
-            closest_tod = None
-            for this_tod in tod_list:
-                if (bod > this_tod and
-                    this_tod > closest_tod):
-                    closest_tod = this_tod
+        start_list = [y.index for y in tod_set.get_ordered_by_index()]
+        end_list = [x.index for x in bod_set.get_ordered_by_index()]
+        assert len(start_list) == len(end_list)
 
-            # Build the slice from what we have found.
-            self.create_phase(slice(closest_tod, bod))
-        return
+        slice_idxs = zip(start_list, end_list)
+        for slice_tuple in slice_idxs:
+            self.create_phase(slice(*slice_tuple))
 
 
 class DescentToFlare(FlightPhaseNode):

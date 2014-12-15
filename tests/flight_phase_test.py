@@ -993,16 +993,16 @@ class TestDescending(unittest.TestCase):
         phase.derive(vert_spd, air)
         self.assertEqual(phase[0].slice, slice(7,19))
 
-"""
-class TestDescentToBottomOfDescent(unittest.TestCase):
+class TestDescent(unittest.TestCase):
     def test_can_operate(self):
         expected = [('Top Of Descent', 'Bottom Of Descent')]
-        opts = DescentToBottomOfDescent.get_operational_combinations()
+        opts = Descent.get_operational_combinations()
         self.assertEqual(opts, expected)
 
-    def test_descent_to_bottom_of_descent_basic(self):
+    def test_descent_basic(self):
         testwave = np.cos(np.arange(0,12.6,0.1))*(-3000)+12500
         alt_data = np.ma.array(testwave)
+        air = buildsection('Airborne', 0, len(testwave))
 
         #===========================================================
         # This block of code replicates normal opeartion and ensures
@@ -1013,19 +1013,17 @@ class TestDescentToBottomOfDescent(unittest.TestCase):
         alt = Parameter('Altitude STD', alt_data)
 
         ccd = ClimbCruiseDescent()
-        ccd.derive(Parameter('Altitude For Flight Phases', alt_data))
+        ccd.derive(alt, air)
         tod = TopOfDescent()
         tod.derive(alt, ccd)
-        dlc = DescentLowClimb()
-        dlc.derive(alt)
         bod = BottomOfDescent()
-        bod.derive(alt, dlc)
+        bod.derive(ccd)
 
-        descent_phase = DescentToBottomOfDescent()
+        descent_phase = Descent()
         descent_phase.derive(tod, bod)
-        expected = [Section(name='Descent To Bottom Of Descent',slice=slice(32,63,None))]
+        expected = [Section(name='Descent',slice=slice(32,63,None), start_edge = 32, stop_edge = 63),
+                    Section(name='Descent',slice=slice(94,125,None), start_edge = 94, stop_edge = 125)]
         self.assertEqual(descent_phase, expected)
-"""
 
 class TestFast(unittest.TestCase):
     def test_can_operate(self):
