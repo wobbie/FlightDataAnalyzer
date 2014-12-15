@@ -62,6 +62,7 @@ from analysis_engine.multistate_parameters import (
     Gear_RedWarning,
     KeyVHFCapt,
     KeyVHFFO,
+    MasterCaution,
     MasterWarning,
     PackValvesOpen,
     PilotFlying,
@@ -2008,6 +2009,37 @@ class TestKeyVHFFO(unittest.TestCase):
         pass
 
 
+class TestMasterCaution(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = MasterCaution
+        self.operational_combinations = [
+            ('Master Caution (Capt)',),
+            ('Master Caution (FO)',),
+            ('Master Caution (Capt)', 'Master Caution (FO)'),
+        ]
+
+    def test_derive(self):
+        warn_capt = M(
+            name='Master Caution (Capt)',
+            array=np.ma.array(data=[0, 0, 0, 1, 1, 1]),
+            values_mapping={0: '-', 1: 'Caution'},
+            frequency=1,
+            offset=0.1,
+        )
+        warn_fo = M(
+            name='Master Caution (FO)',
+            array=np.ma.array(data=[0, 0, 1, 1, 0, 0]),
+            values_mapping={0: '-', 1: 'Caution'},
+            frequency=1,
+            offset=0.1,
+        )
+        node = self.node_class()
+        node.derive(warn_capt, warn_fo)
+        np.testing.assert_array_equal(node.array, [0, 0, 1, 1, 1, 1])
+
+
+
 class TestMasterWarning(unittest.TestCase, NodeTest):
 
     def setUp(self):
@@ -2036,6 +2068,26 @@ class TestMasterWarning(unittest.TestCase, NodeTest):
         node = self.node_class()
         node.derive(warn_capt, warn_fo)
         np.testing.assert_array_equal(node.array, [0, 0, 1, 1, 1, 1])
+
+
+    def test_derive_single(self):
+        warn_capt = M(
+            name='Master Warning (Capt)',
+            array=np.ma.array(data=[0, 0, 0, 0, 0, 0]),
+            values_mapping={0: '-', 1: 'Warning'},
+            frequency=1,
+            offset=0.1,
+        )
+        warn_fo = M(
+            name='Master Warning (FO)',
+            array=np.ma.array(data=[0, 0, 1, 1, 1, 0]),
+            values_mapping={0: '-', 1: 'Warning'},
+            frequency=1,
+            offset=0.1,
+        )
+        node = self.node_class()
+        node.derive(warn_capt, warn_fo)
+        np.testing.assert_array_equal(node.array, [0, 0, 1, 1, 1, 0])
 
 
 class TestPackValvesOpen(unittest.TestCase):
