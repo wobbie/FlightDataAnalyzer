@@ -2376,21 +2376,21 @@ class TestStableApproach(unittest.TestCase):
         opts = StableApproach.get_operational_combinations()
         combinations = [
             # all
-            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL', 'Vapp'),
+            ('Approach Information', 'Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL', 'Vapp'),
             # exc. Vapp
-            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
+            ('Approach Information', 'Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
             # exc. Airspeed Relative
-            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL', 'Vapp'),
+            ('Approach Information', 'Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL', 'Vapp'),
             # exc. Vapp and Airspeed Relative
-            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
+            ('Approach Information', 'Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
             # exc. ILS Glideslope and Vapp
-            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
+            ('Approach Information', 'Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
             # exc. ILS Glideslope and ILS Localizer and Vapp
-            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
+            ('Approach Information', 'Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
             # using EPR and exc. Airspeed Relative
-            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) EPR Avg For 10 Sec', 'Altitude AAL', 'Vapp'),
+            ('Approach Information', 'Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) EPR Avg For 10 Sec', 'Altitude AAL', 'Vapp'),
             # including Family attribute
-            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) EPR Avg For 10 Sec', 'Altitude AAL', 'Vapp', 'Family'),
+            ('Approach Information', 'Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) EPR Avg For 10 Sec', 'Altitude AAL', 'Vapp', 'Family'),
         ]
         for combo in combinations:
             self.assertIn(combo, opts)

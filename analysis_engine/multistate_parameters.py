@@ -2210,7 +2210,7 @@ class StableApproach(MultistateDerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
         # Many parameters are optional dependencies
-        deps = ['Approach Information', 'Combined Descent',
+        deps = ['Approach Information', 'Descent',
                 'Gear Down', 'Flap',
                 'Track Deviation From Runway',
                 'Vertical Speed',
@@ -2222,7 +2222,7 @@ class StableApproach(MultistateDerivedParameterNode):
 
     def derive(self,
                apps=A('Approach Information'),
-               phases=S('Combined Descent'),
+               phases=S('Descent'),
                gear=M('Gear Down'),
                flap=M('Flap'),
                tdev=P('Track Deviation From Runway'),

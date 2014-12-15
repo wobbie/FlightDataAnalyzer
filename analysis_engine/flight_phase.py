@@ -468,7 +468,7 @@ class InitialCruise(FlightPhaseNode):
         if cruise.stop - cruise.start > 330:
             self.create_phase(slice(cruise.start+300, cruise.start+330))
             
-
+"""
 class CombinedDescent(FlightPhaseNode):
     def derive(self,
                tod_set=KTI('Top Of Descent'),
@@ -483,7 +483,7 @@ class CombinedDescent(FlightPhaseNode):
         slice_idxs = zip(start_list, end_list)
         for slice_tuple in slice_idxs:
             self.create_phase(slice(*slice_tuple))
-
+"""
 
 class Descending(FlightPhaseNode):
     """

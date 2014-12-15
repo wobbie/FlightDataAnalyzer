@@ -980,7 +980,7 @@ class Airspeed10000To5000FtMax(KeyPointValueNode):
                air_spd=P('Airspeed'),
                alt_aal=P('Altitude AAL For Flight Phases'),
                alt_std=P('Altitude STD Smoothed'),
-               descends=S('Combined Descent')):
+               descends=S('Descent')):
 
         for descend in descends:
             std = np.ma.clump_unmasked(
@@ -1002,7 +1002,7 @@ class Airspeed10000To8000FtMax(KeyPointValueNode):
     def derive(self,
                air_spd=P('Airspeed'),
                alt_std=P('Altitude STD Smoothed'),
-               descent=S('Combined Descent')):
+               descent=S('Descent')):
 
         alt_band = np.ma.masked_outside(alt_std.array, 10000, 8000)
         alt_descent_sections = valid_slices_within_array(alt_band, descent)
@@ -1024,7 +1024,7 @@ class Airspeed8000To5000FtMax(KeyPointValueNode):
                air_spd=P('Airspeed'),
                alt_aal=P('Altitude AAL For Flight Phases'),
                alt_std=P('Altitude STD Smoothed'),
-               descends=S('Combined Descent')):
+               descends=S('Descent')):
         # As we are only interested in the descending phase, this is used as
         # the normal slices_from_to will not work with two parameters.
         for descend in descends:
@@ -1049,7 +1049,7 @@ class Airspeed5000To3000FtMax(KeyPointValueNode):
     def derive(self,
                air_spd=P('Airspeed'),
                alt_aal=P('Altitude AAL For Flight Phases'),
-               descent=S('Combined Descent')):
+               descent=S('Descent')):
 
         alt_band = np.ma.masked_outside(alt_aal.array, 5000, 3000)
         alt_descent_sections = valid_slices_within_array(alt_band, descent)
@@ -1871,7 +1871,7 @@ class AirspeedMinusMinimumAirspeed10000To50FtMin(KeyPointValueNode):
                air_spd=P('Airspeed Minus Minimum Airspeed'),
                alt_aal=P('Altitude AAL For Flight Phases'),
                alt_std=P('Altitude STD Smoothed'),
-               descents=S('Combined Descent')):
+               descents=S('Descent')):
         std = np.ma.clump_unmasked(np.ma.masked_greater(alt_std.array, 10000.0))
         aal = np.ma.clump_unmasked(np.ma.masked_less(alt_aal.array, 50.0))
         alt_bands = slices_and(std, aal)
@@ -9870,7 +9870,7 @@ class RateOfDescentTopOfDescentTo10000FtMax(KeyPointValueNode):
     def derive(self,
                vrt_spd=P('Vertical Speed'),
                alt_aal=P('Altitude STD Smoothed'),
-               descents=S('Combined Descent')):
+               descents=S('Descent')):
 
         alt_band = np.ma.masked_less(alt_aal.array, 10000)
         alt_descent_sections = valid_slices_within_array(alt_band, descents)
@@ -9891,7 +9891,7 @@ class RateOfDescentBelow10000FtMax(KeyPointValueNode):
     def derive(self,
                vrt_spd=P('Vertical Speed'),
                alt_std=P('Altitude STD Smoothed'),
-               descents=S('Combined Descent')):
+               descents=S('Descent')):
         alt_band = np.ma.masked_outside(alt_std.array, 0, 10000)
         alt_descent_sections = valid_slices_within_array(alt_band, descents)
         self.create_kpv_from_slices(
