@@ -2278,7 +2278,7 @@ class TestFindEdgesOnStateChange(unittest.TestCase):
         
 
 
-class TestFindBocTocTodBod(unittest.TestCase):
+class TestFindTocTod(unittest.TestCase):
     def test_find_tod_with_smoothed_data(self):
         # sample data from Hercules during a low level circuit
         array = np.ma.array(
@@ -2327,61 +2327,47 @@ class TestFindBocTocTodBod(unittest.TestCase):
               351.50954688,  333.34129375,  331.8642    ,  331.8642    ,
               323.14934688])
         # data is already sliced for the required section
-        res = find_boc_toc_tod_bod(array, slice(0, len(array)), 1, mode='tod')
+        res = find_toc_tod(array, slice(0, len(array)), 1, mode='tod')
         self.assertEqual(res, 117)
         # with some smoothing (as per Hercules Alt Std Smoothed
         smooth = moving_average(array, window=3, weightings=[0.25,0.5,0.25])
-        res = find_boc_toc_tod_bod(smooth, slice(0, len(smooth)), 1, mode='tod')
+        res = find_toc_tod(smooth, slice(0, len(smooth)), 1, mode='tod')
         self.assertEqual(res, 116) # bit before previous
 
     def test_wrong_mode(self):
         alt=np.ma.array([0,0,0,5,10,15,20,20,20,16,11,6,1,1,1])
         alt *= 100
         ccd=slice(0,15,None)
-        self.assertRaises(ValueError, find_boc_toc_tod_bod, alt, ccd, 1, 'oops')
+        self.assertRaises(ValueError, find_toc_tod, alt, ccd, 1, 'oops')
                     
     def test_basic(self):
         alt=np.ma.array([0,0,0,5,10,15,20,20,20,16,11,6,1,1,1])
         alt *= 100
         ccd=slice(0,15,None)
-        self.assertEqual(find_boc_toc_tod_bod(alt, ccd, 0.1, 'boc'), 2)
-        self.assertEqual(find_boc_toc_tod_bod(alt, ccd, 0.1, 'toc'), 6)
-        self.assertEqual(find_boc_toc_tod_bod(alt, ccd, 0.1, 'tod'), 8)
-        self.assertEqual(find_boc_toc_tod_bod(alt, ccd, 0.1, 'bod'), 12)
+        self.assertEqual(find_toc_tod(alt, ccd, 0.1, 'toc'), 6)
+        self.assertEqual(find_toc_tod(alt, ccd, 0.1, 'tod'), 8)
 
-    '''
-    # Not currently required, but ready in case we decide to allow reverse slices.
-    def test_reversed_slice(self):
-        alt=np.ma.array([0,0,0,5,10,15,20,20,20,16,11,6,1,1,1])
-        alt *= 100
-        ccd=slice(15,0,-1)
-        self.assertEqual(find_boc_toc_tod_bod(alt, ccd, 0.1, 'boc'), 2)
-        self.assertEqual(find_boc_toc_tod_bod(alt, ccd, 0.1, 'toc'), 6)
-        self.assertEqual(find_boc_toc_tod_bod(alt, ccd, 0.1, 'tod'), 8)
-        self.assertEqual(find_boc_toc_tod_bod(alt, ccd, 0.1, 'bod'), 12)
-    '''
-    
     def test_extended_toc(self):
         alt=np.ma.array([0]*100 + [5,10,15] + [20]*100 + [16,11,6] + [1]*100)
         alt *= 100
         ccd=slice(0,306,None)
-        self.assertEqual(find_boc_toc_tod_bod(alt, ccd, 0.1, 'toc'), 103)
+        self.assertEqual(find_toc_tod(alt, ccd, 0.1, 'toc'), 103)
 
     def test_shortened_toc(self):
         alt=np.ma.array([0,0,0,5,10,15,20])
         alt *= 100
         ccd=slice(0,7,None)
-        self.assertEqual(find_boc_toc_tod_bod(alt, ccd, 0.1, 'toc'), 6)
+        self.assertEqual(find_toc_tod(alt, ccd, 0.1, 'toc'), 6)
 
     def test_null_slice(self):
         alt=np.ma.array([0,0,0,5,10,15,20,20,20])
         alt *= 100
         ccd=slice(None,9,None)
-        self.assertEqual(find_boc_toc_tod_bod(alt, ccd, 0.1, 'toc'), 6)
+        self.assertEqual(find_toc_tod(alt, ccd, 0.1, 'toc'), 6)
         ccd=slice(0, None, None)
-        self.assertEqual(find_boc_toc_tod_bod(alt, ccd, 0.1, 'toc'), 6)
+        self.assertEqual(find_toc_tod(alt, ccd, 0.1, 'toc'), 6)
         ccd=slice(None, None, None)
-        self.assertEqual(find_boc_toc_tod_bod(alt, ccd, 0.1, 'toc'), 6)
+        self.assertEqual(find_toc_tod(alt, ccd, 0.1, 'toc'), 6)
 
         
 class TestFirstOrderLag(unittest.TestCase):

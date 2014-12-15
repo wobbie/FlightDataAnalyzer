@@ -6,7 +6,7 @@ from analysis_engine.library import (all_of,
                                      any_of,
                                      coreg,
                                      find_edges_on_state_change,
-                                     find_boc_toc_tod_bod,
+                                     find_toc_tod,
                                      first_valid_sample,
                                      hysteresis,
                                      index_at_value,
@@ -651,7 +651,7 @@ class TopOfClimb(KeyTimeInstanceNode):
         for ccd_phase in ccd:
             ccd_slice = ccd_phase.slice
             try:
-                n_toc = find_boc_toc_tod_bod(alt_std.array, ccd_slice, self.frequency,
+                n_toc = find_toc_tod(alt_std.array, ccd_slice, self.frequency,
                                              mode='toc')
             except:
                 # altitude data does not have an increasing section, so quit.
@@ -680,7 +680,7 @@ class TopOfDescent(KeyTimeInstanceNode):
             if ccd_slice.stop is None:
                 continue
             try:
-                n_tod = find_boc_toc_tod_bod(alt_std.array, ccd_slice, self.frequency,
+                n_tod = find_toc_tod(alt_std.array, ccd_slice, self.frequency,
                                              mode='tod')
             except ValueError:
                 # altitude data does not have a decreasing section, so quit.

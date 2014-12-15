@@ -1799,22 +1799,29 @@ def find_level_off(array, frequency, _slice):
     data = array[my_slice]
     if data[0] < data[-1]:
         # Treat as climbing
-        index = find_boc_toc_tod_bod(data, slice(None, None), frequency, mode='toc')
+        index = find_toc_tod(data, slice(None, None), frequency, mode='toc')
         return my_slice.start + index
     else:
         # Treat as descending
-        index = find_boc_toc_tod_bod(data, slice(None, None), frequency, mode='tod')
+        index = find_toc_tod(data, slice(None, None), frequency, mode='tod')
         return my_slice.start + index
 
 
-def find_boc_toc_tod_bod(alt_data, ccd_slice, frequency, mode=None):
+def find_toc_tod(alt_data, ccd_slice, frequency, mode=None):
     '''
     Find the Top Of Climb or Top Of Descent from an altitude trace.
+    
+    This code separates the climb cruise descent into half width sections,
+    section_2, and then divides again into top and bottom halves, section_4.
+    This means that the code can be fairly easily extended to detect bottoms
+    of climb and descent if required.
 
     :param alt_data: Altitude array usually above FL100
     :type alt_data: np.ma.array
     :param ccd_slice: "cruise climb descent" slice of data, although similar will do
     :type ccd_slice: slice
+    :param frequency: alt_data sampling frequency
+    :type frequency: float
     :param mode: Either 'Climb' or 'Descent' to define which to select.
     :type mode: String
     :returns: Index of location identified within slice, relative to start of alt_data
@@ -1823,10 +1830,10 @@ def find_boc_toc_tod_bod(alt_data, ccd_slice, frequency, mode=None):
     # Find the maximum, minimim and midpoint altitudes and their indexes in
     # this slice
     peak = max_value(alt_data, ccd_slice)
-    if mode in ['boc', 'toc']:
+    if mode == 'toc':
         section_2 = slice(ccd_slice.start, peak.index+1)
         slope = SLOPE_FOR_TOC_TOD / frequency
-    elif mode in ['tod', 'bod']:
+    elif mode == 'tod':
         # Descent case
         section_2 = slice(peak.index, ccd_slice.stop or len(alt_data))
         slope = -SLOPE_FOR_TOC_TOD / frequency
@@ -1838,7 +1845,7 @@ def find_boc_toc_tod_bod(alt_data, ccd_slice, frequency, mode=None):
     mid_alt = (peak.value + trough.value) / 2.0
     mid_index = int(index_at_value(alt_data[section_2], mid_alt) + (section_2.start or 0))
     
-    if mode in ['boc', 'tod']:
+    if mode == 'tod':
         # The first part is where the point of interest lies
         section_4 = slice(section_2.start, mid_index)
     else:
@@ -1851,10 +1858,7 @@ def find_boc_toc_tod_bod(alt_data, ccd_slice, frequency, mode=None):
     ramp = timebase * slope
 
     test_slope = alt_data[section_4] - ramp
-    if mode in ['toc', 'tod']:
-        return np.ma.argmax(test_slope) + section_4.start
-    else:
-        return np.ma.argmin(test_slope) + section_4.start
+    return np.ma.argmax(test_slope) + section_4.start
 
 
 def find_edges(array, _slice=slice(None), direction='rising_edges'):
