@@ -1535,11 +1535,16 @@ class MasterCaution(MultistateDerivedParameterNode):
 
     def derive(self,
                capt=M('Master Caution (Capt)'),
-               fo=M('Master Caution (FO)')):
+               fo=M('Master Caution (FO)'),
+               capt_2=M('Master Caution (Capt)(2)'),
+               fo_2=M('Master Caution (FO)(2)'),
+               ):
 
         self.array = vstack_params_where_state(
             (capt, 'Caution'),
             (fo, 'Caution'),
+            (capt_2, 'Caution'),
+            (fo_2, 'Caution'),
         ).any(axis=0)
 
 
