@@ -74,6 +74,7 @@ from analysis_engine.multistate_parameters import (
     SpeedbrakeDeployed,
     SpeedbrakeSelected,
     StableApproach,
+    StallWarning,
     StickPusher,
     StickShaker,
     TakeoffConfigurationWarning,
@@ -2022,21 +2023,35 @@ class TestMasterCaution(unittest.TestCase, NodeTest):
     def test_derive(self):
         warn_capt = M(
             name='Master Caution (Capt)',
-            array=np.ma.array(data=[0, 0, 0, 1, 1, 1]),
+            array=np.ma.array(data=[0, 1, 0, 0, 0, 0]),
             values_mapping={0: '-', 1: 'Caution'},
             frequency=1,
             offset=0.1,
         )
         warn_fo = M(
             name='Master Caution (FO)',
-            array=np.ma.array(data=[0, 0, 1, 1, 0, 0]),
+            array=np.ma.array(data=[0, 0, 1, 0, 0, 0]),
             values_mapping={0: '-', 1: 'Caution'},
             frequency=1,
             offset=0.1,
         )
+        warn_capt_2 = M(
+            name='Master Caution (Capt)(2)',
+            array=np.ma.array(data=[0, 0, 0, 1, 0, 0]),
+            values_mapping={0: '-', 1: 'Caution'},
+            frequency=1,
+            offset=0.1,
+        )
+        warn_fo_2 = M(
+            name='Master Caution (FO)(2)',
+            array=np.ma.array(data=[0, 0, 0, 0, 1, 0]),
+            values_mapping={0: '-', 1: 'Caution'},
+            frequency=1,
+            offset=0.1,
+        )        
         node = self.node_class()
-        node.derive(warn_capt, warn_fo)
-        np.testing.assert_array_equal(node.array, [0, 0, 1, 1, 1, 1])
+        node.derive(warn_capt, warn_fo, warn_capt_2, warn_fo_2)
+        np.testing.assert_array_equal(node.array, [0, 1, 1, 1, 1, 0])
 
 
 
@@ -2600,6 +2615,25 @@ class TestStableApproach(unittest.TestCase):
         # 10 samples above 1000ft where Eng N1 was not yet stable
         self.assertEqual(list(sect[117:127]), ['Eng Thrust Not Stable']*10)
         self.assertTrue(np.all(sect[127:] == ['Stable']))
+
+
+class TestStallWarning(unittest.TestCase):
+
+    def test_can_operate(self):
+        opts = StallWarning.get_operational_combinations()
+        self.assertEqual(len(opts), 6)
+
+    def test_derive(self):
+        one = M('Stall Warning (1)', np.ma.array([0, 1, 0, 0, 0, 0]),
+                offset=0.7, frequency=2.0,
+                values_mapping={0: '-', 1: 'Warning'})
+        two = M('Stall Warning (2)', np.ma.array([0, 0, 0, 0, 1, 0]),
+                offset=0.2, frequency=2.0,
+                values_mapping={0: '-', 1: 'Warning'})
+        ss = StallWarning()
+        ss.derive(one, two)
+        expected = np.ma.array([0, 1, 0, 0, 1, 0])
+        np.testing.assert_equal(ss.array.raw, expected)
 
 
 class TestStickShaker(unittest.TestCase):

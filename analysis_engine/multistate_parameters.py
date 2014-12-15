@@ -1857,6 +1857,39 @@ class StickShaker(MultistateDerivedParameterNode):
             self.array = available[0].array
 
 
+class StallWarning(MultistateDerivedParameterNode):
+    '''
+    This accounts for the different types of stall warning system. Where two
+    systems are recorded the results are OR'd to make a single parameter which
+    operates in response to either system triggering.
+    '''
+
+    values_mapping = {
+        0: '-',
+        1: 'Warning',
+    }
+
+    @classmethod
+    def can_operate(cls, available):
+        return any_of((
+            'Stall Warning (1)',
+            'Stall Warning (2)',
+        ), available)
+
+    def derive(self, 
+               ss1=M('Stall Warning (1)'),
+               ss2=M('Stall Warning (2)'),
+               frame=A('Frame'),
+               ):
+
+        available = [par for par in [ss1, ss2] if par]
+        if len(available) > 1:
+            shake_stack = vstack_params_where_state(*[(s, 'Warning') for s in available])
+            self.array = shake_stack.any(axis=0)
+        elif len(available) == 1:
+            self.array = available[0].array
+
+
 class SpeedbrakeDeployed(MultistateDerivedParameterNode):
     '''
     '''
