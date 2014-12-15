@@ -5199,6 +5199,23 @@ class HeadingAtLowestAltitudeDuringApproach(KeyPointValueNode):
         self.create_kpvs_at_ktis(hdg.array % 360.0, low_points)
 
 
+class HeadingChange(KeyPointValueNode):
+    ''' 
+    This determines the heading change made during a turn, while turning\
+    at over +/- HEADING_RATE_FOR_FLIGHT_PHASES in the air.
+    '''
+    
+    units = ut.DEGREE
+
+    def derive(self,
+               hdg=P('Heading Continuous'),
+               turns=S('Turning In Air')):
+
+        for turn in turns:
+            start_hdg = hdg.array[turn.slice.start]
+            stop_hdg = hdg.array[turn.slice.stop]
+            self.create_kpv(turn.slice.stop, stop_hdg-start_hdg)
+
 class ElevatorDuringLandingMin(KeyPointValueNode):
     '''
     '''
