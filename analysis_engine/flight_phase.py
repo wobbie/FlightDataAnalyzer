@@ -133,7 +133,8 @@ class GoAroundAndClimbout(FlightPhaseNode):
         # Find the ups and downs in the height trace.
         level_flights = level_flights.get_slices() if level_flights else None
         low_alt_slices = find_low_alts(
-            alt_aal.array, 3000, start_alt=500, stop_alt=2000,
+            alt_aal.array, alt_aal.frequency, 3000, 
+            start_alt=500, stop_alt=2000,
             level_flights=level_flights,
             relative_start=True,
             relative_stop=True,
@@ -238,7 +239,8 @@ class ApproachAndLanding(FlightPhaseNode):
         level_flights = level_flights.get_slices() if level_flights else None
         
         low_alt_slices = find_low_alts(
-            alt_aal.array, 3000, stop_alt=0,
+            alt_aal.array, alt_aal.frequency, 3000, 
+            stop_alt=0,
             level_flights=level_flights)
         
         for low_alt in low_alt_slices:
@@ -273,8 +275,9 @@ class Approach(FlightPhaseNode):
                level_flights=S('Level Flight'),
                landings=S('Landing')):
         level_flights = level_flights.get_slices() if level_flights else None
-        low_alts = find_low_alts(alt_aal.array, 3000, start_alt=3000,
-                                 stop_alt=50, stop_mode='descent',
+        low_alts = find_low_alts(alt_aal.array, alt_aal.frequency, 3000, 
+                                 start_alt=3000, stop_alt=50, 
+                                 stop_mode='descent',
                                  level_flights=level_flights)
         for low_alt in low_alts:
             # Select landings only.
@@ -553,7 +556,7 @@ class DescentLowClimb(FlightPhaseNode):
     def derive(self, alt_aal=P('Altitude AAL For Flight Phases'),
                level_flights=S('Level Flight')):
         level_flights = level_flights.get_slices() if level_flights else None
-        low_alt_slices = find_low_alts(alt_aal.array,
+        low_alt_slices = find_low_alts(alt_aal.array, alt_aal.frequency,
                                        500,
                                        3000,
                                        level_flights=level_flights)
