@@ -1838,7 +1838,7 @@ def find_toc_tod(alt_data, ccd_slice, frequency, mode=None):
         section_2 = slice(peak.index, ccd_slice.stop or len(alt_data))
         slope = -SLOPE_FOR_TOC_TOD / frequency
     else:
-        raise ValueError('Invalid mode in find_boc_toc_tod_bod')
+        raise ValueError('Invalid mode in find_toc_tod')
 
     # Find the midpoint to separate tops and bottoms of climbs and descents.
     trough = min_value(alt_data, section_2)
