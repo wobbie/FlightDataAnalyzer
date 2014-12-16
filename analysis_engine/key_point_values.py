@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+import operator
 
 from copy import deepcopy
 from math import ceil
@@ -2304,6 +2305,65 @@ class AirspeedWithFlapAndSlatExtendedMax(KeyPointValueNode, FlapOrConfigurationM
                 if not detent == '0':
                     continue  # skip as only interested when flap is retracted.
                 self.create_kpv(index, value, parameter=flap.name, flap=detent)
+
+
+class AirspeedWithFlapIncludingTransition20AndSlatFullyExtendedMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
+    '''
+    Maximum airspeed recorded with Slat Fully Extended and with Flap 20
+    extended. Created specifically for the B777 and B787 which have a
+    commanded slat only movement between flap 20 and 30
+
+    Based upon Flap and Slat surface positions for maintenance based
+    investigations where the results may be compared to Slat limiting speeds.
+    Measurements which include Flap transitions can be found in other
+    measurements.
+
+    The KPV name includes the source parameter used for the flap measurement
+    taken:
+
+    - 'Flap Including Transition': Flap (and Slat) setting includes the
+      transition periods  into and out of the flap detented position
+      (for maintenance investigations on the more cautious side).
+    - 'Flap Excluding Transition': Flap (and Slat) taken only where the
+      detented flap position has been reached, excluding the transition
+      periods (for maintenance investigations).
+    '''
+
+    units = ut.KT
+
+    @classmethod
+    def can_operate(cls, available, family=A('Family')):
+        slat_only_transition = family and family.value in ('B777',
+                                                           'B787')
+        inc = all_of((
+            'Flap Including Transition',
+            'Slat Including Transition',
+            'Airspeed',
+            'Fast'
+        ), available)
+        return slat_only_transition and inc
+
+    def derive(self,
+               flap=M('Flap Including Transition'),
+               slat=M('Slat Including Transition'),
+               airspeed=P('Airspeed'),
+               fast=S('Fast'),
+               family=A('Family')):
+
+        slat_fully_ext_value = max(at.get_slat_map(family=family.value).iteritems(), key=operator.itemgetter(0))[1]
+        # Fast scope traps flap changes very late on the approach and
+        # raising flaps before 80 kt on the landing run.
+        #
+        # We take the intersection of the fast slices and the slices where
+        # the slat was extended.
+        array = np.ma.array(slat.array == slat_fully_ext_value, mask=slat.array.mask, dtype=int)
+        scope = slices_and(fast.get_slices(), runs_of_ones(array))
+        scope = S(items=[Section('', s, s.start, s.stop) for s in scope])
+        data = self.flap_or_conf_max_or_min(flap, airspeed, max_value, scope,
+                                            include_zero=True)
+        for index, value, detent in data:
+            if detent == '20':
+                self.create_kpv(index, value)
 
 
 class AirspeedWithFlapDuringClimbMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):

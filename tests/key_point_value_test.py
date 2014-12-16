@@ -127,6 +127,7 @@ from analysis_engine.key_point_values import (
     AirspeedWhileGearRetractingMax,
     AirspeedWithConfigurationMax,
     AirspeedWithFlapAndSlatExtendedMax,
+    AirspeedWithFlapIncludingTransition20AndSlatFullyExtendedMax,
     AirspeedWithFlapDuringClimbMax,
     AirspeedWithFlapDuringClimbMin,
     AirspeedWithFlapDuringDescentMax,
@@ -2855,6 +2856,39 @@ class TestAirspeedWithFlapAndSlatExtendedMax(unittest.TestCase, NodeTest):
         self.assertEqual(node.get_ordered_by_index(), [
             KeyPointValue(index=9.0, value=500.0, name='Airspeed With Flap Excluding Transition 0 And Slat Extended Max'),
             KeyPointValue(index=11.0, value=110.0, name='Airspeed With Flap Including Transition 0 And Slat Extended Max'),
+        ])
+
+
+class TestAirspeedWithFlapIncludingTransition20AndSlatFullyExtendedMax(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = AirspeedWithFlapIncludingTransition20AndSlatFullyExtendedMax
+
+    def test_can_operate(self):
+        req_params = ('Flap Including Transition', 'Slat Including Transition', 'Airspeed', 'Fast')
+        family = A('Family', value='B767')
+        self.assertFalse(self.node_class.can_operate(req_params, family=family), msg='KPV should not work for B767')
+        family = A('Family', value='B777')
+        self.assertTrue(self.node_class.can_operate(req_params, family=family))
+
+    def test_derive_basic(self):
+        b777 = A('Family', value='B777')
+        flap_values_mapping = {0: '0', 20: '20', 5: '5', 30: '30', 15: '15'}
+        slat_values_mapping = {0: '0', 32: '32', 22: '22'}
+
+        flap_inc_array = np.ma.array((0,)*5 + (5,)*5 + (20,)*10 + (30,)*5)
+        flap_inc_trsn = M('Flap Including Transition', flap_inc_array, values_mapping=flap_values_mapping)
+
+        slat_inc_array = np.ma.array((0,)*2 + (22,)*13 + (32,)*10)
+        slat_inc_trsn = M('Slat Including Transition', slat_inc_array, values_mapping=slat_values_mapping)
+
+        airspeed = P('Airspeed', np.ma.arange(300, 200, -4))
+        fast = buildsection('Fast', 5, None)
+
+        node = self.node_class()
+        node.derive(flap_inc_trsn, slat_inc_trsn, airspeed, fast, b777)
+        self.assertEqual(node.get_ordered_by_index(), [
+            KeyPointValue(index=15.0, value=240.0, name='Airspeed With Flap Including Transition 20 And Slat Fully Extended Max'),
         ])
 
 
