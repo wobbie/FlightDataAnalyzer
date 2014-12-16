@@ -21,6 +21,7 @@ from analysis_engine.settings import (ACCEL_LAT_OFFSET_LIMIT,
                                       HYSTERESIS_FPALT,
                                       KTS_TO_FPS,
                                       KTS_TO_MPS,
+                                      MIN_HEADING_CHANGE,
                                       NAME_VALUES_CONF,
                                       NAME_VALUES_ENGINE,
                                       NAME_VALUES_LEVER,
@@ -5214,7 +5215,10 @@ class HeadingChange(KeyPointValueNode):
         for turn in turns:
             start_hdg = hdg.array[turn.slice.start]
             stop_hdg = hdg.array[turn.slice.stop]
-            self.create_kpv(turn.slice.stop, stop_hdg-start_hdg)
+            dh = stop_hdg-start_hdg
+            if abs(dh) > MIN_HEADING_CHANGE:
+                self.create_kpv(turn.slice.stop-1, stop_hdg-start_hdg)
+
 
 class ElevatorDuringLandingMin(KeyPointValueNode):
     '''

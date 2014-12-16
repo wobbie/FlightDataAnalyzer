@@ -306,6 +306,10 @@ METRES_TO_FEET = 1000/25.4/12
 # Conversion from metres to nautical miles.
 METRES_TO_NM = 1852.0
 
+# Heading change KPV rejects turns below this threshold. 270deg splits full
+# orbits (which we want to measure) from turns in the hold.
+MIN_HEADING_CHANGE = 270.0
+
 # Engine core speed for engine starting.
 CORE_START_SPEED = 35.0  # %
 

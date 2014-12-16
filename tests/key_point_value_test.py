@@ -309,6 +309,7 @@ from analysis_engine.key_point_values import (
     GroundspeedWhileTaxiingTurnMax,
     GroundspeedWithThrustReversersDeployedMin,
     HeadingAtLowestAltitudeDuringApproach,
+    HeadingChange,
     HeadingDeviationFromRunwayAbove80KtsAirspeedDuringTakeoff,
     HeadingDeviationFromRunwayAt50FtDuringLanding,
     HeadingDeviationFromRunwayAtTOGADuringTakeoff,
@@ -7570,6 +7571,41 @@ class TestHeadingAtLowestAltitudeDuringApproach(unittest.TestCase, CreateKPVsAtK
         self.assertTrue(False, msg='Test not implemented.')
 
 
+class TestHeadingChange(unittest.TestCase):
+    def setUp(self):
+        self.node_class = HeadingChange
+        self.operational_combinations = [('Heading Continuous',
+                                          'Turning In Air')]
+
+    def test_derive_basic(self):
+        head = P('Heading Continuous',
+                 np.ma.array([0.0]*10+[280.0]*10))
+        landing = buildsection('Turning In Air', 5, 14)
+        kpv = HeadingChange()
+        kpv.derive(head, landing)
+        expected = [KeyPointValue(index=14, value=280.0,
+                                  name='Heading Change')]
+        self.assertEqual(kpv, expected)
+        
+    def test_derive_left(self):
+        head = P('Heading Continuous',
+                 np.ma.array([0.0]*10+[-300.0]*10))
+        landing = buildsection('Turning In Air', 5, 14)
+        kpv = HeadingChange()
+        kpv.derive(head, landing)
+        expected = [KeyPointValue(index=14, value=-300.0,
+                                  name='Heading Change')]
+        self.assertEqual(kpv, expected)
+        
+    def test_derive_small_angle(self):
+        head = P('Heading Continuous',
+                 np.ma.array([0.0]*10+[269.0]*10))
+        landing = buildsection('Turning In Air', 5, 14)
+        kpv = HeadingChange()
+        kpv.derive(head, landing)
+        self.assertEqual(len(kpv), 0)
+        
+        
 class TestElevatorDuringLandingMin(unittest.TestCase,
                                    CreateKPVsWithinSlicesTest):
     def setUp(self):
