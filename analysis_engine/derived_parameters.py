@@ -989,7 +989,7 @@ class AltitudeRadioOffsetRemoved(DerivedParameterNode):
     def derive(self, alt_rad=P('Altitude Radio')):
         self.array = alt_rad.array
         smoothed = np.ma.copy(alt_rad.array)
-        smoothed = medfilt(smoothed, 21)
+        smoothed = np.ma.array(medfilt(smoothed, 21), mask=alt_rad.array.mask)
         smoothed = np.ma.masked_greater(smoothed, 20)
         if not np.ma.count(smoothed):
             return
