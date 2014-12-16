@@ -5767,6 +5767,16 @@ class TestSlicesRemoveSmallSlices(unittest.TestCase):
         expected = [slice(1, 13)]
         self.assertEqual(expected, newlist)
 
+    def test_slice_removal_null_cases(self):
+        slicelist = []
+        newlist = slices_remove_small_slices(slicelist, count=5)
+        expected = []
+        self.assertEqual(expected, newlist)
+
+        slicelist = None
+        newlist = slices_remove_small_slices(slicelist, count=5)
+        expected = None
+        self.assertEqual(expected, newlist)
 
 class TestSlicesNot(unittest.TestCase):
     def test_slices_not_internal(self):

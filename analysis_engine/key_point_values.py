@@ -4,7 +4,7 @@ import numpy as np
 import operator
 
 from copy import deepcopy
-from math import ceil
+from math import ceil, copysign
 
 from flightdatautilities import aircrafttables as at, units as ut
 from flightdatautilities.geometry import midpoint
@@ -10391,6 +10391,50 @@ class RollCyclesNotDuringFinalApproach(KeyPointValueNode):
                 5.0, 10.0, roll.hz,
                 not_fa.start,
             ))
+
+
+class RollAtLowAltitude(KeyPointValueNode):
+    '''
+    Below 600ft, bank must not exceed 10% of A/C height for more than 5 sec.
+    
+    The dlc phase used here identifies all low level operations below
+    INITIAL_APPROACH_THRESHOLD. This includes takeoffs and landings. Running
+    this KPV to cover these periods is not a problem and might identify
+    bizzare takeoff or landing cases, hence these are not removed.
+    '''
+    
+    units = ut.DEGREE
+
+    def derive(self,
+               roll=P('Roll'),
+               alt_rad=P('Altitude Radio'),
+               dlcs=KTI('Descent Low Climb')):
+        
+        ten_pc = 10.0/100.0
+
+        for dlc in dlcs:
+            # Trim this to 600ft
+            lows = np.ma.clump_unmasked(
+                np.ma.masked_outside(alt_rad.array, 50.0, 600.0))
+            for low in lows:
+                # Only compute the ratio for the short period below 600ft
+                ratio = roll.array[low] / alt_rad.array[low]
+                # We will work out bank angle periods exceeding 10% and 5 sec.
+                banks = np.ma.clump_unmasked(
+                    np.ma.masked_less(np.ma.abs(ratio), ten_pc))
+                banks = slices_remove_small_slices(banks, 
+                                                   time_limit=5.0, 
+                                                   hz=roll.frequency)
+                for bank in banks:
+                    # Mark the largest roll attitude exceeding the limit.
+                    peak = max_abs_value(ratio[bank])
+                    peak_roll = roll.array[low][bank][peak.index]
+                    threshold = copysign(
+                        alt_rad.array[low][bank][peak.index]*ten_pc, 
+                        peak_roll)
+                    index = peak.index + low.start + bank.start
+                    value = peak_roll - threshold
+                    self.create_kpv(index, value)
 
 
 ##############################################################################
