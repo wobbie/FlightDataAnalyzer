@@ -3749,13 +3749,14 @@ def slices_remove_small_slices(slice_list, time_limit=10, hz=1, count=None):
 
     :returns: slice list.
     '''
+    if slice_list is None or slice_list == []:
+        return slice_list
+    
     if count is not None:
         sample_limit = count
     else:
         sample_limit = time_limit * hz
 
-    if slice_list is None :
-        return slice_list
     new_list = []
     for each_slice in slice_list:
         if each_slice.stop - each_slice.start > sample_limit:
