@@ -133,7 +133,8 @@ class GoAroundAndClimbout(FlightPhaseNode):
         # Find the ups and downs in the height trace.
         level_flights = level_flights.get_slices() if level_flights else None
         low_alt_slices = find_low_alts(
-            alt_aal.array, 3000, start_alt=500, stop_alt=2000,
+            alt_aal.array, alt_aal.frequency, 3000, 
+            start_alt=500, stop_alt=2000,
             level_flights=level_flights,
             relative_start=True,
             relative_stop=True,
@@ -238,7 +239,8 @@ class ApproachAndLanding(FlightPhaseNode):
         level_flights = level_flights.get_slices() if level_flights else None
         
         low_alt_slices = find_low_alts(
-            alt_aal.array, 3000, stop_alt=0,
+            alt_aal.array, alt_aal.frequency, 3000, 
+            stop_alt=0,
             level_flights=level_flights)
         
         for low_alt in low_alt_slices:
@@ -273,8 +275,9 @@ class Approach(FlightPhaseNode):
                level_flights=S('Level Flight'),
                landings=S('Landing')):
         level_flights = level_flights.get_slices() if level_flights else None
-        low_alts = find_low_alts(alt_aal.array, 3000, start_alt=3000,
-                                 stop_alt=50, stop_mode='descent',
+        low_alts = find_low_alts(alt_aal.array, alt_aal.frequency, 3000, 
+                                 start_alt=3000, stop_alt=50, 
+                                 stop_mode='descent',
                                  level_flights=level_flights)
         for low_alt in low_alts:
             # Select landings only.
@@ -465,7 +468,7 @@ class InitialCruise(FlightPhaseNode):
         if cruise.stop - cruise.start > 330:
             self.create_phase(slice(cruise.start+300, cruise.start+330))
             
-
+"""
 class CombinedDescent(FlightPhaseNode):
     def derive(self,
                tod_set=KTI('Top Of Descent'),
@@ -480,7 +483,7 @@ class CombinedDescent(FlightPhaseNode):
         slice_idxs = zip(start_list, end_list)
         for slice_tuple in slice_idxs:
             self.create_phase(slice(*slice_tuple))
-
+"""
 
 class Descending(FlightPhaseNode):
     """
@@ -501,24 +504,14 @@ class Descent(FlightPhaseNode):
     def derive(self,
                tod_set=KTI('Top Of Descent'),
                bod_set=KTI('Bottom Of Descent')):
-        # First we extract the kti index values into simple lists.
-        tod_list = []
-        for this_tod in tod_set:
-            tod_list.append(this_tod.index)
 
-        # Now see which preceded this minimum
-        for this_bod in bod_set:
-            bod = this_bod.index
-            # Scan the TODs
-            closest_tod = None
-            for this_tod in tod_list:
-                if (bod > this_tod and
-                    this_tod > closest_tod):
-                    closest_tod = this_tod
+        start_list = [y.index for y in tod_set.get_ordered_by_index()]
+        end_list = [x.index for x in bod_set.get_ordered_by_index()]
+        assert len(start_list) == len(end_list)
 
-            # Build the slice from what we have found.
-            self.create_phase(slice(closest_tod, bod))
-        return
+        slice_idxs = zip(start_list, end_list)
+        for slice_tuple in slice_idxs:
+            self.create_phase(slice(*slice_tuple))
 
 
 class DescentToFlare(FlightPhaseNode):
@@ -553,7 +546,7 @@ class DescentLowClimb(FlightPhaseNode):
     def derive(self, alt_aal=P('Altitude AAL For Flight Phases'),
                level_flights=S('Level Flight')):
         level_flights = level_flights.get_slices() if level_flights else None
-        low_alt_slices = find_low_alts(alt_aal.array,
+        low_alt_slices = find_low_alts(alt_aal.array, alt_aal.frequency,
                                        500,
                                        3000,
                                        level_flights=level_flights)
@@ -962,14 +955,23 @@ class InitialClimb(FlightPhaseNode):
     '''
     def derive(self,
                takeoffs=S('Takeoff'),
-               climb_starts=KTI('Climb Start')):
+               climb_starts=KTI('Climb Start'),
+               tocs=KTI('Top Of Climb')):
         for takeoff in takeoffs:
             begin = takeoff.stop_edge
-            for climb_start in climb_starts.get_ordered_by_index():
-                end = climb_start.index
-                if end > begin:
-                    self.create_phase(slice(begin, end), begin=begin, end=end)
-                    break
+            if climb_starts:
+                for climb_start in climb_starts.get_ordered_by_index():
+                    end = climb_start.index
+                    if end > begin:
+                        self.create_phase(slice(begin, end), begin=begin, end=end)
+                        break
+            else:
+                # TOC was measured below 1000ft so use that as the endpoint.
+                for toc in tocs.get_ordered_by_index():
+                    end = toc.index
+                    if end > begin:
+                        self.create_phase(slice(begin, end), begin=begin, end=end)
+                        break
 
 
 class LevelFlight(FlightPhaseNode):

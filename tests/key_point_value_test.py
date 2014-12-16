@@ -310,6 +310,7 @@ from analysis_engine.key_point_values import (
     GroundspeedWhileTaxiingTurnMax,
     GroundspeedWithThrustReversersDeployedMin,
     HeadingAtLowestAltitudeDuringApproach,
+    HeadingChange,
     HeadingDeviationFromRunwayAbove80KtsAirspeedDuringTakeoff,
     HeadingDeviationFromRunwayAt50FtDuringLanding,
     HeadingDeviationFromRunwayAtTOGADuringTakeoff,
@@ -1593,7 +1594,7 @@ class TestAirspeed10000To8000FtMax(unittest.TestCase):
 
     def setUp(self):
         self.node_class = Airspeed10000To8000FtMax
-        self.operational_combinations = [('Airspeed', 'Altitude STD Smoothed', 'Combined Descent')]
+        self.operational_combinations = [('Airspeed', 'Altitude STD Smoothed', 'Descent')]
         self.function = max_value
 
     def test_can_operate(self):
@@ -1609,7 +1610,7 @@ class TestAirspeed8000To5000FtMax(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = Airspeed8000To5000FtMax
-        self.operational_combinations = [('Airspeed', 'Altitude AAL For Flight Phases', 'Altitude STD Smoothed', 'Combined Descent')]
+        self.operational_combinations = [('Airspeed', 'Altitude AAL For Flight Phases', 'Altitude STD Smoothed', 'Descent')]
         self.function = max_value
         self.second_param_method_calls = [('slices_from_to', (8000, 5000), {})]
 
@@ -1624,7 +1625,7 @@ class TestAirspeed10000To5000FtMax(unittest.TestCase, NodeTest):
         self.node_class = Airspeed10000To5000FtMax
         self.operational_combinations = [
             ('Airspeed', 'Altitude AAL For Flight Phases',
-             'Altitude STD Smoothed', 'Combined Descent')
+             'Altitude STD Smoothed', 'Descent')
         ]
         self.function = max_value
         self.second_param_method_calls = [('slices_from_to', (1000, 5000), {})]
@@ -1638,7 +1639,7 @@ class TestAirspeed5000To3000FtMax(unittest.TestCase):
 
     def setUp(self):
         self.node_class = Airspeed5000To3000FtMax
-        self.operational_combinations = [('Airspeed', 'Altitude AAL For Flight Phases', 'Combined Descent')]
+        self.operational_combinations = [('Airspeed', 'Altitude AAL For Flight Phases', 'Descent')]
         self.function = max_value
 
     def test_can_operate(self):
@@ -2466,7 +2467,7 @@ class TestAirspeedMinusMinimumAirspeed10000To50FtMin(unittest.TestCase):
         alt_array = np.ma.array(array_start + array_start[-1:None:-1] + [0])
         alt_std = P('Altitude STD Smoothed', alt_array + 500)
         alt_aal = P('Altitude AAL For Flight Phases', alt_array)
-        descents = buildsection('Combined Descent', 21, 39)
+        descents = buildsection('Descent', 21, 39)
         name = self.node_class.get_name()
         node = self.node_class()
         node.derive(air_spd, alt_aal, alt_std, descents)
@@ -7604,6 +7605,41 @@ class TestHeadingAtLowestAltitudeDuringApproach(unittest.TestCase, CreateKPVsAtK
         self.assertTrue(False, msg='Test not implemented.')
 
 
+class TestHeadingChange(unittest.TestCase):
+    def setUp(self):
+        self.node_class = HeadingChange
+        self.operational_combinations = [('Heading Continuous',
+                                          'Turning In Air')]
+
+    def test_derive_basic(self):
+        head = P('Heading Continuous',
+                 np.ma.array([0.0]*10+[280.0]*10))
+        landing = buildsection('Turning In Air', 5, 14)
+        kpv = HeadingChange()
+        kpv.derive(head, landing)
+        expected = [KeyPointValue(index=14, value=280.0,
+                                  name='Heading Change')]
+        self.assertEqual(kpv, expected)
+        
+    def test_derive_left(self):
+        head = P('Heading Continuous',
+                 np.ma.array([0.0]*10+[-300.0]*10))
+        landing = buildsection('Turning In Air', 5, 14)
+        kpv = HeadingChange()
+        kpv.derive(head, landing)
+        expected = [KeyPointValue(index=14, value=-300.0,
+                                  name='Heading Change')]
+        self.assertEqual(kpv, expected)
+        
+    def test_derive_small_angle(self):
+        head = P('Heading Continuous',
+                 np.ma.array([0.0]*10+[269.0]*10))
+        landing = buildsection('Turning In Air', 5, 14)
+        kpv = HeadingChange()
+        kpv.derive(head, landing)
+        self.assertEqual(len(kpv), 0)
+        
+        
 class TestElevatorDuringLandingMin(unittest.TestCase,
                                    CreateKPVsWithinSlicesTest):
     def setUp(self):
@@ -9257,7 +9293,7 @@ class TestRateOfDescentTopOfDescentTo10000FtMax(unittest.TestCase):
 
     def test_can_operate(self):
         opts = RateOfDescentTopOfDescentTo10000FtMax.get_operational_combinations()
-        self.assertEqual(opts, [('Vertical Speed', 'Altitude STD Smoothed', 'Combined Descent')])
+        self.assertEqual(opts, [('Vertical Speed', 'Altitude STD Smoothed', 'Descent')])
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
@@ -9268,7 +9304,7 @@ class TestRateOfDescentBelow10000FtMax(unittest.TestCase):
 
     def test_can_operate(self):
         opts = RateOfDescentBelow10000FtMax.get_operational_combinations()
-        self.assertEqual(opts, [('Vertical Speed', 'Altitude STD Smoothed', 'Combined Descent')])
+        self.assertEqual(opts, [('Vertical Speed', 'Altitude STD Smoothed', 'Descent')])
 
     def test_derive(self):
         array = np.ma.concatenate((np.ma.arange(0, 5000, 250), np.ma.arange(5000, 10000, 1000), [10500, 9500, 9900], [11000]*5))
@@ -9277,7 +9313,7 @@ class TestRateOfDescentBelow10000FtMax(unittest.TestCase):
         roc_array = np.ma.concatenate(([250]*19, [437, 625, 812, 1000, 1125, 625, 475, 500, 125, 375, 275, 0, 0, 0]))
         roc_array = np.ma.concatenate((roc_array, 1-roc_array[::-1]))
         vert_spd = P('Vertical Speed', -roc_array)
-        airs = buildsection('Combined Descent', 1, 200)
+        airs = buildsection('Descent', 1, 200)
         node = RateOfDescentBelow10000FtMax()
         node.derive(vert_spd, alt, airs)
 
@@ -9293,7 +9329,7 @@ class TestRateOfDescentBelow10000FtMax(unittest.TestCase):
         roc_array = np.ma.concatenate(([250]*19, [437, 625, 812, 1000, 1125, 625, 475, 500, 125, 375, 275, 0, 0, 0]))
         roc_array = np.ma.concatenate((roc_array, 1-roc_array[::-1]))
         vert_spd = P('Vertical Speed', -roc_array)
-        airs = buildsection('Combined Descent', 1, 2)
+        airs = buildsection('Descent', 1, 2)
         node = RateOfDescentBelow10000FtMax()
         node.derive(vert_spd, alt, airs)
 

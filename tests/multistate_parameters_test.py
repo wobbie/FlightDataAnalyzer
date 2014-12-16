@@ -62,6 +62,7 @@ from analysis_engine.multistate_parameters import (
     Gear_RedWarning,
     KeyVHFCapt,
     KeyVHFFO,
+    MasterCaution,
     MasterWarning,
     PackValvesOpen,
     PilotFlying,
@@ -73,6 +74,7 @@ from analysis_engine.multistate_parameters import (
     SpeedbrakeDeployed,
     SpeedbrakeSelected,
     StableApproach,
+    StallWarning,
     StickPusher,
     StickShaker,
     TakeoffConfigurationWarning,
@@ -2008,6 +2010,51 @@ class TestKeyVHFFO(unittest.TestCase):
         pass
 
 
+class TestMasterCaution(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = MasterCaution
+        self.operational_combinations = [
+            ('Master Caution (Capt)',),
+            ('Master Caution (FO)',),
+            ('Master Caution (Capt)', 'Master Caution (FO)'),
+        ]
+
+    def test_derive(self):
+        warn_capt = M(
+            name='Master Caution (Capt)',
+            array=np.ma.array(data=[0, 1, 0, 0, 0, 0]),
+            values_mapping={0: '-', 1: 'Caution'},
+            frequency=1,
+            offset=0.1,
+        )
+        warn_fo = M(
+            name='Master Caution (FO)',
+            array=np.ma.array(data=[0, 0, 1, 0, 0, 0]),
+            values_mapping={0: '-', 1: 'Caution'},
+            frequency=1,
+            offset=0.1,
+        )
+        warn_capt_2 = M(
+            name='Master Caution (Capt)(2)',
+            array=np.ma.array(data=[0, 0, 0, 1, 0, 0]),
+            values_mapping={0: '-', 1: 'Caution'},
+            frequency=1,
+            offset=0.1,
+        )
+        warn_fo_2 = M(
+            name='Master Caution (FO)(2)',
+            array=np.ma.array(data=[0, 0, 0, 0, 1, 0]),
+            values_mapping={0: '-', 1: 'Caution'},
+            frequency=1,
+            offset=0.1,
+        )        
+        node = self.node_class()
+        node.derive(warn_capt, warn_fo, warn_capt_2, warn_fo_2)
+        np.testing.assert_array_equal(node.array, [0, 1, 1, 1, 1, 0])
+
+
+
 class TestMasterWarning(unittest.TestCase, NodeTest):
 
     def setUp(self):
@@ -2036,6 +2083,26 @@ class TestMasterWarning(unittest.TestCase, NodeTest):
         node = self.node_class()
         node.derive(warn_capt, warn_fo)
         np.testing.assert_array_equal(node.array, [0, 0, 1, 1, 1, 1])
+
+
+    def test_derive_single(self):
+        warn_capt = M(
+            name='Master Warning (Capt)',
+            array=np.ma.array(data=[0, 0, 0, 0, 0, 0]),
+            values_mapping={0: '-', 1: 'Warning'},
+            frequency=1,
+            offset=0.1,
+        )
+        warn_fo = M(
+            name='Master Warning (FO)',
+            array=np.ma.array(data=[0, 0, 1, 1, 1, 0]),
+            values_mapping={0: '-', 1: 'Warning'},
+            frequency=1,
+            offset=0.1,
+        )
+        node = self.node_class()
+        node.derive(warn_capt, warn_fo)
+        np.testing.assert_array_equal(node.array, [0, 0, 1, 1, 1, 0])
 
 
 class TestPackValvesOpen(unittest.TestCase):
@@ -2376,21 +2443,21 @@ class TestStableApproach(unittest.TestCase):
         opts = StableApproach.get_operational_combinations()
         combinations = [
             # all
-            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL', 'Vapp'),
+            ('Approach Information', 'Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL', 'Vapp'),
             # exc. Vapp
-            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
+            ('Approach Information', 'Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
             # exc. Airspeed Relative
-            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL', 'Vapp'),
+            ('Approach Information', 'Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL', 'Vapp'),
             # exc. Vapp and Airspeed Relative
-            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
+            ('Approach Information', 'Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
             # exc. ILS Glideslope and Vapp
-            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
+            ('Approach Information', 'Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'ILS Localizer', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
             # exc. ILS Glideslope and ILS Localizer and Vapp
-            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
+            ('Approach Information', 'Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Airspeed Relative For 3 Sec', 'Vertical Speed', 'Eng (*) N1 Avg For 10 Sec', 'Altitude AAL'),
             # using EPR and exc. Airspeed Relative
-            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) EPR Avg For 10 Sec', 'Altitude AAL', 'Vapp'),
+            ('Approach Information', 'Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) EPR Avg For 10 Sec', 'Altitude AAL', 'Vapp'),
             # including Family attribute
-            ('Approach Information', 'Combined Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) EPR Avg For 10 Sec', 'Altitude AAL', 'Vapp', 'Family'),
+            ('Approach Information', 'Descent', 'Gear Down', 'Flap', 'Track Deviation From Runway', 'Vertical Speed', 'ILS Glideslope', 'ILS Localizer', 'Eng (*) EPR Avg For 10 Sec', 'Altitude AAL', 'Vapp', 'Family'),
         ]
         for combo in combinations:
             self.assertIn(combo, opts)
@@ -2548,6 +2615,25 @@ class TestStableApproach(unittest.TestCase):
         # 10 samples above 1000ft where Eng N1 was not yet stable
         self.assertEqual(list(sect[117:127]), ['Eng Thrust Not Stable']*10)
         self.assertTrue(np.all(sect[127:] == ['Stable']))
+
+
+class TestStallWarning(unittest.TestCase):
+
+    def test_can_operate(self):
+        opts = StallWarning.get_operational_combinations()
+        self.assertEqual(len(opts), 6)
+
+    def test_derive(self):
+        one = M('Stall Warning (1)', np.ma.array([0, 1, 0, 0, 0, 0]),
+                offset=0.7, frequency=2.0,
+                values_mapping={0: '-', 1: 'Warning'})
+        two = M('Stall Warning (2)', np.ma.array([0, 0, 0, 0, 1, 0]),
+                offset=0.2, frequency=2.0,
+                values_mapping={0: '-', 1: 'Warning'})
+        ss = StallWarning()
+        ss.derive(one, two)
+        expected = np.ma.array([0, 1, 0, 0, 1, 0])
+        np.testing.assert_equal(ss.array.raw, expected)
 
 
 class TestStickShaker(unittest.TestCase):

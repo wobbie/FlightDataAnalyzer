@@ -53,30 +53,10 @@ class BottomOfDescent(KeyTimeInstanceNode):
     '''
     Bottom of a descent phase, which may be a go-around, touch and go or landing.
     '''
-    @classmethod
-    def can_operate(cls, available):
-        return ('HDF Duration' in available and
-                any_of(('Climb Cruise Descent', 'Airborne'), available))
-    
-    def derive(self, ccds=S('Climb Cruise Descent'),
-               airs=S('Airborne'), duration=A('HDF Duration')):
-        air_list = [a.stop_edge or duration.value for a in airs] if airs else []
-        climb_list = [c.stop_edge or duration.value for c in ccds] if ccds else []
-        ends = sorted(air_list+climb_list)
-        index = 0
-        while index<len(ends)-1:
-            delta = ends[index+1] - ends[index]
-            # The differences should be less than a second, arising from
-            # different ways of identifying the touchdown point. 30 seconds
-            # is a generous tolerance.
-            if delta < 30.0 * self.frequency:
-                ends.pop(index+1)
-            else:
-                self.create_kti(ends[index])
-                index += 1
-        if ends:
-            # Ends may not exist for non-START_AND_STOP segments.
-            self.create_kti(ends[-1])
+    def derive(self, ccd=S('Climb Cruise Descent')):
+        for ccd_phase in ccd:
+            end = ccd_phase.slice.stop
+            self.create_kti(end)
 
 
 # TODO: Determine an altitude peak per climb.
@@ -323,8 +303,10 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
             if alt_aal:
                 self.frequency = alt_aal.frequency
                 self.offset = alt_aal.offset
-                _slice = initial_climbs.get_aligned(alt_aal).get_first().slice
-                self.create_kti(index_at_value(alt_aal.array, alt, _slice=_slice))
+                ics = initial_climbs.get_aligned(alt_aal)
+                if ics.get_slices():
+                    _slice = ics.get_first().slice
+                    self.create_kti(index_at_value(alt_aal.array, alt, _slice=_slice))
 
 
 class ClimbThrustDerateDeselected(KeyTimeInstanceNode):
@@ -670,7 +652,7 @@ class TopOfClimb(KeyTimeInstanceNode):
             ccd_slice = ccd_phase.slice
             try:
                 n_toc = find_toc_tod(alt_std.array, ccd_slice, self.frequency,
-                                     mode='Climb')
+                                             mode='toc')
             except:
                 # altitude data does not have an increasing section, so quit.
                 continue
@@ -694,18 +676,14 @@ class TopOfDescent(KeyTimeInstanceNode):
                ccd=S('Climb Cruise Descent')):
         for ccd_phase in ccd:
             ccd_slice = ccd_phase.slice
-            try:
-                n_tod = find_toc_tod(alt_std.array, ccd_slice, self.frequency,
-                                     mode='Descent')
-            except ValueError:
-                # altitude data does not have a decreasing section, so quit.
-                continue
             # If this slice ended in mid-cruise, the ccd slice will end in None.
             if ccd_slice.stop is None:
                 continue
-            # if this is the last point in the slice, it's come from
-            # data that ends in the cruise, so we'll ignore this too.
-            if n_tod == ccd_slice.stop - 1:
+            try:
+                n_tod = find_toc_tod(alt_std.array, ccd_slice, self.frequency,
+                                             mode='tod')
+            except ValueError:
+                # altitude data does not have a decreasing section, so quit.
                 continue
             # Record the moment (with respect to this section of data)
             self.create_kti(n_tod)

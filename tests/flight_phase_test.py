@@ -14,6 +14,7 @@ from analysis_engine.flight_phase import (
     Climbing,
     Cruise,
     Descending,
+    Descent,
     DescentLowClimb,
     DescentToFlare,
     EngHotelMode,
@@ -30,6 +31,7 @@ from analysis_engine.flight_phase import (
     ILSGlideslopeEstablished,
     ILSLocalizerEstablished,
     InitialApproach,
+    InitialClimb,
     InitialCruise,
     Landing,
     LandingRoll,
@@ -49,7 +51,7 @@ from analysis_engine.flight_phase import (
     TurningOnGround,
     TwoDegPitchTo35Ft,
 )
-from analysis_engine.key_time_instances import TopOfClimb, TopOfDescent
+from analysis_engine.key_time_instances import BottomOfDescent, TopOfClimb, TopOfDescent
 from analysis_engine.library import integrate
 from analysis_engine.node import (Attribute, KTI, KeyTimeInstance, M, Parameter,
                                   P, S, Section, SectionNode, load)
@@ -117,6 +119,15 @@ def buildsections(*args):
         new_section = builditem(name, a[0], a[1])
         built_list.append(new_section)
     return SectionNode(name, items=built_list)
+
+def build_kti(*args):
+    built_list=[]
+    name = args[0]
+    for a in args[1:]:
+        if a:
+            new_kti = KeyTimeInstance(a, name)
+            built_list.append(new_kti)
+    return KTI(items=built_list)
 
 
 ##############################################################################
@@ -267,7 +278,7 @@ class TestApproachAndLanding(unittest.TestCase):
         self.assertEqual(len(app_ldg), 3)
         self.assertAlmostEqual(app_ldg[0].slice.start, 9771, places=0)
         self.assertAlmostEqual(app_ldg[0].slice.stop, 10810, places=0)
-        self.assertAlmostEqual(app_ldg[1].slice.start, 12056, places=0)
+        self.assertAlmostEqual(app_ldg[1].slice.start, 12050, places=0)
         self.assertAlmostEqual(app_ldg[1].slice.stop, 12631, places=0)
         self.assertAlmostEqual(app_ldg[2].slice.start, 26926, places=0)
         self.assertAlmostEqual(app_ldg[2].slice.stop, 27359, places=0)
@@ -395,11 +406,11 @@ class TestApproach(unittest.TestCase):
         app.derive(alt_aal, level_flights, landing)
         
         self.assertEqual(len(app), 3)
-        self.assertAlmostEqual(app[0].slice.start, 9771, places=0)
+        self.assertAlmostEqual(app[0].slice.start,10207, places=0)
         self.assertAlmostEqual(app[0].slice.stop, 10810, places=0)
-        self.assertAlmostEqual(app[1].slice.start, 12056, places=0)
+        self.assertAlmostEqual(app[1].slice.start,12050, places=0)
         self.assertAlmostEqual(app[1].slice.stop, 12631, places=0)
-        self.assertAlmostEqual(app[2].slice.start, 26926, places=0)
+        self.assertAlmostEqual(app[2].slice.start,26926, places=0)
         self.assertAlmostEqual(app[2].slice.stop, 27342, places=0)
 
 
@@ -726,9 +737,8 @@ class TestClimbCruiseDescent(unittest.TestCase):
         camel = ClimbCruiseDescent()
         # Needs to get above 15000ft and below 10000ft to create this phase.
         testwave = np.ma.cos(np.arange(0, 3.14 * 2, 0.1)) * (-3000) + 12500
-        # plot_parameter (testwave)
         air=buildsection('Airborne', 0, 62)
-        camel.derive(Parameter('Altitude AAL For Flight Phases',
+        camel.derive(Parameter('Altitude STD Smoothed',
                                np.ma.array(testwave)), air)
         self.assertEqual(len(camel), 1)
 
@@ -885,6 +895,34 @@ class TestCruise(unittest.TestCase):
         self.assertEqual(len(tod), 0)
 
 
+class TestInitialClimb(unittest.TestCase):
+
+    def test_can_operate(self):
+        expected = [('Takeoff', 'Climb Start', 'Top Of Climb')]
+        opts = InitialClimb.get_operational_combinations()
+        self.assertEqual(opts, expected)
+    
+    def test_basic(self):
+        ini_clb = InitialClimb()
+        toff = buildsection('Takeoff', 10, 20)
+        clb_start = build_kti('Climb Start', 30)
+        toc = build_kti('Top Of Climb', 40)
+        ini_clb.derive(toff, clb_start, toc)
+        self.assertEqual(len(ini_clb.get_slices()), 1)
+        self.assertEqual(ini_clb.get_first().slice.start, 20)
+        self.assertEqual(ini_clb.get_first().slice.stop, 30)
+
+    def test_short_climb(self):
+        ini_clb = InitialClimb()
+        toff = buildsection('Takeoff', 10, 20)
+        clb_start = build_kti('Climb Start', None)
+        toc = build_kti('Top Of Climb', 40)
+        ini_clb.derive(toff, clb_start, toc)
+        self.assertEqual(len(ini_clb.get_slices()), 1)
+        self.assertEqual(ini_clb.get_first().slice.start, 20)
+        self.assertEqual(ini_clb.get_first().slice.stop, 40)
+
+
 class TestInitialCruise(unittest.TestCase):
     
     def test_basic(self):
@@ -955,16 +993,16 @@ class TestDescending(unittest.TestCase):
         phase.derive(vert_spd, air)
         self.assertEqual(phase[0].slice, slice(7,19))
 
-"""
-class TestDescentToBottomOfDescent(unittest.TestCase):
+class TestDescent(unittest.TestCase):
     def test_can_operate(self):
         expected = [('Top Of Descent', 'Bottom Of Descent')]
-        opts = DescentToBottomOfDescent.get_operational_combinations()
+        opts = Descent.get_operational_combinations()
         self.assertEqual(opts, expected)
 
-    def test_descent_to_bottom_of_descent_basic(self):
+    def test_descent_basic(self):
         testwave = np.cos(np.arange(0,12.6,0.1))*(-3000)+12500
         alt_data = np.ma.array(testwave)
+        air = buildsection('Airborne', 0, len(testwave))
 
         #===========================================================
         # This block of code replicates normal opeartion and ensures
@@ -975,19 +1013,17 @@ class TestDescentToBottomOfDescent(unittest.TestCase):
         alt = Parameter('Altitude STD', alt_data)
 
         ccd = ClimbCruiseDescent()
-        ccd.derive(Parameter('Altitude For Flight Phases', alt_data))
+        ccd.derive(alt, air)
         tod = TopOfDescent()
         tod.derive(alt, ccd)
-        dlc = DescentLowClimb()
-        dlc.derive(alt)
         bod = BottomOfDescent()
-        bod.derive(alt, dlc)
+        bod.derive(ccd)
 
-        descent_phase = DescentToBottomOfDescent()
+        descent_phase = Descent()
         descent_phase.derive(tod, bod)
-        expected = [Section(name='Descent To Bottom Of Descent',slice=slice(32,63,None))]
+        expected = [Section(name='Descent',slice=slice(32,63,None), start_edge = 32, stop_edge = 63),
+                    Section(name='Descent',slice=slice(94,125,None), start_edge = 94, stop_edge = 125)]
         self.assertEqual(descent_phase, expected)
-"""
 
 class TestFast(unittest.TestCase):
     def test_can_operate(self):

@@ -1647,7 +1647,8 @@ def index_of_last_stop(bool_array, _slice=slice(0, None), min_dur=1,
         return None
 
 
-def find_low_alts(array, threshold_alt, start_alt=None, stop_alt=None,
+def find_low_alts(array, frequency, threshold_alt, 
+                  start_alt=None, stop_alt=None,
                   level_flights=None, cycle_size=500, 
                   stop_mode='climbout', relative_start=False,
                   relative_stop=False):
@@ -1738,7 +1739,8 @@ def find_low_alts(array, threshold_alt, start_alt=None, stop_alt=None,
             if pk_idxs is not None and len(pk_idxs) >= 2:
                 pk_idxs += dip_min_index
                 stop_index = index_at_value_or_level_off(
-                    array, stop_value, slice(pk_idxs[0], pk_idxs[1]))
+                    array, frequency, 
+                    stop_value, slice(pk_idxs[0], pk_idxs[1]))
         elif stop_mode == 'descent':
             # Search backwards during descent.
             pk_idxs, pk_vals = cycle_finder(array[start_index:dip_min_index],
@@ -1747,7 +1749,8 @@ def find_low_alts(array, threshold_alt, start_alt=None, stop_alt=None,
             if pk_idxs is not None and len(pk_idxs) >= 2:
                 pk_idxs += start_index
                 stop_index = index_at_value_or_level_off(
-                    array, abs(stop_value), slice(pk_idxs[-1], pk_idxs[-2], -1))
+                    array, frequency, abs(stop_value), 
+                    slice(pk_idxs[-1], pk_idxs[-2], -1))
         else:
             raise NotImplementedError(
                 "Unknown stop_mode '%s' within find_low_alts." % stop_mode)
@@ -1759,81 +1762,103 @@ def find_low_alts(array, threshold_alt, start_alt=None, stop_alt=None,
         if pk_idxs is not None and len(pk_idxs) >= 2:
             pk_idxs += start_index
             start_index = index_at_value_or_level_off(
-                array, start_value, slice(pk_idxs[-1], pk_idxs[-2], -1))
+                array, frequency, start_value, 
+                slice(pk_idxs[-1], pk_idxs[-2], -1))
         
         low_alt_slice = slice(start_index, stop_index)
         
         if level_flights:
             # Exclude level flight.
             excluding_level_flight = slices_and_not([low_alt_slice], level_flights)
-            if not excluding_level_flight:
-                # can be caused by very noisy signals
-                continue
             low_alt_slice = find_nearest_slice(
-                max(dip_min_index-1, low_alt_slice.start),
-                excluding_level_flight,
-            )
-    
-        low_alt_slices.append(low_alt_slice)
-    
+                max(dip_min_index-1, low_alt_slice.start), excluding_level_flight)
+        
+        if low_alt_slice:
+            low_alt_slices.append(low_alt_slice)
+
     return sorted(low_alt_slices)
 
 
-def find_toc_tod(alt_data, ccd_slice, frequency, mode='Climb'):
+def find_level_off(array, frequency, _slice):
+    '''
+    :param array: Altitude array
+    :type array: np.ma.array
+    :param frequency: Altitude array sampling frequency
+    :type frequency: float
+    :param _slice: Slice of the array to be processed
+    :type _slice: Python slice
+    
+    :returns: index of level flight phase.
+    :type: integer
+    '''
+    if _slice.step == -1:
+        my_slice = slice(_slice.stop, _slice.start, 1)
+    else:
+        my_slice = _slice
+        
+    data = array[my_slice]
+    if data[0] < data[-1]:
+        # Treat as climbing
+        index = find_toc_tod(data, slice(None, None), frequency, mode='toc')
+        return my_slice.start + index
+    else:
+        # Treat as descending
+        index = find_toc_tod(data, slice(None, None), frequency, mode='tod')
+        return my_slice.start + index
+
+
+def find_toc_tod(alt_data, ccd_slice, frequency, mode=None):
     '''
     Find the Top Of Climb or Top Of Descent from an altitude trace.
+    
+    This code separates the climb cruise descent into half width sections,
+    section_2, and then divides again into top and bottom halves, section_4.
+    This means that the code can be fairly easily extended to detect bottoms
+    of climb and descent if required.
 
     :param alt_data: Altitude array usually above FL100
     :type alt_data: np.ma.array
     :param ccd_slice: "cruise climb descent" slice of data, although similar will do
     :type ccd_slice: slice
+    :param frequency: alt_data sampling frequency
+    :type frequency: float
     :param mode: Either 'Climb' or 'Descent' to define which to select.
     :type mode: String
     :returns: Index of location identified within slice, relative to start of alt_data
     :rtype: Int
     '''
-    #NOTE: If this is changed to support slices with negative step, be sure to
-    # update index_at_value_or_level_off() which currently reverses the slice.
-
-    # Find the maximum altitude in this slice to reduce the effort later
-    peak_index = max_value(alt_data, ccd_slice).index
-
-    # We shrink the section to exclude data under 500ft. The logic here is
-    # that all climb and descent phases will have been generated with at
-    # least 500ft changes in altitude.
-    #WARNING: 500ft STD is not AAL!
-    if mode == 'Climb':
-        start = floor(index_at_value(alt_data, 500,
-                    slice(ccd_slice.start, peak_index)) or ccd_slice.start or 0)
-        section = slice(start, peak_index + 1)
+    # Find the maximum, minimim and midpoint altitudes and their indexes in
+    # this slice
+    peak = max_value(alt_data, ccd_slice)
+    if mode == 'toc':
+        section_2 = slice(ccd_slice.start or 0, peak.index+1)
         slope = SLOPE_FOR_TOC_TOD / frequency
-    else:
-        stop = ceil(index_at_value(alt_data, 500,
-                    slice(ccd_slice.stop, peak_index, -1)) or ccd_slice.stop or
-                    len(alt_data))
-        section = slice(peak_index, stop)
+    elif mode == 'tod':
+        # Descent case
+        section_2 = slice(peak.index or 0, ccd_slice.stop or len(alt_data))
         slope = -SLOPE_FOR_TOC_TOD / frequency
+    else:
+        raise ValueError('Invalid mode in find_toc_tod')
 
-    # Quit if there is nothing to do here.
-    if section.start == section.stop:
-        raise ValueError('No range of data for top of climb or descent check')
+    # Find the midpoint to separate tops and bottoms of climbs and descents.
+    trough = min_value(alt_data, section_2)
+    mid_alt = (peak.value + trough.value) / 2.0
+    mid_index = int(index_at_value(alt_data[section_2], mid_alt) + (section_2.start or 0))
+    
+    if mode == 'tod':
+        # The first part is where the point of interest lies
+        section_4 = slice(section_2.start, mid_index)
+    else:
+        # we need to scan the second part of this half.
+        section_4 = slice(mid_index, section_2.stop+1)
 
     # Establish a simple monotonic timebase
-    timebase = np.arange(len(alt_data[section]))
+    timebase = np.arange(len(alt_data[section_4]))
     # Then scale this to the required altitude data slope
     ramp = timebase * slope
-    # For airborne data only, subtract the slope from the climb, then the
-    # peak is at the top of climb or descent.
 
-    alt_min = np.ma.min(alt_data[section])
-    test_slope = np.ma.masked_less(alt_data[section], alt_min) - ramp
-    if np.ma.count(test_slope):
-        return np.ma.argmax(test_slope) + section.start
-    else:
-        if mode == 'Climb':
-            return 0
-        else:
-            return ccd_slice.stop-1
+    test_slope = alt_data[section_4] - ramp
+    return np.ma.argmax(test_slope) + section_4.start
 
 
 def find_edges(array, _slice=slice(None), direction='rising_edges'):
@@ -3405,6 +3430,9 @@ def find_nearest_slice(index, slices):
     :returns: the first slice which contains index or None
     :rtype: [slice]
     '''
+    if len(slices) == 0:
+        return None
+
     if len(slices) == 1:
         return slices[0]
     
@@ -6906,7 +6934,7 @@ def index_at_value(array, threshold, _slice=slice(None), endpoint='exact'):
     return (begin + step * (n + r))
 
 
-def index_at_value_or_level_off(array, value, _slice, abs_threshold=None):
+def index_at_value_or_level_off(array, frequency, value, _slice, abs_threshold=None):
     '''
     Find the index closest to the value unless it doesn't get within 10% of
     that value or the value +/- the abs_threshold, in which case find the
@@ -6937,16 +6965,7 @@ def index_at_value_or_level_off(array, value, _slice, abs_threshold=None):
     else:
         # we never got quite close enough to 2000ft above the
         # minimum go around altitude. Find the top of the climb.
-        if _slice.step in (1, None):
-            # TODO: Fix forced frequency of 1.
-            return find_toc_tod(array, _slice, 1, 'Climb')
-        else:
-            # negative step provided which is not supported by find_toc_tod
-            # so reverse the start and stop
-            stop = _slice.stop -1 if _slice.stop > 0 else 0
-            rev_slice = slice(stop, _slice.start, 1)
-            return find_toc_tod(array, rev_slice, 1, 'Descent')
-
+        return find_level_off(array, frequency, _slice)
 
 def _value(array, _slice, operator, start_edge=None, stop_edge=None):
     """

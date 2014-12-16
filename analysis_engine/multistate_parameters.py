@@ -1535,11 +1535,16 @@ class MasterCaution(MultistateDerivedParameterNode):
 
     def derive(self,
                capt=M('Master Caution (Capt)'),
-               fo=M('Master Caution (FO)')):
+               fo=M('Master Caution (FO)'),
+               capt_2=M('Master Caution (Capt)(2)'),
+               fo_2=M('Master Caution (FO)(2)'),
+               ):
 
         self.array = vstack_params_where_state(
             (capt, 'Caution'),
             (fo, 'Caution'),
+            (capt_2, 'Caution'),
+            (fo_2, 'Caution'),
         ).any(axis=0)
 
 
@@ -1847,6 +1852,39 @@ class StickShaker(MultistateDerivedParameterNode):
                                      ] if par]
         if len(available) > 1:
             shake_stack = vstack_params_where_state(*[(s, 'Shake') for s in available])
+            self.array = shake_stack.any(axis=0)
+        elif len(available) == 1:
+            self.array = available[0].array
+
+
+class StallWarning(MultistateDerivedParameterNode):
+    '''
+    This accounts for the different types of stall warning system. Where two
+    systems are recorded the results are OR'd to make a single parameter which
+    operates in response to either system triggering.
+    '''
+
+    values_mapping = {
+        0: '-',
+        1: 'Warning',
+    }
+
+    @classmethod
+    def can_operate(cls, available):
+        return any_of((
+            'Stall Warning (1)',
+            'Stall Warning (2)',
+        ), available)
+
+    def derive(self, 
+               ss1=M('Stall Warning (1)'),
+               ss2=M('Stall Warning (2)'),
+               frame=A('Frame'),
+               ):
+
+        available = [par for par in [ss1, ss2] if par]
+        if len(available) > 1:
+            shake_stack = vstack_params_where_state(*[(s, 'Warning') for s in available])
             self.array = shake_stack.any(axis=0)
         elif len(available) == 1:
             self.array = available[0].array
@@ -2210,7 +2248,7 @@ class StableApproach(MultistateDerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
         # Many parameters are optional dependencies
-        deps = ['Approach Information', 'Combined Descent',
+        deps = ['Approach Information', 'Descent',
                 'Gear Down', 'Flap',
                 'Track Deviation From Runway',
                 'Vertical Speed',
@@ -2222,7 +2260,7 @@ class StableApproach(MultistateDerivedParameterNode):
 
     def derive(self,
                apps=A('Approach Information'),
-               phases=S('Combined Descent'),
+               phases=S('Descent'),
                gear=M('Gear Down'),
                flap=M('Flap'),
                tdev=P('Track Deviation From Runway'),
