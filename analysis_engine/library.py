@@ -1831,11 +1831,11 @@ def find_toc_tod(alt_data, ccd_slice, frequency, mode=None):
     # this slice
     peak = max_value(alt_data, ccd_slice)
     if mode == 'toc':
-        section_2 = slice(ccd_slice.start, peak.index+1)
+        section_2 = slice(ccd_slice.start or 0, peak.index+1)
         slope = SLOPE_FOR_TOC_TOD / frequency
     elif mode == 'tod':
         # Descent case
-        section_2 = slice(peak.index, ccd_slice.stop or len(alt_data))
+        section_2 = slice(peak.index or 0, ccd_slice.stop or len(alt_data))
         slope = -SLOPE_FOR_TOC_TOD / frequency
     else:
         raise ValueError('Invalid mode in find_toc_tod')
