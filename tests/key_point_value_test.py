@@ -422,6 +422,7 @@ from analysis_engine.key_point_values import (
     Roll300To20FtMax,
     Roll400To1000FtMax,
     RollAbove1000FtMax,
+    RollAtLowAltitude,
     RollCyclesDuringFinalApproach,
     RollCyclesNotDuringFinalApproach,
     RollLiftoffTo20FtMax,
@@ -9601,6 +9602,65 @@ class TestRollCyclesNotDuringFinalApproach(unittest.TestCase, NodeTest):
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
 
+class TestRollAtLowAltitude(unittest.TestCase, NodeTest):
+    
+    def setUp(self):
+        self.node_class = RollAtLowAltitude
+        self.operational_combinations = [('Roll', 'Altitude Radio', 'Descent Low Climb')]
+
+    def test_basic(self):
+        roll = P('Roll', np.ma.array([0.0]*2+[11.0]+[10.0]*5+[0.0]*2))
+        alt_rad = P('Altitude Radio', np.ma.array([80.0]*10))
+        dlc = buildsections('Descent Low Climb', [1, 9])
+        kpv = self.node_class()
+        kpv.derive(roll, alt_rad, dlc)
+        self.assertEqual(len(kpv), 1)
+        self.assertEqual(kpv[0].index, 2)
+        self.assertEqual(kpv[0].value, 3)
+
+    def test_negative_bank_angle(self):
+        roll = P('Roll', np.ma.array([0.0]*2+[-11.0]+[10.0]*5+[0.0]*2))
+        alt_rad = P('Altitude Radio', np.ma.array([80.0]*10))
+        dlc = buildsections('Descent Low Climb', [1, 9])
+        kpv = self.node_class()
+        kpv.derive(roll, alt_rad, dlc)
+        self.assertEqual(kpv[0].value, -3)
+
+    def test_short_period(self):
+        roll = P('Roll', np.ma.array([0.0]*2+[11.0]+[10.0]*4+[0.0]*3))
+        alt_rad = P('Altitude Radio', np.ma.array([80.0]*10))
+        dlc = buildsections('Descent Low Climb', [1, 9])
+        kpv = self.node_class()
+        kpv.derive(roll, alt_rad, dlc)
+        self.assertEqual(len(kpv), 0)
+
+    def test_high(self):
+        roll = P('Roll', np.ma.array([0.0]*2+[60.0]*6+[0.0]*2))
+        alt_rad = P('Altitude Radio', np.ma.array([650.0]*10))
+        dlc = buildsections('Descent Low Climb', [1, 9])
+        kpv = self.node_class()
+        kpv.derive(roll, alt_rad, dlc)
+        self.assertEqual(len(kpv), 0)
+
+    def test_correct_peak(self):
+        roll = P('Roll', np.ma.array([0.0]*2+[55]*3+[-26]*3+[0.0]*2))
+        alt_rad = P('Altitude Radio', np.ma.array([500.0]*5+[200.0]*5))
+        dlc = buildsections('Descent Low Climb', [1, 9])
+        kpv = self.node_class()
+        kpv.derive(roll, alt_rad, dlc)
+        self.assertEqual(len(kpv), 1)
+        self.assertEqual(kpv[0].index, 5)
+        self.assertEqual(kpv[0].value, -6.0)
+
+    def test_offset_index(self):
+        roll = P('Roll', np.ma.array([0.0]*2+[55]*3+[-26]*13+[0.0]*2))
+        alt_rad = P('Altitude Radio', np.ma.array([20]*4+[60.0]+[200.0]*15))
+        dlc = buildsections('Descent Low Climb', [1, 9])
+        kpv = self.node_class()
+        kpv.derive(roll, alt_rad, dlc)
+        self.assertEqual(len(kpv), 1)
+        self.assertEqual(kpv[0].index, 4)
+        self.assertEqual(kpv[0].value, 49.0)
 
 ##############################################################################
 # Rudder
