@@ -986,14 +986,16 @@ class AltitudeRadioOffsetRemoved(DerivedParameterNode):
     Remove the offset form Altitude Radio parameters so that it averages 0ft on
     the ground.
     '''
-    def derive(self, alt_rad=P('Altitude Radio')):
+    def derive(self, alt_rad=P('Altitude Radio'), fasts=S('Fast')):
         self.array = alt_rad.array
         smoothed = np.ma.copy(alt_rad.array)
         smoothed = np.ma.array(medfilt(smoothed, 21), mask=alt_rad.array.mask)
         smoothed = np.ma.masked_greater(smoothed, 20)
+        smoothed = mask_outside_slices(smoothed, fasts.get_slices())
         if not np.ma.count(smoothed):
             return
-        offset = mode(smoothed.compressed())[0][0] # TODO: is there a nicer way to index???
+        #offset = mode(smoothed.compressed())[0][0] # TODO: is there a nicer way to index???
+        offset = np.ma.median(smoothed)
         if abs(offset) < ALTITUDE_RADIO_OFFSET_LIMIT:
             self.array = alt_rad.array - offset
 
