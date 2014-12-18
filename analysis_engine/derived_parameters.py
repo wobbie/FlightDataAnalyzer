@@ -996,7 +996,7 @@ class AltitudeRadioOffsetRemoved(DerivedParameterNode):
             return
         #offset = mode(smoothed.compressed())[0][0] # TODO: is there a nicer way to index???
         offset = np.ma.median(smoothed)
-        if abs(offset) < ALTITUDE_RADIO_OFFSET_LIMIT:
+        if 0 < offset < ALTITUDE_RADIO_OFFSET_LIMIT:
             self.array = alt_rad.array - offset
 
 
