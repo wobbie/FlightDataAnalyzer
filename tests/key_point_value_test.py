@@ -202,6 +202,8 @@ from analysis_engine.key_point_values import (
     EngEPRFor5Sec1000To500FtMin,
     EngEPRFor5Sec500To50FtMin,
     EngFireWarningDuration,
+    EngGasTempAboveNormalMaxLimitDuringTakeoffDuration,
+    EngGasTempAboveNormalMaxLimitDuringMaximumContinuousPowerDuration,
     EngGasTempDuringEngStartForXSecMax,
     EngGasTempDuringEngStartMax,
     EngGasTempDuringFlightMin,
@@ -5920,6 +5922,72 @@ class TestEngGasTempExceededEngGasTempRedlineDuration(unittest.TestCase):
         self.assertEqual(node[0].index, 13)
         self.assertEqual(node[0].value, 4)
         self.assertEqual(node[0].name, 'Eng Gas Temp Exceeded Eng Gas Temp Redline Duration')
+
+
+class TestEngGasTempAboveNormalMaxLimitDuringTakeoffDuration(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = EngGasTempAboveNormalMaxLimitDuringTakeoffDuration
+
+    def test_can_operate(self):
+        nodes = ('Eng (1) Gas Temp', 'Takeoff')
+        engine = A('Engine Series', value='CFM56-5A')
+        self.assertFalse(self.node_class.can_operate(nodes, eng_series=engine))
+        engine = A('Engine Series', value='CFM56-3')
+        self.assertTrue(self.node_class.can_operate(nodes, eng_series=engine))
+
+    def test_derive(self):
+        length = 100
+        x = np.arange(0.0,1.0,0.01)
+        y = np.sin(2*2*np.pi*x)+2
+        egt_array = np.ma.array(y*440)
+        egt = P(name='Eng (2) Gas Temp', array=egt_array)
+        takeoffs = buildsection('Takeoff', None, 80)
+
+        node = self.node_class()
+        node.derive(None, egt, None, None, takeoffs)
+
+        limit = 930
+        expected = 48
+
+        self.assertEqual(len(node), 1)
+        self.assertAlmostEqual(node[0].value, expected, delta=1)
+        self.assertAlmostEqual(node[0].index, 1, delta=1)
+        self.assertEqual(node[0].name, 'Eng (2) Gas Temp Above Normal Max Limit During Takeoff Duration')
+
+
+class TestEngGasTempAboveNormalMaxLimitDuringMaximumContinuousPowerDuration(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = EngGasTempAboveNormalMaxLimitDuringMaximumContinuousPowerDuration
+
+    def test_can_operate(self):
+        nodes = ('Eng (1) Gas Temp', 'Takeoff 5 Min Rating', 'Go Around 5 Min Rating', 'Grounded')
+        engine = A('Engine Series', value='CFM56-5A')
+        self.assertFalse(self.node_class.can_operate(nodes, eng_series=engine))
+        engine = A('Engine Series', value='CFM56-3')
+        self.assertTrue(self.node_class.can_operate(nodes, eng_series=engine))
+
+    def test_derive(self):
+        length = 100
+        x = np.arange(0.0,1.0,0.01)
+        y = np.sin(2*2*np.pi*x)+2
+        egt_array = np.ma.array(y*440)
+        egt = P(name='Eng (2) Gas Temp', array=egt_array)
+        grounds = buildsection('Grounded', None, 10)
+        takeoffs = buildsection('Takeoff 5 Min Rating', 10, 80)
+        ga = S('Go Around 5 Min Rating', items=[])
+
+        node = self.node_class()
+        node.derive(None, egt, None, None, takeoffs, ga, grounds)
+
+        limit = 895
+        expected = 48
+
+        self.assertEqual(len(node), 1)
+        self.assertAlmostEqual(node[0].value, expected, delta=1)
+        self.assertAlmostEqual(node[0].index, 1, delta=1)
+        self.assertEqual(node[0].name, 'Eng (2) Gas Temp Above Normal Max Limit During Maximum Continuous Power Duration')
 
 
 ##############################################################################

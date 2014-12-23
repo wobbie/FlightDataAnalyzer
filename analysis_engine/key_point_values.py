@@ -82,6 +82,7 @@ from analysis_engine.library import (ambiguous_runway,
                                      slice_midpoint,
                                      slice_samples,
                                      slices_and_not,
+                                     slices_duration,
                                      slices_from_ktis,
                                      slices_from_to,
                                      slices_not,
@@ -6967,6 +6968,90 @@ class EngGasTempExceededEngGasTempRedlineDuration(KeyPointValueNode):
             if eng_egt and eng_egt_red:
                 egt_diff = eng_egt.array - eng_egt_red.array
                 self.create_kpvs_where(egt_diff > 0, self.hz)
+
+
+class EngGasTempAboveNormalMaxLimitDuringTakeoffDuration(KeyPointValueNode):
+    '''
+    Total duration Engine Gas Temperature is above maintenance limit During
+    Takeoff. Limit depends on type of engine.
+
+    Evaluated for each engine.
+
+    TODO: extend for engines other than CFM56-3
+    '''
+
+    NAME_FORMAT = 'Eng (%(number)d) Gas Temp Above Normal Max Limit During Takeoff Duration'
+    NAME_VALUES = NAME_VALUES_ENGINE
+    units = ut.SECOND
+
+    @classmethod
+    def can_operate(cls, available, eng_series=A('Engine Series')):
+        gas_temps = any_of(('Eng (%d) Gas Temp' % n for n in range(1, 5)), available)
+        engine_series = eng_series and eng_series.value == 'CFM56-3'
+
+        return gas_temps and engine_series and 'Takeoff' in available
+
+    def derive(self,
+               eng1=P('Eng (1) Gas Temp'),
+               eng2=P('Eng (2) Gas Temp'),
+               eng3=P('Eng (3) Gas Temp'),
+               eng4=P('Eng (4) Gas Temp'),
+               takeoffs=S('Takeoff'),
+               eng_series=A('Engine Series')):
+
+        limit = 930
+        for eng_num, eng in enumerate((eng1, eng2, eng3, eng4), start=1):
+            if eng is None:
+                continue  # Engine is not available on this aircraft.
+            egt_limit_exceeded = runs_of_ones(eng.array > limit)
+            egt_takeoff = slices_and(egt_limit_exceeded, takeoffs.get_slices())
+            if egt_takeoff:
+                index = egt_takeoff[0].start
+                value = slices_duration(egt_takeoff, self.hz)
+                self.create_kpv(index, value, number=eng_num, limit=limit)
+
+
+class EngGasTempAboveNormalMaxLimitDuringMaximumContinuousPowerDuration(KeyPointValueNode):
+    '''
+    Total duration Engine Gas Temperature is above maintenance limit During
+    Maximum Continuous Power. Limit depends on type of engine.
+
+    Evaluated for each engine.
+    '''
+
+    NAME_FORMAT = 'Eng (%(number)d) Gas Temp Above Normal Max Limit During Maximum Continuous Power Duration'
+    NAME_VALUES = NAME_VALUES_ENGINE
+    units = ut.SECOND
+
+    @classmethod
+    def can_operate(cls, available, eng_series=A('Engine Series')):
+        gas_temps = any_of(('Eng (%d) Gas Temp' % n for n in range(1, 5)), available)
+        engine_series = eng_series and eng_series.value == 'CFM56-3'
+        phases = all_of(('Takeoff 5 Min Rating', 'Go Around 5 Min Rating', 'Grounded'), available)
+
+        return gas_temps and engine_series and phases
+
+    def derive(self,
+               eng1=P('Eng (1) Gas Temp'),
+               eng2=P('Eng (2) Gas Temp'),
+               eng3=P('Eng (3) Gas Temp'),
+               eng4=P('Eng (4) Gas Temp'),
+               to_ratings=S('Takeoff 5 Min Rating'),
+               ga_ratings=S('Go Around 5 Min Rating'),
+               grounded=S('Grounded')):
+
+        mcp = to_ratings.get_slices() + ga_ratings.get_slices() + grounded.get_slices()
+
+        limit = 895
+        for eng_num, eng in enumerate((eng1, eng2, eng3, eng4), start=1):
+            if eng is None:
+                continue  # Engine is not available on this aircraft.
+            egt_limit_exceeded = runs_of_ones(eng.array > limit)
+            egt_mcp = slices_and(egt_limit_exceeded, mcp)
+            if egt_mcp:
+                index = min(egt_mcp, key=operator.attrgetter('start')).start
+                value = slices_duration(egt_mcp, self.hz)
+                self.create_kpv(index, value, number=eng_num, limit=limit)
 
 
 ##############################################################################
