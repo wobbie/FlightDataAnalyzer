@@ -8314,6 +8314,20 @@ class EngVibCMax(KeyPointValueNode):
         self.create_kpvs_within_slices(eng_vib_c.array, airborne, max_value)
 
 
+class EngVibNpMax(KeyPointValueNode):
+    '''
+    '''
+
+    name = 'Eng Vib Np Max'
+    units = None
+
+    def derive(self,
+               eng_vib_np=P('Eng (*) Vib Np Max'),
+               airborne=S('Airborne')):
+
+        self.create_kpvs_within_slices(eng_vib_np.array, airborne, max_value)
+
+
 ##############################################################################
 # Engine Shutdown
 

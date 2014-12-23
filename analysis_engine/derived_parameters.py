@@ -3097,9 +3097,13 @@ class Eng_VibN1Max(DerivedParameterNode):
                fan1=P('Eng (1) Vib N1 Fan'),
                fan2=P('Eng (2) Vib N1 Fan'),
                lpt1=P('Eng (1) Vib N1 Turbine'),
-               lpt2=P('Eng (2) Vib N1 Turbine')):
+               lpt2=P('Eng (2) Vib N1 Turbine'),
+               comp1=P('Eng (1) Vib N1 Compressor'),
+               comp2=P('Eng (2) Vib N1 Compressor'),
+               gear1=P('Eng (1) Vib N1 Gearbox'),
+               gear2=P('Eng (2) Vib N1 Gearbox')):
 
-        params = eng1, eng2, eng3, eng4, fan1, fan2, lpt1, lpt2
+        params = eng1, eng2, eng3, eng4, fan1, fan2, lpt1, lpt2, comp1, comp2, gear1, gear2
         engines = vstack_params_sw(8, *params)
         self.array = np.ma.max(engines, axis=0)
         self.offset = offset_select('mean', params)
@@ -3195,6 +3199,12 @@ class Eng_VibBroadbandMax(DerivedParameterNode):
                eng2=P('Eng (2) Vib Broadband'),
                eng3=P('Eng (3) Vib Broadband'),
                eng4=P('Eng (4) Vib Broadband'),
+               lpt1=P('Eng (1) Vib Broadband Turbine'),
+               lpt2=P('Eng (2) Vib Broadband Turbine'),
+               comp1=P('Eng (1) Vib Broadband Compressor'),
+               comp2=P('Eng (2) Vib Broadband Compressor'),
+               gear1=P('Eng (1) Vib Broadband Gearbox'),
+               gear2=P('Eng (2) Vib Broadband Gearbox'),
                eng1_accel_a=P('Eng (1) Vib Broadband Accel A'),
                eng2_accel_a=P('Eng (2) Vib Broadband Accel A'),
                eng3_accel_a=P('Eng (3) Vib Broadband Accel A'),
@@ -3204,7 +3214,7 @@ class Eng_VibBroadbandMax(DerivedParameterNode):
                eng3_accel_b=P('Eng (3) Vib Broadband Accel B'),
                eng4_accel_b=P('Eng (4) Vib Broadband Accel B')):
 
-        params = (eng1, eng2, eng3, eng4,
+        params = (eng1, eng2, eng3, eng4, lpt1, lpt2, comp1, comp2, gear1, gear2,
                   eng1_accel_a, eng2_accel_a, eng3_accel_a, eng4_accel_a,
                   eng1_accel_b, eng2_accel_b, eng3_accel_b, eng4_accel_b)
 
@@ -3212,6 +3222,38 @@ class Eng_VibBroadbandMax(DerivedParameterNode):
         self.array = np.ma.max(engines, axis=0)
         self.offset = offset_select('mean', params)
 
+
+class Eng_VibNpMax(DerivedParameterNode):
+    '''
+    This derived parameter condenses all the available first shaft order
+    vibration measurements into a single consolidated value.
+    '''
+
+    name = 'Eng (*) Vib Np Max'
+    align = False
+    units = None
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               eng1=P('Eng (1) Vib Np'),
+               eng2=P('Eng (2) Vib Np'),
+               fan1=P('Eng (1) Vib Np Fan'),
+               fan2=P('Eng (2) Vib Np Fan'),
+               lpt1=P('Eng (1) Vib Np Turbine'),
+               lpt2=P('Eng (2) Vib Np Turbine'),
+               comp1=P('Eng (1) Vib Np Compressor'),
+               comp2=P('Eng (2) Vib Np Compressor'),
+               gear1=P('Eng (1) Vib Np Gearbox'),
+               gear2=P('Eng (2) Vib Np Gearbox')):
+
+        params = eng1, eng2, fan1, fan2, lpt1, lpt2, comp1, comp2, gear1, gear2
+        engines = vstack_params_sw(8, *params)
+        self.array = np.ma.max(engines, axis=0)
+        self.offset = offset_select('mean', params)
 
 ##############################################################################
 # Engine Vibration (A)

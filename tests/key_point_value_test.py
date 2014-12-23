@@ -244,6 +244,7 @@ from analysis_engine.key_point_values import (
     EngNpDuringMaximumContinuousPowerMax,
     EngNpDuringTakeoff5MinRatingMax,
     EngNpDuringTaxiMax,
+    EngVibNpMax,
     EngOilPressFor60SecDuringCruiseMax,
     EngOilPressMax,
     EngOilPressMin,
@@ -6989,6 +6990,18 @@ class TestEngVibBroadbandMax(unittest.TestCase, NodeTest):
         self.operational_combinations = [('Eng (*) Vib Broadband Max',)]
         self.function = max_value
     
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test Not Implemented')
+
+
+class TestEngVibNpMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
+
+    def setUp(self):
+        self.node_class = EngVibNpMax
+        self.operational_combinations = [('Eng (*) Vib Np Max', 'Airborne')]
+        self.function = max_value
+
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test Not Implemented')
