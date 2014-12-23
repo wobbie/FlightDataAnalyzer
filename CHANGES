@@ -9,6 +9,59 @@ You can view the differences in tagged versions as follows:
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
 
+v0.19.1
+-------
+
+ - Fixed
+   - "Index at value or level off" needs to pass frequency to "Find level off"
+     as this is slope dependent.
+   - Climb Acceleration Start - trap for cases where the aircraft does not
+     reach a normal acceleration altitude.
+   - fix to AirspeedMinusV2At35FtDuringTakeoff to use interpolated value
+     instead of last recorded value
+   - Trap for null slices in find_nearest_slice
+   - Stick Shaker and Pusher amended to OR recorded parameters instead of
+     merging
+   - ApproachAndLanding: remove ugly frame hack
+   - Trap for error condition where both arguments are null in approach for
+     'LANDING' case.
+   - Trap for null list in slices_and_not
+   - flight_phase: ApproachAndLanding 146-301 noise fix
+   - find_low_alts: fix for level_flight during noise
+   - Flap Angle offset should not be changed unless really necessary.
+ - Improved
+   - Change to Altitude Radio offset removed to only adjust positive offsets
+   - change to Rad Alt offset removed to try and cater for increases in rad alt
+     during acceleration
+   - Radio Alt offset removed retain origional mask following medfilt
+   - SlicesRemoveSmallSlices rearranged to return null cases quickly - test
+     cases extended.
+   - find_toc_tod amended to handle None arguments to _slice
+   - Find Top of Climb & Descent amended to retain best of 4-part algorithm but
+     remove confusing duplication of Bottom of Descent code.
+   - Top of Climb / Top of Descent expanded to provide bottoms of climb and
+     descent using similar algorithms. Unsatisfactory, but included as an
+     interim step. Also, find_level_off included to avoid problems of reverse
+     slicing.
+   - Bottom of Descent simplified to match the Top of Descent in using Cruise
+     Climb Descent phases, hence ensuring matched pairs of KPVs.
+   - Combined Descent replaced by Descent
+   - Frequency parameter passed out of flight phase calculations into
+     find_low_alts.
+   - Initial Climb phase amended to cater for climbs that do not reach 1000ft.
+     Also, Initial Climb flight phase test added and helper build_kti added.
+   - Mobile phase made solely dependent upon heading rate to avoid problems
+     with groundspeed signals on stand.
+   - EngOilPressFor20SecDuringCruiseMax is now for 60 seconds
+ - Added
+   - Roll At Low Altitude KPV added.
+   - added AirspeedWithFlapIncludingTransition20AndSlatFullyExtendedMax KPV
+   - Heading Change KPV added.
+   - Descent flight phase added, with test case.
+   - Stall Warning multistate parameter added for A340-300 and E505 types,
+     which both carry dual systems.
+
+
 v0.18.2
 -------
 
