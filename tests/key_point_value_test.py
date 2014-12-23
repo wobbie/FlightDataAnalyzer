@@ -8314,7 +8314,7 @@ class TestFlareDistance20FtToTouchdown(unittest.TestCase, NodeTest):
         ldg = S('Landing', frequency=2)
         ldg.create_section(slice(5, 28, None),
                            begin=5.265625, end=27.265625)
-        flare_dist.get_derived([alt_aal, tdwn, ldg, gspd, None, None])
+        flare_dist.get_derived([alt_aal, tdwn, ldg, gspd])
         self.assertAlmostEqual(flare_dist[0].index, 27, 0)
         self.assertAlmostEqual(flare_dist[0].value, 632.69, 0)  # Meters
 
