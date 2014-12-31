@@ -116,10 +116,8 @@ def _segment_type_and_slice(airspeed_array, airspeed_frequency, heading_array,
 
     if not heading_change:
         logger.debug("Heading did not change, aircraft did not move.")
-        #TODO: support "No Movement" type
-        ##segment_type = 'NO_MOVEMENT'
+        segment_type = 'NO_MOVEMENT'
         # e.g. hanger tests, esp. if airspeed changes!
-        segment_type = 'GROUND_ONLY'  # Temporary: leave as Ground Only
     elif not fast_for_long:
         logger.debug("Airspeed was below threshold.")
         segment_type = 'GROUND_ONLY'  # e.g. RTO, re-positioning A/C
