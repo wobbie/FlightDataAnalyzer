@@ -381,7 +381,7 @@ def split_segments(hdf):
         logger.warning("Airspeed is entirely masked. The entire contents of "
                        "the data will be a GROUND_ONLY slice.")
         return [_segment_type_and_slice(
-            airspeed_array, airspeed.frequency, heading.array,
+            airspeed.array, airspeed.frequency, heading.array,
             heading.frequency, 0, hdf.duration, eng_arrays)]
 
     airspeed_secs = len(airspeed_array) / airspeed.frequency
