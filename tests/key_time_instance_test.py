@@ -280,6 +280,22 @@ class TestClimbAccelerationStart(unittest.TestCase):
         self.assertEqual(len(node), 1)
         self.assertAlmostEqual(node[0].index, 917, places=0)
     
+    def test_derive_eng_np_noise(self):
+        '''
+        Noisy Eng Np signal is smoothed allowing fallback to 400 Ft.
+        '''
+        initial_climbs = buildsection('Initial Climb', 419, 439)
+        initial_climbs.frequency = 1
+        prop = A('Engine Propulsion', value='PROP')
+        alt_aal = load(os.path.join(
+            test_data_path, 'climb_acceleration_start_alt_aal_noise.nod'))
+        eng_np = load(os.path.join(
+            test_data_path, 'climb_acceleration_start_eng_np_noise.nod'))
+        node = self.node_class()
+        node.derive(alt_aal, initial_climbs, None, prop, eng_np, None)
+        self.assertEqual(len(node), 1)
+        self.assertAlmostEqual(node[0].index, 854, places=0)
+    
     def test_derive_throttle_levers_fallback(self):
         initial_climbs = buildsection('Initial Climb', 511, 531)
         jet = A('Engine Propulsion', value='JET')
