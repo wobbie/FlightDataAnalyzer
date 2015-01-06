@@ -109,7 +109,7 @@ def _segment_type_and_slice(airspeed_array, airspeed_frequency, heading_array,
 
     # Check Heading
     if eng_arrays is not None:
-        np.ma.masked_where(eng_arrays[heading_start:heading_stop] < 1, heading_array)
+        heading_array = np.ma.masked_where(eng_arrays[heading_start:heading_stop] < 1, heading_array)
     hdiff = np.ma.abs(np.ma.diff(heading_array)).sum()
 
     heading_change = hdiff > settings.HEADING_CHANGE_TAXI_THRESHOLD
