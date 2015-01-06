@@ -97,25 +97,22 @@ def _segment_type_and_slice(airspeed_array, airspeed_frequency, heading_array,
     except TypeError:
         # Raised when flatnotmasked_edges returns None because all data is
         # masked.
-        segment_type = 'GROUND_ONLY'
-        logger.debug("Airspeed data was entirely masked. Assuming '%s' between"
-                     "'%s' and '%s'." % (segment_type, start, stop))
-        return segment_type, slice(start, stop)
-    #unmasked_start += airspeed_start
-    #unmasked_stop += airspeed_start
+        # Either GROUND_ONLY or NO_MOVEMENT
+        slow_start = slow_stop = fast_for_long = None
+    else:
+        # Check Airspeed
+        slow_start = airspeed_array[unmasked_start] < settings.AIRSPEED_THRESHOLD
+        slow_stop = airspeed_array[unmasked_stop] < settings.AIRSPEED_THRESHOLD
+        threshold_exceedance = np.ma.sum(
+            airspeed_array > settings.AIRSPEED_THRESHOLD) * airspeed_frequency
+        fast_for_long = threshold_exceedance > settings.AIRSPEED_THRESHOLD_TIME
 
-    slow_start = airspeed_array[unmasked_start] < settings.AIRSPEED_THRESHOLD
-    slow_stop = airspeed_array[unmasked_stop] < settings.AIRSPEED_THRESHOLD
-
-    threshold_exceedance = np.ma.sum(
-        airspeed_array > settings.AIRSPEED_THRESHOLD) * airspeed_frequency
-
+    # Check Heading
     if eng_arrays is not None:
         np.ma.masked_where(eng_arrays[heading_start:heading_stop] < 1, heading_array)
     hdiff = np.ma.abs(np.ma.diff(heading_array)).sum()
 
     heading_change = hdiff > settings.HEADING_CHANGE_TAXI_THRESHOLD
-    fast_for_long = threshold_exceedance > settings.AIRSPEED_THRESHOLD_TIME
 
     if not heading_change:
         logger.debug("Heading did not change, aircraft did not move.")

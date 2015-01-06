@@ -62,6 +62,7 @@ class TestSplitSegments(unittest.TestCase):
         hdf.get = mock.Mock()
         hdf.get.return_value = None
         hdf.reliable_frame_counter = False
+        hdf.duration = 50
 
         def hdf_getitem(self, key, **kwargs):
             if key == 'Airspeed':
@@ -243,6 +244,15 @@ class TestSplitSegments(unittest.TestCase):
         self.assertEqual(segment_slice.start, 0)
         self.assertEqual(segment_slice.stop, airspeed_secs)
 
+        # Airspeed Fully Masked slow.
+        airspeed_array = np.ma.masked_all(100)
+        heading_array = np.ma.arange(len(airspeed_array) / 2) % 360
+        segment_tuples = split_segments(hdf)
+        self.assertEqual(len(segment_tuples), 1)
+        segment_type, segment_slice = segment_tuples[0]
+        self.assertEqual(segment_type, 'NO_MOVEMENT')
+        self.assertEqual(segment_slice.start, 0)
+        self.assertEqual(segment_slice.stop, airspeed_secs)
         # TODO: Test engine parameters.
 
     @unittest.skipIf(not os.path.isfile(os.path.join(test_data_path,
