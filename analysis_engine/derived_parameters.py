@@ -84,6 +84,7 @@ from analysis_engine.library import (actuator_mismatch,
                                      slices_from_ktis,
                                      slices_from_to,
                                      slices_not,
+                                     slices_or,
                                      slices_remove_small_slices,
                                      smooth_track,
                                      straighten_headings,
@@ -1355,29 +1356,51 @@ class AltitudeSTD(DerivedParameterNode):
 
 class AltitudeTail(DerivedParameterNode):
     """
-    This function allows for the distance between the radio altimeter antenna
-    and the point of the airframe closest to tailscrape.
+    This derived parameter computes the height of the tail above the runway,
+    as a measure of the likelyhood of a tailscrape.
 
-    The parameter gear_to_tail is measured in metres and is the distance from
-    the main gear to the point on the tail most likely to scrape the runway.
+    We are only interested in the takeoff, go-around and landing phases,
+    where the tail may be close to scraping the runway. For this reason, we
+    don't use pressure altitmetry as this suffers too badly from pressure
+    variations at the point of liftoff and touchdown.
+
+    The parameter dist_gear_to_tail is measured in metres and is the
+    horizontal distance aft from the main gear to the point on the tail most
+    likely to scrape the runway.
+    
+    Parameter ground_to_tail is the height of the point most likely to
+    scrape. Ideally this is computed from the manufacturer-provided
+    tailscrape attitude at the point of liftoff:
+    
+    ground_to_tail = dist_gear_to_tail*tan(tailscrape attitude at liftoff)
     """
 
     units = ut.FT
 
-    #TODO: Review availability of Attribute "Dist Gear To Tail"
-
     def derive(self, alt_rad=P('Altitude Radio'), pitch=P('Pitch'),
+               toffs=S('Takeoff'), gas=S('Go Around And Climbout'), 
+               lands=S('Landing'),
                ground_to_tail=A('Ground To Lowest Point Of Tail'),
                dist_gear_to_tail=A('Main Gear To Lowest Point Of Tail')):
-        pitch_rad = pitch.array * deg2rad
-        # Now apply the offset
+
+        # Collect the periods we are interested in:
+        phases=slices_or([t.slice for t in toffs], 
+                         [g.slice for g in gas],
+                         [l.slice for l in lands],
+                         )
+
+        # Scale the aircraft geometry into feet to match aircraft altimetry.
         gear2tail = dist_gear_to_tail.value * METRES_TO_FEET
         ground2tail = ground_to_tail.value * METRES_TO_FEET
-        # Prepare to add back in the negative rad alt reading as the aircraft
-        # settles on its oleos
-        min_rad = np.ma.min(alt_rad.array)
-        self.array = (alt_rad.array + ground2tail -
-                      np.ma.sin(pitch_rad) * gear2tail - min_rad)
+
+        result = np_ma_masked_zeros_like(alt_rad.array)
+        # The tail clearance is the value with the aircraft settled on its
+        # wheels plus radio atimetry minus the pitch attitude change at that
+        # tail arm.
+        for phase in phases:
+            result[phase] = alt_rad.array[phase] + ground2tail - \
+                np.ma.tan(pitch.array[phase]*deg2rad) * gear2tail
+        self.array = result
 
 
 ##############################################################################
