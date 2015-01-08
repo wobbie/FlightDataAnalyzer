@@ -616,9 +616,11 @@ class TestILSLocalizerEstablished(unittest.TestCase):
         alt_aal = load(os.path.join(test_data_path, 'ILS_localizer_established_alt_aal.nod'))
         establish = ILSLocalizerEstablished()
         establish.derive(ils_loc, alt_aal, apps, ils_freq)
-        expected = [Section(name='ILS Localizer Established', slice=slice(12215.896484375, 12244.499993651203, None), start_edge=12215.896484375, stop_edge=12244.499993651203),
-                    Section(name='ILS Localizer Established', slice=slice(12295, 12363.052624896003, None), start_edge=12295, stop_edge=12363.052624896003)]
-        self.assertEqual(establish.get_slices(), expected.get_slices())
+        self.assertEqual(len(establish), 2)
+        self.assertAlmostEqual(establish[0].slice.start, 12216, places=0)
+        self.assertAlmostEqual(establish[0].slice.stop, 12244, places=0)
+        self.assertAlmostEqual(establish[1].slice.start, 12296, places=0)
+        self.assertAlmostEqual(establish[1].slice.stop, 12363, places=0)
 
 
 class TestInitialApproach(unittest.TestCase):
