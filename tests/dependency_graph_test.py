@@ -75,8 +75,8 @@ class TestDependencyGraph(unittest.TestCase):
     
     def test_indent_tree(self):
         requested = ['P7', 'P8']
-        mgr2 = NodeManager(datetime.now(), 10, self.lfl_params, requested, [],
-                           self.derived_nodes, {}, {})
+        mgr2 = NodeManager({'Start Datetime': datetime.now()}, 10, self.lfl_params,
+                           requested, [], self.derived_nodes, {}, {})
         gr = graph_nodes(mgr2)
         gr.node['Raw1']['active'] = True
         gr.node['Raw2']['active'] = False
@@ -122,8 +122,8 @@ class TestDependencyGraph(unittest.TestCase):
     def test_required_available(self):
         nodes = ['a', 'b', 'c']
         required = ['a', 'c']
-        mgr = NodeManager(datetime.now(), 10, nodes, nodes, required, {}, {},
-                          {})
+        mgr = NodeManager({'Start Datetime': datetime.now()}, 10, nodes, nodes,
+                          required, {}, {}, {})
         _graph = graph_nodes(mgr)
         gr_all, gr_st, order = process_order(_graph, mgr)
         self.assertEqual(set(required) - set(order), set())
@@ -131,8 +131,8 @@ class TestDependencyGraph(unittest.TestCase):
     def test_required_unavailable(self):
         nodes = ['a', 'b', 'c']
         required = ['a', 'c', 'd']
-        mgr = NodeManager(datetime.now(), 10, nodes, nodes, required, {}, {},
-                          {})
+        mgr = NodeManager({'Start Datetime': datetime.now()}, 10, nodes, nodes, 
+                          required, {}, {}, {})
         gr = self.assertRaises(graph_nodes(mgr))
     
     def test_graph_predecessors(self):
@@ -168,7 +168,7 @@ class TestDependencyGraph(unittest.TestCase):
         
     def test_graph_nodes_using_sample_tree(self): 
         requested = ['P7', 'P8']
-        mgr2 = NodeManager(datetime.now(), 10, self.lfl_params, requested, [],
+        mgr2 = NodeManager({'Start Datetime': datetime.now()}, 10, self.lfl_params, requested, [],
                            self.derived_nodes, {}, {})
         gr = graph_nodes(mgr2)
         self.assertEqual(len(gr), 11)
@@ -177,7 +177,7 @@ class TestDependencyGraph(unittest.TestCase):
     def test_graph_requesting_all_dependencies_links_root_to_end_leafs(self):
         # build list of all nodes as required
         requested = self.lfl_params + self.derived_nodes.keys()
-        mgr = NodeManager(datetime.now(), 1, self.lfl_params, requested, [],
+        mgr = NodeManager({'Start Datetime': datetime.now()}, 1, self.lfl_params, requested, [],
                           self.derived_nodes, {}, {})
         gr = graph_nodes(mgr)
         # should only be linked to end leafs
@@ -185,7 +185,7 @@ class TestDependencyGraph(unittest.TestCase):
         
     def test_graph_middle_level_depenency_builds_partial_tree(self):
         requested = ['P5']
-        mgr = NodeManager(datetime.now(), 1, self.lfl_params, requested, [],
+        mgr = NodeManager({'Start Datetime': datetime.now()}, 1, self.lfl_params, requested, [],
                           self.derived_nodes, {}, {})
         gr = graph_nodes(mgr)
         # should only be linked to P5
@@ -209,7 +209,7 @@ class TestDependencyGraph(unittest.TestCase):
                 pass
         one = One('overridden')
         four = Four('used')
-        mgr1 = NodeManager(datetime.now(), 10, [1, 2], [2, 4], [],
+        mgr1 = NodeManager({'Start Datetime': datetime.now()}, 10, [1, 2], [2, 4], [],
                            {1:one, 4:four},{}, {})
         gr = graph_nodes(mgr1)
         self.assertEqual(len(gr), 5)
@@ -227,7 +227,7 @@ class TestDependencyGraph(unittest.TestCase):
         
     def test_dependency(self):
         requested = ['P7', 'P8']
-        mgr = NodeManager(datetime.now(), 10, self.lfl_params, requested, [],
+        mgr = NodeManager({'Start Datetime': datetime.now()}, 10, self.lfl_params, requested, [],
                           self.derived_nodes, {}, {})
         gr = graph_nodes(mgr)
         gr_all, gr_st, order = process_order(gr, mgr)
@@ -272,7 +272,7 @@ Node: Start Datetime 	Pre: [] 	Succ: [] 	Neighbors: [] 	Edges: []
                      'P4', 'P5', 'P6', # middle level node
                      'Raw3', # bottom level node
                      ]
-        mgr = NodeManager(datetime.now(), 10, self.lfl_params + ['Floating'],
+        mgr = NodeManager({'Start Datetime': datetime.now()}, 10, self.lfl_params + ['Floating'],
                           requested, [], self.derived_nodes, {}, {})
         gr = graph_nodes(mgr)
         gr_all, gr_st, order = process_order(gr, mgr)
@@ -311,8 +311,8 @@ Node: Start Datetime 	Pre: [] 	Succ: [] 	Neighbors: [] 	Edges: []
         except ImportError:
             # for IDE test runners
             derived = get_derived_nodes(['sample_derived_parameters'])
-        nodes = NodeManager(datetime.now(), 10, lfl_params, requested, [],
-                            derived, {}, {})
+        nodes = NodeManager({'Start Datetime': datetime.now()}, 10, lfl_params,
+                            requested, [], derived, {}, {})
         order, _ = dependency_order(nodes, draw=False)
         pos = order.index
         self.assertTrue(len(order))
@@ -337,7 +337,7 @@ Node: Start Datetime 	Pre: [] 	Succ: [] 	Neighbors: [] 	Edges: []
         except ImportError:
             # for IDE test runners
             derived = get_derived_nodes(['sample_derived_parameters'])
-        mgr = NodeManager(datetime.now(), 10, lfl_params, requested, [],
+        mgr = NodeManager({'Start Datetime': datetime.now()}, 10, lfl_params, requested, [],
                           derived, {}, {})
         self.assertRaises(nx.NetworkXError, dependency_order, mgr, draw=False)
         
@@ -352,7 +352,7 @@ Node: Start Datetime 	Pre: [] 	Succ: [] 	Neighbors: [] 	Edges: []
         except ImportError:
             # for IDE test runners
             derived = get_derived_nodes(['sample_circular_dependency_nodes'])
-        mgr = NodeManager(datetime.now(), 10, lfl_params, requested, [],
+        mgr = NodeManager({'Start Datetime': datetime.now()}, 10, lfl_params, requested, [],
                           derived, {}, {})
         order, _ = dependency_order(mgr, draw=True)
         # As Gear Selected Down depends upon Gear Down
