@@ -2567,10 +2567,10 @@ class TestFuelQtyR(unittest.TestCase):
 class TestGrossWeightSmoothed(unittest.TestCase):
 
     def test_can_operate(self):
-        expected = [('Groundspeed','Acceleration Along Track', 'Altitude AAL',
-                     'ILS Glideslope')]
-        opts = GrossWeightSmoothed.get_operational_combinations()
-        self.assertEqual(opts, expected)
+        expected = ('Eng (*) Fuel Flow','Gross Weight', 'Climbing',
+                     'Descending', 'Airborne')
+        self.assertTrue(GrossWeightSmoothed.can_operate(expected))
+        self.assertTrue(GrossWeightSmoothed.can_operate(('Gross Weight')))
 
     def test_gw_real_data_1(self):
         ff = load(os.path.join(test_data_path,

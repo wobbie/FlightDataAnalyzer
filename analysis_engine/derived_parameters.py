@@ -3615,7 +3615,7 @@ class GrossWeightSmoothed(DerivedParameterNode):
 
         gw_masked = gw.array.copy()
 
-        if ff:
+        if ff and airs:
             gw_masked = mask_inside_slices(gw_masked, climbs.get_slices())
             gw_masked = mask_outside_slices(gw_masked, airs.get_slices())
 

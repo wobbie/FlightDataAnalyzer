@@ -150,9 +150,10 @@ class TestAirborne(unittest.TestCase):
     # Based closely on the level flight condition, but taking only the
     # outside edges of the envelope.
     def test_can_operate(self):
-        expected = [('Altitude AAL For Flight Phases', 'Fast')]
-        opts = Airborne.get_operational_combinations()
-        self.assertEqual(opts, expected)
+        node = Airborne
+        expected = ('Altitude AAL For Flight Phases', 'Fast')
+        self.assertTrue(node.can_operate(expected, seg_type=Attribute('Segment Type', 'START_AND_STOP')))
+        self.assertFalse(node.can_operate(expected, seg_type=Attribute('Segment Type', 'GROUND_ONLY')))
 
     def test_airborne_phase_basic(self):
         # First sample with altitude more than zero is 6, last with high speed is 80.
@@ -212,13 +213,21 @@ class TestAirborne(unittest.TestCase):
 
 class TestApproachAndLanding(unittest.TestCase):
     def test_can_operate(self):
-        opts = ApproachAndLanding.get_operational_combinations()
-        self.assertTrue(
-            ('Altitude AAL For Flight Phases', 'Level Flight', 'Landing',) in opts)
-        self.assertTrue(('Altitude AAL For Flight Phases',) in opts)
-        self.assertTrue(('Altitude AAL For Flight Phases', 'Landing') in opts)
-        self.assertTrue(('Altitude AAL For Flight Phases', 'Level Flight') in opts)
+        node = ApproachAndLanding
+        start_stop = Attribute('Segment Type', 'START_AND_STOP')
+        ground_only = Attribute('Segment Type', 'GROUND_ONLY')
+        self.assertTrue(node.can_operate(('Altitude AAL For Flight Phases', 'Level Flight', 'Landing',),
+                                             seg_type=start_stop))
+        self.assertTrue(node.can_operate(('Altitude AAL For Flight Phases',),
+                                             seg_type=start_stop))
+        self.assertTrue(node.can_operate(('Altitude AAL For Flight Phases', 'Landing'),
+                                             seg_type=start_stop))
+        self.assertTrue(node.can_operate(('Altitude AAL For Flight Phases', 'Level Flight'),
+                                             seg_type=start_stop))
         
+        self.assertFalse(node.can_operate(('Altitude AAL For Flight Phases', 'Level Flight'),
+                                              seg_type=ground_only))
+
     def test_approach_and_landing_basic(self):
         alt = np.ma.array(range(5000, 500, -500) + [0] * 10)
         # No Go-arounds detected
@@ -364,12 +373,20 @@ class TestApproachAndLanding(unittest.TestCase):
 class TestApproach(unittest.TestCase):
     
     def test_can_operate(self):
-        opts = Approach.get_operational_combinations()
-        self.assertTrue(
-            ('Altitude AAL For Flight Phases', 'Level Flight', 'Landing',) in opts)
-        self.assertTrue(('Altitude AAL For Flight Phases',) in opts)
-        self.assertTrue(('Altitude AAL For Flight Phases', 'Landing') in opts)
-        self.assertTrue(('Altitude AAL For Flight Phases', 'Level Flight') in opts)
+        node = Approach
+        start_stop = Attribute('Segment Type', 'START_AND_STOP')
+        ground_only = Attribute('Segment Type', 'GROUND_ONLY')
+        self.assertTrue(node.can_operate(('Altitude AAL For Flight Phases', 'Level Flight', 'Landing',),
+                                             seg_type=start_stop))
+        self.assertTrue(node.can_operate(('Altitude AAL For Flight Phases',),
+                                             seg_type=start_stop))
+        self.assertTrue(node.can_operate(('Altitude AAL For Flight Phases', 'Landing'),
+                                             seg_type=start_stop))
+        self.assertTrue(node.can_operate(('Altitude AAL For Flight Phases', 'Level Flight'),
+                                             seg_type=start_stop))
+        
+        self.assertFalse(node.can_operate(('Altitude AAL For Flight Phases', 'Level Flight'),
+                                              seg_type=ground_only))
 
     def test_approach_basic(self):
         alt = np.ma.array(range(5000, 500, -500) + [50] + [0] * 10)
@@ -949,9 +966,16 @@ class TestInitialCruise(unittest.TestCase):
 
 class TestDescentLowClimb(unittest.TestCase):
     def test_can_operate(self):
-        opts = DescentLowClimb.get_operational_combinations()
-        self.assertTrue(('Altitude AAL For Flight Phases',) in opts)
-        self.assertTrue(('Altitude AAL For Flight Phases', 'Level Flight') in opts)
+        node = DescentLowClimb
+        start_stop = Attribute('Segment Type', 'START_AND_STOP')
+        ground_only = Attribute('Segment Type', 'GROUND_ONLY')
+        self.assertTrue(node.can_operate(('Altitude AAL For Flight Phases',),
+                                             seg_type=start_stop))
+        self.assertTrue(node.can_operate(('Altitude AAL For Flight Phases', 'Level Flight'),
+                                             seg_type=start_stop))
+        
+        self.assertFalse(node.can_operate(('Altitude AAL For Flight Phases', 'Level Flight'),
+                                              seg_type=ground_only))        
 
     def test_descent_low_climb_basic(self):
         # Wave is 5000ft to 0 ft and back up, with climb of 5000ft.
@@ -1109,7 +1133,8 @@ class TestFast(unittest.TestCase):
 class TestGrounded(unittest.TestCase):
     def test_can_operate(self):
         self.assertEqual(Grounded.get_operational_combinations(),
-                         [('Airborne', 'Airspeed For Flight Phases')])
+                         [('Airspeed For Flight Phases',),
+                          ('Airborne', 'Airspeed For Flight Phases',)])
 
     def test_grounded_phase_basic(self):
         slow_and_fast_data = \
@@ -1200,9 +1225,15 @@ class TestGearRetracting(unittest.TestCase):
 class TestGoAroundAndClimbout(unittest.TestCase):
 
     def test_can_operate(self):
-        opts = GoAroundAndClimbout.get_operational_combinations()
-        self.assertTrue(('Altitude AAL For Flight Phases','Level Flight') in opts)
-        self.assertTrue(('Altitude AAL For Flight Phases',) in opts)
+        node = GoAroundAndClimbout
+        start_stop = Attribute('Segment Type', 'START_AND_STOP')
+        ground_only = Attribute('Segment Type', 'GROUND_ONLY')
+        self.assertTrue(node.can_operate(('Altitude AAL For Flight Phases','Level Flight'),
+                                             seg_type=start_stop))
+        self.assertTrue(node.can_operate(('Altitude AAL For Flight Phases',),
+                                             seg_type=start_stop))
+        self.assertFalse(node.can_operate(('Altitude AAL For Flight Phases',),
+                                              seg_type=ground_only))
 
     def test_go_around_and_climbout_basic(self):
         # The Go-Around phase starts 500ft before the minimum altitude is
@@ -1399,8 +1430,20 @@ class TestHolding(unittest.TestCase):
 
 class TestLanding(unittest.TestCase):
     def test_can_operate(self):
-        self.assertEqual(Landing.get_operational_combinations(),
-                         [('Heading Continuous', 'Altitude AAL For Flight Phases', 'Fast')])
+        node = Landing
+        start_stop = Attribute('Segment Type', 'START_AND_STOP')
+        ground_only = Attribute('Segment Type', 'GROUND_ONLY')
+        self.assertTrue(node.can_operate(('Heading Continuous', 'Altitude AAL For Flight Phases', 'Fast',),
+                                             seg_type=start_stop))
+        self.assertTrue(node.can_operate(('Heading Continuous', 'Altitude AAL For Flight Phases',),
+                                             seg_type=start_stop))
+        self.assertTrue(node.can_operate(('Altitude AAL For Flight Phases', 'Fast'),
+                                             seg_type=start_stop))
+        self.assertTrue(node.can_operate(('Altitude AAL For Flight Phases'),
+                                             seg_type=start_stop))
+        
+        self.assertFalse(node.can_operate(('Altitude AAL For Flight Phases'),
+                                              seg_type=ground_only))
 
     def test_landing_basic(self):
         head = np.ma.array([20]*8+[10,0])

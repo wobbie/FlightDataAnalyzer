@@ -240,13 +240,13 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
     
     @classmethod
     def can_operate(cls, available, eng_type=A('Engine Propulsion')):
-        spd_sel = all_of(('Airspeed Selected', 'Initial Climb'), available)
+        spd_sel = 'Airspeed Selected' in available
         jet = (eng_type and eng_type.value == 'JET' and
                'Throttle Levers' in available)
         prop = (eng_type and eng_type.value == 'PROP' and
                'Eng (*) Np Max' in available)
         alt = all_of(('Engine Propulsion', 'Altitude AAL For Flight Phases'), available)
-        return spd_sel or jet or prop or alt
+        return 'Initial Climb' in available and (spd_sel or jet or prop or alt)
     
     def derive(self, alt_aal=P('Altitude AAL For Flight Phases'),
                initial_climbs=S('Initial Climb'),
