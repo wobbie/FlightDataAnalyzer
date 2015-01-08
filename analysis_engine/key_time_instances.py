@@ -2,40 +2,46 @@ import numpy as np
 from math import ceil, floor
 import tempfile
 
-from analysis_engine.library import (all_of,
-                                     any_of,
-                                     coreg,
-                                     find_edges_on_state_change,
-                                     find_toc_tod,
-                                     first_valid_sample,
-                                     hysteresis,
-                                     index_at_value,
-                                     last_valid_sample,
-                                     max_value,
-                                     minimum_unmasked,
-                                     np_ma_masked_zeros_like,
-                                     peak_curvature,
-                                     rate_of_change,
-                                     repair_mask,
-                                     runs_of_ones,
-                                     slices_and,
-                                     slice_duration,
-                                     slices_not)
+from analysis_engine.library import (
+    all_of,
+    any_of,
+    coreg,
+    find_edges_on_state_change,
+    find_toc_tod,
+    first_valid_sample,
+    hysteresis,
+    index_at_value,
+    last_valid_sample,
+    max_value,
+    minimum_unmasked,
+    np_ma_masked_zeros_like,
+    peak_curvature,
+    rate_of_change,
+    repair_mask,
+    runs_of_ones,
+    second_window,
+    slices_and,
+    slice_duration,
+    slices_not,
+)
 
 from analysis_engine.node import A, M, P, S, KTI, KeyTimeInstanceNode
 
-from settings import (CLIMB_THRESHOLD,
-                      HYSTERESIS_ENG_START_STOP,
-                      CORE_START_SPEED,
-                      CORE_STOP_SPEED,
-                      MIN_FAN_RUNNING,
-                      NAME_VALUES_CLIMB,
-                      NAME_VALUES_DESCENT,
-                      NAME_VALUES_ENGINE,
-                      NAME_VALUES_LEVER,
-                      TAKEOFF_ACCELERATION_THRESHOLD,
-                      TRANSITION_ALTITUDE,
-                      VERTICAL_SPEED_FOR_LIFTOFF)
+from settings import (
+    CLIMB_THRESHOLD,
+    HYSTERESIS_ENG_START_STOP,
+    CORE_START_SPEED,
+    CORE_STOP_SPEED,
+    MIN_FAN_RUNNING,
+    NAME_VALUES_CLIMB,
+    NAME_VALUES_DESCENT,
+    NAME_VALUES_ENGINE,
+    NAME_VALUES_LEVER,
+    TAKEOFF_ACCELERATION_THRESHOLD,
+    TRANSITION_ALTITUDE,
+    VERTICAL_SPEED_FOR_LIFTOFF,
+)
+
 
 def sorted_valid_list(x):
     '''
@@ -287,7 +293,7 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
                     _slice = initial_climbs.get_aligned(eng_np).get_first().slice
                     # Base on first Np drop after liftoff.
                     # XXX: Width is too small for low frequency params.
-                    eng_np.array = eng_np.array[_slice]
+                    eng_np.array = hysteresis(eng_np.array[_slice], 4 / eng_np.hz)
                     eng_np_threshold = -0.5 / eng_np.frequency
                     eng_np_roc = rate_of_change(eng_np, 2 * (1 / eng_np.frequency))
                     index = index_at_value(eng_np_roc, eng_np_threshold)

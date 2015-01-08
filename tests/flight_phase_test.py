@@ -501,11 +501,11 @@ class TestILSGlideslopeEstablished(unittest.TestCase):
 
 class TestILSLocalizerEstablished(unittest.TestCase):
     def test_can_operate(self):
-        expected = [('ILS Localizer', 'Altitude AAL For Flight Phases', 'Approach And Landing'),
-                    ('ILS Localizer', 'Altitude AAL For Flight Phases', 'Approach And Landing', 'ILS Frequency')]
-
-        self.assertEqual(ILSLocalizerEstablished.get_operational_combinations(),
-                         expected)
+        opts = ILSLocalizerEstablished.get_operational_combinations()
+        self.assertIn(('ILS Localizer', 'Altitude AAL For Flight Phases', 'Approach And Landing'), opts)
+        self.assertIn(('ILS Localizer', 'Altitude AAL For Flight Phases', 'Approach And Landing', 'ILS Frequency'), opts)
+        self.assertIn(('ILS Localizer', 'Altitude AAL For Flight Phases', 'Approach And Landing', 'ILS Frequency', 'Heading'), opts)
+        self.assertIn(('ILS Localizer', 'Altitude AAL For Flight Phases', 'Approach And Landing', 'ILS Frequency', 'Heading', 'Heading During Landing'), opts)
 
     def test_ils_localizer_established_basic(self):
         ils = P('ILS Localizer',np.ma.arange(-3, 0, 0.3))
@@ -633,9 +633,11 @@ class TestILSLocalizerEstablished(unittest.TestCase):
         alt_aal = load(os.path.join(test_data_path, 'ILS_localizer_established_alt_aal.nod'))
         establish = ILSLocalizerEstablished()
         establish.derive(ils_loc, alt_aal, apps, ils_freq)
-        expected = [Section(name='ILS Localizer Established', slice=slice(12215.896484375, 12244.499993651203, None), start_edge=12215.896484375, stop_edge=12244.499993651203),
-                    Section(name='ILS Localizer Established', slice=slice(12295, 12363.052624896003, None), start_edge=12295, stop_edge=12363.052624896003)]
-        self.assertEqual(establish.get_slices(), expected.get_slices())
+        self.assertEqual(len(establish), 2)
+        self.assertAlmostEqual(establish[0].slice.start, 12216, places=0)
+        self.assertAlmostEqual(establish[0].slice.stop, 12244, places=0)
+        self.assertAlmostEqual(establish[1].slice.start, 12296, places=0)
+        self.assertAlmostEqual(establish[1].slice.stop, 12363, places=0)
 
 
 class TestInitialApproach(unittest.TestCase):
@@ -1486,8 +1488,9 @@ class TestLanding(unittest.TestCase):
         landing.derive(P('Heading Continuous',head),
                        P('Altitude AAL For Flight Phases',alt_aal),
                        phase_fast)
-        expected = buildsection('Landing', 9, 24)
-        self.assertEqual(list(landing), list(expected))
+        self.assertEqual(len(landing), 1)
+        self.assertEqual(landing[0].slice.start, 9)
+        self.assertEqual(landing[0].slice.stop, 24)
 
         # second, test both sections are within the landing section of data
         phase_fast = buildsections('Fast', [0, 12], [14, 15])
@@ -1495,8 +1498,9 @@ class TestLanding(unittest.TestCase):
         landing.derive(P('Heading Continuous',head),
                        P('Altitude AAL For Flight Phases',alt_aal),
                        phase_fast)
-        expected = buildsection('Landing', 9, 24)
-        self.assertEqual(landing.get_slices(), expected.get_slices())
+        self.assertEqual(len(landing), 1)
+        self.assertEqual(landing[0].slice.start, 9)
+        self.assertEqual(landing[0].slice.stop, 24)
 
 
 class TestLandingRoll(unittest.TestCase):
