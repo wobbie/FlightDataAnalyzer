@@ -484,11 +484,11 @@ class TestILSGlideslopeEstablished(unittest.TestCase):
 
 class TestILSLocalizerEstablished(unittest.TestCase):
     def test_can_operate(self):
-        expected = [('ILS Localizer', 'Altitude AAL For Flight Phases', 'Approach And Landing'),
-                    ('ILS Localizer', 'Altitude AAL For Flight Phases', 'Approach And Landing', 'ILS Frequency')]
-
-        self.assertEqual(ILSLocalizerEstablished.get_operational_combinations(),
-                         expected)
+        opts = ILSLocalizerEstablished.get_operational_combinations()
+        self.assertIn(('ILS Localizer', 'Altitude AAL For Flight Phases', 'Approach And Landing'), opts)
+        self.assertIn(('ILS Localizer', 'Altitude AAL For Flight Phases', 'Approach And Landing', 'ILS Frequency'), opts)
+        self.assertIn(('ILS Localizer', 'Altitude AAL For Flight Phases', 'Approach And Landing', 'ILS Frequency', 'Heading'), opts)
+        self.assertIn(('ILS Localizer', 'Altitude AAL For Flight Phases', 'Approach And Landing', 'ILS Frequency', 'Heading', 'Heading During Landing'), opts)
 
     def test_ils_localizer_established_basic(self):
         ils = P('ILS Localizer',np.ma.arange(-3, 0, 0.3))
