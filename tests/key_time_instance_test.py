@@ -214,10 +214,12 @@ class TestClimbAccelerationStart(unittest.TestCase):
                                                      'Engine Propulsion',
                                                      'Initial Climb')))
         jet = A('Engine Propulsion', 'JET')
-        self.assertTrue(self.node_class.can_operate(('Throttle Levers',),
+        self.assertTrue(self.node_class.can_operate(('Throttle Levers',
+                                                     'Initial Climb'),
                                                     eng_type=jet))
         prop = A('Engine Propulsion', 'PROP')
-        self.assertTrue(self.node_class.can_operate(('Eng (*) Np Max',),
+        self.assertTrue(self.node_class.can_operate(('Eng (*) Np Max',
+                                                     'Initial Climb'),
                                                     eng_type=prop))
 
     def test_derive_basic(self):
