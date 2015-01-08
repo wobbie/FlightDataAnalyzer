@@ -1445,8 +1445,9 @@ class TestLanding(unittest.TestCase):
         landing.derive(P('Heading Continuous',head),
                        P('Altitude AAL For Flight Phases',alt_aal),
                        phase_fast)
-        expected = buildsection('Landing', 9, 24)
-        self.assertEqual(list(landing), list(expected))
+        self.assertEqual(len(landing), 1)
+        self.assertEqual(landing[0].slice.start, 9)
+        self.assertEqual(landing[0].slice.stop, 24)
 
         # second, test both sections are within the landing section of data
         phase_fast = buildsections('Fast', [0, 12], [14, 15])
@@ -1454,8 +1455,9 @@ class TestLanding(unittest.TestCase):
         landing.derive(P('Heading Continuous',head),
                        P('Altitude AAL For Flight Phases',alt_aal),
                        phase_fast)
-        expected = buildsection('Landing', 9, 24)
-        self.assertEqual(landing.get_slices(), expected.get_slices())
+        self.assertEqual(len(landing), 1)
+        self.assertEqual(landing[0].slice.start, 9)
+        self.assertEqual(landing[0].slice.stop, 24)
 
 
 class TestLandingRoll(unittest.TestCase):
