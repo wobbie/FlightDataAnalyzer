@@ -1651,7 +1651,6 @@ class TestFlaperon(unittest.TestCase):
             series=Attribute('Series', 'A330-200'),
             family=Attribute('Family', 'A330')))
     
-    @unittest.skip('Test takes far too long to complete')
     def test_derive(self):
         al = load(os.path.join(test_data_path, 'aileron_left.nod'))
         ar = load(os.path.join(test_data_path, 'aileron_right.nod'))
@@ -1662,20 +1661,29 @@ class TestFlaperon(unittest.TestCase):
         family = A('Family', 'A330')
         flaperon = Flaperon()
         flaperon.derive(al, ar, model, series, family)
-        self.assertEqual(
-            flaperon.array.tolist(),
+        self.assertTrue(
+            flaperon.array.tolist() ==
             [None] * 53 +
-            [10] * 10 +
-            [5] * 65 + 
-            [None] * 9 +
-            [5] * 170 +
-            [10] * 581 +
+            [10] * 11 +
+            [5] * 244 + 
+            [10] * 130 +
+            [0, 0, 0, 5, 0, 5, 5] +
+            [10] * 32 +
+            [0, 0, 5, 5, 5, 5] +
+            [10] * 390 +
+            [5, 5, 5] +
+            [10] * 16 +
             [5] * 21 +
-            [0] * 21774 +
-            [10] * 325 +
-            [0] * 278 +
-            [10] * 261 +
-            [0, None, None, None, None]
+            [0] * 21775 +
+            [5] * 11 +
+            [10] * 18 +
+            [5, 5] +
+            [10] * 290 +
+            [5, 5, 5] + 
+            [0] * 275 +
+            [5] + 
+            [10] * 260 +
+            [None] * 4
         )
 
 
