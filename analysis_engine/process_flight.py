@@ -322,23 +322,21 @@ def parse_analyser_profiles(analyser_profiles, filter_modules=None):
     return additional_modules, required_nodes
 
 
-def process_flight(hdf_path, tail_number, aircraft_info={},
+def process_flight(segment_info, tail_number, aircraft_info={},
                    start_datetime=None, achieved_flight_record={},
                    requested=[], required=[], include_flight_attributes=True,
                    additional_modules=[]):
     '''
-    Processes the HDF file (hdf_path) to derive the required_params (Nodes)
+    Processes the HDF file (segment_info['File']) to derive the required_params (Nodes)
     within python modules (settings.NODE_MODULES).
 
     Note: For Flight Data Services, the definitive API is located here:
         "PolarisTaskManagement.test.tasks_mask.process_flight"
 
-    :param hdf_path: Path to HDF File
-    :type hdf_path: String
+    :param segment_info: Details of the segment to process
+    :type segment_info: dict
     :param aircraft: Aircraft specific attributes
     :type aircraft: dict
-    :param start_datetime: Datetime of the origin of the data (at index 0)
-    :type start_datetime: Datetime
     :param achieved_flight_record: See API Below
     :type achieved_flight_record: Dict
     :param requested: Derived nodes to process (dependencies will also be
@@ -354,6 +352,14 @@ def process_flight(hdf_path, tail_number, aircraft_info={},
 
     :returns: See below:
     :rtype: Dict
+
+    Sample segment_info
+    --------------------
+    {
+        'File':  # Path to HDF5 file to process
+        'Start Datetime':  # Datetime of the origin of the data (at index 0)
+        'Segment Type': # segment type obtained from split segments e.g. START_AND_STOP
+    }
 
     Sample aircraft_info
     --------------------
@@ -497,9 +503,10 @@ def process_flight(hdf_path, tail_number, aircraft_info={},
     ],
 
     '''
-    if start_datetime is None:
+    hdf_path = segment_info['File']
+    if 'Start Datetime' not in segment_info:
         import pytz
-        start_datetime = datetime.utcnow().replace(tzinfo=pytz.utc)
+        segment_info['start_datetime'] = datetime.utcnow().replace(tzinfo=pytz.utc)
     logger.info("Processing: %s", hdf_path)
 
     if aircraft_info:
@@ -532,7 +539,7 @@ def process_flight(hdf_path, tail_number, aircraft_info={},
 
     # open HDF for reading
     with hdf_file(hdf_path) as hdf:
-        hdf.start_datetime = start_datetime
+        hdf.start_datetime = segment_info['Start Datetime']
         if hooks.PRE_FLIGHT_ANALYSIS:
             logger.info("Performing PRE_FLIGHT_ANALYSIS actions: %s",
                         hooks.PRE_FLIGHT_ANALYSIS.func_name)
@@ -541,7 +548,7 @@ def process_flight(hdf_path, tail_number, aircraft_info={},
             logger.info("No PRE_FLIGHT_ANALYSIS actions to perform")
         # Track nodes. Assume that all params in HDF are from LFL(!)
         node_mgr = NodeManager(
-            start_datetime, hdf.duration, hdf.valid_param_names(),
+            segment_info, hdf.duration, hdf.valid_param_names(),
             requested, required, derived_nodes, aircraft_info,
             achieved_flight_record)
         # calculate dependency tree
@@ -563,11 +570,11 @@ def process_flight(hdf_path, tail_number, aircraft_info={},
 
         # geo locate KTIs
         kti_list = geo_locate(hdf, kti_list)
-        kti_list = _timestamp(start_datetime, kti_list)
+        kti_list = _timestamp(segment_info['Start Datetime'], kti_list)
 
         # geo locate KPVs
         kpv_list = geo_locate(hdf, kpv_list)
-        kpv_list = _timestamp(start_datetime, kpv_list)
+        kpv_list = _timestamp(segment_info['Start Datetime'], kpv_list)
 
         # Store version of FlightDataAnalyser
         hdf.analysis_version = __version__
@@ -611,6 +618,9 @@ def main():
     parser.add_argument('-tail', '--tail', dest='tail_number',
                         default='G-FDSL',  # as per flightdatacommunity file
                         help='Aircraft tail number.')
+    parser.add_argument('-segment-type', dest='segment_type',
+                        default='START_AND_STOP',  # as per flightdatacommunity file
+                        help='Type of segment.')
     parser.add_argument('--strip', default=False, action='store_true',
                         help='Strip the HDF5 file to only the LFL parameters')
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
@@ -712,8 +722,13 @@ def main():
     if args.strip:
         with hdf_file(hdf_copy) as hdf:
             hdf.delete_params(hdf.derived_keys())
+
+    segment_info = {
+        'File': hdf_copy,
+        'Segment Type': args.segment_type,
+    }
     res = process_flight(
-        hdf_copy, args.tail_number, aircraft_info=aircraft_info,
+        segment_info, args.tail_number, aircraft_info=aircraft_info,
         requested=args.requested, required=args.required,
         additional_modules=['flightdataprofiles.fcp.kpvs']
     )

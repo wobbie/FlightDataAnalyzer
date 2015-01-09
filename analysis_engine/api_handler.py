@@ -133,12 +133,13 @@ class APIHandlerHTTP(object):
             timeout=timeout,
             proxy_info=settings.API_PROXY_INFO,
         )
+        headers = {'content-type':'application/x-www-form-urlencoded'}
 
         # Attempt to make the API request:
         socket_timeout = socket.getdefaulttimeout()
         socket.setdefaulttimeout(timeout)
         try:
-            response, content = http.request(uri, method, body)
+            response, content = http.request(uri, method, body, headers=headers)
         except (httplib2.ServerNotFoundError, socket.error, AttributeError):
             # Usually a result of errors with DNS...
             logger.exception("Connection Error")

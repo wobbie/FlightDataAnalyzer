@@ -657,9 +657,14 @@ class TakeoffPilot(FlightAttributeNode, DeterminePilot):
                ap1_eng=M('AP (1) Engaged'),
                ap2_eng=M('AP (2) Engaged'),
                takeoffs=S('Takeoff'),
-               liftoffs=KTI('Liftoff')):
+               liftoffs=KTI('Liftoff'),
+               rejected_toffs=S('Rejected Takeoff')):
 
-        phase = takeoffs.get_first() if takeoffs else None
+        #TODO: Tidy
+        phase = takeoffs or rejected_toffs or None
+        if phase is None:
+            # Nothing to do as no attempt to takeoff
+            return
         lift = liftoffs.get_first() if liftoffs else None
         if lift and ap1_eng and ap2_eng:
             # check AP state at the floored index (just before lift)
@@ -668,7 +673,7 @@ class TakeoffPilot(FlightAttributeNode, DeterminePilot):
         else:
             ap1 = ap2 = None
         args = (pilot_flying, pitch_capt, pitch_fo, roll_capt, roll_fo,
-                cc_capt, cc_fo, phase, ap1, ap2)
+                cc_capt, cc_fo, phase.get_first(), ap1, ap2)
         self.set_flight_attr(self._determine_pilot(*args))
 
 
@@ -774,7 +779,9 @@ class TakeoffRunway(FlightAttributeNode):
 
 
 class FlightType(FlightAttributeNode):
-    "Type of flight flown"
+    '''
+    Type of flight flown
+    '''
     name = 'FDR Flight Type'
 
     class Type(object):
@@ -795,11 +802,12 @@ class FlightType(FlightAttributeNode):
 
     @classmethod
     def can_operate(cls, available):
-        return all(n in available for n in ['Fast', 'Liftoff', 'Touchdown'])
+        return any_of(cls.get_dependency_names(), available)
 
-    def derive(self, afr_type=A('AFR Type'), fast=S('Fast'),
+    def derive(self, afr_type=A('AFR Type'), fast=S('Fast'), mobile=S('Mobile'),
                liftoffs=KTI('Liftoff'), touchdowns=KTI('Touchdown'),
-               touch_and_gos=S('Touch And Go'), groundspeed=P('Groundspeed')):
+               touch_and_gos=S('Touch And Go'), rejected_to=S('Rejected Takeoff'),
+               eng_start=KTI('Eng Start')):
         '''
         TODO: Detect MID_FLIGHT.
         '''
@@ -846,13 +854,22 @@ class FlightType(FlightAttributeNode):
                 flight_type = afr_type
             else:
                 flight_type = FlightType.Type.COMPLETE
-        elif fast:
+        elif rejected_to:
+            # Rejected takeoff but no takeoff or landing
             flight_type = FlightType.Type.REJECTED_TAKEOFF
-        elif groundspeed and groundspeed.array.ptp() > 10:
+        elif fast:
+            # Midflight as no takeoff, rejected takeoff or landing but went fast
+            flight_type = FlightType.Type.INCOMPLETE
+        elif mobile:
             # The aircraft moved on the ground.
             flight_type = FlightType.Type.GROUND_RUN
-        else:
+        elif eng_start:
+            # Engines were running at some point
             flight_type = FlightType.Type.ENGINE_RUN_UP
+        else:
+            # TODO: not detected flight type should we fall back to No Movement?
+            # should we raise an error
+            flight_type = FlightType.Type.INCOMPLETE
         self.set_flight_attr(flight_type)
 
 #Q: Not sure if we can identify Destination from the data?

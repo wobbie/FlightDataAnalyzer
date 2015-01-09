@@ -69,6 +69,12 @@ class Airborne(FlightPhaseNode):
     would be more sensible as this will allow for negative AAL values longer
     than the remove_small_gaps time_limit.
     '''
+
+    @classmethod
+    def can_operate(cls, available, seg_type=A('Segment Type')):
+        correct_seg_type = seg_type and seg_type.value not in ('GROUND_ONLY', 'NO_MOVEMENT')
+        return 'Altitude AAL For Flight Phases' in available and correct_seg_type
+
     def derive(self, alt_aal=P('Altitude AAL For Flight Phases'),
                fast=S('Fast')):
         
@@ -125,8 +131,9 @@ class GoAroundAndClimbout(FlightPhaseNode):
     '''
     
     @classmethod
-    def can_operate(cls, available):
-        return 'Altitude AAL For Flight Phases' in available
+    def can_operate(cls, available, seg_type=A('Segment Type')):
+        correct_seg_type = seg_type and seg_type.value not in ('GROUND_ONLY', 'NO_MOVEMENT')
+        return 'Altitude AAL For Flight Phases' in available and correct_seg_type
 
     def derive(self, alt_aal=P('Altitude AAL For Flight Phases'),
                level_flights=S('Level Flight')):
@@ -229,8 +236,9 @@ class ApproachAndLanding(FlightPhaseNode):
     align_offset = 0
     
     @classmethod
-    def can_operate(cls, available):
-        return 'Altitude AAL For Flight Phases' in available
+    def can_operate(cls, available, seg_type=A('Segment Type')):
+        correct_seg_type = seg_type and seg_type.value not in ('GROUND_ONLY', 'NO_MOVEMENT')
+        return 'Altitude AAL For Flight Phases' in available and correct_seg_type
 
     def derive(self, alt_aal=P('Altitude AAL For Flight Phases'),
                level_flights=S('Level Flight'),
@@ -268,8 +276,9 @@ class Approach(FlightPhaseNode):
     Uses find_low_alts to exclude level offs and level flight sections.
     """
     @classmethod
-    def can_operate(cls, available):
-        return 'Altitude AAL For Flight Phases' in available
+    def can_operate(cls, available, seg_type=A('Segment Type')):
+        correct_seg_type = seg_type and seg_type.value not in ('GROUND_ONLY', 'NO_MOVEMENT')
+        return 'Altitude AAL For Flight Phases' in available and correct_seg_type
     
     def derive(self, alt_aal=P('Altitude AAL For Flight Phases'), 
                level_flights=S('Level Flight'),
@@ -540,8 +549,9 @@ class DescentLowClimb(FlightPhaseNode):
     '''
     
     @classmethod
-    def can_operate(cls, available):
-        return 'Altitude AAL For Flight Phases' in available
+    def can_operate(cls, available, seg_type=A('Segment Type')):
+        correct_seg_type = seg_type and seg_type.value not in ('GROUND_ONLY', 'NO_MOVEMENT')
+        return 'Altitude AAL For Flight Phases' in available and correct_seg_type
     
     def derive(self, alt_aal=P('Altitude AAL For Flight Phases'),
                level_flights=S('Level Flight')):
@@ -1022,16 +1032,25 @@ class Grounded(FlightPhaseNode):
     Includes start of takeoff run and part of landing run.
     Was "On Ground" but this name conflicts with a recorded 737-6 parameter name.
     '''
+
+    @classmethod
+    def can_operate(cls, available):
+        return 'Airspeed For Flight Phases' in available
+
     def derive(self, air=S('Airborne'), speed=P('Airspeed For Flight Phases')):
         data_end=len(speed.array)
-        gnd_phases = slices_not(air.get_slices(), begin_at=0, end_at=data_end)
-        if not gnd_phases:
-            # Either all on ground or all in flight.
-            median_speed = np.ma.median(speed.array)
-            if median_speed > AIRSPEED_THRESHOLD:
-                gnd_phases = [slice(None,None,None)]
-            else:
-                gnd_phases = [slice(0,data_end,None)]
+        if air:
+            gnd_phases = slices_not(air.get_slices(), begin_at=0, end_at=data_end)
+            if not gnd_phases:
+                # Either all on ground or all in flight.
+                median_speed = np.ma.median(speed.array)
+                if median_speed > AIRSPEED_THRESHOLD:
+                    gnd_phases = [slice(None,None,None)]
+                else:
+                    gnd_phases = [slice(0,data_end,None)]
+        else:
+            # no airborne so must be all on ground
+            gnd_phases = [slice(0,data_end,None)]
 
         self.create_phases(gnd_phases)
 
@@ -1113,6 +1132,11 @@ class Landing(FlightPhaseNode):
     introduced by hysteresis, which is applied to avoid hunting in level
     flight conditions, and thereby make sure the 50ft startpoint is exact.
     '''
+    @classmethod
+    def can_operate(cls, available, seg_type=A('Segment Type')):
+        correct_seg_type = seg_type and seg_type.value not in ('GROUND_ONLY', 'NO_MOVEMENT')
+        return 'Altitude AAL For Flight Phases' in available and correct_seg_type
+
     def derive(self, head=P('Heading Continuous'),
                alt_aal=P('Altitude AAL For Flight Phases'), fast=S('Fast')):
         phases = []

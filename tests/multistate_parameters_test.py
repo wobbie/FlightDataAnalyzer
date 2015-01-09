@@ -1116,7 +1116,7 @@ class TestFlap(unittest.TestCase, NodeTest):
         _as = A('Series', 'B737-300')
         _af = A('Family', 'B737 Classic')
         attributes = (_am, _as, _af)
-        array = np.ma.array([0] * 5 + range(50))
+        array = np.ma.array([0] * 5 + range(42) + [42] * 5)
         flap = P(name='Flap Angle', array=array, frequency=2)
         node = self.node_class()
         node.derive(flap, *attributes)
@@ -1125,7 +1125,7 @@ class TestFlap(unittest.TestCase, NodeTest):
         self.assertEqual(node.values_mapping, at.get_flap_map.return_value)
         self.assertEqual(node.units, ut.DEGREE)
         self.assertIsInstance(node.array, MappedArray)
-        self.assertEqual(node.array.raw.tolist(), [0] * 5 + [40] * 50)
+        self.assertEqual(node.array.raw.tolist(), [0] * 11 + [40] * 92 + [None])
 
     @patch('analysis_engine.library.at')
     def test_derive__md82(self, at):
@@ -1220,7 +1220,7 @@ class TestFlapExcludingTransition(unittest.TestCase, NodeTest):
         _as = A('Series', 'B737-300')
         _af = A('Family', 'B737 Classic')
         attributes = (_am, _as, _af)
-        array = np.ma.array([0] * 5 + range(50))
+        array = np.ma.array([0] * 5 + range(42) + [42] * 5)
         flap = P(name='Flap Angle', array=array, frequency=2)
         node = self.node_class()
         node.derive(flap, *attributes)
@@ -1229,7 +1229,8 @@ class TestFlapExcludingTransition(unittest.TestCase, NodeTest):
         self.assertEqual(node.values_mapping, at.get_flap_map.return_value)
         self.assertEqual(node.units, ut.DEGREE)
         self.assertIsInstance(node.array, MappedArray)
-        self.assertEqual(node.array.raw.tolist(), [0] * 54 + [40] * 1)
+        self.assertEqual(node.frequency, 4)
+        self.assertEqual(node.array.raw.tolist(), [0] * 95 + [40] * 8 + [None])
 
 
 class TestFlapIncludingTransition(unittest.TestCase, NodeTest):
@@ -1260,7 +1261,7 @@ class TestFlapIncludingTransition(unittest.TestCase, NodeTest):
         _as = A('Series', 'B737-300')
         _af = A('Family', 'B737 Classic')
         attributes = (_am, _as, _af)
-        array = np.ma.array([0] * 5 + range(50))
+        array = np.ma.array([0] * 5 + range(42) + [42] * 5)
         flap = P(name='Flap Angle', array=array, frequency=2)
         node = self.node_class()
         node.derive(flap, *attributes)
@@ -1269,7 +1270,8 @@ class TestFlapIncludingTransition(unittest.TestCase, NodeTest):
         self.assertEqual(node.values_mapping, at.get_flap_map.return_value)
         self.assertEqual(node.units, ut.DEGREE)
         self.assertIsInstance(node.array, MappedArray)
-        self.assertEqual(node.array.tolist(), [0] * 5 + [40] * 50)
+        self.assertEqual(node.frequency, 4)
+        self.assertEqual(node.array.tolist(), [0] * 11 + [40] * 92 + [None])
 
 
 class TestFlapLever(unittest.TestCase, NodeTest):
@@ -1648,7 +1650,8 @@ class TestFlaperon(unittest.TestCase):
             model=Attribute('Model', 'A330-222'),
             series=Attribute('Series', 'A330-200'),
             family=Attribute('Family', 'A330')))
-
+    
+    @unittest.skip('Test takes far too long to complete')
     def test_derive(self):
         al = load(os.path.join(test_data_path, 'aileron_left.nod'))
         ar = load(os.path.join(test_data_path, 'aileron_right.nod'))
@@ -1659,8 +1662,8 @@ class TestFlaperon(unittest.TestCase):
         family = A('Family', 'A330')
         flaperon = Flaperon()
         flaperon.derive(al, ar, model, series, family)
-        self.assertTrue(
-            flaperon.array.tolist() ==
+        self.assertEqual(
+            flaperon.array.tolist(),
             [None] * 53 +
             [10] * 10 +
             [5] * 65 + 
@@ -2205,7 +2208,7 @@ class TestSlat(unittest.TestCase, NodeTest):
         _as = A('Series', 'A300B4')
         _af = A('Family', 'A300')
         attributes = (_am, _as, _af)
-        array = np.ma.array([0] * 5 + range(50))
+        array = np.ma.array([0] * 5 + range(27) + [27] * 5)
         slat = P(name='Slat Angle', array=array, frequency=2)
         node = self.node_class()
         node.derive(slat, *attributes)
@@ -2214,7 +2217,8 @@ class TestSlat(unittest.TestCase, NodeTest):
         self.assertEqual(node.values_mapping, at.get_slat_map.return_value)
         self.assertEqual(node.units, ut.DEGREE)
         self.assertIsInstance(node.array, MappedArray)
-        self.assertEqual(node.array.tolist(), [0] * 5 + [25] * 50)
+        self.assertEqual(node.frequency, 4)
+        self.assertEqual(node.array.tolist(), [0] * 11 + [25] * 62 + [None])
 
 
 class TestSlatExcludingTransition(unittest.TestCase, NodeTest):
@@ -2245,7 +2249,7 @@ class TestSlatExcludingTransition(unittest.TestCase, NodeTest):
         _as = A('Series', 'A300B4')
         _af = A('Family', 'A300')
         attributes = (_am, _as, _af)
-        array = np.ma.array([0] * 5 + range(50))
+        array = np.ma.array([0] * 5 + range(27) + [27] * 5)
         slat = P(name='Slat Angle', array=array, frequency=2)
         node = self.node_class()
         node.derive(slat, *attributes)
@@ -2254,7 +2258,7 @@ class TestSlatExcludingTransition(unittest.TestCase, NodeTest):
         self.assertEqual(node.values_mapping, at.get_slat_map.return_value)
         self.assertEqual(node.units, ut.DEGREE)
         self.assertIsInstance(node.array, MappedArray)
-        self.assertEqual(node.array.tolist(), [0] * 54 + [25])
+        self.assertEqual(node.array.tolist(), [0] * 65 + [25] * 8 + [None])
 
 
 class TestSlatIncludingTransition(unittest.TestCase, NodeTest):
@@ -2285,7 +2289,7 @@ class TestSlatIncludingTransition(unittest.TestCase, NodeTest):
         _as = A('Series', 'A300B4')
         _af = A('Family', 'A300')
         attributes = (_am, _as, _af)
-        array = np.ma.array([0] * 5 + range(50))
+        array = np.ma.array([0] * 5 + range(27) + [27] * 5)
         slat = P(name='Slat Angle', array=array, frequency=2)
         node = self.node_class()
         node.derive(slat, *attributes)
@@ -2294,7 +2298,8 @@ class TestSlatIncludingTransition(unittest.TestCase, NodeTest):
         self.assertEqual(node.values_mapping, at.get_slat_map.return_value)
         self.assertEqual(node.units, ut.DEGREE)
         self.assertIsInstance(node.array, MappedArray)
-        self.assertEqual(node.array.tolist(), [0] * 5 + [25] * 50)
+        self.assertEqual(node.frequency, 4)
+        self.assertEqual(node.array.tolist(), [0] * 11 + [25] * 62 + [None])
 
 
 class TestSpeedbrakeDeployed(unittest.TestCase):

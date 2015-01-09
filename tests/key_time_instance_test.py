@@ -109,35 +109,36 @@ class TestAltitudePeak(unittest.TestCase):
 
 class TestBottomOfDescent(unittest.TestCase):
     def test_can_operate(self):
-        
-        opts = BottomOfDescent.get_operational_combinations()
-        self.assertTrue(('Climb Cruise Descent', 'HDF Duration') in opts)
-        self.assertTrue(('Airborne', 'HDF Duration') in opts)
-        self.assertTrue(
-            ('Climb Cruise Descent','Airborne', 'HDF Duration') in opts)
+        self.assertEqual(
+            BottomOfDescent.get_operational_combinations(),
+            [('Climb Cruise Descent',)],
+        )
     
     def test_bottom_of_descent_basic(self):
         testwave = np.cos(np.arange(0,6.3,0.1))*(2500)+2560
         alt_std = Parameter('Altitude STD Smoothed', np.ma.array(testwave))
         from analysis_engine.flight_phase import ClimbCruiseDescent
         ccd = ClimbCruiseDescent()
-        air = buildsection('Airborne', 0,50)
-        duration = A('HDF Duration', 63)
+        #air = buildsection('Airborne', 0,50)
+        #duration = A('HDF Duration', 63)
         ccd.derive(alt_std)
         bod = BottomOfDescent()
-        bod.derive(ccd, air, duration)
+        bod.derive(ccd)
         expected = [KeyTimeInstance(index=31, name='Bottom Of Descent')]
         self.assertEqual(bod, expected)
 
     def test_bottom_of_descent_complex(self):
-        airs = buildsections('Airborne', [896, 1654], [1688, 2055])
+        #airs = buildsections('Airborne', [896, 1654], [1688, 2055])
         ccds = buildsections('Climb Cruise Descent', [897, 1253], [1291, 1651], [1689, 2054])
-        duration = A('HDF Duration', 3000)
+        #duration = A('HDF Duration', 3000)
         bod = BottomOfDescent()
-        bod.derive(ccds, airs, duration)
-        expected = [KeyTimeInstance(index=1253, name='Bottom Of Descent'),
-                    KeyTimeInstance(index=1651, name='Bottom Of Descent'),
-                    KeyTimeInstance(index=2054, name='Bottom Of Descent')]        
+        bod.derive(ccds)
+        self.assertEqual(len(bod), 3)
+        self.assertEqual(bod[0].index, 1254)
+        
+        expected = [KeyTimeInstance(index=1254, name='Bottom Of Descent'),
+                    KeyTimeInstance(index=1652, name='Bottom Of Descent'),
+                    KeyTimeInstance(index=2055, name='Bottom Of Descent')]
         self.assertEqual(bod, expected)
 
     def test_bod_air_only(self):
@@ -145,24 +146,21 @@ class TestBottomOfDescent(unittest.TestCase):
         duration = A('HDF Duration', 100)
         bod = BottomOfDescent()
         bod.derive(None, air, duration)
-        expected = [KeyTimeInstance(index=51, name='Bottom Of Descent')]        
+        expected = [KeyTimeInstance(index=51, name='Bottom Of Descent')]
         self.assertEqual(bod, expected)
         
     def test_bod_ccd_only(self):
         ccds = buildsection('Climb Cruise Descent', 897, 1253)
-        duration = A('HDF Duration', 2000)
         bod = BottomOfDescent()
-        bod.derive(ccds, None, duration)
-        expected = [KeyTimeInstance(index=1253, name='Bottom Of Descent')]
-        self.assertEqual(bod, expected)
+        bod.derive(ccds)
+        self.assertEqual(len(bod), 1)
+        self.assertEqual(bod[0].index, 1254)
     
-    def test_bod_duration(self):
-        ccds = buildsection('Climb Cruise Descent', 897, None)
-        airs = buildsection('Airborne', 1688, None)
-        duration = A('HDF Duration', 2000)
+    def test_bod_end(self):
+        ccds = buildsection('Climb Cruise Descent', 897, 2000)
         bod = BottomOfDescent()
-        bod.derive(ccds, None, duration)
-        expected = [KeyTimeInstance(index=2000, name='Bottom Of Descent')]
+        bod.derive(ccds)
+        expected = [KeyTimeInstance(index=2001, name='Bottom Of Descent')]
         self.assertEqual(bod, expected)
 
 
@@ -214,10 +212,12 @@ class TestClimbAccelerationStart(unittest.TestCase):
                                                      'Engine Propulsion',
                                                      'Initial Climb')))
         jet = A('Engine Propulsion', 'JET')
-        self.assertTrue(self.node_class.can_operate(('Throttle Levers',),
+        self.assertTrue(self.node_class.can_operate(('Throttle Levers',
+                                                     'Initial Climb'),
                                                     eng_type=jet))
         prop = A('Engine Propulsion', 'PROP')
-        self.assertTrue(self.node_class.can_operate(('Eng (*) Np Max',),
+        self.assertTrue(self.node_class.can_operate(('Eng (*) Np Max',
+                                                     'Initial Climb'),
                                                     eng_type=prop))
 
     def test_derive_basic(self):
@@ -280,6 +280,22 @@ class TestClimbAccelerationStart(unittest.TestCase):
         self.assertEqual(len(node), 1)
         self.assertAlmostEqual(node[0].index, 917, places=0)
     
+    def test_derive_eng_np_noise(self):
+        '''
+        Noisy Eng Np signal is smoothed allowing fallback to 400 Ft.
+        '''
+        initial_climbs = buildsection('Initial Climb', 419, 439)
+        initial_climbs.frequency = 1
+        prop = A('Engine Propulsion', value='PROP')
+        alt_aal = load(os.path.join(
+            test_data_path, 'climb_acceleration_start_alt_aal_noise.nod'))
+        eng_np = load(os.path.join(
+            test_data_path, 'climb_acceleration_start_eng_np_noise.nod'))
+        node = self.node_class()
+        node.derive(alt_aal, initial_climbs, None, prop, eng_np, None)
+        self.assertEqual(len(node), 1)
+        self.assertAlmostEqual(node[0].index, 854, places=0)
+    
     def test_derive_throttle_levers_fallback(self):
         initial_climbs = buildsection('Initial Climb', 511, 531)
         jet = A('Engine Propulsion', value='JET')
@@ -323,7 +339,7 @@ class TestGoAround(unittest.TestCase):
 
     def test_go_around_basic(self):
         dlc = [Section('Descent Low Climb',slice(10,18),10,18)]
-        alt = Parameter('Altitude AAL',\
+        alt = Parameter('Altitude AAL',
                         np.ma.array(range(0,4000,500)+\
                                     range(4000,0,-500)+\
                                     range(0,1000,501)))
@@ -648,7 +664,7 @@ class TestTakeoffAccelerationStart(unittest.TestCase):
         self.assertEqual(\
             TakeoffAccelerationStart.get_operational_combinations(),
             [('Airspeed', 'Takeoff'),
-             ('Airspeed', 'Takeoff', 'Acceleration Longitudinal')])
+             ('Airspeed', 'Takeoff', 'Acceleration Longitudinal Offset Removed')])
 
     def test_takeoff_acceleration_start(self):
         # This test uses the same airspeed data as the library routine test,
@@ -830,12 +846,9 @@ class TestTopOfDescent(unittest.TestCase):
 class TestTouchdown(unittest.TestCase):
     def test_can_operate(self):
         opts = Touchdown.get_operational_combinations()
-        # There are eight permutations
-        self.assertEqual(len(opts), 8)
         # Minimal case
-        self.assertTrue(('Altitude AAL', 'Landing') in opts)
-        # Maximum case
-        self.assertTrue(('Acceleration Normal', 'Acceleration Longitudinal', 'Altitude AAL', 'Gear On Ground', 'Landing') in opts)
+        self.assertIn(('Altitude AAL', 'Landing'), opts)
+        self.assertIn(('Acceleration Normal', 'Acceleration Longitudinal Offset Removed', 'Altitude AAL', 'Gear On Ground', 'Landing'), opts)
  
     def test_touchdown_with_minimum_requirements(self):
         # Test 1
