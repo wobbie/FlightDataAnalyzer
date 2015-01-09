@@ -1650,7 +1650,8 @@ class TestFlaperon(unittest.TestCase):
             model=Attribute('Model', 'A330-222'),
             series=Attribute('Series', 'A330-200'),
             family=Attribute('Family', 'A330')))
-
+    
+    @unittest.skip('Test takes far too long to complete')
     def test_derive(self):
         al = load(os.path.join(test_data_path, 'aileron_left.nod'))
         ar = load(os.path.join(test_data_path, 'aileron_right.nod'))
