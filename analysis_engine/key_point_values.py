@@ -6029,6 +6029,84 @@ class LongitudeAtLiftoff(KeyPointValueNode):
         raise Exception('Unable to determine a longitude at liftoff.')
 
 
+class LatitudeOffBlocks(KeyPointValueNode):
+    '''
+    Latitude and Longitude Off Blocks.
+
+    The position of the Aircraft moving Off Blocks is recorded in the form of
+    KPVs as this is used in a number of places. The raw latitude and
+    longitude data is used to create the *OffBlocks parameters, and these are
+    in turn used to compute the takeoff attributes in the absense of
+    *AtTakeoff KPVs.
+
+    Note: Cannot use smoothed position as this causes circular dependancy.
+    '''
+
+    units = ut.DEGREE
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return 'Off Blocks' in available and any_of(('Latitude',
+                                                  'Latitude (Coarse)'),
+                                                 available)
+
+    def derive(self,
+            lat=P('Latitude'),
+            off_blocks=KTI('Off Blocks'),
+            lat_c=P('Latitude (Coarse)')):
+        '''
+        Note that Latitude Coarse is a superframe parameter with poor
+        resolution recorded on some FDAUs. Keeping it at the end of the list
+        of parameters means that it will be aligned to a higher sample rate
+        rather than dragging other parameters down to its sample rate. See
+        767 Delta data frame.
+        '''
+        if lat:
+            self.create_kpvs_at_ktis(lat.array, off_blocks)
+            return
+        if lat_c:
+            self.create_kpvs_at_ktis(lat_c.array, off_blocks)
+            return
+
+
+class LongitudeOffBlocks(KeyPointValueNode):
+    '''
+    Latitude and Longitude Off Blocks.
+
+    The position of the Aircraft moving Off Blocks is recorded in the form of
+    KPVs as this is used in a number of places. The raw latitude and
+    longitude data is used to create the *OffBlocks parameters, and these are
+    in turn used to compute the takeoff attributes in the absense of
+    *AtTakeoff KPVs.
+
+    Note: Cannot use smoothed position as this causes circular dependancy.
+    '''
+
+    units = ut.DEGREE
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return 'Off Blocks' in available and any_of(('Longitude',
+                                                  'Longitude (Coarse)',),
+                                                 available)
+
+    def derive(self,
+            lon=P('Longitude'),
+            off_blocks=KTI('Off Blocks'),
+            lon_c=P('Longitude (Coarse)')):
+        '''
+        See note relating to coarse latitude and longitude under Latitude At Takeoff
+        '''
+        if lon:
+            self.create_kpvs_at_ktis(lon.array, off_blocks)
+            return
+        if lon_c:
+            self.create_kpvs_at_ktis(lon_c.array, off_blocks)
+            return
+
+
 ########################################
 # Latitude/Longitude @ Liftoff/Touchdown
 

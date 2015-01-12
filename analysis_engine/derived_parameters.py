@@ -6546,16 +6546,16 @@ class TrackDeviationFromRunway(DerivedParameterNode):
             to_stop = takeoff[0].slice.stop+300
             _slice = slice(takeoff[0].slice.start, to_stop)
             self._track_deviation(track.array, _slice, to_rwy.value, magnetic)
-            
-        for app in apps:
-            if not app.runway:
-                self.warning("Cannot calculate TrackDeviationFromRunway for "
-                             "approach as there is no runway.")
-                continue
-            # extend approach slice up to 15 minutes earlier (or to takeoff)
-            app_start = max(to_stop, app.slice.start-900)
-            _slice = slice(app_start, app.slice.stop)
-            self._track_deviation(track.array, _slice, app.runway, magnetic)
+        if apps:
+            for app in apps:
+                if not app.runway:
+                    self.warning("Cannot calculate TrackDeviationFromRunway for "
+                                 "approach as there is no runway.")
+                    continue
+                # extend approach slice up to 15 minutes earlier (or to takeoff)
+                app_start = max(to_stop, app.slice.start-900)
+                _slice = slice(app_start, app.slice.stop)
+                self._track_deviation(track.array, _slice, app.runway, magnetic)
 
 
 

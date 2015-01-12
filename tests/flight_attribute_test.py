@@ -878,13 +878,14 @@ class TestOnBlocksDatetime(unittest.TestCase):
 class TestTakeoffAirport(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = TakeoffAirport
-        self.operational_combinations = [
-            ('AFR Takeoff Airport',),
-            ('Latitude At Liftoff', 'Longitude At Liftoff'),
-            ('Latitude At Liftoff', 'AFR Takeoff Airport'),
-            ('Longitude At Liftoff', 'AFR Takeoff Airport'),
-            ('Latitude At Liftoff', 'Longitude At Liftoff', 'AFR Takeoff Airport'),
-        ]
+        self.check_operational_combination_length_only = True
+        self.operational_combination_length = 23
+
+    def test_can_operate(self):
+        self.assertTrue(self.node_class.can_operate(('Latitude At Liftoff', 'Longitude At Liftoff')))
+        self.assertTrue(self.node_class.can_operate(('AFR Takeoff Airport',)))
+        self.assertTrue(self.node_class.can_operate(('Latitude Off Blocks', 'Longitude Off Blocks')))
+        self.assertFalse(self.node_class.can_operate(('Latitude At Liftoff', 'Longitude Off Blocks')))
 
     @patch('analysis_engine.api_handler_analysis_engine.AnalysisEngineAPIHandlerLocal.get_nearest_airport')
     def test_derive_airport_not_found(self, get_nearest_airport):
@@ -940,6 +941,12 @@ class TestTakeoffAirport(unittest.TestCase, NodeTest):
         apt.set_flight_attr.reset_mock()
         get_nearest_airport.assert_called_once_with(4.0, 3.0)
         get_nearest_airport.reset_mock()
+        # Check that the airport returned via API is used for the attribute:
+        apt.derive(None, None, None, lat, lon)
+        apt.set_flight_attr.assert_called_once_with(info)
+        apt.set_flight_attr.reset_mock()
+        get_nearest_airport.assert_called_once_with(4.0, 3.0)
+        get_nearest_airport.reset_mock()
 
     @patch('analysis_engine.api_handler_analysis_engine.AnalysisEngineAPIHandlerLocal.get_nearest_airport')
     def test_derive_afr_fallback(self, get_nearest_airport):
@@ -972,23 +979,39 @@ class TestTakeoffAirport(unittest.TestCase, NodeTest):
 
 
 class TestTakeoffDatetime(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = TakeoffDatetime
+        self.takeoff_datetime = self.node_class()
+        self.takeoff_datetime.set_flight_attr = Mock()
+        self.start_dt = A('Start Datetime', value=datetime(1970, 1, 1))
+        self.liftoff = KTI(name='Liftoff', frequency=2, items=[
+            KeyTimeInstance(index=64),
+        ])
+        self.rto = buildsection('Rejected Takeoff', 15, 20)
+        self.off_blocks = KTI(name='Off Blocks', frequency=0.25, items=[
+            KeyTimeInstance(index=3),
+        ])
+
     def test_can_operate(self):
-        self.assertEqual(TakeoffDatetime.get_operational_combinations(),
-                         [('Liftoff', 'Start Datetime')])
+        self.assertTrue(self.node_class.can_operate(('Start Datetime',)))
+        self.assertFalse(self.node_class.can_operate(('Liftoff', 'Off Blocks')))
 
     def test_derive(self):
-        takeoff_dt = TakeoffDatetime()
-        takeoff_dt.set_flight_attr = Mock()
-        start_dt = A('Start Datetime', value=datetime(1970, 1, 1))
-        liftoff = KTI('Liftoff', frequency=0.25,
-                      items=[KeyTimeInstance(100, 'a')])
-        takeoff_dt.derive(liftoff, start_dt)
-        takeoff_dt.set_flight_attr.assert_called_once_with(\
-            datetime(1970, 1, 1, 0, 6, 40))
-        liftoff = KTI('Liftoff', frequency=0.25, items=[])
-        takeoff_dt.set_flight_attr = Mock()
-        takeoff_dt.derive(liftoff, start_dt)
-        takeoff_dt.set_flight_attr.assert_called_once_with(None)
+        self.takeoff_datetime.derive(self.liftoff, self.rto, self.off_blocks, self.start_dt)
+        self.takeoff_datetime.set_flight_attr.assert_called_once_with(datetime(1970, 1, 1, 0, 0, 32))
+
+    def test_derive__rto(self):
+        self.takeoff_datetime.derive(None, self.rto, self.off_blocks, self.start_dt)
+        self.takeoff_datetime.set_flight_attr.assert_called_once_with(datetime(1970, 1, 1, 0, 0, 15))
+
+    def test_derive__ground_run(self):
+        self.takeoff_datetime.derive(None, None, self.off_blocks, self.start_dt)
+        self.takeoff_datetime.set_flight_attr.assert_called_once_with(datetime(1970, 1, 1, 0, 0, 12))
+
+    def test_derive__incomplete(self):
+        self.takeoff_datetime.derive(None, None, None, self.start_dt)
+        self.takeoff_datetime.set_flight_attr.assert_called_once_with(self.start_dt.value)
 
 
 class TestTakeoffFuel(unittest.TestCase):

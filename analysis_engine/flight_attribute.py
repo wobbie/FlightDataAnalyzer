@@ -508,41 +508,55 @@ class TakeoffAirport(FlightAttributeNode):
     @classmethod
     def can_operate(cls, available):
         '''
-        We can determine a takeoff airport in one of two ways:
+        We can determine a takeoff airport in one of three ways:
 
         1. Find the nearest airport to the coordinates at takeoff.
         2. Use the airport data provided in the achieved flight record.
+        3. If segmetn does not takeoff eg RTO use coordinates off blocks
         '''
-        return 'AFR Takeoff Airport' in available or all((
+        complete_flight = all((
             'Latitude At Liftoff' in available,
             'Longitude At Liftoff' in available,
         ))
+        afr = 'AFR Takeoff Airport' in available
+        other_segments = all((
+            'Latitude Off Blocks' in available,
+            'Longitude Off Blocks' in available,
+        ))
+        return complete_flight or afr or other_segments
+
+    def lookup_airport(self, lat_source, lon_source):
+        lat = lat_source.get_first()
+        lon = lon_source.get_first()
+        if lat and lon:
+            api = get_api_handler(settings.API_HANDLER)
+            try:
+                airport = api.get_nearest_airport(lat.value, lon.value)
+            except NotFoundError:
+                msg = 'No takeoff airport found near coordinates (%f, %f).'
+                self.warning(msg, lat.value, lon.value)
+                # No airport was found, so fall through and try AFR.
+            else:
+                self.debug('Detected takeoff airport: %s', airport)
+                self.set_flight_attr(airport)
+                return True  # We found an airport, so finish here.
+        else:
+            self.warning('No coordinates for looking up takeoff airport.')
+            # No suitable coordinates, so fall through and try AFR.
 
     def derive(self,
                toff_lat=KPV('Latitude At Liftoff'),
                toff_lon=KPV('Longitude At Liftoff'),
-               toff_afr_apt=A('AFR Takeoff Airport')):
+               toff_afr_apt=A('AFR Takeoff Airport'),
+               off_block_lat=KPV('Latitude Off Blocks'),
+               off_block_lon=KPV('Longitude Off Blocks'),):
         '''
         '''
         # 1. If we have latitude and longitude, look for the nearest airport:
         if toff_lat and toff_lon:
-            lat = toff_lat.get_first()
-            lon = toff_lon.get_first()
-            if lat and lon:
-                api = get_api_handler(settings.API_HANDLER)
-                try:
-                    airport = api.get_nearest_airport(lat.value, lon.value)
-                except NotFoundError:
-                    msg = 'No takeoff airport found near coordinates (%f, %f).'
-                    self.warning(msg, lat.value, lon.value)
-                    # No airport was found, so fall through and try AFR.
-                else:
-                    self.debug('Detected takeoff airport: %s', airport)
-                    self.set_flight_attr(airport)
-                    return  # We found an airport, so finish here.
-            else:
-                self.warning('No coordinates for looking up takeoff airport.')
-                # No suitable coordinates, so fall through and try AFR.
+            success = self.lookup_airport(toff_lat, toff_lon)
+            if success:
+                return
 
         # 2. If we have an airport provided in achieved flight record, use it:
         if toff_afr_apt:
@@ -551,7 +565,13 @@ class TakeoffAirport(FlightAttributeNode):
             self.set_flight_attr(airport)
             return  # We found an airport in the AFR, so finish here.
 
-        # 3. After all that, we still couldn't determine an airport...
+        # 3. If we have coordinates of Aircraft moving off Blocks look for the nearest airport:
+        if off_block_lat and off_block_lon:
+            success = self.lookup_airport(off_block_lat, off_block_lon)
+            if success:
+                return
+
+        # 4. After all that, we still couldn't determine an airport...
         self.error('Unable to determine airport at takeoff!')
         self.set_flight_attr(None)
 
@@ -559,19 +579,43 @@ class TakeoffAirport(FlightAttributeNode):
 class TakeoffDatetime(FlightAttributeNode):
     '''
     Datetime at takeoff (first liftoff) or as close to this as possible.
-    If no takeoff (incomplete flight / ground run) the start of data will is
-    to be used.
+
+    If no takeoff the following points in time will be used:
+        Rejected Takeoff - Start of Rejected Takeoff phase
+        Ground Run - Off Blocks
+        No Movement - start of data
     '''
     name = 'FDR Takeoff Datetime'
 
-    def derive(self, liftoff=KTI('Liftoff'), start_dt=A('Start Datetime')):
-        first_liftoff = liftoff.get_first()
-        if not first_liftoff:
-            self.set_flight_attr(None)
-            return
-        liftoff_index = first_liftoff.index
+    @classmethod
+    def can_operate(cls, available):
+        return 'Start Datetime' in available
+
+    def derive(self, liftoff=KTI('Liftoff'), rto=S('Rejected Takeoff'),
+               off_blocks=KTI('Off Blocks'), start_dt=A('Start Datetime')):
+
+        if liftoff:
+            # Flight - use first liftoff index
+            first_liftoff = liftoff.get_first()
+            liftoff_index = first_liftoff.index
+            frequency = liftoff.frequency
+        elif rto:
+            # RTO - use start index of first RTO
+            first_rto = rto.get_first()
+            liftoff_index = first_rto.slice.start
+            frequency = rto.frequency
+        elif off_blocks:
+            # Ground Only - use first off blocks index
+            first_off_blocks = off_blocks.get_first()
+            liftoff_index = first_off_blocks.index
+            frequency = off_blocks.frequency
+        else:
+            # Incomplete - use start of data
+            liftoff_index = 0
+            frequency = 1
+
         takeoff_dt = datetime_of_index(start_dt.value, liftoff_index,
-                                       frequency=liftoff.frequency)
+                                       frequency=frequency)
         self.set_flight_attr(takeoff_dt)
 
 

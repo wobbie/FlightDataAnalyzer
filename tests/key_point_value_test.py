@@ -351,11 +351,13 @@ from analysis_engine.key_point_values import (
     LatitudeAtLiftoff,
     LatitudeAtLowestAltitudeDuringApproach,
     LatitudeAtTouchdown,
+    LatitudeOffBlocks,
     LatitudeSmoothedAtLiftoff,
     LatitudeSmoothedAtTouchdown,
     LongitudeAtLiftoff,
     LongitudeAtLowestAltitudeDuringApproach,
     LongitudeAtTouchdown,
+    LongitudeOffBlocks,
     LongitudeSmoothedAtLiftoff,
     LongitudeSmoothedAtTouchdown,
     MachDuringCruiseAvg,
@@ -7425,6 +7427,51 @@ class TestLongitudeAtLiftoff(unittest.TestCase, NodeTest):
         node.derive(lon, liftoffs, afr_toff_apt, afr_toff_rwy, None)
         node.create_kpv.assert_called_once_with(liftoffs[0].index, 1)
         assert not node.create_kpvs_at_ktis.called, 'method should not have been called'
+
+
+class TestLatitudeOffBlocks(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = LatitudeOffBlocks
+        self.operational_combinations = [
+            ('Latitude', 'Off Blocks'),
+            ('Off Blocks', 'Latitude (Coarse)'),
+            ('Latitude', 'Off Blocks', 'Latitude (Coarse)')
+        ]
+
+    def test_derive_with_Latitude(self):
+        lat = P(name='Latitude')
+        lat.array = Mock()
+        tdwns = KTI(name='Touchdown')
+        lat_c = None
+        node = self.node_class()
+        node.create_kpv = Mock()
+        node.create_kpvs_at_ktis = Mock()
+        node.derive(lat, tdwns, lat_c)
+        node.create_kpvs_at_ktis.assert_called_once_with(lat.array, tdwns)
+        assert not node.create_kpv.called, 'method should not have been called'
+
+
+class TestLongitudeOffBlocks(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = LongitudeOffBlocks
+        self.operational_combinations = [
+            ('Longitude', 'Off Blocks'),
+            ('Off Blocks', 'Longitude (Coarse)'),
+            ('Longitude', 'Off Blocks', 'Longitude (Coarse)')
+        ]
+
+    def test_derive_with_longitude(self):
+        lon = P(name='Longitude')
+        lon.array = Mock()
+        liftoffs = KTI(name='Liftoff')
+        node = self.node_class()
+        node.create_kpv = Mock()
+        node.create_kpvs_at_ktis = Mock()
+        node.derive(lon, liftoffs, None)
+        node.create_kpvs_at_ktis.assert_called_once_with(lon.array, liftoffs)
+        assert not node.create_kpv.called, 'method should not have been called'
 
 
 class TestLongitudeSmoothedAtTouchdown(unittest.TestCase, CreateKPVsAtKTIsTest):
