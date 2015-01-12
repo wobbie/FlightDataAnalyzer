@@ -905,8 +905,10 @@ class AltitudeRadio(DerivedParameterNode):
     units = ut.FT
 
     @classmethod
-    def can_operate(cls, available):
-        return any_of([name for name in cls.get_dependency_names()
+    def can_operate(cls, available, family=A('Family')):
+        airbus = family and family.value in ('A300', 'A310', 'A319', 'A320', 'A321', 'A330', 'A340')
+        fast = 'Fast' in available if airbus else True
+        return fast and any_of([name for name in cls.get_dependency_names()
                        if name.startswith('Altitude Radio')], available)
 
     def derive(self,
