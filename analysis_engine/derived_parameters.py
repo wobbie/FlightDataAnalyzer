@@ -303,7 +303,7 @@ class AirspeedForFlightPhases(DerivedParameterNode):
     def derive(self, airspeed=P('Airspeed')):
         self.array = hysteresis(
             repair_mask(airspeed.array, repair_duration=None,
-                        raise_entirely_masked=True), HYSTERESIS_FPIAS)
+                        raise_entirely_masked=False), HYSTERESIS_FPIAS)
 
 
 class AirspeedTrue(DerivedParameterNode):
