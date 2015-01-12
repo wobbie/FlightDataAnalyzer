@@ -8212,12 +8212,12 @@ class EngTorquePercent65KtsTo35FtMin(KeyPointValueNode):
                airspeed=P('Airspeed'),
                takeoffs=S('Takeoff')):
 
-        takeoff = takeoffs.get_first()
-        start = index_at_value(airspeed.array, 65, _slice=takeoff.slice,
-                               endpoint='nearest')
-        self.create_kpvs_within_slices(eng_trq_min.array,
-                                       [slice(start, takeoff.slice.stop)],
-                                       min_value)
+        for takeoff in takeoffs:
+            start = index_at_value(airspeed.array, 65, _slice=takeoff.slice,
+                                   endpoint='nearest')
+            self.create_kpvs_within_slices(eng_trq_min.array,
+                                           [slice(start, takeoff.slice.stop)],
+                                           min_value)
 
 
 class EngTorquePercentDuringGoAround5MinRatingMax(KeyPointValueNode):
