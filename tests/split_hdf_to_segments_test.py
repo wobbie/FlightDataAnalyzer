@@ -229,9 +229,8 @@ class TestSplitSegments(unittest.TestCase):
 
         # Airspeed always slow.
         eng_array = np.ma.concatenate([np.ma.arange(0, 100, 0.5),
-                                       np.ma.arange(100, 0, -0.5),
-                                       np.ma.arange(0, 100, 0.5),
                                        np.ma.arange(100, 0, -0.5)])
+        eng_frequency = 2
         airspeed_array = np.ma.concatenate([np.ma.arange(50),
                                             np.ma.arange(50, 0, -1)])
         airspeed_secs = len(airspeed_array) / airspeed_frequency
@@ -348,6 +347,7 @@ class TestSplitSegments(unittest.TestCase):
         settings.MINIMUM_SPLIT_PARAM_VALUE = 0.175
         settings.HEADING_RATE_SPLITTING_THRESHOLD = 0.1
         settings.MAX_TIMEBASE_AGE = 365 * 10
+        settings.MIN_N1_RUNNING = 10
 
         hdf_path = os.path.join(test_data_path, "split_segments_multiple_types.hdf5")
         temp_path = copy_file(hdf_path)
