@@ -746,7 +746,7 @@ def append_segment_info(hdf_segment_path, segment_type, segment_slice, part,
         except TimebaseError:
             # Warn the user and store the fake datetime. The code on the other
             # side should check the datetime and avoid processing this file
-            logger.warning('Unable to calculate timebase, using '
+            logger.exception('Unable to calculate timebase, using '
                            '1970-01-01 00:00:00+0000!')
             start_datetime = datetime.utcfromtimestamp(0).replace(tzinfo=pytz.utc)
         stop_datetime = start_datetime + timedelta(seconds=duration)
