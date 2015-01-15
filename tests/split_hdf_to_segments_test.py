@@ -43,8 +43,8 @@ class TestSplitSegments(unittest.TestCase):
     def test_split_segments(self):
         # TODO: Test engine param splitting.
         # Mock hdf
-        airspeed_array = np.ma.concatenate([np.ma.arange(200),
-                                            np.ma.arange(200, 0, -1)])
+        airspeed_array = np.ma.concatenate([np.ma.arange(300),
+                                            np.ma.arange(300, 0, -1)])
 
         airspeed_frequency = 2
         airspeed_secs = len(airspeed_array) / airspeed_frequency
@@ -56,7 +56,7 @@ class TestSplitSegments(unittest.TestCase):
         eng_array = None
         eng_frequency = 1
 
-        dfc_array = np.ma.arange(0, 200, 2)
+        dfc_array = np.ma.arange(0, 300, 2)
 
         hdf = mock.Mock()
         hdf.get = mock.Mock()
@@ -118,8 +118,8 @@ class TestSplitSegments(unittest.TestCase):
         self.assertEqual(segment_slice.start, 0)
         self.assertEqual(segment_slice.stop, airspeed_secs)
         # Masked end of speedy data will affect result.
-        airspeed_array = np.ma.concatenate([np.ma.arange(200),
-                                            np.ma.arange(200, 0, -1)])
+        airspeed_array = np.ma.concatenate([np.ma.arange(300),
+                                            np.ma.arange(300, 0, -1)])
         airspeed_array[-100:] = np.ma.masked
         segment_tuples = split_segments(hdf)
         self.assertEqual(len(segment_tuples), 1)
@@ -252,6 +252,18 @@ class TestSplitSegments(unittest.TestCase):
         self.assertEqual(segment_type, 'NO_MOVEMENT')
         self.assertEqual(segment_slice.start, 0)
         self.assertEqual(segment_slice.stop, airspeed_secs)
+        # Unmasked single flight less than 3 minutes.
+        airspeed_array = np.ma.concatenate([np.ma.arange(200),
+                                            np.ma.arange(200, 0, -1)])
+        heading_array = np.ma.arange(len(airspeed_array) / 2) % 360
+        airspeed_secs = len(airspeed_array) / airspeed_frequency
+        segment_tuples = split_segments(hdf)
+        self.assertEqual(len(segment_tuples), 1)
+        segment_type, segment_slice = segment_tuples[0]
+        self.assertEqual(segment_type, 'GROUND_ONLY', msg="Fast should not be long enought to be a START_AND_STOP")
+        self.assertEqual(segment_slice.start, 0)
+        self.assertEqual(segment_slice.stop, airspeed_secs)
+
         # TODO: Test engine parameters.
 
     @unittest.skipIf(not os.path.isfile(os.path.join(test_data_path,

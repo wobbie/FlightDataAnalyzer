@@ -104,7 +104,7 @@ def _segment_type_and_slice(airspeed_array, airspeed_frequency, heading_array,
         slow_start = airspeed_array[unmasked_start] < settings.AIRSPEED_THRESHOLD
         slow_stop = airspeed_array[unmasked_stop] < settings.AIRSPEED_THRESHOLD
         threshold_exceedance = np.ma.sum(
-            airspeed_array > settings.AIRSPEED_THRESHOLD) * airspeed_frequency
+            airspeed_array > settings.AIRSPEED_THRESHOLD) / airspeed_frequency
         fast_for_long = threshold_exceedance > settings.AIRSPEED_THRESHOLD_TIME
 
     # Check Heading
