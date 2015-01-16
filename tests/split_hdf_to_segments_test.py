@@ -263,7 +263,33 @@ class TestSplitSegments(unittest.TestCase):
         self.assertEqual(segment_type, 'GROUND_ONLY', msg="Fast should not be long enought to be a START_AND_STOP")
         self.assertEqual(segment_slice.start, 0)
         self.assertEqual(segment_slice.stop, airspeed_secs)
+        # Unmasked single flight less than 3 minutes.
+        airspeed_array = np.ma.concatenate([np.ma.arange(200),
+                                            np.ma.arange(200, 0, -1)])
+        airspeed_frequency = 0.5
+        heading_array = np.ma.arange(len(airspeed_array) / 2) % 360
+        airspeed_secs = len(airspeed_array) / airspeed_frequency
+        segment_tuples = split_segments(hdf)
+        self.assertEqual(len(segment_tuples), 1)
+        segment_type, segment_slice = segment_tuples[0]
+        self.assertEqual(segment_type, 'START_AND_STOP', msg="Fast should be long enought to be a START_AND_STOP")
+        self.assertEqual(segment_slice.start, 0)
+        self.assertEqual(segment_slice.stop, airspeed_secs)
 
+        # Airspeed always slow. No Eng so heading changes should be ignored. (eg Herc)
+        eng_array = None
+        eng_frequency = None
+        airspeed_array = np.ma.concatenate([np.ma.arange(50),
+                                            np.ma.arange(50, 0, -1)])
+        airspeed_secs = len(airspeed_array) / airspeed_frequency
+        heading_array = np.ma.arange(0, 100, 2) % 360
+
+        segment_tuples = split_segments(hdf)
+        self.assertEqual(len(segment_tuples), 1)
+        segment_type, segment_slice = segment_tuples[0]
+        self.assertEqual(segment_type, 'NO_MOVEMENT')
+        self.assertEqual(segment_slice.start, 0)
+        self.assertEqual(segment_slice.stop, airspeed_secs)
         # TODO: Test engine parameters.
 
     @unittest.skipIf(not os.path.isfile(os.path.join(test_data_path,

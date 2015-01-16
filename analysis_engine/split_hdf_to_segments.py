@@ -114,7 +114,9 @@ def _segment_type_and_slice(airspeed_array, airspeed_frequency, heading_array,
 
     heading_change = hdiff > settings.HEADING_CHANGE_TAXI_THRESHOLD
 
-    if not heading_change:
+    if not heading_change or (not fast_for_long and eng_arrays is None):
+        # added check for not fast for long and no engine params to avoid
+        # lots of Herc ground runs
         logger.debug("Heading did not change, aircraft did not move.")
         segment_type = 'NO_MOVEMENT'
         # e.g. hanger tests, esp. if airspeed changes!
