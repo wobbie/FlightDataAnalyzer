@@ -7442,10 +7442,11 @@ class EngN154to72PercentWithThrustReversersDeployedDurationMax(KeyPointValueNode
 
     @classmethod
     def can_operate(cls, available, eng_series=A('Engine Series')):
+        engine_series = eng_series and eng_series.value == 'Tay 620'
         return all((
             any_of(('Eng (%d) N1' % n for n in cls.NAME_VALUES['number']), available),
             'Thrust Reversers' in available,
-            eng_series.value=='Tay 620',
+            engine_series,
         ))
 
     def derive(self, eng1_n1=P('Eng (1) N1'), eng2_n1=P('Eng (2) N1'),
