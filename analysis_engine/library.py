@@ -624,7 +624,7 @@ def calculate_flap(mode, flap_angle, model, series, family):
     Retrieves flap map and calls calculate_surface_angle with detents.
     
     :type mode: str
-    :type flap_angle: np.ma.array
+    :type flap_angle: POLARIS parameter
     :type model: Attribute
     :type series: Attribute
     :type family: Attribute
