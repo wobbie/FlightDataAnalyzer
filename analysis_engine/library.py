@@ -633,6 +633,12 @@ def calculate_flap(mode, flap_angle, model, series, family):
     '''
     values_mapping = at.get_flap_map(model.value, series.value, family.value)
     array, frequency, offset = calculate_surface_angle(mode, flap_angle, values_mapping.keys())
+    '''
+    import matplotlib.pyplot as plt
+    plt.plot(flap_angle.array)
+    plt.plot(array)
+    plt.show()    
+    '''
     return values_mapping, array, frequency, offset
 
 
