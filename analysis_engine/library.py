@@ -672,7 +672,7 @@ def calculate_surface_angle(mode, param, detents):
     mask = angle.mask.copy()
     # Repair the array to avoid extreme values affecting the algorithm.
     angle = repair_mask(angle, repair_duration=None)
-    thresh_main_metrics = 5
+    thresh_main_metrics = 4.0 
     thresh_angle_range = 0.4
     filter_median_window = 5
     
