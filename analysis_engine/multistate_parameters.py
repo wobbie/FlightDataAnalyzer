@@ -44,7 +44,7 @@ from analysis_engine.library import (
     step_values,
     vstack_params_where_state,
 )
-
+from settings import MIN_N1_RUNNING
 
 logger = logging.getLogger(name=__name__)
 
@@ -652,7 +652,7 @@ class Eng_AllRunning(MultistateDerivedParameterNode):
             self.array = n2_running & fuel_flowing
         else:
             # Fall back on N1
-            self.array = eng_n1.array > 10
+            self.array = eng_n1.array > MIN_N1_RUNNING
 
 
 class Eng_AnyRunning(MultistateDerivedParameterNode):
@@ -693,7 +693,7 @@ class Eng_AnyRunning(MultistateDerivedParameterNode):
             self.array = n2_running & fuel_flowing
         else:
             # Only have N1 available
-            self.array = eng_n1.array > 10
+            self.array = eng_n1.array > MIN_N1_RUNNING
 
 
 class ThrustModeSelected(MultistateDerivedParameterNode):

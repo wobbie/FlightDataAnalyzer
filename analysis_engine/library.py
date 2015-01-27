@@ -624,7 +624,7 @@ def calculate_flap(mode, flap_angle, model, series, family):
     Retrieves flap map and calls calculate_surface_angle with detents.
     
     :type mode: str
-    :type flap_angle: np.ma.array
+    :type flap_angle: POLARIS parameter
     :type model: Attribute
     :type series: Attribute
     :type family: Attribute
@@ -633,6 +633,12 @@ def calculate_flap(mode, flap_angle, model, series, family):
     '''
     values_mapping = at.get_flap_map(model.value, series.value, family.value)
     array, frequency, offset = calculate_surface_angle(mode, flap_angle, values_mapping.keys())
+    '''
+    import matplotlib.pyplot as plt
+    plt.plot(flap_angle.array)
+    plt.plot(array)
+    plt.show()    
+    '''
     return values_mapping, array, frequency, offset
 
 
@@ -666,7 +672,7 @@ def calculate_surface_angle(mode, param, detents):
     mask = angle.mask.copy()
     # Repair the array to avoid extreme values affecting the algorithm.
     angle = repair_mask(angle, repair_duration=None)
-    thresh_main_metrics = 5
+    thresh_main_metrics = 4.0 
     thresh_angle_range = 0.4
     filter_median_window = 5
     

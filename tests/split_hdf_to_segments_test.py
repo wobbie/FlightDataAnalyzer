@@ -43,8 +43,8 @@ class TestSplitSegments(unittest.TestCase):
     def test_split_segments(self):
         # TODO: Test engine param splitting.
         # Mock hdf
-        airspeed_array = np.ma.concatenate([np.ma.arange(200),
-                                            np.ma.arange(200, 0, -1)])
+        airspeed_array = np.ma.concatenate([np.ma.arange(300),
+                                            np.ma.arange(300, 0, -1)])
 
         airspeed_frequency = 2
         airspeed_secs = len(airspeed_array) / airspeed_frequency
@@ -56,7 +56,7 @@ class TestSplitSegments(unittest.TestCase):
         eng_array = None
         eng_frequency = 1
 
-        dfc_array = np.ma.arange(0, 200, 2)
+        dfc_array = np.ma.arange(0, 300, 2)
 
         hdf = mock.Mock()
         hdf.get = mock.Mock()
@@ -118,8 +118,8 @@ class TestSplitSegments(unittest.TestCase):
         self.assertEqual(segment_slice.start, 0)
         self.assertEqual(segment_slice.stop, airspeed_secs)
         # Masked end of speedy data will affect result.
-        airspeed_array = np.ma.concatenate([np.ma.arange(200),
-                                            np.ma.arange(200, 0, -1)])
+        airspeed_array = np.ma.concatenate([np.ma.arange(300),
+                                            np.ma.arange(300, 0, -1)])
         airspeed_array[-100:] = np.ma.masked
         segment_tuples = split_segments(hdf)
         self.assertEqual(len(segment_tuples), 1)
@@ -229,9 +229,8 @@ class TestSplitSegments(unittest.TestCase):
 
         # Airspeed always slow.
         eng_array = np.ma.concatenate([np.ma.arange(0, 100, 0.5),
-                                       np.ma.arange(100, 0, -0.5),
-                                       np.ma.arange(0, 100, 0.5),
                                        np.ma.arange(100, 0, -0.5)])
+        eng_frequency = 2
         airspeed_array = np.ma.concatenate([np.ma.arange(50),
                                             np.ma.arange(50, 0, -1)])
         airspeed_secs = len(airspeed_array) / airspeed_frequency
@@ -247,6 +246,44 @@ class TestSplitSegments(unittest.TestCase):
         # Airspeed Fully Masked slow.
         airspeed_array = np.ma.masked_all(100)
         heading_array = np.ma.arange(len(airspeed_array) / 2) % 360
+        segment_tuples = split_segments(hdf)
+        self.assertEqual(len(segment_tuples), 1)
+        segment_type, segment_slice = segment_tuples[0]
+        self.assertEqual(segment_type, 'NO_MOVEMENT')
+        self.assertEqual(segment_slice.start, 0)
+        self.assertEqual(segment_slice.stop, airspeed_secs)
+        # Unmasked single flight less than 3 minutes.
+        airspeed_array = np.ma.concatenate([np.ma.arange(200),
+                                            np.ma.arange(200, 0, -1)])
+        heading_array = np.ma.arange(len(airspeed_array) / 2) % 360
+        airspeed_secs = len(airspeed_array) / airspeed_frequency
+        segment_tuples = split_segments(hdf)
+        self.assertEqual(len(segment_tuples), 1)
+        segment_type, segment_slice = segment_tuples[0]
+        self.assertEqual(segment_type, 'GROUND_ONLY', msg="Fast should not be long enought to be a START_AND_STOP")
+        self.assertEqual(segment_slice.start, 0)
+        self.assertEqual(segment_slice.stop, airspeed_secs)
+        # Unmasked single flight less than 3 minutes.
+        airspeed_array = np.ma.concatenate([np.ma.arange(200),
+                                            np.ma.arange(200, 0, -1)])
+        airspeed_frequency = 0.5
+        heading_array = np.ma.arange(len(airspeed_array) / 2) % 360
+        airspeed_secs = len(airspeed_array) / airspeed_frequency
+        segment_tuples = split_segments(hdf)
+        self.assertEqual(len(segment_tuples), 1)
+        segment_type, segment_slice = segment_tuples[0]
+        self.assertEqual(segment_type, 'START_AND_STOP', msg="Fast should be long enought to be a START_AND_STOP")
+        self.assertEqual(segment_slice.start, 0)
+        self.assertEqual(segment_slice.stop, airspeed_secs)
+
+        # Airspeed always slow. No Eng so heading changes should be ignored. (eg Herc)
+        eng_array = None
+        eng_frequency = None
+        airspeed_array = np.ma.concatenate([np.ma.arange(50),
+                                            np.ma.arange(50, 0, -1)])
+        airspeed_secs = len(airspeed_array) / airspeed_frequency
+        heading_array = np.ma.arange(0, 100, 2) % 360
+
         segment_tuples = split_segments(hdf)
         self.assertEqual(len(segment_tuples), 1)
         segment_type, segment_slice = segment_tuples[0]
@@ -348,6 +385,7 @@ class TestSplitSegments(unittest.TestCase):
         settings.MINIMUM_SPLIT_PARAM_VALUE = 0.175
         settings.HEADING_RATE_SPLITTING_THRESHOLD = 0.1
         settings.MAX_TIMEBASE_AGE = 365 * 10
+        settings.MIN_N1_RUNNING = 10
 
         hdf_path = os.path.join(test_data_path, "split_segments_multiple_types.hdf5")
         temp_path = copy_file(hdf_path)
@@ -459,11 +497,13 @@ class mocked_hdf(object):
 
 
 class TestSegmentInfo(unittest.TestCase):
+    @mock.patch('analysis_engine.split_hdf_to_segments.logger')
     @mock.patch('analysis_engine.split_hdf_to_segments.sha_hash_file')
     @mock.patch('analysis_engine.split_hdf_to_segments.hdf_file',
                 new_callable=mocked_hdf)
-    def test_timestamps_in_past(self, hdf_file_patch, sha_hash_file_patch):
-        # Using Fallback Datetime is no longer recommended
+    def test_timestamps_in_past(self, hdf_file_patch, sha_hash_file_patch, logger_patch):
+        # No longer raising exception, using epoch instead with exception logging,
+        # allows segment to be created.
         ### example where it goes fast
         ##seg = append_segment_info('old timestamps', 'START_AND_STOP',
         ##                          slice(10,1000), 4,
@@ -471,11 +511,12 @@ class TestSegmentInfo(unittest.TestCase):
         ##self.assertEqual(seg.start_dt, datetime(2012,12,12,0,0,0))
         ##self.assertEqual(seg.go_fast_dt, datetime(2012,12,12,0,6,52))
         ##self.assertEqual(seg.stop_dt, datetime(2012,12,12,11,29,56))
-        # Raising exception is more pythonic
-        self.assertRaises(
-            TimebaseError, append_segment_info,
-            'old timestamps', 'START_AND_STOP', slice(10, 1000),
-            4, fallback_dt=datetime(2012, 12, 12, 0, 0, 0, tzinfo=pytz.utc))
+        seg = append_segment_info('invalid timestamps', 'START_AND_STOP',
+                                  slice(10, 1000), 4, fallback_dt=datetime(2009, 12, 12, 0, 0, 0,
+                                                                           tzinfo=pytz.utc))
+        self.assertTrue(logger_patch.exception.called)
+        self.assertEqual(logger_patch.exception.call_args[0], ('Unable to calculate timebase, using 1970-01-01 00:00:00+0000!',))
+
 
     @mock.patch('analysis_engine.split_hdf_to_segments.sha_hash_file')
     @mock.patch('analysis_engine.split_hdf_to_segments.hdf_file',
@@ -525,16 +566,19 @@ class TestSegmentInfo(unittest.TestCase):
         self.assertEqual(seg.hash, 'ABCDEFG')  # taken from the "file"
         self.assertEqual(seg.stop_dt, datetime(2012, 12, 25, 0, 0, 50, tzinfo=pytz.utc))  # +50 seconds of airspeed
 
+    @mock.patch('analysis_engine.split_hdf_to_segments.logger')
     @mock.patch('analysis_engine.split_hdf_to_segments.sha_hash_file')
     @mock.patch('analysis_engine.split_hdf_to_segments.hdf_file',
                 new_callable=mocked_hdf)
-    def test_invalid_datetimes(self, hdf_file_patch, sha_hash_file_patch):
-        # No longer using epoch, raising exception instead
-        ##seg = append_segment_info('invalid timestamps', '', slice(10,110), 2)
-        ##self.assertEqual(seg.start_dt, datetime(1970,1,1,1,0)) # start of time!
-        ##self.assertEqual(seg.go_fast_dt, datetime(1970, 1, 1, 1, 6, 52)) # went fast
-        self.assertRaises(TimebaseError, append_segment_info,
-                          'invalid timestamps', '', slice(10, 110), 2)
+    def test_invalid_datetimes(self, hdf_file_patch, sha_hash_file_patch, logger_patch):
+        # No longer raising exception, using epoch instead
+        #seg = append_segment_info('invalid timestamps', 'START_AND_STOP', slice(10,110), 2)
+
+        seg = append_segment_info('invalid timestamps', 'START_AND_STOP', slice(28000,34000), 6)
+        self.assertEqual(seg.start_dt, datetime(1970,1,1,0,0, tzinfo=pytz.utc)) # start of time!
+        self.assertEqual(seg.go_fast_dt, datetime(1970, 1, 1, 0, 6, 52, tzinfo=pytz.utc)) # went fast
+        self.assertTrue(logger_patch.exception.called)
+        self.assertEqual(logger_patch.exception.call_args[0], ('Unable to calculate timebase, using 1970-01-01 00:00:00+0000!',))
 
     def test_calculate_start_datetime(self):
         """

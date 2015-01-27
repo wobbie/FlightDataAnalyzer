@@ -104,17 +104,19 @@ def _segment_type_and_slice(airspeed_array, airspeed_frequency, heading_array,
         slow_start = airspeed_array[unmasked_start] < settings.AIRSPEED_THRESHOLD
         slow_stop = airspeed_array[unmasked_stop] < settings.AIRSPEED_THRESHOLD
         threshold_exceedance = np.ma.sum(
-            airspeed_array > settings.AIRSPEED_THRESHOLD) * airspeed_frequency
+            airspeed_array > settings.AIRSPEED_THRESHOLD) / airspeed_frequency
         fast_for_long = threshold_exceedance > settings.AIRSPEED_THRESHOLD_TIME
 
     # Check Heading
     if eng_arrays is not None:
-        heading_array = np.ma.masked_where(eng_arrays[heading_start:heading_stop] < 1, heading_array)
+        heading_array = np.ma.masked_where(eng_arrays[heading_start:heading_stop] < settings.MIN_N1_RUNNING, heading_array)
     hdiff = np.ma.abs(np.ma.diff(heading_array)).sum()
 
     heading_change = hdiff > settings.HEADING_CHANGE_TAXI_THRESHOLD
 
-    if not heading_change:
+    if not heading_change or (not fast_for_long and eng_arrays is None):
+        # added check for not fast for long and no engine params to avoid
+        # lots of Herc ground runs
         logger.debug("Heading did not change, aircraft did not move.")
         segment_type = 'NO_MOVEMENT'
         # e.g. hanger tests, esp. if airspeed changes!
@@ -746,7 +748,7 @@ def append_segment_info(hdf_segment_path, segment_type, segment_slice, part,
         except TimebaseError:
             # Warn the user and store the fake datetime. The code on the other
             # side should check the datetime and avoid processing this file
-            logger.warning('Unable to calculate timebase, using '
+            logger.exception('Unable to calculate timebase, using '
                            '1970-01-01 00:00:00+0000!')
             start_datetime = datetime.utcfromtimestamp(0).replace(tzinfo=pytz.utc)
         stop_datetime = start_datetime + timedelta(seconds=duration)

@@ -320,6 +320,10 @@ CORE_STOP_SPEED = 35.0  # %
 # Minimum fan speed at idle for engines where N2/N3 not recorded.
 MIN_FAN_RUNNING = 5.0  # %
 
+#Minimum N1 for running engine, used in segment type detection as well as Eng
+#running multistates
+MIN_N1_RUNNING = 10
+
 # Minimum proportion of valid data for unused fuel tanks.
 MIN_VALID_FUEL = 0.25
 

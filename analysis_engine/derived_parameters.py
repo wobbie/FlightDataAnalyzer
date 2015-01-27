@@ -303,7 +303,7 @@ class AirspeedForFlightPhases(DerivedParameterNode):
     def derive(self, airspeed=P('Airspeed')):
         self.array = hysteresis(
             repair_mask(airspeed.array, repair_duration=None,
-                        raise_entirely_masked=True), HYSTERESIS_FPIAS)
+                        raise_entirely_masked=False), HYSTERESIS_FPIAS)
 
 
 class AirspeedTrue(DerivedParameterNode):
@@ -905,8 +905,10 @@ class AltitudeRadio(DerivedParameterNode):
     units = ut.FT
 
     @classmethod
-    def can_operate(cls, available):
-        return any_of([name for name in cls.get_dependency_names()
+    def can_operate(cls, available, family=A('Family')):
+        airbus = family and family.value in ('A300', 'A310', 'A319', 'A320', 'A321', 'A330', 'A340')
+        fast = 'Fast' in available if airbus else True
+        return fast and any_of([name for name in cls.get_dependency_names()
                        if name.startswith('Altitude Radio')], available)
 
     def derive(self,
@@ -3784,6 +3786,11 @@ class FlapAngle(DerivedParameterNode):
         else:
             self.array = np.ma.array(new_yaxis)
         ##scatter(new_xaxis, self.array, edgecolor='none', c='r')
+
+        if len(sources) == 2:
+            self.offset = self.offset + 1/(self.hz * 2.0)
+            self.array[:-1] = (self.array[:-1] + self.array[1:]) / 2.0
+            self.array[-1] = self.array[-2]
         
   
 
@@ -6546,16 +6553,16 @@ class TrackDeviationFromRunway(DerivedParameterNode):
             to_stop = takeoff[0].slice.stop+300
             _slice = slice(takeoff[0].slice.start, to_stop)
             self._track_deviation(track.array, _slice, to_rwy.value, magnetic)
-            
-        for app in apps:
-            if not app.runway:
-                self.warning("Cannot calculate TrackDeviationFromRunway for "
-                             "approach as there is no runway.")
-                continue
-            # extend approach slice up to 15 minutes earlier (or to takeoff)
-            app_start = max(to_stop, app.slice.start-900)
-            _slice = slice(app_start, app.slice.stop)
-            self._track_deviation(track.array, _slice, app.runway, magnetic)
+        if apps:
+            for app in apps:
+                if not app.runway:
+                    self.warning("Cannot calculate TrackDeviationFromRunway for "
+                                 "approach as there is no runway.")
+                    continue
+                # extend approach slice up to 15 minutes earlier (or to takeoff)
+                app_start = max(to_stop, app.slice.start-900)
+                _slice = slice(app_start, app.slice.stop)
+                self._track_deviation(track.array, _slice, app.runway, magnetic)
 
 
 

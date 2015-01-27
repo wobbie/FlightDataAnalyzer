@@ -2181,11 +2181,11 @@ class AirspeedWithFlapMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
         ), available) and all_of(('Airspeed', 'Fast'), available)
 
     def derive(self,
+               airspeed=P('Airspeed'),
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
                flap_inc_trans=M('Flap Including Transition'),
                flap_exc_trans=M('Flap Excluding Transition'),
-               airspeed=P('Airspeed'),
                scope=S('Fast')):
 
         # We want to use flap lever detents if they are available, but we need
@@ -2227,9 +2227,9 @@ class AirspeedWithFlapMin(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
             and all_of(('Airspeed', 'Airborne'), available)
 
     def derive(self,
+               airspeed=P('Airspeed'),
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
-               airspeed=P('Airspeed'),
                scope=S('Airborne')):
 
         # Airborne scope avoids deceleration on the runway "corrupting" the
@@ -2283,11 +2283,11 @@ class AirspeedWithFlapAndSlatExtendedMax(KeyPointValueNode, FlapOrConfigurationM
         return (exc or inc) and all_of(('Airspeed', 'Fast'), available)
 
     def derive(self,
+               airspeed=P('Airspeed'),
                flap_exc_trsn=M('Flap Excluding Transition'),
                flap_inc_trsn=M('Flap Including Transition'),
                slat_exc_trsn=M('Slat Excluding Transition'),
                slat_inc_trsn=M('Slat Including Transition'),
-               airspeed=P('Airspeed'),
                fast=S('Fast')):
 
         pairs = (flap_inc_trsn, slat_inc_trsn), (flap_exc_trsn, slat_exc_trsn)
@@ -2346,9 +2346,9 @@ class AirspeedWithFlapIncludingTransition20AndSlatFullyExtendedMax(KeyPointValue
         return slat_only_transition and inc
 
     def derive(self,
+               airspeed=P('Airspeed'),
                flap=M('Flap Including Transition'),
                slat=M('Slat Including Transition'),
-               airspeed=P('Airspeed'),
                fast=S('Fast'),
                family=A('Family')):
 
@@ -2407,11 +2407,11 @@ class AirspeedWithFlapDuringClimbMax(KeyPointValueNode, FlapOrConfigurationMaxOr
         ), available) and all_of(('Airspeed', 'Climb'), available)
 
     def derive(self,
+               airspeed=P('Airspeed'),
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
                flap_inc_trans=M('Flap Including Transition'),
                flap_exc_trans=M('Flap Excluding Transition'),
-               airspeed=P('Airspeed'),
                scope=S('Climb')):
 
         # We want to use flap lever detents if they are available, but we need
@@ -2453,9 +2453,9 @@ class AirspeedWithFlapDuringClimbMin(KeyPointValueNode, FlapOrConfigurationMaxOr
             and all_of(('Airspeed', 'Climb'), available)
 
     def derive(self,
+               airspeed=P('Airspeed'),
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
-               airspeed=P('Airspeed'),
                scope=S('Climb')):
 
         flap = flap_lever or flap_synth
@@ -2504,11 +2504,11 @@ class AirspeedWithFlapDuringDescentMax(KeyPointValueNode, FlapOrConfigurationMax
         ), available) and all_of(('Airspeed', 'Descent'), available)
 
     def derive(self,
+               airspeed=P('Airspeed'),
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
                flap_inc_trans=M('Flap Including Transition'),
                flap_exc_trans=M('Flap Excluding Transition'),
-               airspeed=P('Airspeed'),
                scope=S('Descent')):
 
         # We want to use flap lever detents if they are available, but we need
@@ -2550,9 +2550,9 @@ class AirspeedWithFlapDuringDescentMin(KeyPointValueNode, FlapOrConfigurationMax
             and all_of(('Airspeed', 'Descent To Flare'), available)
 
     def derive(self,
+               airspeed=P('Airspeed'),
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
-               airspeed=P('Airspeed'),
                scope=S('Descent To Flare')):
 
         flap = flap_lever or flap_synth
@@ -2591,9 +2591,9 @@ class AirspeedMinusFlapManoeuvreSpeedWithFlapDuringDescentMin(KeyPointValueNode,
         return core and flap
 
     def derive(self,
+               airspeed=P('Airspeed Minus Flap Manoeuvre Speed'),
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
-               airspeed=P('Airspeed Minus Flap Manoeuvre Speed'),
                scope=S('Descent To Flare')):
 
         flap = flap_lever or flap_synth
@@ -2628,7 +2628,8 @@ class AirspeedSelectedFMCMinusFlapManoeuvreSpeed1000to5000FtMin(KeyPointValueNod
     units = ut.KT
     name = 'Airspeed Selected (FMC) Minus Flap Manoeuvre Speed 1000 to 5000 Ft Min'
 
-    def derive(self, spd_sel=P('Airspeed Selected (FMC)'),
+    def derive(self,
+               spd_sel=P('Airspeed Selected (FMC)'),
                flap_spd=P('Flap Manoeuvre Speed'), 
                alt_aal=P('Altitude AAL For Flight Phases'),
                climbs=S('Climb')):
@@ -2757,8 +2758,8 @@ class AirspeedWithConfigurationMax(KeyPointValueNode, FlapOrConfigurationMaxOrMi
     units = ut.KT
 
     def derive(self,
-               conf=M('Configuration'),
                airspeed=P('Airspeed'),
+               conf=M('Configuration'),
                scope=S('Fast')):
 
         # Fast scope traps configuration changes very late on the approach and
@@ -2783,8 +2784,8 @@ class AirspeedRelativeWithConfigurationDuringDescentMin(KeyPointValueNode, FlapO
     units = ut.KT
 
     def derive(self,
-               conf=M('Configuration'),
                airspeed=P('Airspeed Relative'),
+               conf=M('Configuration'),
                scope=S('Descent To Flare')):
 
         data = self.flap_or_conf_max_or_min(conf, airspeed, min_value, scope)
@@ -3135,9 +3136,9 @@ class AOAWithFlapMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
             and all_of(('AOA', 'Airborne'), available)
 
     def derive(self,
+               aoa=P('AOA'),
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
-               aoa=P('AOA'),
                scope=S('Airborne')):
 
         # Airborne scope avoids triggering during the takeoff or landing runs.
@@ -3162,9 +3163,9 @@ class AOAWithFlapDuringClimbMax(KeyPointValueNode):
                 any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available))
     
     def derive(self,
+               aoa=P('AOA'),
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
-               aoa=P('AOA'),
                climbs=S('Climbing')):
         flap = flap_lever or flap_synth
         if 'Lever 0' in flap.array.state:
@@ -3189,9 +3190,9 @@ class AOAWithFlapDuringDescentMax(KeyPointValueNode):
                 any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available))
     
     def derive(self,
+               aoa=P('AOA'),
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
-               aoa=P('AOA'),
                descends=S('Descending')):
         flap = flap_lever or flap_synth
         if 'Lever 0' in flap.array.state:
@@ -3855,9 +3856,9 @@ class AltitudeWithFlapMax(KeyPointValueNode):
             and all_of(('Altitude STD Smoothed', 'Airborne'), available)
 
     def derive(self,
+               alt_std=P('Altitude STD Smoothed'),
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
-               alt_std=P('Altitude STD Smoothed'),
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
@@ -3877,8 +3878,8 @@ class AltitudeAtFlapExtension(KeyPointValueNode):
     units = ut.FT
 
     def derive(self,
-               flaps=KTI('Flap Extension While Airborne'),
-               alt_aal=P('Altitude AAL')):
+               alt_aal=P('Altitude AAL'),
+               flaps=KTI('Flap Extension While Airborne')):
 
         if flaps:
             for flap in flaps:
@@ -3918,9 +3919,9 @@ class AltitudeAtFlapExtensionWithGearDownSelected(KeyPointValueNode):
             and all_of(('Altitude AAL', 'Gear Down Selected', 'Airborne'), available)
 
     def derive(self,
+               alt_aal=P('Altitude AAL'),
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
-               alt_aal=P('Altitude AAL'),
                gear_ext=M('Gear Down Selected'),
                airborne=S('Airborne')):
 
@@ -3988,9 +3989,9 @@ class AirspeedAtFlapExtensionWithGearDownSelected(KeyPointValueNode):
             and all_of(('Airspeed', 'Gear Down Selected', 'Airborne'), available)
 
     def derive(self,
+               air_spd=P('Airspeed'),
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
-               air_spd=P('Airspeed'),
                gear_ext=M('Gear Down Selected'),
                airborne=S('Airborne')):
 
@@ -4041,10 +4042,10 @@ class AltitudeAtFirstFlapChangeAfterLiftoff(KeyPointValueNode):
             and all_of(('Flap At Liftoff', 'Altitude AAL', 'Airborne'), available)
 
     def derive(self,
+               alt_aal=P('Altitude AAL'),
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
                flap_liftoff=KPV('Flap At Liftoff'),
-               alt_aal=P('Altitude AAL'),
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth
@@ -4081,9 +4082,9 @@ class AltitudeAtLastFlapChangeBeforeTouchdown(KeyPointValueNode):
             and all_of(('Altitude AAL', 'Touchdown'), available)
 
     def derive(self,
+               alt_aal=P('Altitude AAL'),
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
-               alt_aal=P('Altitude AAL'),
                touchdowns=KTI('Touchdown'),
                far=P('Flap Automatic Retraction')):
 
@@ -6029,6 +6030,84 @@ class LongitudeAtLiftoff(KeyPointValueNode):
         raise Exception('Unable to determine a longitude at liftoff.')
 
 
+class LatitudeOffBlocks(KeyPointValueNode):
+    '''
+    Latitude and Longitude Off Blocks.
+
+    The position of the Aircraft moving Off Blocks is recorded in the form of
+    KPVs as this is used in a number of places. The raw latitude and
+    longitude data is used to create the *OffBlocks parameters, and these are
+    in turn used to compute the takeoff attributes in the absense of
+    *AtTakeoff KPVs.
+
+    Note: Cannot use smoothed position as this causes circular dependancy.
+    '''
+
+    units = ut.DEGREE
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return 'Off Blocks' in available and any_of(('Latitude',
+                                                  'Latitude (Coarse)'),
+                                                 available)
+
+    def derive(self,
+            lat=P('Latitude'),
+            off_blocks=KTI('Off Blocks'),
+            lat_c=P('Latitude (Coarse)')):
+        '''
+        Note that Latitude Coarse is a superframe parameter with poor
+        resolution recorded on some FDAUs. Keeping it at the end of the list
+        of parameters means that it will be aligned to a higher sample rate
+        rather than dragging other parameters down to its sample rate. See
+        767 Delta data frame.
+        '''
+        if lat:
+            self.create_kpvs_at_ktis(lat.array, off_blocks)
+            return
+        if lat_c:
+            self.create_kpvs_at_ktis(lat_c.array, off_blocks)
+            return
+
+
+class LongitudeOffBlocks(KeyPointValueNode):
+    '''
+    Latitude and Longitude Off Blocks.
+
+    The position of the Aircraft moving Off Blocks is recorded in the form of
+    KPVs as this is used in a number of places. The raw latitude and
+    longitude data is used to create the *OffBlocks parameters, and these are
+    in turn used to compute the takeoff attributes in the absense of
+    *AtTakeoff KPVs.
+
+    Note: Cannot use smoothed position as this causes circular dependancy.
+    '''
+
+    units = ut.DEGREE
+
+    @classmethod
+    def can_operate(cls, available):
+
+        return 'Off Blocks' in available and any_of(('Longitude',
+                                                  'Longitude (Coarse)',),
+                                                 available)
+
+    def derive(self,
+            lon=P('Longitude'),
+            off_blocks=KTI('Off Blocks'),
+            lon_c=P('Longitude (Coarse)')):
+        '''
+        See note relating to coarse latitude and longitude under Latitude At Takeoff
+        '''
+        if lon:
+            self.create_kpvs_at_ktis(lon.array, off_blocks)
+            return
+        if lon_c:
+            self.create_kpvs_at_ktis(lon_c.array, off_blocks)
+            return
+
+
 ########################################
 # Latitude/Longitude @ Liftoff/Touchdown
 
@@ -6213,9 +6292,9 @@ class MachWithFlapMax(KeyPointValueNode, FlapOrConfigurationMaxOrMin):
             and all_of(('Mach', 'Fast'), available)
 
     def derive(self,
+               mach=P('Mach'),
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
-               mach=P('Mach'),
                scope=S('Fast')):
 
         # Fast scope traps flap changes very late on the approach and raising
@@ -7363,10 +7442,11 @@ class EngN154to72PercentWithThrustReversersDeployedDurationMax(KeyPointValueNode
 
     @classmethod
     def can_operate(cls, available, eng_series=A('Engine Series')):
+        engine_series = eng_series and eng_series.value == 'Tay 620'
         return all((
             any_of(('Eng (%d) N1' % n for n in cls.NAME_VALUES['number']), available),
             'Thrust Reversers' in available,
-            eng_series.value=='Tay 620',
+            engine_series,
         ))
 
     def derive(self, eng1_n1=P('Eng (1) N1'), eng2_n1=P('Eng (2) N1'),
@@ -8134,12 +8214,12 @@ class EngTorquePercent65KtsTo35FtMin(KeyPointValueNode):
                airspeed=P('Airspeed'),
                takeoffs=S('Takeoff')):
 
-        takeoff = takeoffs.get_first()
-        start = index_at_value(airspeed.array, 65, _slice=takeoff.slice,
-                               endpoint='nearest')
-        self.create_kpvs_within_slices(eng_trq_min.array,
-                                       [slice(start, takeoff.slice.stop)],
-                                       min_value)
+        for takeoff in takeoffs:
+            start = index_at_value(airspeed.array, 65, _slice=takeoff.slice,
+                                   endpoint='nearest')
+            self.create_kpvs_within_slices(eng_trq_min.array,
+                                           [slice(start, takeoff.slice.stop)],
+                                           min_value)
 
 
 class EngTorquePercentDuringGoAround5MinRatingMax(KeyPointValueNode):
@@ -9381,9 +9461,9 @@ class PitchAfterFlapRetractionMax(KeyPointValueNode):
             and all_of(('Pitch', 'Airborne'), available)
 
     def derive(self,
+               pitch=P('Pitch'),
                flap_lever=M('Flap Lever'),
                flap_synth=M('Flap Lever (Synthetic)'),
-               pitch=P('Pitch'),
                airborne=S('Airborne')):
 
         flap = flap_lever or flap_synth

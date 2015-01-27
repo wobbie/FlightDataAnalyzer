@@ -322,8 +322,7 @@ def parse_analyser_profiles(analyser_profiles, filter_modules=None):
     return additional_modules, required_nodes
 
 
-def process_flight(segment_info, tail_number, aircraft_info={},
-                   start_datetime=None, achieved_flight_record={},
+def process_flight(segment_info, tail_number, aircraft_info={}, achieved_flight_record={},
                    requested=[], required=[], include_flight_attributes=True,
                    additional_modules=[], pre_flight_kwargs={}):
     '''
@@ -508,7 +507,7 @@ def process_flight(segment_info, tail_number, aircraft_info={},
     hdf_path = segment_info['File']
     if 'Start Datetime' not in segment_info:
         import pytz
-        segment_info['start_datetime'] = datetime.utcnow().replace(tzinfo=pytz.utc)
+        segment_info['Start Datetime'] = datetime.utcnow().replace(tzinfo=pytz.utc)
     logger.info("Processing: %s", hdf_path)
 
     if aircraft_info:

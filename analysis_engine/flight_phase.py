@@ -777,7 +777,7 @@ def scan_ils(beam, ils_dots, height, scan_slice, frequency,
         first_valid_idx, first_valid_value = first_valid_sample(ils_abs[scan_slice.start:ils_lost_idx])
         
         # If there is no valid data in this range, we cannot be captured.
-        if not first_valid_idx:
+        if first_valid_idx is None:
             return None
         
         if first_valid_value < ILS_CAPTURE:
