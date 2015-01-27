@@ -325,7 +325,7 @@ def parse_analyser_profiles(analyser_profiles, filter_modules=None):
 def process_flight(segment_info, tail_number, aircraft_info={},
                    start_datetime=None, achieved_flight_record={},
                    requested=[], required=[], include_flight_attributes=True,
-                   additional_modules=[]):
+                   additional_modules=[], pre_flight_kwargs={}):
     '''
     Processes the HDF file (segment_info['File']) to derive the required_params (Nodes)
     within python modules (settings.NODE_MODULES).
@@ -349,6 +349,8 @@ def process_flight(segment_info, tail_number, aircraft_info={},
     :type include_flight_attributes: Boolean
     :param additional_modules: List of module paths to import.
     :type additional_modules: List of Strings
+    :param pre_flight_kwargs: Keyword arguments for the pre-flight analysis hook.
+    :type pre_flight_kwargs: dict
 
     :returns: See below:
     :rtype: Dict
@@ -543,7 +545,7 @@ def process_flight(segment_info, tail_number, aircraft_info={},
         if hooks.PRE_FLIGHT_ANALYSIS:
             logger.info("Performing PRE_FLIGHT_ANALYSIS actions: %s",
                         hooks.PRE_FLIGHT_ANALYSIS.func_name)
-            hooks.PRE_FLIGHT_ANALYSIS(hdf, aircraft_info)
+            hooks.PRE_FLIGHT_ANALYSIS(hdf, aircraft_info, **pre_flight_kwargs)
         else:
             logger.info("No PRE_FLIGHT_ANALYSIS actions to perform")
         # Track nodes. Assume that all params in HDF are from LFL(!)
