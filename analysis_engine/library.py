@@ -6304,6 +6304,32 @@ def step_local_cusp(array, span):
         return 0
 
 
+def including_transition(array, steps, threshold=0.2):
+    '''
+    Snaps signal to step values including transition, e.g.:
+          _____
+      ___|/   \|
+    _|/        \|__
+    
+    :type array: np.ma.array
+    :param steps: Steps to align the signal to.
+    :type steps: [int]
+    :param threshold: Threshold of difference between two flap settings to apply the next flap setting.
+    :type threshold: float
+    '''
+    # XXX: Problematic signals could benefit from second_window.
+    #array = second_window(array, 1, 10, extend_window=True)
+    output = np_ma_zeros_like(array, mask=array.mask)
+    steps = sorted(steps)
+    bounds = [(x + (pow(y - x, 1/1.5) * threshold), y)
+              for x, y in zip(steps, steps[1:])]
+    for above, next_step in bounds:
+        above_slices = runs_of_ones(array >= above)
+        for above_slice in above_slices:
+            output[above_slice] = next_step
+    return output
+
+
 def step_values(array, steps, hz=1, step_at='midpoint', rate_threshold=0.5):
     """
     Rounds each value in the array to the nearest step, depending upon the
