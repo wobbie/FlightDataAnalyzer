@@ -325,7 +325,8 @@ def plot_parameter(array, new_subplot=False, show=True, label='', marker=None):
     label = label or "Length: %d | Min: %.2f | Max: %.2f" % (
         len(array), array.min(), array.max())
     ax.plot(array, marker=marker, label=label)
-    plt.show()
+    if show:
+        plt.show()
     
 
 def plot_essential(hdf_path):
