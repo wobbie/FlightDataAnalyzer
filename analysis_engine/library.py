@@ -6321,7 +6321,7 @@ def including_transition(array, steps, threshold=0.2):
     #array = second_window(array, 1, 10, extend_window=True)
     output = np_ma_zeros_like(array, mask=array.mask)
     steps = sorted(steps)
-    bounds = [(x + (pow(y - x, 1/1.5) * threshold), y)
+    bounds = [(x + ((y - x) * threshold), y)
               for x, y in zip(steps, steps[1:])]
     for above, next_step in bounds:
         above_slices = runs_of_ones(array >= above)
