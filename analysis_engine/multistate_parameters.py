@@ -25,6 +25,7 @@ from analysis_engine.library import (
     calculate_surface_angle,
     datetime_of_index,
     find_edges_on_state_change,
+    including_transition,
     index_at_value,
     index_closest_value,
     is_day,
@@ -900,13 +901,8 @@ class FlapIncludingTransition(MultistateDerivedParameterNode):
     
     def derive(self, flap_angle=P('Flap Angle'),
                model=A('Model'), series=A('Series'), family=A('Family')):
-        self.values_mapping, self.array, self.frequency, self.offset = calculate_flap(
-            'including',
-            flap_angle,
-            model,
-            series,
-            family,
-        )
+        self.values_mapping = at.get_flap_map(model.value, series.value, family.value)
+        self.array = including_transition(flap_angle.array, self.values_mapping)
 
 
 class FlapExcludingTransition(MultistateDerivedParameterNode):
