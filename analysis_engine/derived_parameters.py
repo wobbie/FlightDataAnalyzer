@@ -3788,10 +3788,7 @@ class FlapAngle(DerivedParameterNode):
         ##scatter(new_xaxis, self.array, edgecolor='none', c='r')
 
         if len(sources) == 2:
-            self.offset = self.offset + 1/(self.hz * 2.0)
-            self.array[:-1] = (self.array[:-1] + self.array[1:]) / 2.0
-            self.array[-1] = self.array[-2]
-        
+            self.array, self.frequency, self.offset = blend_two_parameters(*sources)
   
 
 '''
