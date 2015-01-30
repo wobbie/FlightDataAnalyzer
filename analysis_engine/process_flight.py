@@ -542,8 +542,8 @@ def process_flight(segment_info, tail_number, aircraft_info={}, achieved_flight_
     with hdf_file(hdf_path) as hdf:
         hdf.start_datetime = segment_info['Start Datetime']
         if hooks.PRE_FLIGHT_ANALYSIS:
-            logger.info("Performing PRE_FLIGHT_ANALYSIS actions: %s",
-                        hooks.PRE_FLIGHT_ANALYSIS.func_name)
+            logger.info("Performing PRE_FLIGHT_ANALYSIS action '%s' with options: %s",
+                        hooks.PRE_FLIGHT_ANALYSIS.func_name, pre_flight_kwargs)
             hooks.PRE_FLIGHT_ANALYSIS(hdf, aircraft_info, **pre_flight_kwargs)
         else:
             logger.info("No PRE_FLIGHT_ANALYSIS actions to perform")
