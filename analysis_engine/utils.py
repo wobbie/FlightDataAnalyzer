@@ -245,7 +245,7 @@ def list_everything():
     '''
     Return an ordered list of all parameters both derived and required.
     '''
-    return _get_names(settings.NODE_MODULES, True, True)
+    return sorted(set(_get_names(settings.NODE_MODULES, True, True)))
 
 
 def list_kpvs():
