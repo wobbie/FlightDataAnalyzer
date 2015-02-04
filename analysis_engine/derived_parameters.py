@@ -1129,7 +1129,7 @@ class AltitudeQNH(DerivedParameterNode):
         if l_elev is None and l_apt:
             l_elev = self._calc_apt_elev(l_apt.value)
 
-        if t_elev is None and l_elev is None:
+        if t_elev is None or l_elev is None:
             self.warning("No Takeoff or Landing elevation, using Altitude AAL")
             self.array = alt_qnh
             return  # BAIL OUT!
