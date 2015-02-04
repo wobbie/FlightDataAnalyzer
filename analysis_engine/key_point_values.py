@@ -8431,8 +8431,9 @@ class EngShutdownDuringFlightDuration(KeyPointValueNode):
         for air in airborne:
             for _slice in runs_of_ones(eng_off[air.slice]):
                 dur = float(_slice.stop - _slice.start) / self.frequency
-                if dur > 2:
-                    # Must be at least 2 seconds not running:
+                if dur > 4:
+                    # Must be at least 4 seconds not running to extend over a
+                    # complete frame:
                     self.create_kpv(_slice.start + air.slice.start, dur)
 
 
@@ -11969,6 +11970,7 @@ class ThrustAsymmetryWithThrustReversersDeployedDuration(KeyPointValueNode):
         for slice_ in slices:
             asymmetry = np.ma.masked_less(ta.array[slice_], 10.0)
             slices = np.ma.clump_unmasked(asymmetry)
+            slices = slices_remove_small_slices(slices, time_limit=2, hz=ta.hz)            
             slices = shift_slices(slices, slice_.start)
             self.create_kpvs_from_slice_durations(slices, self.frequency)
 
