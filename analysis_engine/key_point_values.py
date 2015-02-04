@@ -11923,6 +11923,11 @@ class ThrustAsymmetryWithThrustReversersDeployedMax(KeyPointValueNode):
         # Note: Use not 'Stowed' as 'In Transit' implies partially 'Deployed':
         slices = clump_multistate(tr.array, 'Stowed', mobile.get_slices(),
                                   condition=False)
+        # This KPV can trigger many times if the thrust reverser signal
+        # toggles. This has been seen to happen after electrical power loss,
+        # and as it is not possible for the thrust reversers to deploy and
+        # retract within 2 seconds, small slices are removed here.
+        slices = slices_remove_small_slices(slices, time_limit=2, hz=ta.hz)
         self.create_kpvs_within_slices(ta.array, slices, max_value)
 
 
