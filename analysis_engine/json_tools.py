@@ -158,3 +158,26 @@ def json_to_process_flight(txt):
             res[key][name] = [jsondict_to_node(i) for i in items]
 
     return res
+
+
+def process_flight_to_nodes(pf_results):
+    '''
+    Load process flight results into Node objects.
+    '''
+    from analysis_engine import node
+    
+    node_classes = {
+        'ktis': node.KeyTimeInstanceNode,
+        'kpvs': node.KeyPointValueNode,
+        'phases': node.FlightPhaseNode,
+        'approaches': node.ApproachNode,
+    }
+    
+    params = {}
+    
+    for node_type, nodes in pf_results.iteritems():
+        node_cls = node_classes[node_type]
+        for node_name, items in nodes.iteritems():
+            params[node_name] = node_cls(node_name, items=items)
+    
+    return params

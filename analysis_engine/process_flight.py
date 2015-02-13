@@ -1,4 +1,5 @@
 import argparse
+import itertools
 import logging
 import numpy as np
 import os
@@ -13,6 +14,7 @@ from hdfaccess.file import hdf_file
 
 from analysis_engine import hooks, settings, __version__
 from analysis_engine.dependency_graph import dependency_order
+from analysis_engine.json_tools import process_flight_to_nodes
 from analysis_engine.library import np_ma_masked_zeros, repair_mask
 from analysis_engine.node import (ApproachNode, Attribute,
                                   derived_param_from_hdf,
@@ -58,13 +60,13 @@ def geo_locate(hdf, items):
     lat_pos.array = repair_mask(lat_pos.array, repair_duration=None, extrapolate=True)
     lon_pos.array = repair_mask(lon_pos.array, repair_duration=None, extrapolate=True)
     
-    for item in items:
+    for item in itertools.chain.from_iterable(items.itervalues()):
         item.latitude = lat_pos.at(item.index) or None
         item.longitude = lon_pos.at(item.index) or None
     return items
 
 
-def _timestamp(start_datetime, item_list):
+def _timestamp(start_datetime, items):
     '''
     Adds item.datetime (from timedelta of item.index + start_datetime)
 
@@ -73,9 +75,9 @@ def _timestamp(start_datetime, item_list):
     :param item_list: list of objects with a .index attribute
     :type item_list: list
     '''
-    for item in item_list:
+    for item in itertools.chain.from_iterable(items.itervalues()):
         item.datetime = start_datetime + timedelta(seconds=float(item.index))
-    return item_list
+    return items
 
 
 def get_node_type(node, node_subclasses):
@@ -89,7 +91,7 @@ def get_node_type(node, node_subclasses):
     return node.__class__.__name__
 
 
-def derive_parameters(hdf, node_mgr, process_order, ignore_errors=False):
+def derive_parameters(hdf, node_mgr, process_order, params={}, force=False):
     '''
     Derives parameters in process_order. Dependencies are sourced via the
     node_mgr.
@@ -107,14 +109,13 @@ def derive_parameters(hdf, node_mgr, process_order, ignore_errors=False):
     node_subclasses = NODE_SUBCLASSES
     
     # store all derived params that aren't masked arrays
-    params = {}
-    approach_list = ApproachNode(restrict_names=False)
+    approaches = {}
     # duplicate storage, but maintaining types
-    kpv_list = KeyPointValueNode(restrict_names=False)
-    kti_list = KeyTimeInstanceNode(restrict_names=False)
+    kpvs = {}
+    ktis = {}
     # 'Node Name' : node()  pass in node.get_accessor()
-    section_list = SectionNode()
-    flight_attrs = []
+    sections = {}
+    flight_attrs = {}
     duration = hdf.duration
 
     for param_name in process_order:
@@ -169,9 +170,8 @@ def derive_parameters(hdf, node_mgr, process_order, ignore_errors=False):
         try:
             node = node.get_derived(deps)
         except:
-            if not ignore_errors:
+            if not force:
                 raise
-            logger.exception('Exception raised by Node %s', node.get_name())
         
         del node._p
         del node._h
@@ -179,25 +179,31 @@ def derive_parameters(hdf, node_mgr, process_order, ignore_errors=False):
 
         if node.node_type is KeyPointValueNode:
             params[param_name] = node
+            
+            aligned_kpvs = []
             for one_hz in node.get_aligned(P(frequency=1, offset=0)):
                 if not (0 <= one_hz.index <= duration+4):
                     raise IndexError(
                         "KPV '%s' index %.2f is not between 0 and %d" %
                         (one_hz.name, one_hz.index, duration))
-                kpv_list.append(one_hz)
+                aligned_kpvs.append(one_hz)
+            kpvs[param_name] = aligned_kpvs
         elif node.node_type is KeyTimeInstanceNode:
             params[param_name] = node
+            
+            aligned_ktis = []
             for one_hz in node.get_aligned(P(frequency=1, offset=0)):
                 if not (0 <= one_hz.index <= duration+4):
                     raise IndexError(
                         "KTI '%s' index %.2f is not between 0 and %d" %
                         (one_hz.name, one_hz.index, duration))
-                kti_list.append(one_hz)
+                aligned_ktis.append(one_hz)
+            ktis[param_name] = aligned_ktis
         elif node.node_type is FlightAttributeNode:
             params[param_name] = node
             try:
-                # only has one Attribute node
-                flight_attrs.append(Attribute(node.name, node.value))
+                # only has one Attribute node, store as a list for consistency
+                flight_attrs[param_name] = [Attribute(node.name, node.value)]
             except:
                 logger.warning("Flight Attribute Node '%s' returned empty "
                                "handed.", param_name)
@@ -232,8 +238,9 @@ def derive_parameters(hdf, node_mgr, process_order, ignore_errors=False):
                 if not 0 <= stop_edge <= duration + 4:
                     msg = "Section '%s' stop_edge (%.2f) not between 0 and %d"
                     raise IndexError(msg % (one_hz.name, stop_edge, duration))
-                section_list.append(one_hz)
+                #section_list.append(one_hz)
             params[param_name] = aligned_section
+            sections[param_name] = list(aligned_section)
         elif issubclass(node.node_type, DerivedParameterNode):
             if duration:
                 # check that the right number of nodes were returned Allow a
@@ -242,7 +249,7 @@ def derive_parameters(hdf, node_mgr, process_order, ignore_errors=False):
                 # at 0.25Hz (rounded upwards). If we combine two 0.25Hz
                 # parameters then we will have an array length of 1412.
                 expected_length = duration * node.frequency
-                if node.array is None or (ignore_errors and len(node.array) == 0):
+                if node.array is None or (force and len(node.array) == 0):
                     logger.warning("No array set; creating a fully masked "
                                    "array for %s", param_name)
                     array_length = expected_length
@@ -289,12 +296,12 @@ def derive_parameters(hdf, node_mgr, process_order, ignore_errors=False):
                             valid_loc_est]):
                     raise ValueError('ApproachItem contains index outside of '
                                      'flight data: %s' % approach)
-                approach_list.append(approach)
             params[param_name] = aligned_approach
+            approaches[param_name] = list(aligned_approach)
         else:
             raise NotImplementedError("Unknown Type %s" % node.__class__)
         continue
-    return kti_list, kpv_list, section_list, approach_list, flight_attrs
+    return ktis, kpvs, sections, approaches, flight_attrs
 
 
 def parse_analyser_profiles(analyser_profiles, filter_modules=None):
@@ -329,7 +336,8 @@ def parse_analyser_profiles(analyser_profiles, filter_modules=None):
 
 def process_flight(segment_info, tail_number, aircraft_info={}, achieved_flight_record={},
                    requested=[], required=[], include_flight_attributes=True,
-                   additional_modules=[], pre_flight_kwargs={}, ignore_errors=False):
+                   additional_modules=[], pre_flight_kwargs={}, force=False,
+                   initial={}):
     '''
     Processes the HDF file (segment_info['File']) to derive the required_params (Nodes)
     within python modules (settings.NODE_MODULES).
@@ -355,6 +363,10 @@ def process_flight(segment_info, tail_number, aircraft_info={}, achieved_flight_
     :type additional_modules: List of Strings
     :param pre_flight_kwargs: Keyword arguments for the pre-flight analysis hook.
     :type pre_flight_kwargs: dict
+    :param force: Ignore errors raised while deriving nodes.
+    :type force: bool
+    :param initial: Initial content for nodes to avoid reprocessing (excluding parameter nodes which are saved to the hdf).
+    :type initial: dict
 
     :returns: See below:
     :rtype: Dict
@@ -509,6 +521,7 @@ def process_flight(segment_info, tail_number, aircraft_info={}, achieved_flight_
     ],
 
     '''
+    
     hdf_path = segment_info['File']
     if 'Start Datetime' not in segment_info:
         import pytz
@@ -542,6 +555,8 @@ def process_flight(segment_info, tail_number, aircraft_info={}, achieved_flight_
         requested = list(set(
             requested + get_derived_nodes(
                 ['analysis_engine.flight_attribute']).keys()))
+    
+    initial = process_flight_to_nodes(initial)
 
     # open HDF for reading
     with hdf_file(hdf_path) as hdf:
@@ -571,16 +586,16 @@ def process_flight(segment_info, tail_number, aircraft_info={}, achieved_flight_
                          hdf.cache_param_list)
 
         # derive parameters
-        kti_list, kpv_list, section_list, approach_list, flight_attrs = \
-            derive_parameters(hdf, node_mgr, process_order, ignore_errors=ignore_errors)
+        ktis, kpvs, sections, approaches, flight_attrs = \
+            derive_parameters(hdf, node_mgr, process_order, params=initial, force=force)
 
         # geo locate KTIs
-        kti_list = geo_locate(hdf, kti_list)
-        kti_list = _timestamp(segment_info['Start Datetime'], kti_list)
+        ktis = geo_locate(hdf, ktis)
+        ktis = _timestamp(segment_info['Start Datetime'], ktis)
 
         # geo locate KPVs
-        kpv_list = geo_locate(hdf, kpv_list)
-        kpv_list = _timestamp(segment_info['Start Datetime'], kpv_list)
+        kpvs = geo_locate(hdf, kpvs)
+        kpvs = _timestamp(segment_info['Start Datetime'], kpvs)
 
         # Store version of FlightDataAnalyser
         hdf.analysis_version = __version__
@@ -592,10 +607,10 @@ def process_flight(segment_info, tail_number, aircraft_info={}, achieved_flight_
 
     return {
         'flight': flight_attrs,
-        'kti': kti_list,
-        'kpv': kpv_list,
-        'approach': approach_list,
-        'phases': section_list,
+        'kti': ktis,
+        'kpv': kpvs,
+        'approach': approaches,
+        'phases': sections,
     }
 
 
