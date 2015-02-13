@@ -240,6 +240,7 @@ def is_power2(number):
     num = int(number)
     return num > 0 and ((num & (num - 1)) == 0)
 
+
 def is_power2_fraction(number):
     '''
     TODO: Tests
@@ -251,6 +252,7 @@ def is_power2_fraction(number):
     if number < 1:
         number = 1 / number
     return is_power2(number)
+
 
 def is_5_10_20(number):
     """

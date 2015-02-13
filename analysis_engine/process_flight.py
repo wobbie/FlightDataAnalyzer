@@ -13,7 +13,7 @@ from hdfaccess.file import hdf_file
 
 from analysis_engine import hooks, settings, __version__
 from analysis_engine.dependency_graph import dependency_order
-from analysis_engine.library import np_ma_masked_zeros_like, repair_mask
+from analysis_engine.library import np_ma_masked_zeros, repair_mask
 from analysis_engine.node import (ApproachNode, Attribute,
                                   derived_param_from_hdf,
                                   DerivedParameterNode,
@@ -89,7 +89,7 @@ def get_node_type(node, node_subclasses):
     return node.__class__.__name__
 
 
-def derive_parameters(hdf, node_mgr, process_order):
+def derive_parameters(hdf, node_mgr, process_order, ignore_errors=False):
     '''
     Derives parameters in process_order. Dependencies are sourced via the
     node_mgr.
@@ -165,39 +165,44 @@ def derive_parameters(hdf, node_mgr, process_order):
         node._n = node_mgr
         logger.info("Processing %s `%s`", get_node_type(node, node_subclasses), param_name)
         # Derive the resulting value
-
-        result = node.get_derived(deps)
+        
+        try:
+            node = node.get_derived(deps)
+        except:
+            if not ignore_errors:
+                raise
+            logger.exception('Exception raised by Node %s', node.get_name())
+        
         del node._p
         del node._h
         del node._n
 
         if node.node_type is KeyPointValueNode:
-            #Q: track node instead of result here??
-            params[param_name] = result
-            for one_hz in result.get_aligned(P(frequency=1, offset=0)):
+            params[param_name] = node
+            for one_hz in node.get_aligned(P(frequency=1, offset=0)):
                 if not (0 <= one_hz.index <= duration+4):
                     raise IndexError(
                         "KPV '%s' index %.2f is not between 0 and %d" %
                         (one_hz.name, one_hz.index, duration))
                 kpv_list.append(one_hz)
         elif node.node_type is KeyTimeInstanceNode:
-            params[param_name] = result
-            for one_hz in result.get_aligned(P(frequency=1, offset=0)):
+            params[param_name] = node
+            for one_hz in node.get_aligned(P(frequency=1, offset=0)):
                 if not (0 <= one_hz.index <= duration+4):
                     raise IndexError(
                         "KTI '%s' index %.2f is not between 0 and %d" %
                         (one_hz.name, one_hz.index, duration))
                 kti_list.append(one_hz)
         elif node.node_type is FlightAttributeNode:
-            params[param_name] = result
+            params[param_name] = node
             try:
-                # only has one Attribute result
-                flight_attrs.append(Attribute(result.name, result.value))
+                # only has one Attribute node
+                flight_attrs.append(Attribute(node.name, node.value))
             except:
                 logger.warning("Flight Attribute Node '%s' returned empty "
                                "handed.", param_name)
         elif issubclass(node.node_type, SectionNode):
-            aligned_section = result.get_aligned(P(frequency=1, offset=0))
+            aligned_section = node.get_aligned(P(frequency=1, offset=0))
             for index, one_hz in enumerate(aligned_section):
                 # SectionNodes allow slice starts and stops being None which
                 # signifies the beginning and end of the data. To avoid
@@ -231,22 +236,22 @@ def derive_parameters(hdf, node_mgr, process_order):
             params[param_name] = aligned_section
         elif issubclass(node.node_type, DerivedParameterNode):
             if duration:
-                # check that the right number of results were returned Allow a
+                # check that the right number of nodes were returned Allow a
                 # small tolerance. For example if duration in seconds is 2822,
                 # then there will be an array length of  1411 at 0.5Hz and 706
                 # at 0.25Hz (rounded upwards). If we combine two 0.25Hz
                 # parameters then we will have an array length of 1412.
-                expected_length = duration * result.frequency
-                if result.array is None:
+                expected_length = duration * node.frequency
+                if node.array is None or (ignore_errors and len(node.array) == 0):
                     logger.warning("No array set; creating a fully masked "
                                    "array for %s", param_name)
                     array_length = expected_length
                     # Where a parameter is wholly masked, we fill the HDF
                     # file with masked zeros to maintain structure.
-                    result.array = \
-                        np_ma_masked_zeros_like(np.ma.arange(expected_length))
+                    node.array = \
+                        np_ma_masked_zeros(expected_length)
                 else:
-                    array_length = len(result.array)
+                    array_length = len(node.array)
                 length_diff = array_length - expected_length
                 if length_diff == 0:
                     pass
@@ -254,8 +259,8 @@ def derive_parameters(hdf, node_mgr, process_order):
                     logger.warning("Cutting excess data for parameter '%s'. "
                                    "Expected length was '%s' while resulting "
                                    "array length was '%s'.", param_name,
-                                   expected_length, len(result.array))
-                    result.array = result.array[:expected_length]
+                                   expected_length, len(node.array))
+                    node.array = node.array[:expected_length]
                 else:
                     raise ValueError("Array length mismatch for parameter "
                                      "'%s'. Expected '%s', resulting array "
@@ -263,11 +268,11 @@ def derive_parameters(hdf, node_mgr, process_order):
                                                        expected_length,
                                                        array_length))
 
-            hdf.set_param(result)
+            hdf.set_param(node)
             # Keep hdf_keys up to date.
             node_mgr.hdf_keys.append(param_name)
         elif issubclass(node.node_type, ApproachNode):
-            aligned_approach = result.get_aligned(P(frequency=1, offset=0))
+            aligned_approach = node.get_aligned(P(frequency=1, offset=0))
             for approach in aligned_approach:
                 # Does not allow slice start or stops to be None.
                 valid_turnoff = (not approach.turnoff or
@@ -324,7 +329,7 @@ def parse_analyser_profiles(analyser_profiles, filter_modules=None):
 
 def process_flight(segment_info, tail_number, aircraft_info={}, achieved_flight_record={},
                    requested=[], required=[], include_flight_attributes=True,
-                   additional_modules=[], pre_flight_kwargs={}):
+                   additional_modules=[], pre_flight_kwargs={}, ignore_errors=False):
     '''
     Processes the HDF file (segment_info['File']) to derive the required_params (Nodes)
     within python modules (settings.NODE_MODULES).
@@ -567,7 +572,7 @@ def process_flight(segment_info, tail_number, aircraft_info={}, achieved_flight_
 
         # derive parameters
         kti_list, kpv_list, section_list, approach_list, flight_attrs = \
-            derive_parameters(hdf, node_mgr, process_order)
+            derive_parameters(hdf, node_mgr, process_order, ignore_errors=ignore_errors)
 
         # geo locate KTIs
         kti_list = geo_locate(hdf, kti_list)
