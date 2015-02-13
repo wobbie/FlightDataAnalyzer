@@ -136,13 +136,14 @@ def process_flight_to_json(pf_results, indent=2):
     """
     d = collections.OrderedDict()
     for key in PROCESS_FLIGHT_RESULT_KEYS:
-        d[key] = []
-        for node in pf_results[key]:
-            d[key].append(node_to_jsondict(node))
+        d[key] = {}
+        for name, items in pf_results[key].items():
+            d[key][name] = [node_to_jsondict(i) for i in items]
+        
+        # Q: Should we sort?
+        #d[key] = sorted(d[key])
 
-        d[key] = sorted(d[key])
-
-    return json.dumps(d, indent=indent)
+    return json.dumps(sort_dict(d), indent=indent)
 
 
 def json_to_process_flight(txt):
@@ -152,8 +153,8 @@ def json_to_process_flight(txt):
     d = json.loads(txt)
     res = {}
     for key in PROCESS_FLIGHT_RESULT_KEYS:
-        res[key] = []
-        for dn in d[key]:
-            res[key].append(jsondict_to_node(dn))
+        res[key] = {}
+        for name, items in d[key].items():
+            res[key][name] = [jsondict_to_node(i) for i in items]
 
     return res
