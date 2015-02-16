@@ -6,6 +6,9 @@ import dateutil.parser
 from datetime import datetime
 
 
+# VERSION will be included in json output. Only json matching the current VERSION number will be loaded.
+VERSION = '0.1'
+
 PROCESS_FLIGHT_RESULT_KEYS = (
     'flight',
     'kti',
@@ -142,15 +145,23 @@ def process_flight_to_json(pf_results, indent=2):
         
         # Q: Should we sort?
         #d[key] = sorted(d[key])
-
+    
+    d['version'] = VERSION
+    
     return json.dumps(sort_dict(d), indent=indent)
 
 
 def json_to_process_flight(txt):
     """
     Convert JSON to a data structure as returned by `process_flight`.
+    
+    :rtype: dict or None
     """
     d = json.loads(txt)
+    
+    if not d.get('version') == VERSION:
+        return
+
     res = {}
     for key in PROCESS_FLIGHT_RESULT_KEYS:
         res[key] = {}
@@ -171,6 +182,7 @@ def process_flight_to_nodes(pf_results):
         'kpvs': node.KeyPointValueNode,
         'phases': node.FlightPhaseNode,
         'approaches': node.ApproachNode,
+        'flight': node.FlightAttributeNode,
     }
     
     params = {}
