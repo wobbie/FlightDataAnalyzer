@@ -178,6 +178,12 @@ def process_flight_to_nodes(pf_results):
     for node_type, nodes in pf_results.iteritems():
         node_cls = node_classes[node_type]
         for node_name, items in nodes.iteritems():
+            if node_type == 'flight' and items:
+                flight_attr = node.FlightAttributeNode(node_name)
+                flight_attr.set_flight_attr(items[0].value)
+                params[node_name] = flight_attr
+                continue
+            
             params[node_name] = node_cls(node_name, items=items)
     
     return params
