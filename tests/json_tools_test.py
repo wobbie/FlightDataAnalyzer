@@ -88,9 +88,9 @@ class TestJsonTools(unittest.TestCase):
         self.assertEqual(json_to_process_flight(simplejson.dumps(process_flight_json)), PROCESS_FLIGHT)
         # incompatible or missing version does not load
         process_flight_json['version'] = '0.4'
-        self.assertEqual(json_to_process_flight(simplejson.dumps(process_flight_json)), None)
+        self.assertEqual(json_to_process_flight(simplejson.dumps(process_flight_json)), {})
         del process_flight_json['version']
-        self.assertEqual(json_to_process_flight(simplejson.dumps(process_flight_json)), None)
+        self.assertEqual(json_to_process_flight(simplejson.dumps(process_flight_json)), {})
         
     
     def test_jsondict_to_node(self):

@@ -155,12 +155,12 @@ def json_to_process_flight(txt):
     """
     Convert JSON to a data structure as returned by `process_flight`.
     
-    :rtype: dict or None
+    :rtype: dict
     """
     d = json.loads(txt)
     
     if not d.get('version') == VERSION:
-        return
+        return {}
 
     res = {}
     for key in PROCESS_FLIGHT_RESULT_KEYS:
