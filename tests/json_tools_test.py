@@ -13,6 +13,7 @@ from analysis_engine.json_tools import (
     node_to_json,
     node_to_jsondict,
     process_flight_to_json,
+    process_flight_to_nodes,
     sort_dict,
 )
 from analysis_engine.node import (
@@ -28,6 +29,13 @@ from analysis_engine.node import (
     Section,
     SectionNode,
 )
+
+
+'''
+TODO:
+
+ - Expand test data with more node types.
+'''
 
 
 KTI_NAME = 'Altitude When Climbing'
@@ -58,6 +66,7 @@ PROCESS_FLIGHT_JSON = {
     'kpv': {},
     'kti': {KTI_NAME: [sort_dict(KTI_JSONDICT)]},
     'phases': {},
+    'version': '0.1',
 }
 
 PROCESS_FLIGHT = {
@@ -75,7 +84,14 @@ class TestJsonTools(unittest.TestCase):
         self.assertEqual(json_to_node(simplejson.dumps(KTI_JSONDICT.copy())), KTI)
     
     def test_json_to_process_flight(self):
-        self.assertEqual(json_to_process_flight(simplejson.dumps(PROCESS_FLIGHT_JSON)), PROCESS_FLIGHT)
+        process_flight_json = deepcopy(PROCESS_FLIGHT_JSON)
+        self.assertEqual(json_to_process_flight(simplejson.dumps(process_flight_json)), PROCESS_FLIGHT)
+        # incompatible or missing version does not load
+        process_flight_json['version'] = '0.4'
+        self.assertEqual(json_to_process_flight(simplejson.dumps(process_flight_json)), None)
+        del process_flight_json['version']
+        self.assertEqual(json_to_process_flight(simplejson.dumps(process_flight_json)), None)
+        
     
     def test_jsondict_to_node(self):
         # TODO: Other types.
@@ -98,6 +114,17 @@ class TestJsonTools(unittest.TestCase):
     
     def test_process_flight_to_json(self):
         self.assertEqual(process_flight_to_json(deepcopy(PROCESS_FLIGHT)), simplejson.dumps(sort_dict(PROCESS_FLIGHT_JSON), indent=2))
+    
+    def test_process_flight_to_nodes(self):
+        nodes = process_flight_to_nodes(PROCESS_FLIGHT)
+        self.assertEqual(len(nodes), 1)
+        self.assertEqual(nodes.keys(), [KTI_NAME])
+        self.assertIn(KTI_NAME, nodes)
+        node = nodes[KTI_NAME]
+        self.assertTrue(isinstance(node, KeyTimeInstanceNode))
+        self.assertEqual(len(node), 1)
+        for name in ('index', 'latitude', 'longitude', 'name'):
+            self.assertEqual(getattr(node[0], name), KTI_JSONDICT[name])
     
     def test_sort_dict(self):
         unsorted = {

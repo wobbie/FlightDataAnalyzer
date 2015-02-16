@@ -178,10 +178,10 @@ def process_flight_to_nodes(pf_results):
     from analysis_engine import node
     
     node_classes = {
-        'ktis': node.KeyTimeInstanceNode,
-        'kpvs': node.KeyPointValueNode,
+        'kti': node.KeyTimeInstanceNode,
+        'kpv': node.KeyPointValueNode,
         'phases': node.FlightPhaseNode,
-        'approaches': node.ApproachNode,
+        'approach': node.ApproachNode,
         'flight': node.FlightAttributeNode,
     }
     
