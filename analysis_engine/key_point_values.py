@@ -9923,6 +9923,27 @@ class PitchRate35To1000FtMax(KeyPointValueNode):
         )
 
 
+class PitchRate35ToClimbAccelerationStartMax(KeyPointValueNode):
+    '''
+    '''
+
+    units = ut.DEGREE_S
+
+    def derive(self,
+               pitch_rate=P('Pitch Rate'),
+               climbs=S('Initial Climb'),
+               climb_accel_start=KTI('Climb Acceleration Start')):
+
+        init_climb = climbs.get_first()
+        if len(climb_accel_start):
+            _slice = slice(init_climb.slice.start,
+                           climb_accel_start.get_first().index+1)
+        else:
+            _slice = init_climb.slice
+
+        self.create_kpvs_within_slices(pitch_rate.array, (_slice,), max_value)
+
+
 class PitchRate20FtToTouchdownMax(KeyPointValueNode):
     '''
     '''

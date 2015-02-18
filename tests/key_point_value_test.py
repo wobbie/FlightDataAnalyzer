@@ -405,6 +405,7 @@ from analysis_engine.key_point_values import (
     PitchRate2DegPitchTo35FtMax,
     PitchRate2DegPitchTo35FtMin,
     PitchRate35To1000FtMax,
+    PitchRate35ToClimbAccelerationStartMax,
     PitchTakeoffMax,
     RateOfClimb35To1000FtMin,
     RateOfClimb35ToClimbAccelerationStartMin,
@@ -9230,6 +9231,33 @@ class TestPitchRate35To1000FtMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestPitchRate35ToClimbAccelerationStartMax(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = PitchRate35ToClimbAccelerationStartMax
+        self.operational_combinations = [('Pitch Rate', 'Initial Climb', 'Climb Acceleration Start')]
+        self.function = max_value
+
+    def test_can_operate(self):
+        opts = self.node_class.get_operational_combinations()
+        self.assertEqual(opts, self.operational_combinations)
+
+    def test_derive_basic(self):
+        pitch_rate = P(
+            name='Pitch Rate',
+            array=np.ma.array([0, 2, 4, 7, 9, 8, 6, 3, -1]),
+        )
+        climb = buildsection('Initial Climb', 1.4, 8)
+        climb_accel_start = KTI('Climb Acceleration Start', items=[KeyTimeInstance(3, 'Climb Acceleration Start')])
+
+        node = self.node_class()
+        node.derive(pitch_rate, climb, climb_accel_start)
+
+        self.assertEqual(node, KPV('Pitch Rate 35 To Climb Acceleration Start Max', items=[
+            KeyPointValue(name='Pitch Rate 35 To Climb Acceleration Start Max', index=3, value=7),
+        ]))
 
 
 class TestPitchRate20FtToTouchdownMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
