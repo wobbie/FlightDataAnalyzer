@@ -39,6 +39,7 @@ from analysis_engine.library import (
     offset_select,
     repair_mask,
     runs_of_ones,
+    second_window,
     slices_from_to,
     slices_remove_small_gaps,
     slices_remove_small_slices,
@@ -441,7 +442,7 @@ class Daylight(MultistateDerivedParameterNode):
                 self.array[step] = np.ma.masked
 
 
-class DualInputWarning(MultistateDerivedParameterNode):
+class DualInput(MultistateDerivedParameterNode):
     '''
     Determines whether input by both of the pilots has occurred.
 
@@ -472,8 +473,8 @@ class DualInputWarning(MultistateDerivedParameterNode):
         array = np.ma.array(array > 1.7, mask=array.mask, dtype=int)
 
         slices = runs_of_ones(array)
-        slices = slices_remove_small_slices(slices, 3, self.hz)
         slices = slices_remove_small_gaps(slices, 15, self.hz)
+        slices = slices_remove_small_slices(slices, 3, self.hz)
 
         dual = np_ma_zeros_like(array, dtype=np.short)
         for sl in slices:
@@ -1620,14 +1621,15 @@ class PilotFlying(MultistateDerivedParameterNode):
                stick_capt=P('Sidestick Angle (Capt)'),
                stick_fo=P('Sidestick Angle (FO)')):
 
-        pilot_flying = MappedArray(np.ma.zeros(stick_capt.array.size, dtype=np.short),
+
+        pilot_flying = MappedArray(np_ma_masked_zeros_like(stick_capt.array, dtype=np.short),
                                    values_mapping=self.values_mapping)
 
         if stick_capt.array.size > 61:
             # Calculate average instead of sum as it we already have a function
             # defined to work over a window and it doesn't affect the result as
             # the arrays are altered in the same way and are still comparable.
-            window = 61 * self.hz  # Use 61 seconds for 30 seconds either side.
+            window = 31 * self.hz  # Use 61 seconds for 30 seconds either side.
             if not window % 2:
                 window += 1
             angle_capt = moving_average(np.ma.abs(stick_capt.array), window)
@@ -1638,9 +1640,23 @@ class PilotFlying(MultistateDerivedParameterNode):
                                      extrapolate=True)
             angle_fo = repair_mask(angle_fo, repair_duration=31,
                                    extrapolate=True)
+            # ignore moving average if no input from pilot at that time.
+            angle_capt_zerod = np.ma.where(stick_capt.array == 0.0, 0.0, angle_capt)
+            angle_fo_zerod = np.ma.where(stick_fo.array == 0.0, 0.0, angle_fo)
+            # mask non imputs to allow us to repair nearest neightbour later
+            angle_capt_masked = np.ma.masked_where((stick_capt.array == 0.0) & (angle_capt_zerod != 0.0), angle_capt_zerod)
+            angle_fo_masked = np.ma.masked_where((stick_fo.array == 0.0) & (angle_fo_zerod != 0.0), angle_fo_zerod)
 
-            pilot_flying[angle_capt > angle_fo] = 'Captain'
-            pilot_flying[angle_capt < angle_fo] = 'First Officer'
+            pilot_flying[angle_capt_masked > angle_fo_masked] = 'Captain'
+            pilot_flying[angle_capt_masked < angle_fo_masked] = 'First Officer'
+            # keep calculated masks
+            pilot_flying.mask = angle_capt_masked.mask & angle_fo_masked.mask
+
+            # repair nearest neightbour to remove small gaps of no movement.
+            pilot_flying = nearest_neighbour_mask_repair(pilot_flying, repair_gap_size=20*self.frequency, copy=False)
+            # use second window to remove spiking between captain and first
+            # officer during dual stick periods
+            pilot_flying = second_window(pilot_flying, self.frequency, 2).astype(np.short)
 
         self.array = pilot_flying
 

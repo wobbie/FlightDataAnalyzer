@@ -37,7 +37,7 @@ from analysis_engine.multistate_parameters import (
     APURunning,
     Configuration,
     Daylight,
-    DualInputWarning,
+    DualInput,
     ThrustModeSelected,
     Eng_1_Fire,
     Eng_2_Fire,
@@ -695,20 +695,20 @@ class TestDaylight(unittest.TestCase):
 
 class TestDualInputWarning(unittest.TestCase, NodeTest):
     def setUp(self):
-        self.node_class = DualInputWarning
+        self.node_class = DualInput
+        self.pilot_map = {0: '-', 1: 'Captain', 2: 'First Officer'}
         self.operational_combinations = [
             ('Pilot Flying', 'Sidestick Angle (Capt)', 'Sidestick Angle (FO)')
         ]
 
     def test_derive(self):
-        pilot_map = {0: '-', 1: 'Captain', 2: 'First Officer'}
         pilot_array = MappedArray([1] * 20 + [0] * 10 + [2] * 20,
-                                  values_mapping=pilot_map)
+                                  values_mapping=self.pilot_map)
         capt_array = np.ma.concatenate((15 + np.arange(20), np.zeros(30)))
         fo_array = np.ma.concatenate((np.zeros(30), 15 + np.arange(20)))
         # Dual input
         fo_array[5:10] = 15
-        pilot = M('Pilot Flying', pilot_array, values_mapping=pilot_map)
+        pilot = M('Pilot Flying', pilot_array, values_mapping=self.pilot_map)
         capt = P('Sidestick Angle (Capt)', capt_array)
         fo = P('Sidestick Angle (FO)', fo_array)
         node = self.node_class()
@@ -721,9 +721,13 @@ class TestDualInputWarning(unittest.TestCase, NodeTest):
         np.testing.assert_array_equal(node.array, expected_array)
 
     def test_derive_from_hdf(self):
-        (pilot, capt, fo), phase = self.get_params_from_hdf(
+        (capt, fo), phase = self.get_params_from_hdf(
             os.path.join(test_data_path, 'dual_input.hdf5'),
-            ['Pilot Flying', 'Sidestick Angle (Capt)', 'Sidestick Angle (FO)'])
+            ['Sidestick Angle (Capt)', 'Sidestick Angle (FO)'])
+
+        pilot_array = MappedArray([1] * 840,
+                                  values_mapping=self.pilot_map)
+        pilot = M('Pilot Flying', pilot_array, values_mapping=self.pilot_map)
 
         node = self.node_class()
         node.derive(pilot, capt, fo)
@@ -731,13 +735,14 @@ class TestDualInputWarning(unittest.TestCase, NodeTest):
         expected_array = MappedArray(
             np.ma.zeros(pilot.array.size),
             values_mapping=self.node_class.values_mapping)
-        expected_array[177:212] = 'Dual'
+        expected_array[178:215] = 'Dual'
+        expected_array[421:464] = 'Dual'
+        expected_array[487:507] = 'Dual'
         np.testing.assert_array_equal(node.array, expected_array)
 
     def test_not_triggered_at_minimum_resolution(self):
-        pilot_map = {0: '-', 1: 'Captain', 2: 'First Officer'}
         pilot_array = MappedArray([1] * 20,
-                                  values_mapping=pilot_map)
+                                  values_mapping=self.pilot_map)
         capt_array = np.ma.array([10.0]*20)
         fo_array = np.ma.array([0.0]*20)
         # Dual input
@@ -749,7 +754,7 @@ class TestDualInputWarning(unittest.TestCase, NodeTest):
         min_res = ((resolution*resolution)*2*1.1)**0.5
 
         fo_array[5:10] = min_res
-        pilot = M('Pilot Flying', np.ma.array([1]*20), values_mapping=pilot_map)
+        pilot = M('Pilot Flying', np.ma.array([1]*20), values_mapping=self.pilot_map)
         capt = P('Sidestick Angle (Capt)', capt_array)
         fo = P('Sidestick Angle (FO)', fo_array)
         node = self.node_class()
