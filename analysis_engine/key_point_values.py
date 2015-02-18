@@ -431,7 +431,7 @@ class AccelerationLongitudinalDuringTakeoffMax(KeyPointValueNode):
     units = ut.G
 
     def derive(self,
-               acc_lon=P('Acceleration Longitudinal'),
+               acc_lon=P('Acceleration Longitudinal Offset Removed'),
                takeoff=S('Takeoff')):
 
         self.create_kpv_from_slices(acc_lon.array, takeoff, max_value)
@@ -446,7 +446,7 @@ class AccelerationLongitudinalDuringLandingMin(KeyPointValueNode):
     units = ut.G
 
     def derive(self,
-               acc_lon=P('Acceleration Longitudinal'),
+               acc_lon=P('Acceleration Longitudinal Offset Removed'),
                landing=S('Landing')):
 
         self.create_kpv_from_slices(acc_lon.array, landing, min_value)

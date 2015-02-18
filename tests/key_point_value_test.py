@@ -1060,7 +1060,7 @@ class TestAccelerationLongitudinalDuringTakeoffMax(unittest.TestCase, CreateKPVF
 
     def setUp(self):
         self.node_class = AccelerationLongitudinalDuringTakeoffMax
-        self.operational_combinations = [('Acceleration Longitudinal', 'Takeoff')]
+        self.operational_combinations = [('Acceleration Longitudinal Offset Removed', 'Takeoff')]
         self.function = max_value
 
     @unittest.skip('Test Not Implemented')
@@ -1072,7 +1072,7 @@ class TestAccelerationLongitudinalDuringLandingMin(unittest.TestCase, CreateKPVF
 
     def setUp(self):
         self.node_class = AccelerationLongitudinalDuringLandingMin
-        self.operational_combinations = [('Acceleration Longitudinal', 'Landing')]
+        self.operational_combinations = [('Acceleration Longitudinal Offset Removed', 'Landing')]
         self.function = min_value
 
     @unittest.skip('Test Not Implemented')
