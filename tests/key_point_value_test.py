@@ -185,6 +185,8 @@ from analysis_engine.key_point_values import (
     DualInputDuration,
     DualInputAbove200FtDuration,
     DualInputBelow200FtDuration,
+    DualInputByCaptMax,
+    DualInputByFOMax,
     DualInputByCaptDuration,
     DualInputByFODuration,
     ElevatorDuringLandingMin,
@@ -11459,6 +11461,99 @@ class TestDualInputByFODuration(unittest.TestCase, NodeTest):
     ####    ])
 
     ####    self.assertEqual(node, expected)
+
+class TestDualInputByCaptMax(unittest.TestCase):
+
+    def setUp(self):
+        ranges = []
+        start = 0
+        for x in range(2, 20, 2):
+            ranges.append(np.ma.arange(start, x, 0.5))
+            ranges.append(np.ma.arange(x, x-1, -0.5))
+            start = x-1
+        self.stick_array = np.ma.concatenate(ranges)
+
+        self.node_class = DualInputByCaptMax
+
+    def test_can_operate(self):
+        expected = [('Sidestick Angle (Capt)',
+                    'Dual Input Warning',
+                    'Pilot Flying',
+                    'Takeoff Roll',
+                    'Landing Roll')]
+        self.assertEqual(expected,
+                         self.node_class.get_operational_combinations())
+
+    def test_derive(self):
+        takeoff_roll = buildsection('Takeoff Roll', 5, 20)
+        landing_roll = buildsection('Landing Roll', 55, 65)
+        dual_inputs_array = np.ma.zeros(70)
+        dual_inputs_array[25:30] = 1
+        dual_inputs_array[66:70] = 1
+        dual_inputs = M('Dual Input Warning',
+                        array=dual_inputs_array,
+                        values_mapping={0: '-', 1: 'Dual'})
+        pilot_array = np.ma.zeros(70)
+        pilot_array[10:30] = 2
+        pilot_array[40:50] = 2
+        pilot_array[66:70] = 2
+        pilot = M('Pilot Flying',
+                        array=pilot_array,
+                        values_mapping={0: '-', 1: 'Captain', 2: 'First Officer'})
+        stick = P('Sidestick Angle (Capt)', array=self.stick_array)
+        node = self.node_class()
+        node.derive(stick, dual_inputs, pilot, takeoff_roll, landing_roll)
+
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 28)
+        self.assertEqual(node[0].value, 8)
+
+
+class TestDualInputByFOMax(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        ranges = []
+        start = 0
+        for x in range(2, 20, 2):
+            ranges.append(np.ma.arange(start, x, 0.5))
+            ranges.append(np.ma.arange(x, x-1, -0.5))
+            start = x-1
+        self.stick_array = np.ma.concatenate(ranges)
+
+        self.node_class = DualInputByFOMax
+
+    def test_can_operate(self):
+        expected = [('Sidestick Angle (FO)',
+                    'Dual Input Warning',
+                    'Pilot Flying',
+                    'Takeoff Roll',
+                    'Landing Roll')]
+        self.assertEqual(expected,
+                         self.node_class.get_operational_combinations())
+
+    def test_derive(self):
+        takeoff_roll = buildsection('Takeoff Roll', 5, 20)
+        landing_roll = buildsection('Landing Roll', 55, 65)
+        dual_inputs_array = np.ma.zeros(70)
+        dual_inputs_array[25:30] = 1
+        dual_inputs_array[66:70] = 1
+        dual_inputs = M('Dual Input Warning',
+                        array=dual_inputs_array,
+                        values_mapping={0: '-', 1: 'Dual'})
+        pilot_array = np.ma.zeros(70)
+        pilot_array[10:30] = 1
+        pilot_array[40:50] = 1
+        pilot_array[66:70] = 1
+        pilot = M('Pilot Flying',
+                        array=pilot_array,
+                        values_mapping={0: '-', 1: 'Captain', 2: 'First Officer'})
+        stick = P('Sidestick Angle (FO)', array=self.stick_array)
+        node = self.node_class()
+        node.derive(stick, dual_inputs, pilot, takeoff_roll, landing_roll)
+
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 28)
+        self.assertEqual(node[0].value, 8)
 
 
 ##############################################################################

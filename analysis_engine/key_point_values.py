@@ -12431,6 +12431,79 @@ class DualInputByFODuration(KeyPointValueNode):
         self.create_kpvs_where(condition, dual.hz, phase)
 
 
+class DualInputByCaptMax(KeyPointValueNode):
+    '''
+    Maximum Sidestick Angle of Captain whilst First Officer flying.
+
+    We only look for dual input from the start of the first takeoff roll until
+    the end of the last landing roll. This KPV is used to detect occurrences of
+    dual input by the captain when the first officer was the pilot flying.
+
+    Reference was made to the following documentation to assist with the
+    development of this algorithm:
+
+    - A320 Flight Profile Specification
+    - A321 Flight Profile Specification
+    '''
+
+    units = ut.DEGREE
+
+    def derive(self,
+               stick_capt=P('Sidestick Angle (Capt)'),
+               dual=M('Dual Input Warning'),
+               pilot=M('Pilot Flying'),
+               takeoff_rolls=S('Takeoff Roll'),
+               landing_rolls=S('Landing Roll')):
+
+        start = takeoff_rolls.get_first().slice.start
+        stop = landing_rolls.get_last().slice.stop
+        phase = slice(start, stop)
+        condition = runs_of_ones((dual.array == 'Dual') & (pilot.array == 'First Officer'))
+        dual_input_phases = slices_and((phase,), condition)
+        self.create_kpvs_within_slices(
+            stick_capt.array,
+            dual_input_phases,
+            max_value
+        )
+
+
+class DualInputByFOMax(KeyPointValueNode):
+    '''
+    Maximum Sidestick Angle of First Officer whilst Captain flying.
+
+    We only look for dual input from the start of the first takeoff roll until
+    the end of the last landing roll. This KPV is used to detect occurrences of
+    dual input by the first officer when the captain was the pilot flying.
+
+    Reference was made to the following documentation to assist with the
+    development of this algorithm:
+
+    - A320 Flight Profile Specification
+    - A321 Flight Profile Specification
+    '''
+
+    name = 'Dual Input By FO Max'
+    units = ut.DEGREE
+
+    def derive(self,
+               stick_fo=P('Sidestick Angle (FO)'),
+               dual=M('Dual Input Warning'),
+               pilot=M('Pilot Flying'),
+               takeoff_rolls=S('Takeoff Roll'),
+               landing_rolls=S('Landing Roll')):
+
+        start = takeoff_rolls.get_first().slice.start
+        stop = landing_rolls.get_last().slice.stop
+        phase = slice(start, stop)
+        condition = runs_of_ones((dual.array == 'Dual') & (pilot.array == 'Captain'))
+        dual_input_phases = slices_and((phase,), condition)
+        self.create_kpvs_within_slices(
+            stick_fo.array,
+            dual_input_phases,
+            max_value
+        )
+
+
 ##############################################################################
 
 
