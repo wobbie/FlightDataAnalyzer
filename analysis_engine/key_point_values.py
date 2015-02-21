@@ -5027,6 +5027,52 @@ class DecelerationFromTouchdownToStopOnRunway(KeyPointValueNode):
                 self.create_kpv(index, mu)
 
 
+class DistanceFromRunwayCentrelineAtTouchdown(KeyPointValueNode):
+    '''
+    For the KTI at touchdown, find the distance from the centreline.
+    '''
+    
+    name = 'Distance From Runway Centreline At Touchdown'
+    units = ut.METER
+    
+    def derive(self,
+               lat_dist=P('ILS Lateral Distance'),
+               tdwns=KTI('Touchdown')):
+
+        self.create_kpvs_at_ktis(lat_dist.array, tdwns)
+
+
+class DistanceFromRunwayCentrelineFromTouchdownTo60KtMax(KeyPointValueNode):
+    '''
+    '''
+    
+    name = 'Distance From Runway Centreline From Touchdown To 60 Kt Max'
+    units = ut.METER
+    
+    def derive(self,
+               lat_dist = P('ILS Lateral Distance'),
+               lands=S('Landing'),
+               gspd=P('Groundspeed'),
+               tdwns=KTI('Touchdown')):
+
+        to_scan = []
+        for land in lands:
+            for tdwn in tdwns:
+                if is_index_within_slice(tdwn.index, land.slice) and \
+                   gspd.array[land.slice.stop] < 60.0:
+                    to_scan.append(slice(tdwn.index, 
+                                         index_at_value(gspd.array[land.slice], 
+                                                        60.0)+land.slice.start
+                                         )
+                                   )
+
+        self.create_kpvs_within_slices(
+            lat_dist.array,
+            to_scan,
+            max_abs_value
+            )
+
+    
 class RunwayHeadingTrue(KeyPointValueNode):
     '''
     Calculate Runway headings from runway information dictionaries.
@@ -5142,6 +5188,7 @@ class DistanceOnLandingFrom60KtToRunwayEnd(KeyPointValueNode):
     '''
     
     units = ut.METER
+    name = 'Distance On Landing From 60 Kt To Runway End'
     
     def derive(self,
                gspd=P('Groundspeed'),

@@ -182,6 +182,8 @@ from analysis_engine.key_point_values import (
     DecelerationFromTouchdownToStopOnRunway,
     DelayedBrakingAfterTouchdown,
     DirectLawDuration,
+    DistanceFromRunwayCentrelineAtTouchdown,
+    DistanceFromRunwayCentrelineFromTouchdownTo60KtMax,
     DualInputDuration,
     DualInputAbove200FtDuration,
     DualInputBelow200FtDuration,
@@ -5327,6 +5329,58 @@ class TestDecelerationFromTouchdownToStopOnRunway(unittest.TestCase, NodeTest):
         self.assertTrue(False, msg='Test not implemented.')
 
 
+class TestDistanceFromRunwayCentrelineAtTouchdown(unittest.TestCase):
+    def test_can_operate(self):
+        ops = DistanceFromRunwayCentrelineAtTouchdown.get_operational_combinations()
+        self.assertEqual(ops, [('ILS Lateral Distance', 'Touchdown')])
+       
+    def test_basic(self):
+        lat = P('ILS Lateral Distance', range(10))
+        tdwns = KTI(items=[KeyTimeInstance(3), KeyTimeInstance(5)])
+        dist = DistanceFromRunwayCentrelineAtTouchdown()
+        dist.derive(lat, tdwns)
+        self.assertEqual(dist[0].value, 3.0)
+        self.assertEqual(dist[0].index, 3.0)
+        self.assertEqual(dist[1].value, 5.0)
+        self.assertEqual(dist[1].index, 5.0)
+    
+    def test_masked(self):
+        lat = P('ILS Lateral Distance', range(10))
+        lat.array[5] = np.ma.masked
+        tdwns = KTI(items=[KeyTimeInstance(3), KeyTimeInstance(5)])
+        dist = DistanceFromRunwayCentrelineAtTouchdown()
+        dist.derive(lat, tdwns)
+        # Only one answer should be returned.
+        self.assertEqual(len(dist), 1)
+        
+class TestDistanceFromRunwayCentrelineFromTouchdownTo60KtMax(unittest.TestCase):
+    def test_can_operate(self):
+        ops = DistanceFromRunwayCentrelineFromTouchdownTo60KtMax.get_operational_combinations()
+        self.assertEqual(ops, [('ILS Lateral Distance', 'Landing',
+                                'Groundspeed', 'Touchdown')])
+        
+    def test_basic(self):
+        lat = P('ILS Lateral Distance', range(10))
+        lands=buildsection('Landing', 2, 8)
+        gspd = P('Groundspeed', range(130,30,-10))
+        tdwns = KTI(items=[KeyTimeInstance(3)])
+        dist = DistanceFromRunwayCentrelineFromTouchdownTo60KtMax()
+        dist.derive(lat, lands, gspd, tdwns)
+        # The value 4 occurs at the 60kt point
+        self.assertEqual(dist[0].value, 4.0)
+
+    def test_abs_function(self):
+        lat = P('ILS Lateral Distance', range(10))
+        lat.array[3] = -20.0
+        lands=buildsection('Landing', 2, 8)
+        gspd = P('Groundspeed', range(130,30,-10))
+        tdwns = KTI(items=[KeyTimeInstance(3)])
+        dist = DistanceFromRunwayCentrelineFromTouchdownTo60KtMax()
+        dist.derive(lat, lands, gspd, tdwns)
+        self.assertEqual(dist[0].value, -20.0)
+        self.assertEqual(dist[0].index, 3.0)
+
+        
 class TestDistanceFrom60KtToRunwayEnd(unittest.TestCase):
     @unittest.skip('Test Not Implemented')
     def test_can_operate(self):

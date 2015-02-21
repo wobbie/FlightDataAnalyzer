@@ -4110,6 +4110,40 @@ class ILSLocalizer(DerivedParameterNode):
         self.array = blend_parameters(sources, offset=self.offset, 
                                       frequency=self.frequency)
 
+class ILSLateralDistance(DerivedParameterNode):
+    '''
+    Lateral distance from the runway centreline based in ILS localizer
+    signals, scaled in metres, positive to the right of the centreline.
+    
+    The term distance is used to indicate linear distance, rather than the
+    angular deviation (dots) of the ILS system.
+    '''
+
+    units = ut.METER
+    name = 'ILS Lateral Distance'
+
+    def derive(self, loc=P('ILS Localizer'), app_rng=P('Approach Range'),
+               approaches=App('Approach Information')):
+    
+        self.array = np_ma_masked_zeros_like(loc.array)
+
+        for approach in approaches:
+            runway = approach.runway
+            if not runway:
+                # no runway to establish distance to localizer antenna
+                continue
+
+            start_2_loc = runway_distances(runway)[0]
+            try:
+                hw = (runway['strip']['width'] / 2.0) / METRES_TO_FEET
+            except (KeyError, TypeError):
+                raise 'Unknown runway width'
+
+            # Scale for localizer deviation to metres at runway start
+            scale = hw / start_2_loc 
+            s = approach.slice
+            self.array[s] = loc.array[s] * app_rng.array[s] * scale
+
 
 class ILSGlideslope(DerivedParameterNode):
     '''
