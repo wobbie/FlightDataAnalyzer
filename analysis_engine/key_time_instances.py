@@ -1,6 +1,6 @@
 import numpy as np
+
 from math import ceil, floor
-import tempfile
 
 from analysis_engine.library import (
     all_of,
@@ -19,7 +19,6 @@ from analysis_engine.library import (
     rate_of_change,
     repair_mask,
     runs_of_ones,
-    second_window,
     slices_and,
     slice_duration,
     slices_not,

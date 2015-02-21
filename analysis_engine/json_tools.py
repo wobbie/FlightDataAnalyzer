@@ -6,6 +6,9 @@ import dateutil.parser
 from datetime import datetime
 
 
+# VERSION will be included in json output. Only json matching the current VERSION number will be loaded.
+VERSION = '0.1'
+
 PROCESS_FLIGHT_RESULT_KEYS = (
     'flight',
     'kti',
@@ -136,24 +139,63 @@ def process_flight_to_json(pf_results, indent=2):
     """
     d = collections.OrderedDict()
     for key in PROCESS_FLIGHT_RESULT_KEYS:
-        d[key] = []
-        for node in pf_results[key]:
-            d[key].append(node_to_jsondict(node))
-
-        d[key] = sorted(d[key])
-
-    return json.dumps(d, indent=indent)
+        d[key] = {}
+        for name, items in pf_results[key].items():
+            d[key][name] = [node_to_jsondict(i) for i in items]
+        
+        # Q: Should we sort?
+        #d[key] = sorted(d[key])
+    
+    d['version'] = VERSION
+    
+    return json.dumps(sort_dict(d), indent=indent)
 
 
 def json_to_process_flight(txt):
     """
     Convert JSON to a data structure as returned by `process_flight`.
+    
+    :rtype: dict
     """
     d = json.loads(txt)
+    
+    if not d.get('version') == VERSION:
+        return {}
+
     res = {}
     for key in PROCESS_FLIGHT_RESULT_KEYS:
-        res[key] = []
-        for dn in d[key]:
-            res[key].append(jsondict_to_node(dn))
+        res[key] = {}
+        for name, items in d[key].items():
+            res[key][name] = [jsondict_to_node(i) for i in items]
 
     return res
+
+
+def process_flight_to_nodes(pf_results):
+    '''
+    Load process flight results into Node objects.
+    '''
+    from analysis_engine import node
+    
+    node_classes = {
+        'kti': node.KeyTimeInstanceNode,
+        'kpv': node.KeyPointValueNode,
+        'phases': node.FlightPhaseNode,
+        'approach': node.ApproachNode,
+        'flight': node.FlightAttributeNode,
+    }
+    
+    params = {}
+    
+    for node_type, nodes in pf_results.iteritems():
+        node_cls = node_classes[node_type]
+        for node_name, items in nodes.iteritems():
+            if node_type == 'flight' and items:
+                flight_attr = node.FlightAttributeNode(node_name)
+                flight_attr.set_flight_attr(items[0].value)
+                params[node_name] = flight_attr
+                continue
+            
+            params[node_name] = node_cls(node_name, items=items)
+    
+    return params
