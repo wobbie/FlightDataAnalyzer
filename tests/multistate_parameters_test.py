@@ -693,7 +693,7 @@ class TestDaylight(unittest.TestCase):
         np.testing.assert_array_equal(don.array, expected)  # FIX required to test as no longer superframe samples
 
 
-class TestDualInputWarning(unittest.TestCase, NodeTest):
+class TestDualInput(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = DualInput
         self.pilot_map = {0: '-', 1: 'Captain', 2: 'First Officer'}

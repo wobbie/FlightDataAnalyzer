@@ -12497,7 +12497,7 @@ class DualInputByCaptMax(KeyPointValueNode):
 
     def derive(self,
                stick_capt=P('Sidestick Angle (Capt)'),
-               dual=M('Dual Input Warning'),
+               dual=M('Dual Input'),
                pilot=M('Pilot Flying'),
                takeoff_rolls=S('Takeoff Roll'),
                landing_rolls=S('Landing Roll')):
@@ -12534,7 +12534,7 @@ class DualInputByFOMax(KeyPointValueNode):
 
     def derive(self,
                stick_fo=P('Sidestick Angle (FO)'),
-               dual=M('Dual Input Warning'),
+               dual=M('Dual Input'),
                pilot=M('Pilot Flying'),
                takeoff_rolls=S('Takeoff Roll'),
                landing_rolls=S('Landing Roll')):

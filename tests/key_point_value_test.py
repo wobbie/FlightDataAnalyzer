@@ -11531,7 +11531,7 @@ class TestDualInputByCaptMax(unittest.TestCase):
 
     def test_can_operate(self):
         expected = [('Sidestick Angle (Capt)',
-                    'Dual Input Warning',
+                    'Dual Input',
                     'Pilot Flying',
                     'Takeoff Roll',
                     'Landing Roll')]
@@ -11544,7 +11544,7 @@ class TestDualInputByCaptMax(unittest.TestCase):
         dual_inputs_array = np.ma.zeros(70)
         dual_inputs_array[25:30] = 1
         dual_inputs_array[66:70] = 1
-        dual_inputs = M('Dual Input Warning',
+        dual_inputs = M('Dual Input',
                         array=dual_inputs_array,
                         values_mapping={0: '-', 1: 'Dual'})
         pilot_array = np.ma.zeros(70)
@@ -11578,7 +11578,7 @@ class TestDualInputByFOMax(unittest.TestCase, NodeTest):
 
     def test_can_operate(self):
         expected = [('Sidestick Angle (FO)',
-                    'Dual Input Warning',
+                    'Dual Input',
                     'Pilot Flying',
                     'Takeoff Roll',
                     'Landing Roll')]
@@ -11591,7 +11591,7 @@ class TestDualInputByFOMax(unittest.TestCase, NodeTest):
         dual_inputs_array = np.ma.zeros(70)
         dual_inputs_array[25:30] = 1
         dual_inputs_array[66:70] = 1
-        dual_inputs = M('Dual Input Warning',
+        dual_inputs = M('Dual Input',
                         array=dual_inputs_array,
                         values_mapping={0: '-', 1: 'Dual'})
         pilot_array = np.ma.zeros(70)
