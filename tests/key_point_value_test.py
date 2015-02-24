@@ -184,13 +184,13 @@ from analysis_engine.key_point_values import (
     DirectLawDuration,
     DistanceFromRunwayCentrelineAtTouchdown,
     DistanceFromRunwayCentrelineFromTouchdownTo60KtMax,
-    DualInputDuration,
     DualInputAbove200FtDuration,
     DualInputBelow200FtDuration,
-    DualInputByCaptMax,
-    DualInputByFOMax,
     DualInputByCaptDuration,
+    DualInputByCaptMax,
     DualInputByFODuration,
+    DualInputByFOMax,
+    DualInputWarningDuration,
     ElevatorDuringLandingMin,
     EngBleedValvesAtLiftoff,
     EngEPR500To50FtMax,
@@ -11290,20 +11290,20 @@ class TestGrossWeightDelta60SecondsInFlightMax(unittest.TestCase):
 # Dual Input
 
 
-class TestDualInputDuration(unittest.TestCase, NodeTest):
+class TestDualInputWarningDuration(unittest.TestCase, NodeTest):
 
     def setUp(self):
-        self.node_class = DualInputDuration
+        self.node_class = DualInputWarningDuration
         self.operational_combinations = [
-            ('Dual Input', 'Takeoff Roll', 'Landing Roll'),
+            ('Dual Input Warning', 'Takeoff Roll', 'Landing Roll'),
         ]
 
     def test_derive(self):
         mapping = {0: '-', 1: 'Dual'}
-        dual = M('Dual Input', np.ma.zeros(50), values_mapping=mapping)
+        dual = M('Dual Input Warning', np.ma.zeros(50), values_mapping=mapping)
         dual.array[3:10] = 'Dual'
 
-        takeoff_roll = buildsection('Takeoff Roll Or Rejected Takeoff', 0, 5)
+        takeoff_roll = buildsection('Takeoff Roll', 0, 5)
         landing_roll = buildsection('Landing Roll', 44, 50)
 
         node = self.node_class()
@@ -11319,8 +11319,9 @@ class TestDualInputDuration(unittest.TestCase, NodeTest):
     def test_derive_from_hdf(self):
         path = os.path.join(test_data_path, 'dual_input.hdf5')
         [dual], phase = self.get_params_from_hdf(path, ['Dual Input'])
+        dual.name = 'Dual Input Warning'  # Hack...
 
-        takeoff_roll = buildsection('Takeoff Roll Or Rejected Takeoff', 0, 100)
+        takeoff_roll = buildsection('Takeoff Roll', 0, 100)
         landing_roll = buildsection('Landing Roll', 320, 420)
 
         node = self.node_class()

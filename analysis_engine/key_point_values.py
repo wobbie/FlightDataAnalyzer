@@ -12326,31 +12326,21 @@ class GrossWeightDelta60SecondsInFlightMax(KeyPointValueNode):
 # Dual Input
 
 
-class DualInputDuration(KeyPointValueNode):
+class DualInputWarningDuration(KeyPointValueNode):
     '''
-    Duration of dual input.
+    Duration of dual input warning discrete parameter as recorded on aircraft.
 
     We only look for dual input from the start of the first takeoff roll until
     the end of the last landing roll. This KPV is used to detect occurrences of
     dual input by either pilot irrespective of who was flying.
 
-    Makes use of Dual Input parameter which is derived from at least 2.0
-    degrees sidestick deflection by non-pilot flying for a minimum of 3
-    seconds.
-
     This does not include looking at dual inputs during a rejected takeoff.
-
-    Reference was made to the following documentation to assist with the
-    development of this algorithm:
-
-    - A320 Flight Profile Specification
-    - A321 Flight Profile Specification
     '''
 
     units = ut.SECOND
 
     def derive(self,
-               dual=M('Dual Input'),
+               dual=M('Dual Input Warning'),
                takeoff_rolls=S('Takeoff Roll'),
                landing_rolls=S('Landing Roll')):
 
