@@ -12326,21 +12326,15 @@ class GrossWeightDelta60SecondsInFlightMax(KeyPointValueNode):
 # Dual Input
 
 
-class DualInputDuration(KeyPointValueNode):
+class DualInputWarningDuration(KeyPointValueNode):
     '''
-    Duration of dual input.
+    Duration of dual input warning discrete parameter as recorded on aircraft.
 
     We only look for dual input from the start of the first takeoff roll until
     the end of the last landing roll. This KPV is used to detect occurrences of
     dual input by either pilot irrespective of who was flying.
-    
+
     This does not include looking at dual inputs during a rejected takeoff.
-
-    Reference was made to the following documentation to assist with the
-    development of this algorithm:
-
-    - A320 Flight Profile Specification
-    - A321 Flight Profile Specification
     '''
 
     units = ut.SECOND
@@ -12365,6 +12359,10 @@ class DualInputAbove200FtDuration(KeyPointValueNode):
     the end of the last landing roll. This KPV is used to detect occurrences of
     dual input above 200 ft AAL by either pilot irrespective of who was flying.
 
+    Makes use of Dual Input parameter which is derived from at least 2.0
+    degrees sidestick deflection by non-pilot flying for a minimum of 3
+    seconds.
+
     Reference was made to the following documentation to assist with the
     development of this algorithm:
 
@@ -12375,14 +12373,9 @@ class DualInputAbove200FtDuration(KeyPointValueNode):
     units = ut.SECOND
 
     def derive(self,
-               dual=M('Dual Input Warning'),
-               alt_aal=P('Altitude AAL'),
-               takeoff_rolls=S('Takeoff Roll'),
-               landing_rolls=S('Landing Roll')):
-        # Q: Takeoff / Landing Roll should be redundant if over 200ft AAL?!
-        start = takeoff_rolls.get_first().slice.start
-        stop = landing_rolls.get_last().slice.stop
-        phase = slices_and([slice(start, stop)], alt_aal.slices_above(200))
+               dual=M('Dual Input'),
+               alt_aal=P('Altitude AAL')):
+        phase = alt_aal.slices_above(200)
         condition = dual.array == 'Dual'
         self.create_kpvs_where(condition, dual.hz, phase)
 
@@ -12395,6 +12388,10 @@ class DualInputBelow200FtDuration(KeyPointValueNode):
     the end of the last landing roll. This KPV is used to detect occurrences of
     dual input below 200 ft AAL by either pilot irrespective of who was flying.
 
+    Makes use of Dual Input parameter which is derived from at least 2.0
+    degrees sidestick deflection by non-pilot flying for a minimum of 3
+    seconds.
+
     Reference was made to the following documentation to assist with the
     development of this algorithm:
 
@@ -12405,7 +12402,7 @@ class DualInputBelow200FtDuration(KeyPointValueNode):
     units = ut.SECOND
 
     def derive(self,
-               dual=M('Dual Input Warning'),
+               dual=M('Dual Input'),
                alt_aal=P('Altitude AAL'),
                takeoff_rolls=S('Takeoff Roll'),
                landing_rolls=S('Landing Roll')):
@@ -12425,6 +12422,10 @@ class DualInputByCaptDuration(KeyPointValueNode):
     the end of the last landing roll. This KPV is used to detect occurrences of
     dual input by the captain when the first officer was the pilot flying.
 
+    Makes use of Dual Input parameter which is derived from at least 2.0
+    degrees sidestick deflection by non-pilot flying for a minimum of 3
+    seconds.
+
     Reference was made to the following documentation to assist with the
     development of this algorithm:
 
@@ -12435,7 +12436,7 @@ class DualInputByCaptDuration(KeyPointValueNode):
     units = ut.SECOND
 
     def derive(self,
-               dual=M('Dual Input Warning'),
+               dual=M('Dual Input'),
                pilot=M('Pilot Flying'),
                takeoff_rolls=S('Takeoff Roll'),
                landing_rolls=S('Landing Roll')):
@@ -12455,6 +12456,10 @@ class DualInputByFODuration(KeyPointValueNode):
     the end of the last landing roll. This KPV is used to detect occurrences of
     dual input by the first officer when the captain was the pilot flying.
 
+    Makes use of Dual Input parameter which is derived from at least 2.0
+    degrees sidestick deflection by non-pilot flying for a minimum of 3
+    seconds.
+
     Reference was made to the following documentation to assist with the
     development of this algorithm:
 
@@ -12466,7 +12471,7 @@ class DualInputByFODuration(KeyPointValueNode):
     units = ut.SECOND
 
     def derive(self,
-               dual=M('Dual Input Warning'),
+               dual=M('Dual Input'),
                pilot=M('Pilot Flying'),
                takeoff_rolls=S('Takeoff Roll'),
                landing_rolls=S('Landing Roll')):
@@ -12480,11 +12485,15 @@ class DualInputByFODuration(KeyPointValueNode):
 
 class DualInputByCaptMax(KeyPointValueNode):
     '''
-    Maximum Sidestick Angle of Captain whilst First Officer flying.
+    Maximum sidestick angle of captain whilst first officer flying.
 
     We only look for dual input from the start of the first takeoff roll until
     the end of the last landing roll. This KPV is used to detect occurrences of
     dual input by the captain when the first officer was the pilot flying.
+
+    Makes use of Dual Input parameter which is derived from at least 2.0
+    degrees sidestick deflection by non-pilot flying for a minimum of 3
+    seconds.
 
     Reference was made to the following documentation to assist with the
     development of this algorithm:
@@ -12516,11 +12525,15 @@ class DualInputByCaptMax(KeyPointValueNode):
 
 class DualInputByFOMax(KeyPointValueNode):
     '''
-    Maximum Sidestick Angle of First Officer whilst Captain flying.
+    Maximum sidestick angle of first officer whilst captain flying.
 
     We only look for dual input from the start of the first takeoff roll until
     the end of the last landing roll. This KPV is used to detect occurrences of
     dual input by the first officer when the captain was the pilot flying.
+
+    Makes use of Dual Input parameter which is derived from at least 2.0
+    degrees sidestick deflection by non-pilot flying for a minimum of 3
+    seconds.
 
     Reference was made to the following documentation to assist with the
     development of this algorithm:

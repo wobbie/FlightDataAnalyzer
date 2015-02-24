@@ -452,6 +452,18 @@ class DualInput(MultistateDerivedParameterNode):
 
     For Airbus aircraft, this requires us to check the angle of the sidestick.
 
+    Note that the AFPS defines DUAL_INPUT as 0.5 degree deflection for more
+    than 3 seconds. However, the A330/A340 have poor resolution so this
+    threshold was increased to 1.7 degrees. SmartCockpit Flight Controls
+    Sidestick priority logic declares a 2.0 degree deflection will trigger
+    "SIDE STICK PRIORITY" lights on the glareshield and the "DUAL INPUT" voice
+    message is activated. Therefore, the threshold used here is 2.0 degrees for
+    3 seconds so all maximum sidestick angle KPVs measured during Dual Input
+    will have a minimum of 2.0 degrees.
+
+    This is not strictly speaking a warning as we have no record that anything
+    was triggered in the cockpit.
+
     Reference was made to the following documentation to assist with the
     development of this algorithm:
 
@@ -468,9 +480,7 @@ class DualInput(MultistateDerivedParameterNode):
         array = np_ma_zeros_like(pilot.array)
         array[pilot.array == 'Captain'] = stick_fo.array[pilot.array == 'Captain']
         array[pilot.array == 'First Officer'] = stick_capt.array[pilot.array == 'First Officer']
-        # Due to the poor resolution of the A330/A340 sidesticks, a threshold
-        # increase was required to ensure reliable operation.
-        array = np.ma.array(array > 1.7, mask=array.mask, dtype=int)
+        array = np.ma.array(array > 2.0, mask=array.mask, dtype=int)
 
         slices = runs_of_ones(array)
         slices = slices_remove_small_gaps(slices, 15, self.hz)
