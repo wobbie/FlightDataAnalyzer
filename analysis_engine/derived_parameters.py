@@ -94,6 +94,7 @@ from analysis_engine.library import (actuator_mismatch,
                                      vstack_params_sw)
 
 from settings import (AIRSPEED_THRESHOLD,
+                      ALTITUDE_AAL_TRANS_ALT,
                       ALTITUDE_RADIO_OFFSET_LIMIT,
                       AZ_WASHOUT_TC,
                       BOUNCED_LANDING_THRESHOLD,
@@ -570,7 +571,8 @@ class AltitudeAAL(DerivedParameterNode):
 
         # We pretend the aircraft can't go below ground level for altitude AAL:
         alt_rad_aal = np.ma.maximum(alt_rad, 0.0)
-        ralt_sections = np.ma.clump_unmasked(np.ma.masked_outside(alt_rad_aal, 0.1, 100.0))
+        ralt_sections = np.ma.clump_unmasked(
+            np.ma.masked_outside(alt_rad_aal, 0.1, ALTITUDE_AAL_TRANS_ALT))
         if len(ralt_sections) == 0:
             # No useful radio altitude signals, so just use pressure altitude
             # and pitch data.
@@ -590,7 +592,8 @@ class AltitudeAAL(DerivedParameterNode):
 
         elif mode=='over_gnd':
 
-            ralt_sections = np.ma.clump_unmasked(np.ma.masked_outside(alt_rad_aal, 0.0, 100.0))
+            ralt_sections = np.ma.clump_unmasked(
+                np.ma.masked_outside(alt_rad_aal, 0.0, ALTITUDE_AAL_TRANS_ALT))
             if len(ralt_sections)==0:
                 # Either Altitude Radio did not drop below 100, or did not get
                 # above 100. Either way, we are better off working with just the

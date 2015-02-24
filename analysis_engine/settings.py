@@ -114,6 +114,9 @@ AIRSPEED_THRESHOLD_TIME = 3 * 60  # secs
 # 64 samples is enough to exceed arinc and short enough to not affect flights
 AIRSPEED_HASH_MIN_SAMPLES = 64
 
+# Transition altitude between Altitude Rad and Altitude STD for Altitude AAL
+ALTITUDE_AAL_TRANS_ALT = 50.0
+
 # Altitude AAL complementary filter timeconstant
 ALTITUDE_AAL_LAG_TC = 3.0
 
