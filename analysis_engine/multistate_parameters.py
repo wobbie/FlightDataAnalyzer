@@ -1651,9 +1651,11 @@ class PilotFlying(MultistateDerivedParameterNode):
             angle_fo = repair_mask(angle_fo, repair_duration=31,
                                    extrapolate=True)
             # ignore moving average if no input from pilot at that time.
-            angle_capt_zerod = np.ma.where(stick_capt.array == 0.0, 0.0, angle_capt)
-            angle_fo_zerod = np.ma.where(stick_fo.array == 0.0, 0.0, angle_fo)
-            # mask non imputs to allow us to repair nearest neightbour later
+            # AFPS declares 0.5 degrees minimum input, but due to A330/A340 
+            # poor resolution, allow 1.7 degrees of movement.
+            angle_capt_zerod = np.ma.where(stick_capt.array < 1.7, 0.0, angle_capt)
+            angle_fo_zerod = np.ma.where(stick_fo.array < 1.7, 0.0, angle_fo)
+            # mask non inputs to allow us to repair nearest neightbour later
             angle_capt_masked = np.ma.masked_where((stick_capt.array == 0.0) & (angle_capt_zerod != 0.0), angle_capt_zerod)
             angle_fo_masked = np.ma.masked_where((stick_fo.array == 0.0) & (angle_fo_zerod != 0.0), angle_fo_zerod)
 
@@ -1662,7 +1664,7 @@ class PilotFlying(MultistateDerivedParameterNode):
             # keep calculated masks
             pilot_flying.mask = angle_capt_masked.mask & angle_fo_masked.mask
 
-            # repair nearest neightbour to remove small gaps of no movement.
+            # repair nearest neighbour to remove small gaps of no movement
             pilot_flying = nearest_neighbour_mask_repair(pilot_flying, repair_gap_size=20*self.frequency, copy=False)
             # use second window to remove spiking between captain and first
             # officer during dual stick periods
