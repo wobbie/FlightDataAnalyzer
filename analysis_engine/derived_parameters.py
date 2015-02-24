@@ -3383,7 +3383,7 @@ class FuelQty(DerivedParameterNode):
     '''
     May be supplanted by an LFL parameter of the same name if available.
 
-    Sum of fuel in left, right and middle tanks where available.
+    Sum of fuel in left, right, centre and other tanks where available.
     '''
 
     # XXX: Enabling alignment because different frequency 
@@ -3401,15 +3401,14 @@ class FuelQty(DerivedParameterNode):
     def derive(self,
                fuel_qty_l=P('Fuel Qty (L)'),
                fuel_qty_c=P('Fuel Qty (C)'),
-               fuel_qty_c_1=P('Fuel Qty (C1)'),
-               fuel_qty_c_2=P('Fuel Qty (C2)'),
                fuel_qty_r=P('Fuel Qty (R)'),
                fuel_qty_trim=P('Fuel Qty (Trim)'),
                fuel_qty_aux=P('Fuel Qty (Aux)'),
-               fuel_qty_tail=P('Fuel Qty (Tail)')):
+               fuel_qty_tail=P('Fuel Qty (Tail)'),
+               fuel_qty_stab=P('Fuel Qty (Stab)')):
         params = []
-        for param in (fuel_qty_l, fuel_qty_c, fuel_qty_c_1, fuel_qty_c_2,
-                      fuel_qty_r, fuel_qty_trim, fuel_qty_aux, fuel_qty_tail):
+        for param in (fuel_qty_l, fuel_qty_c, fuel_qty_r,  fuel_qty_trim, 
+                      fuel_qty_aux, fuel_qty_tail, fuel_qty_stab):
             if not param or np.ma.count(param.array)/float(len(param.array))<MIN_VALID_FUEL:
                 continue
             # Repair array masks to ensure that the summed values are not too small
@@ -3440,6 +3439,31 @@ class FuelQty(DerivedParameterNode):
             self.offset = 0.0
 
 
+class FuelQtyC(DerivedParameterNode):
+    '''
+    Total fuel quantity measured in the centre tanks.
+    
+    Note: A340 has up to 4 centre tanks!
+    '''
+    name = 'Fuel Qty (C)'
+
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self, fuel_qty_c_1=P('Fuel Qty (C) (1)'),
+               fuel_qty_c_2=P('Fuel Qty (C) (2)'),
+               fuel_qty_c_3=P('Fuel Qty (C) (3)'),
+               fuel_qty_c_4=P('Fuel Qty (C) (4)')):
+        # Sum all the available measurements! Masked values are maintained as
+        # all tanks must be reading valid values to be summed together. Fuel in
+        # both tanks but a masked value in one should not result in half the
+        # measured fuel quantity!
+        stacked_params = vstack_params(fuel_qty_c_1, fuel_qty_c_2,
+                                       fuel_qty_c_3, fuel_qty_c_4)
+        self.array = np.ma.sum(stacked_params, axis=0)
+
+
 class FuelQtyL(DerivedParameterNode):
     '''
     Total fuel quantity measured in the left wing.
@@ -3450,17 +3474,17 @@ class FuelQtyL(DerivedParameterNode):
     def can_operate(cls, available):
         return any_of(cls.get_dependency_names(), available)
 
-    def derive(self, fuel_qty_l_1=P('Fuel Qty (L1)'),
-               fuel_qty_l_2=P('Fuel Qty (L2)'),
-               fuel_qty_l_3=P('Fuel Qty (L3)'),):
+    def derive(self, fuel_qty_l_1=P('Fuel Qty (L) (1)'),
+               fuel_qty_l_2=P('Fuel Qty (L) (2)'),
+               fuel_qty_l_3=P('Fuel Qty (L) (3)'),
+               fuel_qty_l_4=P('Fuel Qty (L) (4)')):
         # Sum all the available measurements! Masked values are maintained as
         # all tanks must be reading valid values to be summed together. Fuel in
         # both tanks but a masked value in one should not result in half the
         # measured fuel quantity!
-        params = [p.array for p in (fuel_qty_l_1,
-                                    fuel_qty_l_2,
-                                    fuel_qty_l_3) if p is not None]
-        self.array = np.ma.sum(np.ma.vstack(params), axis=0)
+        stacked_params = vstack_params(fuel_qty_l_1, fuel_qty_l_2,
+                                       fuel_qty_l_3, fuel_qty_l_4)
+        self.array = np.ma.sum(stacked_params, axis=0)
 
 
 class FuelQtyR(DerivedParameterNode):
@@ -3473,17 +3497,17 @@ class FuelQtyR(DerivedParameterNode):
     def can_operate(cls, available):
         return any_of(cls.get_dependency_names(), available)
 
-    def derive(self, fuel_qty_r_1=P('Fuel Qty (R1)'),
-               fuel_qty_r_2=P('Fuel Qty (R2)'),
-               fuel_qty_r_3=P('Fuel Qty (R3)'),):
+    def derive(self, fuel_qty_r_1=P('Fuel Qty (R) (1)'),
+               fuel_qty_r_2=P('Fuel Qty (R) (2)'),
+               fuel_qty_r_3=P('Fuel Qty (R) (3)'),
+               fuel_qty_r_4=P('Fuel Qty (R) (4)')):
         # Sum all the available measurements! Masked values are maintained as
         # all tanks must be reading valid values to be summed together. Fuel in
         # both tanks but a masked value in one should not result in half the
         # measured fuel quantity!
-        params = [p.array for p in (fuel_qty_r_1,
-                                    fuel_qty_r_2,
-                                    fuel_qty_r_3) if p is not None]
-        self.array = np.ma.sum(np.ma.vstack(params), axis=0)
+        stacked_params = vstack_params(fuel_qty_r_1, fuel_qty_r_2,
+                                       fuel_qty_r_3, fuel_qty_r_4)
+        self.array = np.ma.sum(stacked_params, axis=0)
 
 
 ##############################################################################

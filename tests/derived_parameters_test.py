@@ -126,6 +126,7 @@ from analysis_engine.derived_parameters import (
     EngTPRLimitDifference,
     FlapAngle,
     FuelQty,
+    FuelQtyC,
     FuelQtyL,
     FuelQtyR,
     GrossWeight,
@@ -2444,8 +2445,12 @@ class TestFuelQty(unittest.TestCase):
         # combinations as this can get very large (2**(n-1)-1) where n is the
         # number of parameters n-1 as both left and right are required if
         # either is avalibale (-1 as none is not a option)
-        self.assertEqual(len(FuelQty.get_operational_combinations()), 2**7-1)
-    
+        self.assertEqual(len(FuelQty.get_operational_combinations()), 2**6-1)
+        opts = FuelQty.get_operational_combinations()
+        self.assertTrue(('Fuel Qty (L)', 'Fuel Qty (C)', 'Fuel Qty (R)',
+                         'Fuel Qty (Trim)', 'Fuel Qty (Aux)',
+                         'Fuel Qty (Tail)', 'Fuel Qty (Stab)') in opts)
+
     def test_three_tanks(self):
         fuel_qty1 = P('Fuel Qty (L)', 
                       array=np.ma.array([1,2,3], mask=[False, False, False]))
@@ -2455,12 +2460,12 @@ class TestFuelQty(unittest.TestCase):
         fuel_qty3 = P('Fuel Qty (R)',
                       array=np.ma.array([3,6,9], mask=[False, True, False]))
         fuel_qty_node = FuelQty()
-        fuel_qty_node.derive(fuel_qty1, fuel_qty2, None, None, fuel_qty3,
-                             None, None, None)
+        fuel_qty_node.derive(fuel_qty1, fuel_qty2, fuel_qty3, None, None, 
+                             None, None)
         np.testing.assert_array_equal(fuel_qty_node.array,
                                       np.ma.array([6, 12, 18]))
         # Works without all parameters.
-        fuel_qty_node.derive(fuel_qty1, *[None,]*7)
+        fuel_qty_node.derive(fuel_qty1, *[None,]*6)
         np.testing.assert_array_equal(fuel_qty_node.array,
                                       np.ma.array([1, 2, 3]))
 
@@ -2475,8 +2480,8 @@ class TestFuelQty(unittest.TestCase):
         fuel_qty_a = P('Fuel Qty (Aux)',
                       array=np.ma.array([11,12,13], mask=[False, False, False]))
         fuel_qty_node = FuelQty()
-        fuel_qty_node.derive(fuel_qty1, fuel_qty2, None, None, fuel_qty3,
-                             fuel_qty_a, None, None)
+        fuel_qty_node.derive(fuel_qty1, fuel_qty2, fuel_qty3, fuel_qty_a, 
+                             None, None, None)
         np.testing.assert_array_equal(fuel_qty_node.array,
                                       np.ma.array([17, 24, 31]))
     
@@ -2487,10 +2492,47 @@ class TestFuelQty(unittest.TestCase):
                       array=np.ma.array([2,4,6], mask=[True, True, True]))
         # Mask will be interpolated by repair_mask.
         fuel_qty_node = FuelQty()
-        fuel_qty_node.derive(fuel_qty1, None, None, None, fuel_qty2, None, None, None)
+        fuel_qty_node.derive(fuel_qty1, None, fuel_qty2, None, None, None, None)
         np.testing.assert_array_equal(fuel_qty_node.array,
                                       np.ma.array([1, 2, 3]))
 
+class TestFuelQtyC(unittest.TestCase):
+    def test_can_operate(self):
+        # testing for number of combinations possible, will operate with at
+        # least one of the listed parameters. Not listing all operational
+        # combinations as this can get very large (2**n-1) where n is the
+        # number of parameters (-1 as none is not a option)
+        opts = FuelQtyC.get_operational_combinations()
+        self.assertTrue(('Fuel Qty (C) (1)',) in opts)
+        self.assertTrue(('Fuel Qty (C) (2)',) in opts)
+        self.assertTrue(('Fuel Qty (C) (3)',) in opts)
+        self.assertTrue(('Fuel Qty (C) (1)', 'Fuel Qty (C) (2)',
+                         'Fuel Qty (C) (3)') in opts)
+        self.assertTrue(('Fuel Qty (C) (1)', 'Fuel Qty (C) (2)',
+                         'Fuel Qty (C) (3)', 'Fuel Qty (C) (4)') in opts)
+    
+    def test_three_tanks(self):
+        fuel_qty1 = P('Fuel Qty (C) (1)', 
+                      array=np.ma.array([1,2,3], mask=[False, False, False]))
+        fuel_qty2 = P('Fuel Qty (C) (2)', 
+                      array=np.ma.array([2,4,6], mask=[False, False, False]))
+        fuel_qty3 = P('Fuel Qty (C) (3)',
+                      array=np.ma.array([3,6,9], mask=[False, True, False]))
+        fuel_qty_node = FuelQtyL()
+        fuel_qty_node.derive(fuel_qty1, None, None, None)
+        np.testing.assert_array_equal(fuel_qty_node.array,
+                                      np.ma.array([1, 2, 3]))
+        fuel_qty_node.derive(None, fuel_qty2, None, None)
+        np.testing.assert_array_equal(fuel_qty_node.array,
+                                      np.ma.array([2, 4, 6]))
+        fuel_qty_node.derive(None, fuel_qty2, fuel_qty3, None)
+        np.testing.assert_array_equal(fuel_qty_node.array,
+                                      np.ma.array([5, 10, 15],
+                                                  mask=[False, True, False]))
+        fuel_qty_node.derive(fuel_qty1, fuel_qty2, fuel_qty3, None)
+        np.testing.assert_array_equal(fuel_qty_node.array,
+                                      np.ma.array([6, 12, 18],
+                                                  mask=[False, True, False]))
 
 class TestFuelQtyL(unittest.TestCase):
     def test_can_operate(self):
@@ -2499,30 +2541,33 @@ class TestFuelQtyL(unittest.TestCase):
         # combinations as this can get very large (2**n-1) where n is the
         # number of parameters (-1 as none is not a option)
         opts = FuelQtyL.get_operational_combinations()
-        self.assertTrue(('Fuel Qty (L1)',) in opts)
-        self.assertTrue(('Fuel Qty (L2)',) in opts)
-        self.assertTrue(('Fuel Qty (L3)',) in opts)
-        self.assertTrue(('Fuel Qty (L1)', 'Fuel Qty (L2)', 'Fuel Qty (L3)') in opts)
+        self.assertTrue(('Fuel Qty (L) (1)',) in opts)
+        self.assertTrue(('Fuel Qty (L) (2)',) in opts)
+        self.assertTrue(('Fuel Qty (L) (3)',) in opts)
+        self.assertTrue(('Fuel Qty (L) (1)', 'Fuel Qty (L) (2)',
+                         'Fuel Qty (L) (3)') in opts)
+        self.assertTrue(('Fuel Qty (L) (1)', 'Fuel Qty (L) (2)',
+                         'Fuel Qty (L) (3)', 'Fuel Qty (L) (4)') in opts)
     
     def test_three_tanks(self):
-        fuel_qty1 = P('Fuel Qty (L1)', 
+        fuel_qty1 = P('Fuel Qty (L) (1)', 
                       array=np.ma.array([1,2,3], mask=[False, False, False]))
-        fuel_qty2 = P('Fuel Qty (L2)', 
+        fuel_qty2 = P('Fuel Qty (L) (2)', 
                       array=np.ma.array([2,4,6], mask=[False, False, False]))
-        fuel_qty3 = P('Fuel Qty (L3)',
+        fuel_qty3 = P('Fuel Qty (L) (3)',
                       array=np.ma.array([3,6,9], mask=[False, True, False]))
         fuel_qty_node = FuelQtyL()
-        fuel_qty_node.derive(fuel_qty1, None, None)
+        fuel_qty_node.derive(fuel_qty1, None, None, None)
         np.testing.assert_array_equal(fuel_qty_node.array,
                                       np.ma.array([1, 2, 3]))
-        fuel_qty_node.derive(None, fuel_qty2, None)
+        fuel_qty_node.derive(None, fuel_qty2, None, None)
         np.testing.assert_array_equal(fuel_qty_node.array,
                                       np.ma.array([2, 4, 6]))
-        fuel_qty_node.derive(None, fuel_qty2, fuel_qty3)
+        fuel_qty_node.derive(None, fuel_qty2, fuel_qty3, None)
         np.testing.assert_array_equal(fuel_qty_node.array,
                                       np.ma.array([5, 10, 15],
                                                   mask=[False, True, False]))
-        fuel_qty_node.derive(fuel_qty1, fuel_qty2, fuel_qty3)
+        fuel_qty_node.derive(fuel_qty1, fuel_qty2, fuel_qty3, None)
         np.testing.assert_array_equal(fuel_qty_node.array,
                                       np.ma.array([6, 12, 18],
                                                   mask=[False, True, False]))
@@ -2535,30 +2580,33 @@ class TestFuelQtyR(unittest.TestCase):
         # combinations as this can get very large (2**n-1) where n is the
         # number of parameters (-1 as none is not a option)
         opts = FuelQtyR.get_operational_combinations()
-        self.assertTrue(('Fuel Qty (R1)',) in opts)
-        self.assertTrue(('Fuel Qty (R2)',) in opts)
-        self.assertTrue(('Fuel Qty (R3)',) in opts)
-        self.assertTrue(('Fuel Qty (R1)', 'Fuel Qty (R2)', 'Fuel Qty (R3)') in opts)
+        self.assertTrue(('Fuel Qty (R) (1)',) in opts)
+        self.assertTrue(('Fuel Qty (R) (2)',) in opts)
+        self.assertTrue(('Fuel Qty (R) (3)',) in opts)
+        self.assertTrue(('Fuel Qty (R) (1)', 'Fuel Qty (R) (2)', 
+                         'Fuel Qty (R) (3)') in opts)
+        self.assertTrue(('Fuel Qty (R) (1)', 'Fuel Qty (R) (2)', 
+                         'Fuel Qty (R) (3)', 'Fuel Qty (R) (4)') in opts)
     
     def test_three_tanks(self):
-        fuel_qty1 = P('Fuel Qty (R1)', 
+        fuel_qty1 = P('Fuel Qty (R) (1)', 
                       array=np.ma.array([3,2,1], mask=[False, False, False]))
-        fuel_qty2 = P('Fuel Qty (R2)', 
+        fuel_qty2 = P('Fuel Qty (R) (2)', 
                       array=np.ma.array([6,4,2], mask=[False, False, False]))
-        fuel_qty3 = P('Fuel Qty (R3)',
+        fuel_qty3 = P('Fuel Qty (R) (3)',
                       array=np.ma.array([9,6,3], mask=[False, True, False]))
         fuel_qty_node = FuelQtyR()
-        fuel_qty_node.derive(fuel_qty1, None, None)
+        fuel_qty_node.derive(fuel_qty1, None, None, None)
         np.testing.assert_array_equal(fuel_qty_node.array,
                                       np.ma.array([3, 2, 1]))
-        fuel_qty_node.derive(None, fuel_qty2, None)
+        fuel_qty_node.derive(None, fuel_qty2, None, None)
         np.testing.assert_array_equal(fuel_qty_node.array,
                                       np.ma.array([6, 4, 2]))
-        fuel_qty_node.derive(None, fuel_qty2, fuel_qty3)
+        fuel_qty_node.derive(None, fuel_qty2, fuel_qty3, None)
         np.testing.assert_array_equal(fuel_qty_node.array,
                                       np.ma.array([15, 10, 5],
                                                   mask=[False, True, False]))
-        fuel_qty_node.derive(fuel_qty1, fuel_qty2, fuel_qty3)
+        fuel_qty_node.derive(fuel_qty1, fuel_qty2, fuel_qty3, None)
         np.testing.assert_array_equal(fuel_qty_node.array,
                                       np.ma.array([18, 12, 6],
                                                   mask=[False, True, False]))

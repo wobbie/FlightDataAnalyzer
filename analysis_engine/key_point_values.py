@@ -9029,10 +9029,10 @@ class FlareDuration20FtToTouchdown(KeyPointValueNode):
 
 class FlareDistance20FtToTouchdown(KeyPointValueNode):
     '''
-    TODO: Write a test for this function with less than one second between 20ft and touchdown, using interval arithmetic.
-    NAX_1_LN-DYC_20120104234127_22_L3UQAR___dev__sdb.001.hdf5
     '''
-
+    #TODO: Write a test for this function with less than one second between 20ft and touchdown, using interval arithmetic.
+    #NAX_1_LN-DYC_20120104234127_22_L3UQAR___dev__sdb.001.hdf5
+        
     units = ut.METER
 
     def derive(self,
