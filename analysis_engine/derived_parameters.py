@@ -4136,11 +4136,12 @@ class ILSLateralDistance(DerivedParameterNode):
                 # no runway to establish distance to localizer antenna
                 continue
 
-            start_2_loc = runway_distances(runway)[0]
             try:
+                start_2_loc = runway_distances(runway)[0]
                 hw = (runway['strip']['width'] / 2.0) / METRES_TO_FEET
             except (KeyError, TypeError):
-                raise 'Unknown runway width'
+                self.warning('Unknown runway width or localizer coordinates')
+                continue
 
             # Scale for localizer deviation to metres at runway start
             scale = hw / start_2_loc 
