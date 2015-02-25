@@ -2394,7 +2394,7 @@ class StableApproach(MultistateDerivedParameterNode):
                 if aspd_minus_sel:
                     # Airspeed relative to selected speed
                     STABLE_AIRSPEED_BELOW_REF = -5
-                    STABLE_AIRSPEED_ABOVE_REF = 10                    
+                    STABLE_AIRSPEED_ABOVE_REF = 15
                 elif vapp:
                     # Those aircraft which record a variable Vapp shall have more constraint thresholds
                     STABLE_AIRSPEED_BELOW_REF = -5
@@ -2402,7 +2402,7 @@ class StableApproach(MultistateDerivedParameterNode):
                 else:
                     # Most aircraft record only Vref - as we don't know the wind correction be more lenient
                     STABLE_AIRSPEED_BELOW_REF = -5
-                    STABLE_AIRSPEED_ABOVE_REF = 30
+                    STABLE_AIRSPEED_ABOVE_REF = 35
                 stable_airspeed = (airspeed >= STABLE_AIRSPEED_BELOW_REF) & (airspeed <= STABLE_AIRSPEED_ABOVE_REF)
                 # extend the stability at the end of the altitude threshold through to landing
                 stable_airspeed[altitude < 50] = stable_airspeed[index_at_50]
@@ -2440,7 +2440,7 @@ class StableApproach(MultistateDerivedParameterNode):
             # Patch this value depending upon aircraft type
             if eng_epr:
                 if family and family.value in ('A319', 'A320', 'A321'):
-                    STABLE_EPR_MIN = 1.05  # Ratio
+                    STABLE_EPR_MIN = 1.02  # Ratio
                 else:
                     STABLE_EPR_MIN = 1.09  # Ratio
                 stable_engine = (engine >= STABLE_EPR_MIN)
