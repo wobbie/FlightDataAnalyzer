@@ -6807,11 +6807,70 @@ def straighten(array, estimate, limit, copy):
                     starting_value -= limit
 
         diff = np.ediff1d(array[clump])
-        diff = diff - limit * np.trunc(diff * 2.0 / limit)
+        diff -= limit * np.trunc(diff * 2.0 / limit)
         array[clump][0] = starting_value
         array[clump][1:] = np.cumsum(diff) + starting_value
         last_value = array[clump][-1]
     return array
+
+
+def straighten_overflows(array, min_val, max_val, threshold=4):
+    '''
+    Straighten a signal which overflows when the value exceeds a specified
+    range. Threshold is specified as a fraction of the full range
+    (total_range / threshold, e.g. 200 / 4 = 50). The threshold is used to
+    avoid missing data and data spikes causing unwanted overflows.
+    
+    :param array: Signal to straighten.
+    :type array: np.ma.masked_array
+    :param min_val: Minimum value of parameter before overflow occurs.
+    :type min_val: int or float
+    :param max_val: Maximum value of parameter before overflow occurs.
+    :type max_val: int or float
+    :param threshold: Threshold specified as a fraction of the total range.
+    :type threshold: int or float
+    :returns: Straightened signal.
+    :rtype: np.ma.masked_array
+    '''
+    straight = array.copy()
+    
+    if max_val <= min_val:
+        raise ValueError('Invalid range: %s to %s', min_val, max_val)
+    
+    total_range = max_val - min_val
+    
+    partition = total_range / threshold
+    upper = max_val - partition
+    lower = min_val + partition
+    
+    last_value = None
+    overflow = 0
+    for unmasked_slice in np.ma.clump_unmasked(array):
+        first_value = array[unmasked_slice.start]
+        if last_value is not None:
+            # Check if overflow occurred within masked region.
+            if last_value < lower and first_value > upper:
+                overflow -= 1
+            elif last_value > upper and first_value < lower:
+                overflow += 1
+        
+        # locate overflows and shift the arrays
+        diff = np.ediff1d(array[unmasked_slice])
+        straight[unmasked_slice] += overflow * total_range
+        
+        for idx in np.where(np.abs(diff) > total_range - partition)[0]:
+            sign = np.sign(diff[idx])
+            overflow -= sign
+            straight[idx + 1:] -= sign * total_range
+        
+        last_value = array[unmasked_slice.stop - 1]
+    
+    return straight
+
+
+def straighten_longitude(array):
+    return straighten_overflows(array, -180, 180, threshold=8)
+
 
 def subslice(orig, new):
     """

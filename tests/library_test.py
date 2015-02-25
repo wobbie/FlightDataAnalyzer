@@ -6332,6 +6332,58 @@ class TestStraightenAltitudes(unittest.TestCase):
         self.assertEqual(np.ma.max(result),546.0)
 
 
+class TestStraightenLongitude(unittest.TestCase):
+    def test_straighten_longitude_without_overflow(self):
+        data = np.ma.array([35.5,29.5,11.3,0.0,2.5,8.1,14.4])
+        expected = np.ma.array(
+            [35.5,29.5,11.3,0.0,-11.6,-23.2,-1.1,2.5,8.1,14.4])
+        np.testing.assert_array_almost_equal(straighten_longitude(data), data)
+    
+    def test_straighten_longitude_single_overflow(self):
+        data = np.ma.array([175.5,179.5,179.1,179.9,-179.9,-178.2,-176.5,-175.2,-174.1,-172.4])
+        expected = np.ma.array(
+            [175.5,179.5,179.1,179.9,180.1,181.8,183.5,184.8,185.9,187.6])
+        np.testing.assert_array_almost_equal(straighten_longitude(data), expected)
+    
+    def test_straighten_longitude_single_overflow_and_return(self):
+        data = np.ma.array([175.5,179.5,179.1,179.9, -179.9,-178.2,176.5,175.2,174.1,172.4])
+        expected = np.ma.array(
+            [175.5, 179.5, 179.1, 179.9, 180.1, 181.8, 176.5, 175.2, 174.1, 172.4])
+        np.testing.assert_array_almost_equal(straighten_longitude(data), expected)
+    
+    def test_straighten_longitude_single_overflow_masked(self):
+        mask = [True,False,False,True,True,False,False,False,False,True]
+        data = np.ma.array([175.5,179.5,179.1,179.9, -179.9,-178.2,-176.5,-175.2,-174.1,-172.4],
+                           mask=mask)
+        expected = np.ma.array(
+            [175.5, 179.5, 179.1, 179.9, -179.9, 181.8, 183.5, 184.8, 185.9, -172.4],
+            mask=mask)
+        np.testing.assert_array_almost_equal(straighten_longitude(data), expected)
+    
+    def test_straighten_longitude_single_overflow_and_return_masked(self):
+        mask = [True,False,False,True,True,False,True,False,False,True]
+        data = np.ma.array([175.5,179.5,179.1,179.9, -179.9,-178.2,176.5,175.2,174.1,172.4],
+                           mask=mask)
+        expected = np.ma.array(
+            [175.5, 179.5, 179.1, 179.9, 180.1, 181.8, 176.5, 175.2, 174.1, 172.4],
+            mask=mask)
+        np.testing.assert_array_almost_equal(straighten_longitude(data), expected)
+    
+    def test_straighten_longitude_spike(self):
+        '''
+        Spike does not trigger overflow as with straighten().
+        '''
+        data = load_compressed(os.path.join(test_data_path, 'straighten_longitude_1.npz'))
+        np.testing.assert_array_almost_equal(straighten_longitude(data), data)
+        
+    def test_straighten_longitude_drop(self):
+        '''
+        Overflow is not triggered as drop is too small.
+        '''
+        data = load_compressed(os.path.join(test_data_path, 'straighten_longitude_2.npz'))
+        np.testing.assert_array_almost_equal(straighten_longitude(data), data)
+
+
 class TestStraightenHeadings(unittest.TestCase):
     def test_straighten_headings(self):
         data = np.ma.array([35.5,29.5,11.3,0.0,348.4,336.8,358.9,2.5,8.1,14.4])
