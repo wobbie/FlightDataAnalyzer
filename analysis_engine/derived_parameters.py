@@ -6461,6 +6461,7 @@ class AirspeedSelectedForApproaches(DerivedParameterNode):
         array = aspd.array.repeat(rep)
         self.array = np.ma.concatenate([array[rep - 1:], array[-(rep - 1):]])
         self.frequency = 1
+        self.offset = 0
 
 
 class AirspeedSelected(DerivedParameterNode):
