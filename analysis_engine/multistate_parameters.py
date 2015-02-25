@@ -2448,7 +2448,7 @@ class StableApproach(MultistateDerivedParameterNode):
                 if family and family.value in ('B787', 'A319'):
                     STABLE_N1_MIN = 35  # %
                 else:
-                    STABLE_N1_MIN = 45  # %
+                    STABLE_N1_MIN = 40  # %
                 stable_engine = (engine >= STABLE_N1_MIN)
             # extend the stability at the end of the altitude threshold through to landing
             stable_engine[altitude < 50] = stable_engine[index_at_50]
