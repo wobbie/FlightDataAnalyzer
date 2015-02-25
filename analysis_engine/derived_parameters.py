@@ -6447,6 +6447,22 @@ class WheelSpeedRight(DerivedParameterNode):
         self.array = blend_parameters(sources, self.offset, self.frequency)
 
 
+class AirspeedSelectedForApproaches(DerivedParameterNode):
+    '''
+    Use Airspeed Selected if frequency >= 0.25, otherwise upsample to 1Hz using
+    next sampled value.
+    '''
+    def derive(self, aspd=P('Airspeed Selected')):
+        if aspd.frequency >= 0.25:
+            self.array = aspd.array
+            return
+
+        rep = 1 / aspd.frequency
+        array = aspd.array.repeat(rep)
+        self.array = np.ma.concatenate([array[rep - 1:], array[rep - 1:]])
+        self.frequency = 1
+
+
 class AirspeedSelected(DerivedParameterNode):
     '''
     Merge the various recorded Airspeed Selected signals.
@@ -7495,7 +7511,8 @@ class FlapManoeuvreSpeed(DerivedParameterNode):
 
 class AirspeedMinusAirspeedSelectedFor3Sec(DerivedParameterNode):
     '''
-    Airspeed relative to Airspeed Selected.
+    Airspeed relative to Airspeed Selected During Approach which in case of low
+    sample rate uses next sample of Airspeed Selected.
     '''
 
     align_frequency = 2
@@ -7504,9 +7521,9 @@ class AirspeedMinusAirspeedSelectedFor3Sec(DerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available):
-        return all_of(('Airspeed', 'Airspeed Selected'), available)
+        return all_of(('Airspeed', 'Airspeed Selected For Approaches'), available)
 
-    def derive(self, aspd=P('Airspeed'), aspd_sel=P('Airspeed Selected')):
+    def derive(self, aspd=P('Airspeed'), aspd_sel=P('Airspeed Selected For Approaches')):
         self.array = second_window(aspd.array - aspd_sel.array, 
                                    self.frequency, 3)
         
