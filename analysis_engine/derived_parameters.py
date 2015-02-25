@@ -6459,7 +6459,7 @@ class AirspeedSelectedForApproaches(DerivedParameterNode):
 
         rep = 1 / aspd.frequency
         array = aspd.array.repeat(rep)
-        self.array = np.ma.concatenate([array[rep - 1:], array[rep - 1:]])
+        self.array = np.ma.concatenate([array[rep - 1:], array[-(rep - 1):]])
         self.frequency = 1
 
 

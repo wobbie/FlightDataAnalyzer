@@ -578,8 +578,9 @@ class TestAirspeedForFlightPhases(unittest.TestCase):
 class TestAirspeedSelectedForApproaches(unittest.TestCase):
     def test_derive(self):
         airspd = P('Airspeed Selected', array=np.ma.arange(10), frequency=1 / 64.)
-        p = AirspeedSelectedForApproaches()
+        p = AirspeedSelectedForApproaches(frequency=1 / 64.)
         p.derive(airspd)
+        self.assertEquals(len(p.array), 640)
         self.assertTrue(p.array[1], 1)
 
 
