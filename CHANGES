@@ -9,6 +9,49 @@ You can view the differences in tagged versions as follows:
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
 
+v0.20.1
+-------
+
+ - Fixed
+   - Added missing Eng Hotel Mode test data
+   - Change of elevation test to avoid problems with lack of airfield identification.
+   - Don't detect GROUND_ONLY for slow segments with no engine parameters
+   - Fast duration calculation in split segments
+   - ILS Established no longer throws away phases where starts are established
+   - Prevent Airspeed FFP raising error for fully masked airspeed (GROUND_ONLY)
+   - plot_parameter actually uses show kwarg
+ - Improved
+   - API changes to allow passing of segment type (GROUND_ONLY)
+   - Acceleration Longitudinal KPVs changed to use offset removed
+   - Added including_transition function for Flap Including Transition
+   - Added pre_flight_kwargs as kwarg to process_flight to allow customisation of PRE_FLIGHT_ANALYSIS hook
+   - Airspeed Minus Airspeed Selected For 3s uses an upsampled Airspeed Selected in case of a low sample rate
+   - Altitude Tail reworked following known tail scrape cases
+   - Climb Acceleration Start smooths noisy Eng Np signal
+   - Detection of handover between pilots
+   - EngTorquePercent65KtsTo35FtMin handles no takeoffs being detected (GROUND_ONLY)
+   - Fuel Qty naming convention updated and Fuel Qty (C) added
+   - Identification of Ground Only Rejected Takeoffs (GROUND_ONLY)
+   - Merging of two-source flap data to cater for aircraft with mismatched left and right flap sensors
+   - Segment type detection with fully masked airspeed
+   - Threshold change to cater for low rate of flap movement on first stage of flap selection (737NG applies)
+   - ThrustAsymmetryWithThrustReversersDeployedMax amended to suppress transients.
+   - Transition altitude from Altitude AAL is now a setting
+   - Updated limits within StableApproach
+   - Vibration derived parameters and KPVs include additional dependencies
+   - api_handler: Use form content type in requests
+   - ignore_errors option added to ProcessFlight to continue processing if exceptions are raised within nodes
+   - library.scan_ils: Fallback for invalid ils signal
+   - process_flight returns dictionaries of nodes rather than lists of instances for matching instances to nodes
+ - Added
+   - Dual Input By Capt/FO Max KPVs
+   - Eng Gas Temp Above Normal Max Limit Duration KPVs
+   - Lateral distances on runway at Touchdown
+   - PitchRate35ToClimbAccelerationStartMax KPV
+   - Straighten algorithm suited for Longitude
+   - json_tools module unit tests
+
+
 v0.19.1
 -------
 
