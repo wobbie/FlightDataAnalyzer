@@ -5054,14 +5054,19 @@ class DistanceFromRunwayCentrelineFromTouchdownTo60KtMax(KeyPointValueNode):
                lands=S('Landing'),
                gspd=P('Groundspeed'),
                tdwns=KTI('Touchdown')):
-
+        # where corrupted data, interpolate as we're only interested in regions
+        gspd_data = repair_mask(gspd.array, repair_duration=30)
         to_scan = []
         for land in lands:
             for tdwn in tdwns:
                 if is_index_within_slice(tdwn.index, land.slice) and \
-                   gspd.array[land.slice.stop-1] < 60.0:
-                    val = index_at_value(gspd.array, 60.0, land.slice)
-                    to_scan.append(slice(tdwn.index, val))
+                   gspd_data[land.slice.stop-1] < 60.0:
+                    stop = index_at_value(gspd_data, 60.0, land.slice)
+                    if stop is None:
+                        # don't take the risk of measuring below 60kts as
+                        # could be off the runway
+                        return
+                    to_scan.append(slice(tdwn.index, stop))
 
         self.create_kpvs_within_slices(
             lat_dist.array,
