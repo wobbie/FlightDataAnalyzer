@@ -5059,12 +5059,9 @@ class DistanceFromRunwayCentrelineFromTouchdownTo60KtMax(KeyPointValueNode):
         for land in lands:
             for tdwn in tdwns:
                 if is_index_within_slice(tdwn.index, land.slice) and \
-                   gspd.array[land.slice.stop] < 60.0:
-                    to_scan.append(slice(tdwn.index, 
-                                         index_at_value(gspd.array[land.slice], 
-                                                        60.0)+land.slice.start
-                                         )
-                                   )
+                   gspd.array[land.slice.stop-1] < 60.0:
+                    val = index_at_value(gspd.array, 60.0, land.slice)
+                    to_scan.append(slice(tdwn.index, val))
 
         self.create_kpvs_within_slices(
             lat_dist.array,

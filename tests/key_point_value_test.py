@@ -5363,14 +5363,15 @@ class TestDistanceFromRunwayCentrelineFromTouchdownTo60KtMax(unittest.TestCase):
                                 'Groundspeed', 'Touchdown')])
         
     def test_basic(self):
-        lat = P('ILS Lateral Distance', range(10))
+        lat = P('ILS Lateral Distance', np.ma.array([3,4,3,6,4,-7,-1,2,8,10]))
         lands=buildsection('Landing', 2, 8)
         gspd = P('Groundspeed', range(130,30,-10))
         tdwns = KTI(items=[KeyTimeInstance(3)])
         dist = DistanceFromRunwayCentrelineFromTouchdownTo60KtMax()
         dist.derive(lat, lands, gspd, tdwns)
         # The value 4 occurs at the 60kt point
-        self.assertEqual(dist[0].value, 4.0)
+        self.assertEqual(dist[0].index, 5)
+        self.assertEqual(dist[0].value, -7.0)
 
     def test_abs_function(self):
         lat = P('ILS Lateral Distance', range(10))
