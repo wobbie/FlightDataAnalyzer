@@ -57,6 +57,7 @@ from analysis_engine.derived_parameters import (
     AirspeedForFlightPhases,
     AirspeedMinusAirspeedSelectedFor3Sec,
     AirspeedSelected,
+    AirspeedSelectedForApproaches,
     AirspeedTrue,
     AltitudeAAL,
     AltitudeAALForFlightPhases,
@@ -572,6 +573,15 @@ class TestAirspeedForFlightPhases(unittest.TestCase):
         expected = [('Airspeed',)]
         opts = AirspeedForFlightPhases.get_operational_combinations()
         self.assertEqual(opts, expected)
+
+
+class TestAirspeedSelectedForApproaches(unittest.TestCase):
+    def test_derive(self):
+        airspd = P('Airspeed Selected', array=np.ma.arange(10), frequency=1 / 64.)
+        p = AirspeedSelectedForApproaches(frequency=1 / 64.)
+        p.derive(airspd)
+        self.assertEquals(len(p.array), 640)
+        self.assertTrue(p.array[1], 1)
 
 
 class TestAirspeedSelected(unittest.TestCase):

@@ -2230,14 +2230,14 @@ class StableApproach(MultistateDerivedParameterNode):
 
     if all the above steps are met, the result is the declaration of:
     9. "Stable"
-    
+
     Notes:
-    
+
     Airspeed is relative to "Airspeed Selected" where available as this will
     account for the reference speed and any compensation for the wind speed.
-    
+
     If Vapp is recorded, a more constraint airspeed threshold is applied.
-    
+
     Where parameters are not monitored below a certain threshold (e.g. ILS
     below 200ft) the stability criteria just before 200ft is reached is
     continued through to landing. So if one was unstable due to ILS
@@ -2246,7 +2246,7 @@ class StableApproach(MultistateDerivedParameterNode):
 
     TODO/REVIEW:
     ============
-    * Check for 300ft limit if turning onto runway late and ignore stability 
+    * Check for 300ft limit if turning onto runway late and ignore stability
       criteria before this? Alternatively only assess criteria when heading is 
       within 50.
     * Add hysteresis (3 second gliding windows for GS / LOC etc.)
@@ -2310,7 +2310,7 @@ class StableApproach(MultistateDerivedParameterNode):
             # use Combined descent phase slice as it contains the data from
             # top of descent to touchdown (approach starts and finishes later)
             approach.slice = phase.slice
-            
+
             # FIXME: approaches shorter than 10 samples will not work due to
             # the use of moving_average with a width of 10 samples.
             if approach.slice.stop - approach.slice.start < 10:
@@ -2345,7 +2345,7 @@ class StableApproach(MultistateDerivedParameterNode):
 
             index_at_50 = index_closest_value(altitude, 50)
             index_at_200 = index_closest_value(altitude, 200)
-            
+
             #== 1. Gear Down ==
             # Assume unstable due to Gear Down at first
             self.array[_slice] = 1
@@ -2362,7 +2362,7 @@ class StableApproach(MultistateDerivedParameterNode):
             if landing_flap is np.ma.masked:
                 # try looking above 1000ft
                 landing_flap = np.ma.where(altitude > 1000, flap_lever, np.ma.masked).max()
-            
+
             if landing_flap is not np.ma.masked:
                 landing_flap_set = (flap_lever == landing_flap)
                 # assume stable (flap set)
@@ -2376,7 +2376,7 @@ class StableApproach(MultistateDerivedParameterNode):
 
             #== 3. Track Deviation ==
             self.array[_slice][stable] = 3
-            
+
             runway = approach.runway
             if runway and runway.get('localizer', {}).get('is_offset'):
                 # offset ILS Localizer or offset approach without ILS (IAN approach)
@@ -2394,7 +2394,7 @@ class StableApproach(MultistateDerivedParameterNode):
                 if aspd_minus_sel:
                     # Airspeed relative to selected speed
                     STABLE_AIRSPEED_BELOW_REF = -5
-                    STABLE_AIRSPEED_ABOVE_REF = 10                    
+                    STABLE_AIRSPEED_ABOVE_REF = 15
                 elif vapp:
                     # Those aircraft which record a variable Vapp shall have more constraint thresholds
                     STABLE_AIRSPEED_BELOW_REF = -5
@@ -2402,7 +2402,7 @@ class StableApproach(MultistateDerivedParameterNode):
                 else:
                     # Most aircraft record only Vref - as we don't know the wind correction be more lenient
                     STABLE_AIRSPEED_BELOW_REF = -5
-                    STABLE_AIRSPEED_ABOVE_REF = 30
+                    STABLE_AIRSPEED_ABOVE_REF = 35
                 stable_airspeed = (airspeed >= STABLE_AIRSPEED_BELOW_REF) & (airspeed <= STABLE_AIRSPEED_ABOVE_REF)
                 # extend the stability at the end of the altitude threshold through to landing
                 stable_airspeed[altitude < 50] = stable_airspeed[index_at_50]
@@ -2440,7 +2440,7 @@ class StableApproach(MultistateDerivedParameterNode):
             # Patch this value depending upon aircraft type
             if eng_epr:
                 if family and family.value in ('A319', 'A320', 'A321'):
-                    STABLE_EPR_MIN = 1.05  # Ratio
+                    STABLE_EPR_MIN = 1.02  # Ratio
                 else:
                     STABLE_EPR_MIN = 1.09  # Ratio
                 stable_engine = (engine >= STABLE_EPR_MIN)
@@ -2448,12 +2448,12 @@ class StableApproach(MultistateDerivedParameterNode):
                 if family and family.value in ('B787', 'A319'):
                     STABLE_N1_MIN = 35  # %
                 else:
-                    STABLE_N1_MIN = 45  # %
+                    STABLE_N1_MIN = 40  # %
                 stable_engine = (engine >= STABLE_N1_MIN)
             # extend the stability at the end of the altitude threshold through to landing
             stable_engine[altitude < 50] = stable_engine[index_at_50]
             stable &= stable_engine.filled(True)
-            
+
             #== 9. Stable ==
             # Congratulations; whatever remains in this approach is stable!
             self.array[_slice][stable] = 9

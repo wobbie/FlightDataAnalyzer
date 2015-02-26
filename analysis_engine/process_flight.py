@@ -753,6 +753,10 @@ def main():
         requested=args.requested, required=args.required,
         additional_modules=['flightdataprofiles.fcp.kpvs']
     )
+    # Flatten results.
+    res = {k: list(itertools.chain.from_iterable(v.itervalues()))
+           for k, v in res.iteritems()}
+    
     logger.info("Derived parameters stored in hdf: %s", hdf_copy)
     # Write CSV file
     if not args.disable_csv:
