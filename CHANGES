@@ -9,6 +9,15 @@ You can view the differences in tagged versions as follows:
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
 
+v0.20.2
+-------
+
+ - Fixed
+   - DistCentreLine where groundspeed doesn't register below 60kts
+ - Improved
+   - StableApproach: tweaked stability criteria
+
+
 v0.20.1
 -------
 
