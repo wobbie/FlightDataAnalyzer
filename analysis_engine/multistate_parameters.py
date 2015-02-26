@@ -2428,8 +2428,13 @@ class StableApproach(MultistateDerivedParameterNode):
 
             #== 7. Vertical Speed ==
             self.array[_slice][stable] = 7
-            STABLE_VERTICAL_SPEED_MIN = -1100
             STABLE_VERTICAL_SPEED_MAX = -200
+            STABLE_VERTICAL_SPEED_MIN = -1100
+            if runway:
+                gs_angle = runway.get('glideslope', {}).get('angle')
+                # offset ILS Localizer or offset approach without ILS (IAN approach)
+                if gs_angle >= 3:
+                    STABLE_VERTICAL_SPEED_MIN = -1500
             stable_vert = (vertical_speed >= STABLE_VERTICAL_SPEED_MIN) & (vertical_speed <= STABLE_VERTICAL_SPEED_MAX)
             # extend the stability at the end of the altitude threshold through to landing
             stable_vert[altitude < 50] = stable_vert[index_at_50]
