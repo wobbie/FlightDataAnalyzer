@@ -1324,6 +1324,8 @@ class FormattedNameNode(ListNode):
         elif within_slices:
             return within_slices_func
         elif name:
+            #Q: If restrict names BUT the named item is in the list of objects
+            # contained, should we not return it anyway rather than raise?
             if self.restrict_names and name not in self.names():
                 raise ValueError("Attempted to filter by invalid name '%s' "
                                  "within '%s'." % (name,
