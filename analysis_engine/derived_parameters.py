@@ -5667,6 +5667,11 @@ class TAT(DerivedParameterNode):
     Blends data from two air temperature sources.
     '''
 
+    @classmethod
+    def can_operate(cls, available):
+        return ('TAT (1)' in available and 'TAT (2)' in available) or \
+               'SAT' in available
+    
     # TODO: Support generation from SAT, Mach and Altitude STD    
     # TODO: Review naming convention - rename to "Total Air Temperature"?
 
@@ -5676,11 +5681,26 @@ class TAT(DerivedParameterNode):
 
     def derive(self,
                source_1 = P('TAT (1)'),
-               source_2 = P('TAT (2)')):
+               source_2 = P('TAT (2)'),
+               sat = P('SAT')):
 
-        # Alternate samples (1)&(2) are blended.
-        self.array, self.frequency, self.offset = \
-            blend_two_parameters(source_1, source_2)
+        if sat:
+            # Compute TAT from SAT and other stuff
+            ####################################
+            ## At this point DJ realised we   ##
+            ## have to find speed and altitude##
+            ## parameters and add a library   ##
+            ## function to get TAT.           ##
+            ## Please sort out the "can       ##
+            ## operate" test so I can take it ##
+            ## on from here. Off to fly :o(   ##
+            ####################################
+            pass
+
+        else:
+            # Alternate samples (1)&(2) are blended.
+            self.array, self.frequency, self.offset = \
+                blend_two_parameters(source_1, source_2)
 
 
 class WindAcrossLandingRunway(DerivedParameterNode):

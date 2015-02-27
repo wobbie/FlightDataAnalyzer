@@ -161,6 +161,7 @@ from analysis_engine.derived_parameters import (
     SlatAngle,
     Speedbrake,
     Stabilizer,
+    TAT,
     VerticalSpeed,
     VerticalSpeedForFlightPhases,
     HeadingRate,
@@ -4694,7 +4695,6 @@ class TestSAT(unittest.TestCase):
              ('Mach', 'Altitude STD Smoothed'),
              ('TAT', 'Mach', 'Altitude STD Smoothed')])
 
-
     def test_basic_altitude(self):
         # -1000 ft = 16.9812 C
         # 0 ft = 15C
@@ -4712,16 +4712,22 @@ class TestSAT(unittest.TestCase):
         expected = np.ma.array([16.9812, 15.0, 5.09400, -4.812, -24.624,
                                 -44.4360, -56.5, -56.5])
         ma_test.assert_array_almost_equal(sat.array, expected)
-        
+
 
 class TestTAT(unittest.TestCase):
-    @unittest.skip('Test Not Implemented')
     def test_can_operate(self):
-        self.assertTrue(False, msg='Test not implemented.')
-        
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
+        self.assertEqual(
+            TAT.get_operational_combinations(),
+            [('TAT (1)', 'TAT (2)'),
+             ('SAT',)])
+             
+    def test_combination(self):
+        t1 = P('TAT (1)', array = [1,2,1])
+        t2 = P('TAT (2)', array = [2,1,2])
+        tat = TAT()
+        tat.derive(t1, t2, None)
+        expected = np.ma.array([1.5]*6)
+        ma_test.assert_array_almost_equal(tat.array, expected)
 
 
 class TestTailwind(unittest.TestCase):
