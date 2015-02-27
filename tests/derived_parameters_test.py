@@ -155,6 +155,7 @@ from analysis_engine.derived_parameters import (
     PotentialEnergy,
     RollRate,
     RudderPedal,
+    SAT,
     SidestickAngleCapt,
     SidestickAngleFO,
     SlatAngle,
@@ -4684,14 +4685,34 @@ class TestSpeedbrake(unittest.TestCase):
 
 class TestSAT(unittest.TestCase):
     # Note: the core function machtat2sat is tested by the library test.
-    @unittest.skip('Test Not Implemented')
-    def test_can_operate(self):
-        self.assertTrue(False, msg='Test not implemented.')
-        
-    @unittest.skip('Test Not Implemented')
-    def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
 
+    def test_can_operate(self):
+        self.assertEqual(
+            SAT.get_operational_combinations(),
+            [('Altitude STD Smoothed',),
+             ('TAT', 'Altitude STD Smoothed'),
+             ('Mach', 'Altitude STD Smoothed'),
+             ('TAT', 'Mach', 'Altitude STD Smoothed')])
+
+
+    def test_basic_altitude(self):
+        # -1000 ft = 16.9812 C
+        # 0 ft = 15C
+        # 5000 ft = 5.09400 C
+        # 10000 ft = -4.81200 C
+        # 20000 ft = -24.6240 C
+        # 30000 ft = -44.4360 C
+        # 40000 ft = -56.5000 C
+        # 50000 ft = -56.5000 C
+        
+        alt=P('Altitude STD Smoothed', 
+              array=np.array([-1,0,5,10,20,30,40,50])*1000.0)
+        sat = SAT()
+        sat.derive(None, None, alt)
+        expected = np.ma.array([16.9812, 15.0, 5.09400, -4.812, -24.624,
+                                -44.4360, -56.5, -56.5])
+        ma_test.assert_array_almost_equal(sat.array, expected)
+        
 
 class TestTAT(unittest.TestCase):
     @unittest.skip('Test Not Implemented')
