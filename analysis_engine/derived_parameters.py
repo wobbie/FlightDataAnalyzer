@@ -5696,7 +5696,9 @@ class TAT(DerivedParameterNode):
                sat = P('SAT'), mach = P('Mach')):
 
         if sat:
-            self.array = machsat2tat(mach.array, sat.array)
+            # We compute the total air temperature, assuming a perfect sensor.
+            self.array = machsat2tat(mach.array, sat.array, 
+                                     recovery_factor=1.0)
 
         else:
             # Alternate samples (1)&(2) are blended.

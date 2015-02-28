@@ -4747,9 +4747,7 @@ class TestTAT(unittest.TestCase):
         tat = TAT()
         tat.derive(None, None, sat, mach)
         # TAT = SAT (1 + (1.4-1)/2M^2) = 1 + 0.2M^2
-        # expected = [13.6575, 1.1232] for recovery factor = 1.0
-        # So values returned from algorithm OK to use as test results.
-        expected = np.ma.array([13.5892125, 0.967584])
+        expected = np.ma.array([13.6575, 1.1232])
         ma_test.assert_array_almost_equal(tat.array, expected)
         
 
