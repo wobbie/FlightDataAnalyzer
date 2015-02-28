@@ -7498,6 +7498,15 @@ def machtat2sat(mach, tat, recovery_factor=0.995):
     sat = ambient_temp - 273.15
     return sat
 
+def machsat2tat(mach, sat, recovery_factor=0.995):
+    """
+    The inverse of machtat2sat, using the same assumptions.
+    """
+    numerator = np.ma.array(1.0 + (0.2*recovery_factor) * mach * mach)
+    ambient_temp = sat + 273.15
+    tat = (ambient_temp * numerator) - 273.15
+    return tat
+    
 def _alt2press_ratio_gradient(H):
     # From http://www.aerospaceweb.org/question/atmosphere/q0049.shtml
     # Faster to compute than AeroCalc formulae, and pass AeroCalc tests.

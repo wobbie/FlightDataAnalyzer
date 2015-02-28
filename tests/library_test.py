@@ -6987,8 +6987,14 @@ class TestMachTat2Sat(unittest.TestCase):
         mach = np.ma.array(data=[0.5, 0.5], mask=[False, True])
         value = machtat2sat(mach, 15, recovery_factor = 0.5)
         truth = 7.97195121951
+class TestMachSat2Tat(unittest.TestCase):
+
+    def test_machsat2tat(self):
+        mach = np.ma.array(data=[0.5, 0.5])
+        sat = np.ma.array(data=[7.97195121951, 7.97195121951])
+        value = machsat2tat(mach, sat, recovery_factor = 0.5)
+        truth = 15.0
         self.assertAlmostEqual(value[0], truth, delta = 1e-5)
-        self.assertAlmostEqual(value.data[1], 1.0, delta = 1e-5)
 
 
 class TestAlt2Sat(unittest.TestCase):
