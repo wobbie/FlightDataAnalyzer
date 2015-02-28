@@ -4685,15 +4685,17 @@ class TestSpeedbrake(unittest.TestCase):
 
 
 class TestSAT(unittest.TestCase):
-    # Note: the core function machtat2sat is tested by the library test.
 
     def test_can_operate(self):
         self.assertEqual(
             SAT.get_operational_combinations(),
-            [('Altitude STD Smoothed',),
-             ('TAT', 'Altitude STD Smoothed'),
-             ('Mach', 'Altitude STD Smoothed'),
-             ('TAT', 'Mach', 'Altitude STD Smoothed')])
+            [('TAT', 'Mach')])
+
+    @unittest.skip('Test Not Implemented')
+    def test_basic(self):
+        pass
+        # Note: the core function machtat2sat is tested by the library test.
+
 
     def test_basic_altitude(self):
         # -1000 ft = 16.9812 C
@@ -4722,13 +4724,25 @@ class TestTAT(unittest.TestCase):
              ('SAT',)])
              
     def test_combination(self):
-        t1 = P('TAT (1)', array = [1,2,1])
-        t2 = P('TAT (2)', array = [2,1,2])
+        t1 = P('TAT (1)', array = [1,3,5])
+        t2 = P('TAT (2)', array = [2,4,6])
         tat = TAT()
         tat.derive(t1, t2, None)
-        expected = np.ma.array([1.5]*6)
+        expected = np.ma.array(range(1,7))+0.5
+        # This test correctly ignores the 6th overrun sample which is masked.
         ma_test.assert_array_almost_equal(tat.array, expected)
 
+    def test_conversion(self):
+        sat = P('SAT', array=[0.0, -30.0])
+        mach = P('Mach', array=[0.5, 0.8])
+        tat = TAT()
+        tat.derive(None, None, sat, mach)
+        # TAT = SAT (1 + (1.4-1)/2M^2) = 1 + 0.2M^2
+        # expected = [13.6575, 1.1232] for recovery factor = 1.0
+        # So values returned from algorithm OK to use as test results.
+        expected = np.ma.array([13.5892125, 0.967584])
+        ma_test.assert_array_almost_equal(tat.array, expected)
+        
 
 class TestTailwind(unittest.TestCase):
     @unittest.skip('Test Not Implemented')

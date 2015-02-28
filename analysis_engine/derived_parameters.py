@@ -5652,20 +5652,20 @@ class SAT(DerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available):
+        return all_of(('TAT', 'Mach'), available)
 
-        return 'Altitude STD Smoothed' in available
+    def derive(self, tat=P('TAT'), mach=P('Mach')):
+        self.array = machtat2sat(mach.array, tat.array)
 
-    def derive(self, tat=P('TAT'), mach=P('Mach'), alt=P('Altitude STD Smoothed')):
 
-        if tat and mach:
-            self.array = machtat2sat(mach.array, tat.array)
-        else:
-            self.array = alt2sat(alt.array)
 
 
 class TAT(DerivedParameterNode):
     '''
-    Blends data from two air temperature sources.
+    Operates in two different modes, depending upon available information.
+    
+    (1) Blends data from two air temperature sources.
+    (2) Computes TAT from SAT and Mach number.
     '''
 
     @classmethod
@@ -5673,7 +5673,6 @@ class TAT(DerivedParameterNode):
         return ('TAT (1)' in available and 'TAT (2)' in available) or \
                'SAT' in available
     
-    # TODO: Support generation from SAT, Mach and Altitude STD    
     # TODO: Review naming convention - rename to "Total Air Temperature"?
 
     name = 'TAT'
@@ -5683,20 +5682,10 @@ class TAT(DerivedParameterNode):
     def derive(self,
                source_1 = P('TAT (1)'),
                source_2 = P('TAT (2)'),
-               sat = P('SAT')):
+               sat = P('SAT'), mach = P('Mach')):
 
         if sat:
-            # Compute TAT from SAT and other stuff
-            ####################################
-            ## At this point DJ realised we   ##
-            ## have to find speed and altitude##
-            ## parameters and add a library   ##
-            ## function to get TAT.           ##
-            ## Please sort out the "can       ##
-            ## operate" test so I can take it ##
-            ## on from here. Off to fly :o(   ##
-            ####################################
-            pass
+            self.array = machsat2tat(mach.array, sat.array)
 
         else:
             # Alternate samples (1)&(2) are blended.
