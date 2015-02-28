@@ -5658,6 +5658,17 @@ class SAT(DerivedParameterNode):
         self.array = machtat2sat(mach.array, tat.array)
 
 
+class SAT_ISA(DerivedParameterNode):
+    '''
+    Computes Static Air Temperature (temperature of the outside air) from the
+    standard atmosphere and lapse rate.
+    '''
+
+    name = 'SAT International Standard Atmosphere'
+    units = ut.CELSIUS
+
+    def derive(self, alt=P('Altitude STD Smoothed')):
+        self.array = alt2sat(alt.array)
 
 
 class TAT(DerivedParameterNode):

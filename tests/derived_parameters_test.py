@@ -156,6 +156,7 @@ from analysis_engine.derived_parameters import (
     RollRate,
     RudderPedal,
     SAT,
+    SAT_ISA,
     SidestickAngleCapt,
     SidestickAngleFO,
     SlatAngle,
@@ -4697,6 +4698,14 @@ class TestSAT(unittest.TestCase):
         # Note: the core function machtat2sat is tested by the library test.
 
 
+class TestSAT_ISA(unittest.TestCase):
+    # Note: the core function machtat2sat is tested by the library test.
+
+    def test_can_operate(self):
+        self.assertEqual(
+            SAT_ISA.get_operational_combinations(),
+            [('Altitude STD Smoothed',)])
+
     def test_basic_altitude(self):
         # -1000 ft = 16.9812 C
         # 0 ft = 15C
@@ -4709,8 +4718,8 @@ class TestSAT(unittest.TestCase):
         
         alt=P('Altitude STD Smoothed', 
               array=np.array([-1,0,5,10,20,30,40,50])*1000.0)
-        sat = SAT()
-        sat.derive(None, None, alt)
+        sat = SAT_ISA()
+        sat.derive(alt)
         expected = np.ma.array([16.9812, 15.0, 5.09400, -4.812, -24.624,
                                 -44.4360, -56.5, -56.5])
         ma_test.assert_array_almost_equal(sat.array, expected)
