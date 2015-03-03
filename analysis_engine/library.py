@@ -4109,6 +4109,25 @@ def average_value(array, _slice=None):
     return Value(midpoint, np.ma.mean(array))
 
 
+def std_dev_value(array, _slice=slice(None), start_edge=None, stop_edge=None):
+    """
+    Get the standard deviation in the array and its index.
+
+    :param array: Data to calculate the standard deviation of.
+    :type array: np.ma.masked_array
+    :param _slice: Optional subsection of the data to calculate the standard deviation within.
+    :type _slice: slice
+    :returns: The midpoint index and the standard deviation.
+    :rtype: Value named tuple of index and value.
+    """
+    start = _slice.start or 0 if _slice else 0
+    stop = _slice.stop or len(array) if _slice else len(array)
+    midpoint = start + ((stop - start) / 2)
+    if _slice:
+        array = array[_slice]
+    return Value(midpoint, np.ma.std(array))
+
+
 def minimum_unmasked(array1, array2):
     """
     Get the minimum value between two arrays. Differs from the Numpy minimum
