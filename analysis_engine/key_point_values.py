@@ -8986,8 +8986,11 @@ class GearDownToLandingFlapConfigurationDuration(KeyPointValueNode):
                 self.create_kpv(approach.slice.stop, (approach.slice.stop - last_gear_dn.index) / self.frequency)
                 continue
             
-            index, diff = max((f, f - last_gear_dn.index) for f in landing_flap_changes)
-            self.create_kpv(index, diff / self.frequency)
+            flap_idx = landing_flap_changes[0]
+            diff = flap_idx - last_gear_dn.index
+            
+            if diff >= 0:
+                self.create_kpv(flap_idx, diff / self.frequency)
 
 
 ##############################################################################
