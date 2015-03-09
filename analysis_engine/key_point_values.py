@@ -8943,8 +8943,7 @@ class FlapAt500Ft(KeyPointValueNode):
 class GearDownToLandingFlapConfigurationDuration(KeyPointValueNode):
     '''
     Duration between Gear Down selection and Landing Flap Configuration
-    selection. Gear Down selection after Landing Flap Configuration will
-    result in positive values.
+    selection.
     '''
     
     units = ut.SECOND
@@ -8971,6 +8970,7 @@ class GearDownToLandingFlapConfigurationDuration(KeyPointValueNode):
             # Assume Gear Down is selected before lowest point of descent.
             last_gear_dn = gear_dn_sel.get_last(within_slice=approach.slice)
             if not last_gear_dn:
+                # gear down was selected before approach? kpv should not be triggered
                 continue
             
             landing_flap_changes = []
@@ -8982,15 +8982,16 @@ class GearDownToLandingFlapConfigurationDuration(KeyPointValueNode):
                 ))
             
             if not landing_flap_changes:
-                # Always create a KPV if Gear Down is selected during approach
-                self.create_kpv(approach.slice.stop, (approach.slice.stop - last_gear_dn.index) / self.frequency)
+                if flap_lever.array[slice_midpoint(approach.slice)] in valid_settings:
+                    # create kpv if landing flap configuration is for entire approach
+                    self.create_kpv(approach.slice.start,
+                                    (approach.slice.start - last_gear_dn.index) / self.frequency)
                 continue
             
-            flap_idx = landing_flap_changes[0]
+            flap_idx = sorted(landing_flap_changes)[0]
             diff = flap_idx - last_gear_dn.index
             
-            if diff >= 0:
-                self.create_kpv(flap_idx, diff / self.frequency)
+            self.create_kpv(flap_idx, diff / self.frequency)
 
 
 ##############################################################################

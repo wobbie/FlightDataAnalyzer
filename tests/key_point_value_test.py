@@ -8330,13 +8330,11 @@ class TestGearDownToLandingFlapConfigurationDuration(unittest.TestCase):
         
         node.derive(flap_lever, gear_dn_sel, approaches, family)
         
-        self.assertEqual(len(node), 3)
-        self.assertEqual(node[0].index, 21)
-        self.assertEqual(node[0].value, 6)
-        self.assertEqual(node[1].index, 29.5)
-        self.assertEqual(node[1].value, 2.5)
-        self.assertEqual(node[2].index, 39.5)
-        self.assertEqual(node[2].value, -1.5)
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].index, 29.5)
+        self.assertEqual(node[0].value, 2.5)
+        self.assertEqual(node[1].index, 39.5)
+        self.assertEqual(node[1].value, -1.5)
     
     
     def test_derive_basic_erj(self):
@@ -8358,8 +8356,6 @@ class TestGearDownToLandingFlapConfigurationDuration(unittest.TestCase):
         approaches = buildsections('Approach And Landing', (15, 20), (20, 32), (35, 45), (45, 55), (55, 65))
         
         expected = [
-            (21, 6),
-            (33, 6),
             (39.5, -1.5),
             (49.5, -2.5),
         ]
