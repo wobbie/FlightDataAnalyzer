@@ -8198,7 +8198,7 @@ class TestFlapWithSpeedbrakeDeployedMax(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = FlapWithSpeedbrakeDeployedMax
         self.operational_combinations = [
-            ('Flap', 'Speedbrake Selected', 'Airborne', 'Landing'),
+            ('Flap Including Transition', 'Speedbrake Selected', 'Airborne', 'Landing'),
         ]
 
     def test_derive(self):

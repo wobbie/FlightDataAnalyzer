@@ -8898,7 +8898,7 @@ class FlapWithSpeedbrakeDeployedMax(KeyPointValueNode):
     units = ut.DEGREE
 
     def derive(self,
-               flap=M('Flap'),
+               flap=M('Flap Including Transition'),
                spd_brk=M('Speedbrake Selected'),
                airborne=S('Airborne'),
                landings=S('Landing')):
