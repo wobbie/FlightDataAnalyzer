@@ -119,7 +119,7 @@ def derive_parameters(hdf, node_mgr, process_order, params={}, force=False):
     duration = hdf.duration
 
     for param_name in process_order:
-        if param_name in node_mgr.hdf_keys:
+        if param_name in node_mgr.hdf_keys or param_name in params:
             continue
 
         elif node_mgr.get_attribute(param_name) is not None:
