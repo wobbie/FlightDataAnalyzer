@@ -8278,7 +8278,32 @@ class TestFlapAt500Ft(unittest.TestCase, NodeTest):
 
 
 class TestGearDownToLandingFlapConfigurationDuration(unittest.TestCase):
-
+    
+    class ERJ(VelocitySpeed):
+        weight_unit = ut.TONNE
+        tables = {'vref': {
+            'weight': (30,  40),
+            'Lever 4': (110, 120),
+            'Lever 5': (110, 120),
+            'Lever Full': (120, 130),
+        }}
+    
+    class Phenom(VelocitySpeed):
+        weight_unit = ut.TONNE
+        tables = {'vapp': {
+            'weight': (30,  40),
+            'Lever 3': (110, 120),
+            'Lever Full': (120, 130),
+        }}
+    
+    ATTRS = {
+        'family': A('Family', 'B737'),
+        'series': A('Series', 'B737-300'),
+        'model': A('Model', 'B737-3Q8'),
+        'engine_type': A('Engine Type', 'CFM56-3B1'),
+        'engine_series': A('Engine Series', 'CFM56-3'),
+    }
+    
     def setUp(self):
         self.node_class = GearDownToLandingFlapConfigurationDuration
         self.values_mapping = {
@@ -8292,23 +8317,21 @@ class TestGearDownToLandingFlapConfigurationDuration(unittest.TestCase):
         }
         self.reverse_lookup = {v: k for k, v in self.values_mapping.items()}
     
-    def test_can_operate(self):
-        self.assertFalse(self.node_class.can_operate([]))
-        valid_family1 = A('Family', value='ERJ-170/175')
-        valid_family2 = A('Family', value='ERJ-190/195')
-        valid_family3 = A('Family', value='Phenom 300')
-        invalid_family = A('Family', value='B787')
-        available = set()
-        self.assertFalse(self.node_class.can_operate(available, family=valid_family1))
-        self.assertFalse(self.node_class.can_operate(available, family=invalid_family))
-        available = {'Flap Lever', 'Gear Down Selection', 'Approach And Landing', 'Family'}
-        self.assertFalse(self.node_class.can_operate(available))
-        self.assertFalse(self.node_class.can_operate(available, family=invalid_family))
-        self.assertTrue(self.node_class.can_operate(available, family=valid_family1))
-        self.assertTrue(self.node_class.can_operate(available, family=valid_family2))
-        self.assertTrue(self.node_class.can_operate(available, family=valid_family3))
+    @patch('analysis_engine.key_point_values.lookup_table')
+    def test_can_operate(self, lookup_table):
+        
+        lookup_table.return_value = self.ERJ
+        
+        self.assertFalse(self.node_class.can_operate([], **self.ATTRS))
+        self.assertFalse(self.node_class.can_operate(['Gear Down Selection', 'Approach And Landing'], **self.ATTRS))
+        self.assertTrue(self.node_class.can_operate(['Flap Lever', 'Gear Down Selection', 'Approach And Landing'], **self.ATTRS))
+        self.assertTrue(self.node_class.can_operate(['Flap Lever (Synthetic)', 'Gear Down Selection', 'Approach And Landing'], **self.ATTRS))
+        self.assertTrue(self.node_class.can_operate(['Flap Lever', 'Flap Lever (Synthetic)', 'Gear Down Selection', 'Approach And Landing'], **self.ATTRS))
 
-    def test_derive_basic_phenom_300(self):
+    @patch('analysis_engine.key_point_values.lookup_table')
+    def test_derive_basic_phenom_300(self, lookup_table):
+        lookup_table.return_value = self.Phenom()
+        
         flap_lever_values = np.ma.array(
             [self.reverse_lookup['Lever 0']] * 10 +
             [self.reverse_lookup['Lever 1']] * 10 +
@@ -8324,20 +8347,29 @@ class TestGearDownToLandingFlapConfigurationDuration(unittest.TestCase):
         
         approaches = buildsections('Approach And Landing', (15, 20), (20, 32), (35, 45))
         
-        family = A('Family', value='Phenom 300')
+        def test_assertions(node):
+            self.assertEqual(len(node), 2)
+            self.assertEqual(node[0].index, 29.5)
+            self.assertEqual(node[0].value, 2.5)
+            self.assertEqual(node[1].index, 39.5)
+            self.assertEqual(node[1].value, -1.5)
         
         node = self.node_class()
+        node.derive(flap_lever, None, gear_dn_sel, approaches, **self.ATTRS)
+        test_assertions(node)
         
-        node.derive(flap_lever, gear_dn_sel, approaches, family)
+        node = self.node_class()
+        node.derive(None, flap_lever, gear_dn_sel, approaches, **self.ATTRS)
+        test_assertions(node)
         
-        self.assertEqual(len(node), 2)
-        self.assertEqual(node[0].index, 29.5)
-        self.assertEqual(node[0].value, 2.5)
-        self.assertEqual(node[1].index, 39.5)
-        self.assertEqual(node[1].value, -1.5)
+        node = self.node_class()
+        node.derive(flap_lever, flap_lever, gear_dn_sel, approaches, **self.ATTRS)
+        test_assertions(node)
     
-    
-    def test_derive_basic_erj(self):
+    @patch('analysis_engine.key_point_values.lookup_table')
+    def test_derive_basic_erj(self, lookup_table):
+        lookup_table.return_value = self.ERJ()
+        
         flap_lever_values = np.ma.array(
             [self.reverse_lookup['Lever 0']] * 10 +
             [self.reverse_lookup['Lever 1']] * 10 +
@@ -8355,22 +8387,14 @@ class TestGearDownToLandingFlapConfigurationDuration(unittest.TestCase):
         
         approaches = buildsections('Approach And Landing', (15, 20), (20, 32), (35, 45), (45, 55), (55, 65))
         
-        expected = [
-            (39.5, -1.5),
-            (49.5, -2.5),
-        ]
+        node = self.node_class()
+        node.derive(flap_lever, None, gear_dn_sel, approaches, **self.ATTRS)
         
-        def test_family(family_name):
-            node = self.node_class()
-            family = A('Family', value=family_name)
-            node.derive(flap_lever, gear_dn_sel, approaches, family)
-            self.assertEqual(len(node), len(expected))
-            for index, (kpv_index, kpv_value) in enumerate(expected):
-                self.assertEqual(node[index].index, kpv_index)
-                self.assertEqual(node[index].value, kpv_value)
-        
-        test_family('ERJ-170/175')
-        test_family('ERJ-190/195')
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].index, 39.5)
+        self.assertEqual(node[0].value, -1.5)
+        self.assertEqual(node[1].index, 49.5)
+        self.assertEqual(node[1].value, -2.5)
 
 
 ##############################################################################

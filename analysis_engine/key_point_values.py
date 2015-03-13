@@ -8944,27 +8944,35 @@ class GearDownToLandingFlapConfigurationDuration(KeyPointValueNode):
     '''
     Duration between Gear Down selection and Landing Flap Configuration
     selection.
+    
+    Landing Flap Configurations are sourced from the aircraft table
     '''
     
     units = ut.SECOND
     
     @classmethod
-    def can_operate(cls, available, family=A('Family')):
-        embraer = family and family.value in ('ERJ-170/175',
-                                              'ERJ-190/195',
-                                              'Phenom 300')
-        return embraer and all_of(['Flap Lever', 'Gear Down Selection', 'Approach And Landing', 'Family'], available)
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family'),
+                    engine_type=A('Engine Type'), engine_series=A('Engine Series')):
+        flap_lever = any_of(('Flap Lever', 'Flap Lever (Synthetic)'), available)
+        required = all_of(('Gear Down Selection', 'Approach And Landing'), available)
+        attrs = (model, series, family, engine_type, engine_series)
+        table = lookup_table(cls, 'vref', *attrs) or lookup_table(cls, 'vapp', *attrs)
+        return flap_lever and required and table
     
     def derive(self,
                flap_lever=M('Flap Lever'),
+               flap_synth=M('Flap Lever (Synthetic)'),
                gear_dn_sel=KTI('Gear Down Selection'),
-               approaches=A('Approach And Landing'),
-               family=A('Family')):
+               approaches=S('Approach And Landing'),
+               model=A('Model'), series=A('Series'), family=A('Family'),
+               engine_type=A('Engine Type'), engine_series=A('Engine Series')):
         
-        if family.value in ('ERJ-170/175', 'ERJ-190/195'):
-            valid_settings = ('Lever 4', 'Lever 5', 'Lever Full')
-        elif family.value == 'Phenom 300':
-            valid_settings = ('Lever 3', 'Lever Full')
+        attrs = (model, series, family, engine_type, engine_series)
+        table = lookup_table(self, 'vref', *attrs) or lookup_table(self, 'vapp', *attrs)
+        detents = table.vref_detents or table.vapp_detents
+        
+        flap_lever = flap_lever or flap_synth
         
         for approach in approaches:
             # Assume Gear Down is selected before lowest point of descent.
@@ -8974,7 +8982,7 @@ class GearDownToLandingFlapConfigurationDuration(KeyPointValueNode):
                 continue
             
             landing_flap_changes = []
-            for valid_setting in valid_settings:
+            for valid_setting in detents:
                 landing_flap_changes.extend(find_edges_on_state_change(
                     valid_setting,
                     flap_lever.array,
@@ -8982,7 +8990,7 @@ class GearDownToLandingFlapConfigurationDuration(KeyPointValueNode):
                 ))
             
             if not landing_flap_changes:
-                if flap_lever.array[slice_midpoint(approach.slice)] in valid_settings:
+                if flap_lever.array[slice_midpoint(approach.slice)] in detents:
                     # create kpv if landing flap configuration is for entire approach
                     self.create_kpv(approach.slice.start,
                                     (approach.slice.start - last_gear_dn.index) / self.frequency)
