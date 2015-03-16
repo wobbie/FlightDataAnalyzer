@@ -1,7 +1,6 @@
 import argparse
 import itertools
 import logging
-import numpy as np
 import os
 import sys
 
@@ -119,7 +118,21 @@ def derive_parameters(hdf, node_mgr, process_order, params={}, force=False):
     duration = hdf.duration
 
     for param_name in process_order:
-        if param_name in node_mgr.hdf_keys or param_name in params:
+        if param_name in node_mgr.hdf_keys:
+            continue
+        
+        elif param_name in params:
+            node = params[param_name]
+            # populate output
+            if node.node_type is KeyPointValueNode:
+                kpvs[param_name] = list(node)
+            elif node.node_type is KeyTimeInstanceNode:
+                ktis[param_name] = list(node)
+            elif node.node_type is FlightAttributeNode:
+                flight_attrs[param_name] = [Attribute(node.name, node.value)]
+            elif node.node_type is SectionNode:
+                sections[param_name] = list(node)
+            # DerivedParameterNodes are not supported in initial data.
             continue
 
         elif node_mgr.get_attribute(param_name) is not None:
