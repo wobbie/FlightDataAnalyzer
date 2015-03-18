@@ -1542,10 +1542,12 @@ class AltitudeWhenClimbing(KeyTimeInstanceNode):
     NAME_FORMAT = '%(altitude)d Ft Climbing'
     NAME_VALUES = NAME_VALUES_CLIMB
 
-    def derive(self, climbing=S('Climb'),
+    def derive(self,
+               initial_climb=S('Initial Climb'),
+               climb=S('Climb'),
                alt_aal=P('Altitude AAL'),
                alt_std=P('Altitude STD Smoothed')):
-        for climb in climbing:
+        for climb in list(initial_climb) + list(climb):
             for alt_threshold in self.NAME_VALUES['altitude']:
                 # Will trigger a single KTI per height (if threshold is crossed)
                 # per climbing phase.
