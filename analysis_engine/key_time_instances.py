@@ -1731,3 +1731,24 @@ class OnBlocks(KeyTimeInstanceNode):
     def derive(self, mobile=S('Mobile'), hdg=P('Heading')):
         if len(mobile):
             self.create_kti(mobile[0].slice.stop or len(hdg.array))
+
+
+class FirstEngFuelFlowStart(KeyTimeInstanceNode):
+    '''
+    Start of fuel flow in any engine.
+    '''
+    def derive(self, ff=S('Eng (*) Fuel Flow')):
+        ix = np.ma.argmax(ff.array > 0)
+        if ix or ff.array[ix] != 0:
+            self.create_kti(ix)
+
+
+class LastEngFuelFlowStop(KeyTimeInstanceNode):
+    '''
+    Stop of fuel flow in all engines.
+    '''
+    def derive(self, ff=S('Eng (*) Fuel Flow')):
+        slices = runs_of_ones(ff.array == 0)
+        if slices:
+            ix = slices[-1].start
+            self.create_kti(ix)

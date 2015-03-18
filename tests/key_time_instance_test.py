@@ -1788,3 +1788,23 @@ class TestOnBlocks(unittest.TestCase):
         on.get_derived((mobile, hdg))
         self.assertEqual(len(on),1)
         self.assertEqual(on[0].index, 36)
+
+
+class TestFirstEngFuelFlowStart(unittest.TestCase):
+    def test_derive(self):
+        ff = P(
+            'Eng (*) Fuel Flow',
+            array=np.ma.array([0, 0, 1, 3, 5, 5, 5, 5, 5, 5, 3, 2, 2, 0, 0]))
+        feffs = FirstEngFuelFlowStart()
+        feffs.derive(ff)
+        self.assertEqual(feffs[0].index, 2)
+
+
+class TestLastEngFuelFlowStop(unittest.TestCase):
+    def test_derive(self):
+        ff = P(
+            'Eng (*) Fuel Flow',
+            array=np.ma.array([0, 0, 1, 3, 5, 5, 5, 5, 5, 5, 3, 2, 2, 0, 0]))
+        leffs = LastEngFuelFlowStop()
+        leffs.derive(ff)
+        self.assertEqual(leffs[0].index, 13)
