@@ -1276,7 +1276,7 @@ class TestFlapIncludingTransition(unittest.TestCase, NodeTest):
         self.assertEqual(node.units, ut.DEGREE)
         self.assertIsInstance(node.array, MappedArray)
         self.assertEqual(node.frequency, 4)
-        self.assertEqual(node.array.tolist(), [0] * 11 + [40] * 92 + [None])
+        self.assertEqual(node.array.raw.tolist(), [0] * 11 + [40] * 92 + [None])
 
 
 class TestFlapLever(unittest.TestCase, NodeTest):
@@ -1667,7 +1667,7 @@ class TestFlaperon(unittest.TestCase):
         flaperon = Flaperon()
         flaperon.derive(al, ar, model, series, family)
         self.assertTrue(
-            flaperon.array.tolist() ==
+            flaperon.array.raw.tolist() ==
             [None] * 53 +
             [10] * 11 +
             [5] * 244 + 
@@ -2231,7 +2231,7 @@ class TestSlat(unittest.TestCase, NodeTest):
         self.assertEqual(node.units, ut.DEGREE)
         self.assertIsInstance(node.array, MappedArray)
         self.assertEqual(node.frequency, 4)
-        self.assertEqual(node.array.tolist(), [0] * 11 + [25] * 62 + [None])
+        self.assertEqual(node.array.raw.tolist(), [0] * 11 + [25] * 62 + [None])
 
 
 class TestSlatExcludingTransition(unittest.TestCase, NodeTest):
@@ -2271,7 +2271,7 @@ class TestSlatExcludingTransition(unittest.TestCase, NodeTest):
         self.assertEqual(node.values_mapping, at.get_slat_map.return_value)
         self.assertEqual(node.units, ut.DEGREE)
         self.assertIsInstance(node.array, MappedArray)
-        self.assertEqual(node.array.tolist(), [0] * 65 + [25] * 8 + [None])
+        self.assertEqual(node.array.raw.tolist(), [0] * 65 + [25] * 8 + [None])
 
 
 class TestSlatIncludingTransition(unittest.TestCase, NodeTest):
@@ -2312,7 +2312,7 @@ class TestSlatIncludingTransition(unittest.TestCase, NodeTest):
         self.assertEqual(node.units, ut.DEGREE)
         self.assertIsInstance(node.array, MappedArray)
         self.assertEqual(node.frequency, 4)
-        self.assertEqual(node.array.tolist(), [0] * 11 + [25] * 62 + [None])
+        self.assertEqual(node.array.raw.tolist(), [0] * 11 + [25] * 62 + [None])
 
 
 class TestSpeedbrakeDeployed(unittest.TestCase):
