@@ -2585,9 +2585,6 @@ class TestStableApproach(unittest.TestCase):
                                 start_edge=2702.0, stop_edge=2993.0)])
         
 
-        #def save_test_node(param):
-            #param.save('../tests/test_data/Stable Approach - '+param.name+'.nod')
-
         def test_node(name):
             return load(os.path.join(test_data_path, 'Stable Approach - '+name+'.nod'))
         stable = StableApproach()
