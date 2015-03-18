@@ -1542,7 +1542,7 @@ class AltitudeWhenClimbing(KeyTimeInstanceNode):
     NAME_FORMAT = '%(altitude)d Ft Climbing'
     NAME_VALUES = NAME_VALUES_CLIMB
 
-    def derive(self, climbing=S('Climbing'), 
+    def derive(self, climbing=S('Climb'),
                alt_aal=P('Altitude AAL'),
                alt_std=P('Altitude STD Smoothed')):
         for climb in climbing:
@@ -1568,7 +1568,7 @@ class AltitudeWhenDescending(KeyTimeInstanceNode):
     NAME_FORMAT = '%(altitude)d Ft Descending'
     NAME_VALUES = NAME_VALUES_DESCENT
 
-    def derive(self, descending=S('Descending'), 
+    def derive(self, descending=S('Descent'),
                alt_aal=P('Altitude AAL'),
                alt_std=P('Altitude STD Smoothed')):
         for descend in descending:

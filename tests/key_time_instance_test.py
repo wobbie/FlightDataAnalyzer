@@ -466,45 +466,44 @@ class TestAltitudeInFinalApproach(unittest.TestCase):
                            latitude=None, longitude=None)])
 """
 
+
 class TestAltitudeWhenClimbing(unittest.TestCase):
     def test_can_operate(self):
         self.assertEqual(AltitudeWhenClimbing.get_operational_combinations(),
-                         [('Climbing', 'Altitude AAL', 'Altitude STD Smoothed')])
+                         [('Climb', 'Altitude AAL', 'Altitude STD Smoothed')])
 
     def test_derive(self):
-        climbing = S('Climbing', items=[Section('a', slice(4, 10), 4, 10),
-                                        Section('b', slice(12, 20), 12, 20)])
-        alt_aal = P('Altitude AAL',
-                    np.ma.masked_array(range(0, 200, 20) + \
-                                       range(0, 200, 20),
-                                       mask=[False] * 6 + [True] * 3 + \
-                                            [False] * 11))
+        climbing = S('Climb', items=[Section('a', slice(4, 30), 4, 30)])
+        arr = np.ma.arange(20, 200, 5)
+        alt_aal = P('Altitude AAL', arr)
         altitude_when_climbing = AltitudeWhenClimbing()
         altitude_when_climbing.derive(climbing, alt_aal)
-        self.assertEqual(list(altitude_when_climbing),
-          [KeyTimeInstance(index=5.0, name='100 Ft Climbing'),
-           KeyTimeInstance(index=12.5, name='50 Ft Climbing'),
-           KeyTimeInstance(index=13.75, name='75 Ft Climbing'),
-           KeyTimeInstance(index=15.0, name='100 Ft Climbing'),
-           KeyTimeInstance(index=17.5, name='150 Ft Climbing')])
+        self.assertEqual(
+            list(altitude_when_climbing),
+            [KeyTimeInstance(index=6, name='50 Ft Climbing'),
+             KeyTimeInstance(index=11, name='75 Ft Climbing'),
+             KeyTimeInstance(index=16, name='100 Ft Climbing'),
+             KeyTimeInstance(index=26, name='150 Ft Climbing')])
 
 
 class TestAltitudeWhenDescending(unittest.TestCase):
     def test_can_operate(self):
-        self.assertEqual(AltitudeWhenDescending.get_operational_combinations(),
-                         [('Descending','Altitude AAL', 'Altitude STD Smoothed')])
+        self.assertEqual(
+            AltitudeWhenDescending.get_operational_combinations(),
+            [('Descent', 'Altitude AAL', 'Altitude STD Smoothed')])
 
     def test_derive(self):
-        descending = buildsections('Descending', [0, 10], [11, 20])
-        alt_aal = P('Altitude AAL',
-                    np.ma.masked_array(range(100, 0, -10),
-                                       mask=[False] * 6 + [True] * 3 + [False]))
+        descending = buildsections('Descent', [0, 20])
+        alt_aal = P(
+            'Altitude AAL',
+            np.ma.masked_array(
+                range(100, 0, -10), mask=[False] * 6 + [True] * 3 + [False]))
         altitude_when_descending = AltitudeWhenDescending()
         altitude_when_descending.derive(descending, alt_aal)
-        self.assertEqual(list(altitude_when_descending),
-          [KeyTimeInstance(index=2.5, name='75 Ft Descending'),
-           KeyTimeInstance(index=5.0, name='50 Ft Descending'),
-        ])
+        self.assertEqual(
+            list(altitude_when_descending),
+            [KeyTimeInstance(index=2.5, name='75 Ft Descending'),
+             KeyTimeInstance(index=5.0, name='50 Ft Descending')])
 
 
 #class TestAltitudeSTDWhenDescending(unittest.TestCase):
