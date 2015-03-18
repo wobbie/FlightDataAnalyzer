@@ -350,7 +350,7 @@ def parse_analyser_profiles(analyser_profiles, filter_modules=None):
 def process_flight(segment_info, tail_number, aircraft_info={}, achieved_flight_record={},
                    requested=[], required=[], include_flight_attributes=True,
                    additional_modules=[], pre_flight_kwargs={}, force=False,
-                   initial={}):
+                   initial={}, reprocess=False):
     '''
     Processes the HDF file (segment_info['File']) to derive the required_params (Nodes)
     within python modules (settings.NODE_MODULES).
@@ -380,6 +380,7 @@ def process_flight(segment_info, tail_number, aircraft_info={}, achieved_flight_
     :type force: bool
     :param initial: Initial content for nodes to avoid reprocessing (excluding parameter nodes which are saved to the hdf).
     :type initial: dict
+    :param reprocess: Force reprocessing of all Nodes (including derived Nodes already saved to the HDF file).
 
     :returns: See below:
     :rtype: Dict
@@ -580,9 +581,10 @@ def process_flight(segment_info, tail_number, aircraft_info={}, achieved_flight_
             hooks.PRE_FLIGHT_ANALYSIS(hdf, aircraft_info, **pre_flight_kwargs)
         else:
             logger.info("No PRE_FLIGHT_ANALYSIS actions to perform")
-        # Track nodes. Assume that all params in HDF are from LFL(!)
+        # Track nodes.
+        param_names = hdf.valid_lfl_param_names() if reprocess else hdf.valid_param_names()
         node_mgr = NodeManager(
-            segment_info, hdf.duration, hdf.valid_param_names(),
+            segment_info, hdf.duration, param_names,
             requested, required, derived_nodes, aircraft_info,
             achieved_flight_record)
         # calculate dependency tree
