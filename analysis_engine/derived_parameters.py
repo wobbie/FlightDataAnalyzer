@@ -943,6 +943,10 @@ class AltitudeRadio(DerivedParameterNode):
         self.frequency = 4.0
 
         if family and family.value in ('A300', 'A310', 'A319', 'A320', 'A321', 'A330', 'A340'):
+            # The Altitude Radio, Altitude Radio (*) in Airbus frames should
+            # not contain "Overflow Correction = True". The below procedure
+            # works a lot more effective, especially in case of ARINC pattern
+            # in the signal, which can't be removed in conversion process.
             osources = []
             for source in sources:
                 if source is None:
