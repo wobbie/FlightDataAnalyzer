@@ -605,12 +605,17 @@ class AltitudeAAL(DerivedParameterNode):
                                    end_at=len(alt_std))
 
         for ralt_section in ralt_sections:
-            if np.ma.mean(alt_std[ralt_section] - alt_rad_aal[ralt_section]) > 10000:
-                # Difference between Altitude STD and Altitude Radio should not
-                # be greater than 10000 ft when Altitude Radio is recording below
-                # 100 ft. This will not fix cases when Altitude Radio records
-                # spurious data at lower altitudes.
-                continue
+            # Note: below check commented out as multiple commercial airports
+            # have an elevation of more than 10000ft. If the use case for
+            # this check is dicovered it needs to be documented - 2015/03/20
+
+            #if np.ma.mean(alt_std[ralt_section] -
+            # alt_rad_aal[ralt_section]) > 10000:
+                ## Difference between Altitude STD and Altitude Radio should not
+                ## be greater than 10000 ft when Altitude Radio is recording below
+                ## 100 ft. This will not fix cases when Altitude Radio records
+                ## spurious data at lower altitudes.
+                # continue
 
             if mode=='over_gnd':
                 # land mode is handled above so just need to set rad alt as
