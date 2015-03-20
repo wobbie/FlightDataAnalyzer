@@ -3803,16 +3803,7 @@ class TestAltitudeOvershootAtSuspectedLevelBust(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = AltitudeOvershootAtSuspectedLevelBust
-        self.operational_combinations = [('Altitude STD Smoothed', 'Level Flight')]
-
-    def test_derive_handling_no_data(self):
-        alt_std = P(
-            name='Altitude STD Smoothed',
-            array=np.ma.array([0] + [1000] * 4),
-        )
-        node = AltitudeOvershootAtSuspectedLevelBust()
-        node.derive(alt_std)
-        self.assertEqual(node, [])
+        self.operational_combinations = [('Altitude STD Smoothed', 'Altitude AAL')]
 
     def test_derive_too_slow(self):
         alt_std = P(
@@ -3820,9 +3811,8 @@ class TestAltitudeOvershootAtSuspectedLevelBust(unittest.TestCase, NodeTest):
             array=np.ma.array(1.0 + np.sin(np.arange(0, 12.6, 0.1))) * 1000,
             frequency=0.02,
         )
-        level_flights = buildsections('Level Flight', (15, 17), (46, 48), (78, 80), (109, 111))
         node = AltitudeOvershootAtSuspectedLevelBust()
-        node.get_derived([alt_std, level_flights])
+        node.get_derived([alt_std, alt_std])
         self.assertEqual(node, [])
 
     def test_derive_straight_up_and_down(self):
@@ -3831,9 +3821,8 @@ class TestAltitudeOvershootAtSuspectedLevelBust(unittest.TestCase, NodeTest):
             array=np.ma.array(range(0, 10000, 50) + range(10000, 0, -50)),
             frequency=1,
         )
-        level_flights = S('Level Flight')
         node = AltitudeOvershootAtSuspectedLevelBust()
-        node.derive(alt_std, level_flights)
+        node.derive(alt_std, alt_std)
         self.assertEqual(node, [])
 
     def test_derive_up_and_down_with_overshoot(self):
@@ -3841,11 +3830,10 @@ class TestAltitudeOvershootAtSuspectedLevelBust(unittest.TestCase, NodeTest):
             name='Altitude STD Smoothed',
             array=np.ma.array(range(0, 10000, 50) + range(10000, 9000, -50)
                 + [9000] * 200 + range(9000, 0, -50)),
-            frequency=1,
+            frequency=0.25,
         )
-        level_flights = buildsection('Level Flight', 220, 420)
         node = AltitudeOvershootAtSuspectedLevelBust()
-        node.derive(alt_std, level_flights)
+        node.get_derived([alt_std, alt_std])
         self.assertEqual(len(node), 1)
         self.assertEqual(node[0].index, 200)
         self.assertEqual(node[0].value, 1000)
@@ -3856,15 +3844,13 @@ class TestAltitudeOvershootAtSuspectedLevelBust(unittest.TestCase, NodeTest):
             array=np.ma.array(range(0, 10000, 50) + [10000] * 200
                 + range(10000, 9000, -50) + range(9000, 20000, 50)
                 + range(20000, 0, -50)),
-            frequency=1,
+            frequency=0.25,
         )
-        level_flights = buildsection('Level Flight', 200, 400)
         node = AltitudeOvershootAtSuspectedLevelBust()
-        node.derive(alt_std, level_flights)
-        self.assertEqual(node, [
-            KeyPointValue(index=420, value=-1000,
-                name='Altitude Overshoot At Suspected Level Bust'),
-        ])
+        node.get_derived([alt_std, alt_std])
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 420)
+        self.assertEqual(node[0].value, -1000)
     
     def test_derive_with_real_go_around_data_ignores_undershoot(self):
         '''
@@ -3873,12 +3859,7 @@ class TestAltitudeOvershootAtSuspectedLevelBust(unittest.TestCase, NodeTest):
         alt_std = load(os.path.join(test_data_path,
                                     'alt_std_smoothed_go_around.nod'))
         bust = AltitudeOvershootAtSuspectedLevelBust()
-        level_flights = buildsections(
-            'Level Flight',
-            (1740, 2682),
-            (3400, 3510),
-        )
-        bust.derive(alt_std, level_flights)
+        bust.derive(alt_std, alt_std)
         self.assertEqual(len(bust), 0)
     
     def test_derive_real_data_overshoot(self):
@@ -3887,14 +3868,45 @@ class TestAltitudeOvershootAtSuspectedLevelBust(unittest.TestCase, NodeTest):
         '''
         alt_std = load(os.path.join(test_data_path,
                                     'alt_overshoot_alt_std.nod'))
-        level_flights = load(os.path.join(test_data_path,
-                                          'alt_overshoot_level_flight.nod'))
         bust = AltitudeOvershootAtSuspectedLevelBust()
-        bust.derive(alt_std, level_flights)
+        bust.derive(alt_std, alt_std)
         self.assertEqual(len(bust), 1)
         self.assertAlmostEqual(bust[0].index, 3713, places=0)
-        self.assertAlmostEqual(bust[0].value, 496, places=0)
-
+        self.assertAlmostEqual(bust[0].value, 543, places=0)
+    
+    def test_derive_no_duplicates_1(self):
+        node = AltitudeOvershootAtSuspectedLevelBust()
+        alt_std = load(os.path.join(test_data_path, 'AltitudeOvershootAtSuspectedLevelBust_alt_std_01.nod'))
+        alt_aal = load(os.path.join(test_data_path, 'AltitudeOvershootAtSuspectedLevelBust_alt_aal_01.nod'))
+        node.derive(alt_std, alt_aal)
+        self.assertEqual(len(node), 1)
+        self.assertAlmostEqual(node[0].index, 781, places=0)
+        self.assertAlmostEqual(node[0].value, 533, places=0)
+    
+    def test_derive_no_duplicates_2(self):
+        node = AltitudeOvershootAtSuspectedLevelBust()
+        alt_std = load(os.path.join(test_data_path, 'AltitudeOvershootAtSuspectedLevelBust_alt_std_02.nod'))
+        alt_aal = load(os.path.join(test_data_path, 'AltitudeOvershootAtSuspectedLevelBust_alt_aal_02.nod'))
+        node.derive(alt_std, alt_aal)
+        self.assertEqual(len(node), 1)
+        self.assertAlmostEqual(node[0].index, 1192, places=0)
+        self.assertAlmostEqual(node[0].value, 330, places=0)
+    
+    def test_derive_overshoot_during_descent(self):
+        node = AltitudeOvershootAtSuspectedLevelBust()
+        alt_std = load(os.path.join(test_data_path, 'AltitudeOvershootAtSuspectedLevelBust_alt_std_03.nod'))
+        alt_aal = load(os.path.join(test_data_path, 'AltitudeOvershootAtSuspectedLevelBust_alt_aal_03.nod'))
+        node.derive(alt_std, alt_aal)
+        self.assertEqual(len(node), 1)
+        self.assertAlmostEqual(node[0].index, 2478, places=0)
+        self.assertAlmostEqual(node[0].value, -416, places=0)
+    
+    def test_derive_level_flights(self):
+        node = AltitudeOvershootAtSuspectedLevelBust()
+        alt_std = load(os.path.join(test_data_path, 'AltitudeOvershootAtSuspectedLevelBust_alt_std_04.nod'))
+        alt_aal = load(os.path.join(test_data_path, 'AltitudeOvershootAtSuspectedLevelBust_alt_aal_04.nod'))
+        node.derive(alt_std, alt_aal)
+        self.assertEqual(len(node), 0)
 
 
 ####class TestAltitudeAtCabinPressureLowWarningDuration(unittest.TestCase,
@@ -8198,7 +8210,7 @@ class TestFlapWithSpeedbrakeDeployedMax(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = FlapWithSpeedbrakeDeployedMax
         self.operational_combinations = [
-            ('Flap', 'Speedbrake Selected', 'Airborne', 'Landing'),
+            ('Flap Including Transition', 'Speedbrake Selected', 'Airborne', 'Landing'),
         ]
 
     def test_derive(self):
@@ -8278,7 +8290,32 @@ class TestFlapAt500Ft(unittest.TestCase, NodeTest):
 
 
 class TestGearDownToLandingFlapConfigurationDuration(unittest.TestCase):
-
+    
+    class ERJ(VelocitySpeed):
+        weight_unit = ut.TONNE
+        tables = {'vref': {
+            'weight': (30,  40),
+            'Lever 4': (110, 120),
+            'Lever 5': (110, 120),
+            'Lever Full': (120, 130),
+        }}
+    
+    class Phenom(VelocitySpeed):
+        weight_unit = ut.TONNE
+        tables = {'vapp': {
+            'weight': (30,  40),
+            'Lever 3': (110, 120),
+            'Lever Full': (120, 130),
+        }}
+    
+    ATTRS = {
+        'family': A('Family', 'B737'),
+        'series': A('Series', 'B737-300'),
+        'model': A('Model', 'B737-3Q8'),
+        'engine_type': A('Engine Type', 'CFM56-3B1'),
+        'engine_series': A('Engine Series', 'CFM56-3'),
+    }
+    
     def setUp(self):
         self.node_class = GearDownToLandingFlapConfigurationDuration
         self.values_mapping = {
@@ -8292,23 +8329,21 @@ class TestGearDownToLandingFlapConfigurationDuration(unittest.TestCase):
         }
         self.reverse_lookup = {v: k for k, v in self.values_mapping.items()}
     
-    def test_can_operate(self):
-        self.assertFalse(self.node_class.can_operate([]))
-        valid_family1 = A('Family', value='ERJ-170/175')
-        valid_family2 = A('Family', value='ERJ-190/195')
-        valid_family3 = A('Family', value='Phenom 300')
-        invalid_family = A('Family', value='B787')
-        available = set()
-        self.assertFalse(self.node_class.can_operate(available, family=valid_family1))
-        self.assertFalse(self.node_class.can_operate(available, family=invalid_family))
-        available = {'Flap Lever', 'Gear Down Selection', 'Approach And Landing', 'Family'}
-        self.assertFalse(self.node_class.can_operate(available))
-        self.assertFalse(self.node_class.can_operate(available, family=invalid_family))
-        self.assertTrue(self.node_class.can_operate(available, family=valid_family1))
-        self.assertTrue(self.node_class.can_operate(available, family=valid_family2))
-        self.assertTrue(self.node_class.can_operate(available, family=valid_family3))
+    @patch('analysis_engine.key_point_values.lookup_table')
+    def test_can_operate(self, lookup_table):
+        
+        lookup_table.return_value = self.ERJ
+        
+        self.assertFalse(self.node_class.can_operate([], **self.ATTRS))
+        self.assertFalse(self.node_class.can_operate(['Gear Down Selection', 'Approach And Landing'], **self.ATTRS))
+        self.assertTrue(self.node_class.can_operate(['Flap Lever', 'Gear Down Selection', 'Approach And Landing'], **self.ATTRS))
+        self.assertTrue(self.node_class.can_operate(['Flap Lever (Synthetic)', 'Gear Down Selection', 'Approach And Landing'], **self.ATTRS))
+        self.assertTrue(self.node_class.can_operate(['Flap Lever', 'Flap Lever (Synthetic)', 'Gear Down Selection', 'Approach And Landing'], **self.ATTRS))
 
-    def test_derive_basic_phenom_300(self):
+    @patch('analysis_engine.key_point_values.lookup_table')
+    def test_derive_basic_phenom_300(self, lookup_table):
+        lookup_table.return_value = self.Phenom()
+        
         flap_lever_values = np.ma.array(
             [self.reverse_lookup['Lever 0']] * 10 +
             [self.reverse_lookup['Lever 1']] * 10 +
@@ -8324,22 +8359,29 @@ class TestGearDownToLandingFlapConfigurationDuration(unittest.TestCase):
         
         approaches = buildsections('Approach And Landing', (15, 20), (20, 32), (35, 45))
         
-        family = A('Family', value='Phenom 300')
+        def test_assertions(node):
+            self.assertEqual(len(node), 2)
+            self.assertEqual(node[0].index, 29.5)
+            self.assertEqual(node[0].value, 2.5)
+            self.assertEqual(node[1].index, 39.5)
+            self.assertEqual(node[1].value, -1.5)
         
         node = self.node_class()
+        node.derive(flap_lever, None, gear_dn_sel, approaches, **self.ATTRS)
+        test_assertions(node)
         
-        node.derive(flap_lever, gear_dn_sel, approaches, family)
+        node = self.node_class()
+        node.derive(None, flap_lever, gear_dn_sel, approaches, **self.ATTRS)
+        test_assertions(node)
         
-        self.assertEqual(len(node), 3)
-        self.assertEqual(node[0].index, 21)
-        self.assertEqual(node[0].value, 6)
-        self.assertEqual(node[1].index, 29.5)
-        self.assertEqual(node[1].value, 2.5)
-        self.assertEqual(node[2].index, 39.5)
-        self.assertEqual(node[2].value, -1.5)
+        node = self.node_class()
+        node.derive(flap_lever, flap_lever, gear_dn_sel, approaches, **self.ATTRS)
+        test_assertions(node)
     
-    
-    def test_derive_basic_erj(self):
+    @patch('analysis_engine.key_point_values.lookup_table')
+    def test_derive_basic_erj(self, lookup_table):
+        lookup_table.return_value = self.ERJ()
+        
         flap_lever_values = np.ma.array(
             [self.reverse_lookup['Lever 0']] * 10 +
             [self.reverse_lookup['Lever 1']] * 10 +
@@ -8357,24 +8399,14 @@ class TestGearDownToLandingFlapConfigurationDuration(unittest.TestCase):
         
         approaches = buildsections('Approach And Landing', (15, 20), (20, 32), (35, 45), (45, 55), (55, 65))
         
-        expected = [
-            (21, 6),
-            (33, 6),
-            (39.5, -1.5),
-            (49.5, -2.5),
-        ]
+        node = self.node_class()
+        node.derive(flap_lever, None, gear_dn_sel, approaches, **self.ATTRS)
         
-        def test_family(family_name):
-            node = self.node_class()
-            family = A('Family', value=family_name)
-            node.derive(flap_lever, gear_dn_sel, approaches, family)
-            self.assertEqual(len(node), len(expected))
-            for index, (kpv_index, kpv_value) in enumerate(expected):
-                self.assertEqual(node[index].index, kpv_index)
-                self.assertEqual(node[index].value, kpv_value)
-        
-        test_family('ERJ-170/175')
-        test_family('ERJ-190/195')
+        self.assertEqual(len(node), 2)
+        self.assertEqual(node[0].index, 39.5)
+        self.assertEqual(node[0].value, -1.5)
+        self.assertEqual(node[1].index, 49.5)
+        self.assertEqual(node[1].value, -2.5)
 
 
 ##############################################################################

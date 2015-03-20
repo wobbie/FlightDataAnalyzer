@@ -3966,7 +3966,6 @@ class TestBlendParameters(unittest.TestCase):
         self.assertAlmostEqual(len(result), 4)
 
 
-
 class TestBlendParametersWeighting(unittest.TestCase):
     def test_weighting(self):
         array=np.ma.array(data=[0,0,0,0,0,0,0,0,0,0,0,0,0],

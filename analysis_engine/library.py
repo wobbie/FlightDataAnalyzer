@@ -4321,7 +4321,7 @@ def blend_two_parameters(param_one, param_two):
         analysis processes to proceed without failing due to differing sample
         rates.
         '''
-        b = np.empty(2*a.size,)
+        b = np.ma.empty(2 * a.size,)
         if off > 0.5/freq:
             b[1::2] = a
             b[2::2] = (a[:-1]+a[1:]) / 2.0 
@@ -4331,7 +4331,7 @@ def blend_two_parameters(param_one, param_two):
             b[0::2] = a
             b[1:-1:2] = (a[:-1]+a[1:]) / 2.0 
             b[-1] = b[-2]
-        return b, 2.0*freq, off 
+        return b, 2.0 * freq, off 
     
     if param_one == None and param_two == None:
         raise ValueError('blend_two_parameters called with both parameters = None')

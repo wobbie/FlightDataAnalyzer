@@ -5702,8 +5702,10 @@ class TAT(DerivedParameterNode):
 
         if sat:
             # We compute the total air temperature, assuming a perfect sensor.
-            self.array = machsat2tat(mach.array, sat.array, 
-                                     recovery_factor=1.0)
+            # Where Mach is masked we use SAT directly
+            self.array = np.ma.where(
+                mach.array.mask, sat.array, machsat2tat(mach.array, sat.array,
+                                                        recovery_factor=1.0))
 
         else:
             # Alternate samples (1)&(2) are blended.

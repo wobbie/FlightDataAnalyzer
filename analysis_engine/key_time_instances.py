@@ -85,7 +85,7 @@ class AltitudePeak(KeyTimeInstanceNode):
 class APEngagedSelection(KeyTimeInstanceNode):
     '''
     AP Engaged is defined as the Autopilot entering the Engaged state.
-    
+
     This works for simplex, duplex or triplex engagement options, which are
     defined by the AP Channels Engaged parameter.
     '''
@@ -106,7 +106,7 @@ class APEngagedSelection(KeyTimeInstanceNode):
 class APDisengagedSelection(KeyTimeInstanceNode):
     '''
     AP Disengaged is defined as the Autopilot leaving the Engaged state.
-    
+
     This works for simplex, duplex or triplex engagement options, which are
     defined by the AP Channels Engaged parameter.
     '''
@@ -115,7 +115,7 @@ class APDisengagedSelection(KeyTimeInstanceNode):
 
     def derive(self, ap=M('AP Engaged'), phase=S('Fast')):
         # TODO: Use a phase that includes on ground too, say Acceleration
-        # Start before liftoff to Turn off Runway after touchdown.        
+        # Start before liftoff to Turn off Runway after touchdown.
         self.create_ktis_on_state_change(
             'Engaged',
             ap.array,
@@ -126,7 +126,7 @@ class APDisengagedSelection(KeyTimeInstanceNode):
 
 class ATEngagedSelection(KeyTimeInstanceNode):
     '''
-    
+
     '''
 
     name = 'AT Engaged Selection'
@@ -166,35 +166,35 @@ class Transmit(KeyTimeInstanceNode):
     '''
     Whenever the HF, VHF or Satcom transmits are used, this KTI is triggered.
     '''
-    
+
     @classmethod
     def can_operate(cls, available):
         return any(d in available for d in cls.get_dependency_names())
 
     def derive(self,
-            hf=M('Key HF'),
-            hf1=M('Key HF (1)'),
-            hf2=M('Key HF (2)'),
-            hf3=M('Key HF (3)'),
-            hf1_capt=M('Key HF (1) (Capt)'),
-            hf2_capt=M('Key HF (2) (Capt)'),
-            hf3_capt=M('Key HF (3) (Capt)'),
-            hf1_fo=M('Key HF (1) (FO)'),
-            hf2_fo=M('Key HF (2) (FO)'),
-            hf3_fo=M('Key HF (3) (FO)'),
-            sc=M('Key Satcom'),
-            sc1=M('Key Satcom (1)'),
-            sc2=M('Key Satcom (2)'),
-            vhf=M('Key VHF'),
-            vhf1=M('Key VHF (1)'),
-            vhf2=M('Key VHF (2)'),
-            vhf3=M('Key VHF (3)'),
-            vhf1_capt=M('Key VHF (1) (Capt)'),
-            vhf2_capt=M('Key VHF (2) (Capt)'),
-            vhf3_capt=M('Key VHF (3) (Capt)'),
-            vhf1_fo=M('Key VHF (1) (FO)'),
-            vhf2_fo=M('Key VHF (2) (FO)'),
-            vhf3_fo=M('Key VHF (3) (FO)')):
+               hf=M('Key HF'),
+               hf1=M('Key HF (1)'),
+               hf2=M('Key HF (2)'),
+               hf3=M('Key HF (3)'),
+               hf1_capt=M('Key HF (1) (Capt)'),
+               hf2_capt=M('Key HF (2) (Capt)'),
+               hf3_capt=M('Key HF (3) (Capt)'),
+               hf1_fo=M('Key HF (1) (FO)'),
+               hf2_fo=M('Key HF (2) (FO)'),
+               hf3_fo=M('Key HF (3) (FO)'),
+               sc=M('Key Satcom'),
+               sc1=M('Key Satcom (1)'),
+               sc2=M('Key Satcom (2)'),
+               vhf=M('Key VHF'),
+               vhf1=M('Key VHF (1)'),
+               vhf2=M('Key VHF (2)'),
+               vhf3=M('Key VHF (3)'),
+               vhf1_capt=M('Key VHF (1) (Capt)'),
+               vhf2_capt=M('Key VHF (2) (Capt)'),
+               vhf3_capt=M('Key VHF (3) (Capt)'),
+               vhf1_fo=M('Key VHF (1) (FO)'),
+               vhf2_fo=M('Key VHF (2) (FO)'),
+               vhf3_fo=M('Key VHF (3) (FO)')):
         for p in [hf, hf1, hf2, hf3, hf1_capt, hf2_capt, hf3_capt,
                   hf1_fo, hf2_fo, hf3_fo, sc, sc1, sc2, vhf, vhf1, vhf2, vhf3,
                   vhf1_capt, vhf2_capt, vhf3_capt, vhf1_fo, vhf2_fo, vhf3_fo]:
@@ -210,14 +210,14 @@ class ClimbStart(KeyTimeInstanceNode):
     '''
     Creates KTIs where the aircraft transitions through %dft
     ''' % CLIMB_THRESHOLD
-    
+
     def derive(self, alt_aal=P('Altitude AAL For Flight Phases'), liftoffs=KTI('Liftoff'),
                tocs=KTI('Top Of Climb')):
         for liftoff in liftoffs:
             # Assumes a Top Of Climb KTI exists after each Liftoff.
             toc = tocs.get_next(liftoff.index)
             climb_slice = slice(liftoff.index, toc.index)
-            
+
             index = index_at_value(alt_aal.array, CLIMB_THRESHOLD, climb_slice)
             if index:
                 self.create_kti(index)
@@ -227,26 +227,26 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
     '''
     Creates KTI on first change in Airspeed Selected during initial climb to
     indicate the start of the acceleration phase of climb
-    
+
     Alignment is performed manually because Airspeed Selected can be recorded at
     a very low frequency and interpolation will render the find_edges algorithm
     useless.
-    
-    Dynamically create rate_of_change width from the parameter's frequency to 
+
+    Dynamically create rate_of_change width from the parameter's frequency to
     avoid errors. Larger widths flatten the rate of change result.
     '''
     align = False
-    
+
     @classmethod
     def can_operate(cls, available, eng_type=A('Engine Propulsion')):
         spd_sel = 'Airspeed Selected' in available
         jet = (eng_type and eng_type.value == 'JET' and
                'Throttle Levers' in available)
         prop = (eng_type and eng_type.value == 'PROP' and
-               'Eng (*) Np Max' in available)
+                'Eng (*) Np Max' in available)
         alt = all_of(('Engine Propulsion', 'Altitude AAL For Flight Phases'), available)
         return 'Initial Climb' in available and (spd_sel or jet or prop or alt)
-    
+
     def derive(self, alt_aal=P('Altitude AAL For Flight Phases'),
                initial_climbs=S('Initial Climb'),
                spd_sel=P('Airspeed Selected'),
@@ -266,7 +266,7 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
                 self.offset = spd_sel.offset
                 self.create_kti(index + (_slice.start or 0))
                 return
-        
+
         if eng_type:
             if eng_type.value == 'JET':
                 if throttle and initial_climbs:
@@ -283,9 +283,9 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
                         self.offset = throttle.offset
                         self.create_kti(index + (_slice.start or 0))
                         return
-                
+
                 alt = 800
-                
+
             elif eng_type.value == 'PROP':
                 if eng_np and initial_climbs:
                     # Align to Np.
@@ -301,9 +301,9 @@ class ClimbAccelerationStart(KeyTimeInstanceNode):
                         self.offset = eng_np.offset
                         self.create_kti(index + (_slice.start or 0))
                         return
-                
+
                 alt = 400
-            
+
             # Base on crossing altitude threshold.
             if alt_aal:
                 self.frequency = alt_aal.frequency
@@ -319,7 +319,7 @@ class ClimbThrustDerateDeselected(KeyTimeInstanceNode):
     Creates KTIs where both climb thrust derates are deselected.
     Specific to 787 operations.
     '''
-    
+
     def derive(self, climb_derate_1=P('AT Climb 1 Derate'),
                climb_derate_2=P('AT Climb 2 Derate'),):
         self.create_ktis_on_state_change(
@@ -537,7 +537,7 @@ class EngStop(KeyTimeInstanceNode):
                         'Eng (%d) Stop: `%s` spin down not detected, '
                         'sampling at the end of the data.' % (number,
                                                               eng_nx.name))
-                    self.create_kti(i-1, replace_values={'number': number})
+                    self.create_kti(i - 1, replace_values={'number': number})
 
 
 class LastEngStopAfterTouchdown(KeyTimeInstanceNode):
@@ -545,20 +545,20 @@ class LastEngStopAfterTouchdown(KeyTimeInstanceNode):
     Check for the last engine stop after touchdown. The index will be the last
     time an engine is stopped and remains off after liftoff.
     '''
-    
+
     def derive(self, eng_stops=KTI('Eng Stop'), eng_count=A('Engine Count'),
                touchdowns=KTI('Touchdown'), duration=A('HDF Duration')):
         eng_stops_after_touchdown = []
 
         for x in range(eng_count.value):
             kti_name = eng_stops.format_name(number=x + 1)
-           
+
             if touchdowns.get_last():
                 eng_stop_after_touchdown = eng_stops.get_next(
                     touchdowns.get_last().index, name=kti_name)
             else:
                 eng_stop_after_touchdown = None
-                
+
             if not eng_stop_after_touchdown:
                 self.warning("Could not find '%s after Touchdown.",
                              kti_name)
@@ -587,17 +587,17 @@ class ExitHold(KeyTimeInstanceNode):
 
 
 class EngFireExtinguisher(KeyTimeInstanceNode):
-    def derive(self, e1f = P('Eng (1) Fire Extinguisher'),
-               e2f = P('Eng (2) Fire Extinguisher'),
-               airborne = S('Airborne')):
+    def derive(self, e1f=P('Eng (1) Fire Extinguisher'),
+               e2f=P('Eng (2) Fire Extinguisher'),
+               airborne=S('Airborne')):
         ef = np.ma.logical_or(e1f.array, e2f.array)
-        
+
         # Monitor only while airborne, in case this is triggered by pre-flight tests.
         for air in airborne:
             pull_index = np.ma.nonzero(ef[air.slice])[0]
             if len(pull_index):
                 self.create_kti(pull_index[0] + air.slice.start)
-        
+
 
 class GoAround(KeyTimeInstanceNode):
     """
@@ -622,7 +622,7 @@ class GoAround(KeyTimeInstanceNode):
     def derive(self, dlcs=S('Descent Low Climb'),
                alt_aal=P('Altitude AAL For Flight Phases'),
                alt_rad=P('Altitude Radio')):
-        
+
         for dlc in dlcs:
             # Check for cases where a radio altimeter is not fitted or where
             # the altimeter data is out of range, hence masked, at the lowest
@@ -630,14 +630,14 @@ class GoAround(KeyTimeInstanceNode):
             if alt_rad and np.ma.count(alt_rad.array[dlc.slice]):
                 # Worth using the radio altimeter...
                 pit = np.ma.argmin(alt_rad.array[dlc.slice])
-                
+
                 '''
                 import matplotlib.pyplot as plt
                 plt.plot(alt_aal.array[dlc.slice],'-b')
                 plt.plot(alt_rad.array[dlc.slice],'-r')
                 plt.show()
                 '''
-                
+
             else:
                 # Fall back on pressure altitude. Remember the altitude may
                 # have been artificially adjusted if we have no absolute
@@ -656,8 +656,7 @@ class TopOfClimb(KeyTimeInstanceNode):
         for ccd_phase in ccd:
             ccd_slice = ccd_phase.slice
             try:
-                n_toc = find_toc_tod(alt_std.array, ccd_slice, self.frequency,
-                                             mode='toc')
+                n_toc = find_toc_tod(alt_std.array, ccd_slice, self.frequency, mode='toc')
             except:
                 # altitude data does not have an increasing section, so quit.
                 continue
@@ -674,7 +673,7 @@ class TopOfClimb(KeyTimeInstanceNode):
 
 class TopOfDescent(KeyTimeInstanceNode):
     '''
-    This checks for the top of descent in each Climb/Cruise/Descent period 
+    This checks for the top of descent in each Climb/Cruise/Descent period
     of the flight.
     '''
     def derive(self, alt_std=P('Altitude STD Smoothed'),
@@ -685,8 +684,7 @@ class TopOfDescent(KeyTimeInstanceNode):
             if ccd_slice.stop is None:
                 continue
             try:
-                n_tod = find_toc_tod(alt_std.array, ccd_slice, self.frequency,
-                                             mode='tod')
+                n_tod = find_toc_tod(alt_std.array, ccd_slice, self.frequency, mode='tod')
             except ValueError:
                 # altitude data does not have a decreasing section, so quit.
                 continue
@@ -894,10 +892,13 @@ class GearUpSelection(KeyTimeInstanceNode):
         ga_slices = go_arounds.get_slices()
         if not air_slices:
             return
-        air_not_ga = slices_and(air_slices, slices_not(ga_slices,
-            begin_at=air_slices[0].start,
-            end_at=air_slices[-1].stop,
-        ))
+        air_not_ga = slices_and(
+            air_slices, slices_not(
+                ga_slices,
+                begin_at=air_slices[0].start,
+                end_at=air_slices[-1].stop,
+            )
+        )
         good_phases = S(name='Airborne Not During Go Around',
                         frequency=gear_up_sel.frequency,
                         offset=gear_up_sel.offset)
@@ -969,7 +970,7 @@ class TakeoffTurnOntoRunway(KeyTimeInstanceNode):
             start_search = fast.get_next(toff.slice.start).slice.start
             if (start_search is None) or (start_search > toff.slice.stop):
                 start_search = (toff.slice.start + toff.slice.stop) / 2
-            peak_bend = peak_curvature(head.array,slice(
+            peak_bend = peak_curvature(head.array, slice(
                 start_search, toff.slice.start, -1), curve_sense='Bipolar')
             if peak_bend:
                 takeoff_turn = peak_bend
@@ -1016,8 +1017,8 @@ class TakeoffAccelerationStart(KeyTimeInstanceNode):
                 is masked out) and so the extrapolated airspeed was adopted.
                 '''
                 #pc = peak_curvature(speed.array[takeoff.slice])
-                p,m,c = coreg(speed.array[takeoff.slice])
-                start_accel = max(takeoff.slice.start-c/m, 0.0)
+                p, m, c = coreg(speed.array[takeoff.slice])
+                start_accel = max(takeoff.slice.start - c / m, 0.0)
 
             if start_accel is not None:
                 self.create_kti(start_accel)
@@ -1032,7 +1033,7 @@ class TakeoffPeakAcceleration(KeyTimeInstanceNode):
                accel=P('Acceleration Longitudinal')):
         for toff in toffs:
             index, value = max_value(accel.array, _slice=toff.slice)
-            if index: # In case all the Ay data is invalid.
+            if index:  # In case all the Ay data is invalid.
                 self.create_kti(index)
 
 
@@ -1043,31 +1044,31 @@ class Liftoff(KeyTimeInstanceNode):
     that the first indication may not be valid.
 
     The five indications used are:
-    
+
     (a) the inertial vertical speed indicates a rate of climb (we cannot use
     barometric rate of climb as the aircraft is in ground effect and
     transient changes of pressure field as the aircraft rotates cause an
     indicated descent just prior to lift)
 
     (b) a normal acceleration of greater than 1.2g
-    
+
     (c) radio altimeter indications greater than zero (see http://www.flightdatacommunity.com/looking-closely-at-radio-altimeters/)
-    
+
     (d) altitude above airfield greater than zero. This is computed from the
     available height sources, so will work off the pressure altitude only if no
     radio altimeter is available.
 
     (e) change in the gear on ground (weight oon wheels) switch status where
     available.
-    
+
     In the case where the gear on ground signal switches first, we use this.
     However it is common for this to switch at the end of the oleo extension
     which is why it commonly operates after other indications.
-    
+
     For a more descriptive explanation of the second of many technique, refer to
     http://www.flightdatacommunity.com/when-does-the-aircraft-land/
     '''
-    
+
     @classmethod
     def can_operate(cls, available):
         return 'Airborne' in available
@@ -1080,24 +1081,23 @@ class Liftoff(KeyTimeInstanceNode):
                gog=M('Gear On Ground'),
                airs=S('Airborne'),
                frame=A('Frame')):
-        
+
         for air in airs:
             index_acc = index_rad = index_gog = None
             index_air = air.start_edge
-            if index_air == None:
+            if index_air is None:
                 continue
-            back_6 = (air.slice.start - 6.0*self.frequency)
+            back_6 = (air.slice.start - 6.0 * self.frequency)
             if back_6 < 0:
                 # unlikely to have lifted off within 3 seconds of data start
                 # STOP ONLY slice without a liftoff in this Airborne section
                 continue
-            on_6 = (air.slice.start + 6.0*self.frequency) + 1 # For indexing
+            on_6 = (air.slice.start + 6.0 * self.frequency) + 1  # For indexing
             to_scan = slice(back_6, on_6)
 
             if vert_spd:
-                index_vs = index_at_value(vert_spd.array,
-                                       VERTICAL_SPEED_FOR_LIFTOFF,
-                                       to_scan)
+                index_vs = index_at_value(
+                    vert_spd.array, VERTICAL_SPEED_FOR_LIFTOFF, to_scan)
             else:
                 # Fallback to pressure rate of climb
                 index_vs = index_at_value(vert_spd_baro.array,
@@ -1106,12 +1106,12 @@ class Liftoff(KeyTimeInstanceNode):
                 # and try to augment this with another measure
                 if acc_norm:
                     idx = np.ma.argmax(acc_norm.array[to_scan])
-                    if acc_norm.array[to_scan][idx]>1.2:
-                        index_acc=idx+back_6
-            
+                    if acc_norm.array[to_scan][idx] > 1.2:
+                        index_acc = idx + back_6
+
             if alt_rad:
                 index_rad = index_at_value(alt_rad.array, 0.0, to_scan)
-                
+
             if gog:
                 # Try using Gear On Ground switch
                 edges = find_edges_on_state_change(
@@ -1120,30 +1120,30 @@ class Liftoff(KeyTimeInstanceNode):
                     # use the last liftoff point
                     index = edges[-1] + back_6
                     # Check we were within 5ft of the ground when the switch triggered.
-                    if alt_rad == None:
+                    if alt_rad is None:
                         index_gog = index
                     elif alt_rad.array[index] < 5.0 or \
-                         alt_rad.array[index] is np.ma.masked:
+                            alt_rad.array[index] is np.ma.masked:
                         index_gog = index
                     else:
                         index_gog = None
 
             # We pick the second  recorded indication for the point of liftoff.
-            index_list = sorted_valid_list([index_air, 
-                                            index_vs, 
-                                            index_acc, 
-                                            index_gog, 
+            index_list = sorted_valid_list([index_air,
+                                            index_vs,
+                                            index_acc,
+                                            index_gog,
                                             index_rad])
-            
-            if len(index_list)>1:
+
+            if len(index_list) > 1:
                 index_lift = sorted(index_list)[1]
             else:
                 index_lift = index_list[0]
             # but in any case, if we have a gear on ground signal which goes
             # off first, adopt that.
-            if index_gog and index_gog<index_lift:
+            if index_gog and index_gog < index_lift:
                 index_lift = index_gog
-            
+
             self.create_kti(index_lift)
 
             '''
@@ -1165,20 +1165,20 @@ class Liftoff(KeyTimeInstanceNode):
                     plt.plot(timebase, acc_norm.array[plot_period]*10.0, 'o-c')
                 if index_acc:
                     plt.plot(index_acc-air.slice.start, 15.0,'vc', markersize=8)
-                    
+
             if index_vs:
                 plt.plot(index_vs-air.slice.start, 15,'vg', markersize=8)
-                
+
             if alt_rad:
                 plt.plot(timebase, np.ma.masked_greater(alt_rad.array[plot_period],30.0), 'o-r')
             if index_rad:
                 plt.plot(index_rad-air.slice.start, 17.0,'vr', markersize=8)
-                
+
             if gog:
                 plt.plot(timebase, gog.array[plot_period]*10, 'o-k')
             if index_gog:
                 plt.plot(index_gog-air.slice.start, 19.0,'vk', markersize=8)
-                
+
             if vert_spd_baro:
                 plt.plot(timebase, np.ma.masked_greater(vert_spd_baro.array[plot_period]/20.0, 30.0), 'o-b')
 
@@ -1243,13 +1243,13 @@ class LandingStart(KeyTimeInstanceNode):
 
 
 class TouchAndGo(KeyTimeInstanceNode):
-    #TODO: TESTS
+    # TODO: TESTS
     """
     In POLARIS we define a Touch and Go as a Go-Around that contacted the ground.
     """
-    def derive(self, alt_AAL=P('Altitude AAL'), go_arounds=KTI('Go Around')):
+    def derive(self, alt_aal=P('Altitude AAL'), go_arounds=KTI('Go Around')):
         for ga in go_arounds:
-            if alt_AAL.array[ga.index] == 0.0:
+            if alt_aal.array[ga.index] == 0.0:
                 # wheels on ground
                 self.create_kti(ga.index)
 
@@ -1259,11 +1259,11 @@ class Touchdown(KeyTimeInstanceNode):
     Touchdown is notoriously difficult to identify precisely, and a
     suggestion from a Boeing engineer was to add a longitudinal acceleration
     term as there is always an instantaneous drag when the mainwheels touch.
-    
+
     This was added in the form of three triggers, one detecting the short dip
     in Ax, a second for the point of onset of deceleration and a third for
     braking deceleration.
-    
+
     So, we look for the weight on wheels switch if this is the first indication,
     or the second indication of:
     * Zero feet AAL (normally derived from the radio altimeter)
@@ -1271,7 +1271,7 @@ class Touchdown(KeyTimeInstanceNode):
     * Significant product of two samples of normal acceleration (correlating to a sudden drop in descent rate)
     * A transient reduction in longitudinal acceleration as the wheels first spin up
     * A large reduction in longitudinal acceleration when braking action starts
-    
+
     http://www.flightdatacommunity.com/when-does-the-aircraft-land/
     '''
     # List the minimum acceptable parameters here
@@ -1282,8 +1282,8 @@ class Touchdown(KeyTimeInstanceNode):
 
     def derive(self, acc_norm=P('Acceleration Normal'),
                acc_long=P('Acceleration Longitudinal Offset Removed'),
-               alt=P('Altitude AAL'), 
-               gog=M('Gear On Ground'), 
+               alt=P('Altitude AAL'),
+               gog=M('Gear On Ground'),
                lands=S('Landing'),
                flap=P('Flap'),
                manufacturer=A('Manufacturer'),
@@ -1295,30 +1295,30 @@ class Touchdown(KeyTimeInstanceNode):
         # signal changes state on raising the gear (OK, if they do a gear-up
         # landing it won't work, but this will be the least of the problems).
 
-        dt_pre = 10.0 # Seconds to scan before estimate.
-        dt_post = 3.0 # Seconds to scan after estimate.
+        dt_pre = 10.0  # Seconds to scan before estimate.
+        dt_post = 3.0  # Seconds to scan after estimate.
         hz = alt.frequency
         index_gog = index_wheel_touch = index_brake = index_decel = None
         index_dax = index_z = index_az = index_daz = None
         peak_ax = peak_az = delta = 0.0
-        
+
         for land in lands:
             # We have to have an altitude signal, so this forms an initial
             # estimate of the touchdown point.
             index_alt = index_at_value(alt.array, 0.0, land.slice)
-            
+
             if gog:
                 # Try using Gear On Ground switch
                 edges = find_edges_on_state_change(
                     'Ground', gog.array[land.slice])
                 if edges:
-                    # use the first contact with ground as touchdown point 
+                    # use the first contact with ground as touchdown point
                     # (i.e. we ignore bounces)
                     index = edges[0] + land.slice.start
                     # Check we were within 5ft of the ground when the switch triggered.
                     if not alt or alt.array[index] < 7.0:
                         index_gog = index
-                        
+
             if manufacturer and manufacturer.value in ('Saab') and \
                family and family.value in ('2000'):
                 # This covers aircraft with automatic flap retraction on
@@ -1326,23 +1326,23 @@ class Touchdown(KeyTimeInstanceNode):
                 # case in point.
                 land_flap = np.ma.array(data=flap.array.data[land.slice],
                                         mask=flap.array.mask[land.slice])
-                flap_change_idx = index_at_value(land_flap, land_flap[0]-1)
-                if flap_change_idx :
+                flap_change_idx = index_at_value(land_flap, land_flap[0] - 1)
+                if flap_change_idx:
                     index_gog = int(flap_change_idx) + land.slice.start
 
             index_ref = min([x for x in index_alt, index_gog if x is not None])
-            
+
             # With an estimate from the height and perhaps gear switch, set
             # up a period to scan across for accelerometer based
             # indications...
-            period = slice(max(floor(index_ref-dt_pre*hz), 0), ceil(index_ref+dt_post*hz))
-            
+            period = slice(max(floor(index_ref - dt_pre * hz), 0), ceil(index_ref + dt_post * hz))
+
             if acc_long:
                 drag = np.ma.copy(acc_long.array[period])
                 drag = np.ma.where(drag > 0.0, 0.0, drag)
-                
+
                 # Look for inital wheel contact where there is a sudden spike in Ax.
-                
+
                 touch = np_ma_masked_zeros_like(drag)
                 for i in range(2, len(touch)-2):
                     # Looking for a downward pointing "V" shape over half the
@@ -1361,25 +1361,25 @@ class Touchdown(KeyTimeInstanceNode):
                         if touch[ix_ax1] > peak_ax*0.2:
                             # This earlier touch was a better guess.
                             peak_ax = touch[ix_ax1]
-                            ix_ax = ix_ax1 
-                                
+                            ix_ax = ix_ax1
+
                     index_wheel_touch = ix_ax+1+index_ref-dt_pre*hz
 
                 # Look for the onset of braking
-                
-                index_brake = peak_curvature(drag, 
-                                             curve_sense='Convex', 
-                                             gap=1*hz, 
+
+                index_brake = peak_curvature(drag,
+                                             curve_sense='Convex',
+                                             gap=1*hz,
                                              ttp=3*hz)
                 if index_brake:
                     index_brake += index_ref-dt_pre*hz
-                
+
                 # Look for substantial deceleration
-                
+
                 index_decel = index_at_value(drag, -0.1)
                 if index_decel:
                     index_decel += index_ref-dt_pre*hz
-                
+
             if acc_norm:
                 lift = acc_norm.array[period]
                 mean = np.mean(lift)
@@ -1392,7 +1392,7 @@ class Touchdown(KeyTimeInstanceNode):
                 peak_az = np.max(bump)
                 if peak_az > 0.01:
                     index_az = np.argmax(bump)+index_ref-dt_pre*hz
-            
+
                 # The first real contact is indicated by an increase in g of
                 # more than 0.075, but this must be positive (hence the
                 # masking above the local mean).
@@ -1402,7 +1402,7 @@ class Touchdown(KeyTimeInstanceNode):
                         if delta > 0.1:
                             index_daz = i+1+index_ref-dt_pre*hz
                             break
-                        
+
             '''
             open("touchdown_test","a").write(str([index_alt, index_gog, index_ax, index_dax, index_daz, index_az]))
             open("touchdown_test","a").write("\n")
@@ -1413,7 +1413,7 @@ class Touchdown(KeyTimeInstanceNode):
             index_z_list = [x for x in index_az, index_daz if x is not None]
             if index_z_list:
                 index_z = min(index_z_list)
-                
+
             # ...then collect the valid estimates of the touchdown point...
             index_list = sorted_valid_list([index_alt,
                                             index_gog,
@@ -1425,7 +1425,7 @@ class Touchdown(KeyTimeInstanceNode):
 
             # ...to find the best estimate...
             # If we have lots of measures, bias towards the earlier ones.
-            index_tdn = np.median(index_list[:4]) 
+            index_tdn = np.median(index_list[:4])
             self.create_kti(index_tdn)
 
             '''
@@ -1532,7 +1532,7 @@ class LandingTurnOffRunway(KeyTimeInstanceNode):
                 self.create_kti(landing_turn)
 
 
-################################################################################        
+################################################################################
 
 
 class AltitudeWhenClimbing(KeyTimeInstanceNode):
@@ -1542,10 +1542,12 @@ class AltitudeWhenClimbing(KeyTimeInstanceNode):
     NAME_FORMAT = '%(altitude)d Ft Climbing'
     NAME_VALUES = NAME_VALUES_CLIMB
 
-    def derive(self, climbing=S('Climbing'), 
+    def derive(self,
+               initial_climb=S('Initial Climb'),
+               climb=S('Climb'),
                alt_aal=P('Altitude AAL'),
                alt_std=P('Altitude STD Smoothed')):
-        for climb in climbing:
+        for climb in list(initial_climb) + list(climb):
             for alt_threshold in self.NAME_VALUES['altitude']:
                 # Will trigger a single KTI per height (if threshold is crossed)
                 # per climbing phase.
@@ -1568,7 +1570,7 @@ class AltitudeWhenDescending(KeyTimeInstanceNode):
     NAME_FORMAT = '%(altitude)d Ft Descending'
     NAME_VALUES = NAME_VALUES_DESCENT
 
-    def derive(self, descending=S('Descending'), 
+    def derive(self, descending=S('Descent'),
                alt_aal=P('Altitude AAL'),
                alt_std=P('Altitude STD Smoothed')):
         for descend in descending:
@@ -1583,7 +1585,7 @@ class AltitudeWhenDescending(KeyTimeInstanceNode):
                 else:
                     # Use standard altitudes.
                     alt = alt_std.array
-                    
+
                 index = index_at_value(alt, alt_threshold,
                                        slice(descend.slice.stop,
                                              descend.slice.start, -1))
@@ -1673,7 +1675,7 @@ class Autoland(KeyTimeInstanceNode):
     @classmethod
     def can_operate(cls, available):
         return all_of(('AP Channels Engaged', 'Touchdown'), available)
-    
+
     def derive(self, ap=M('AP Channels Engaged'), touchdowns=KTI('Touchdown'),
                family=A('Family')):
         family = family.value if family else None
@@ -1717,17 +1719,38 @@ class OffBlocks(KeyTimeInstanceNode):
     Simple KTI derived from the first point of heading change, so probably
     pushback or start of data.
     '''
-    
+
     def derive(self, mobile=S('Mobile')):
         if len(mobile):
             self.create_kti(mobile[0].slice.start or 0)
-        
-        
+
+
 class OnBlocks(KeyTimeInstanceNode):
     '''
     Simple KTI derived from the last point of heading change.
     '''
-    
+
     def derive(self, mobile=S('Mobile'), hdg=P('Heading')):
         if len(mobile):
             self.create_kti(mobile[0].slice.stop or len(hdg.array))
+
+
+class FirstEngFuelFlowStart(KeyTimeInstanceNode):
+    '''
+    Start of fuel flow in any engine.
+    '''
+    def derive(self, ff=S('Eng (*) Fuel Flow')):
+        ix = np.ma.argmax(ff.array > 0)
+        if ix or ff.array[ix] != 0:
+            self.create_kti(ix)
+
+
+class LastEngFuelFlowStop(KeyTimeInstanceNode):
+    '''
+    Stop of fuel flow in all engines.
+    '''
+    def derive(self, ff=S('Eng (*) Fuel Flow')):
+        slices = runs_of_ones(ff.array == 0)
+        if slices:
+            ix = slices[-1].start
+            self.create_kti(ix)

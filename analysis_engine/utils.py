@@ -6,7 +6,7 @@ import zipfile
 
 from collections import defaultdict
 from datetime import datetime
-from inspect import isclass
+from inspect import getargspec, isclass
 
 from hdfaccess.file import hdf_file
 from hdfaccess.utils import strip_hdf
@@ -15,7 +15,7 @@ from analysis_engine.api_handler import APIError, get_api_handler
 from analysis_engine.dependency_graph import dependencies3, graph_nodes
 # node classes required for unpickling
 from analysis_engine.node import (
-    loads, Node, NodeManager,
+    loads, save, Node, NodeManager,
     DerivedParameterNode,
     KeyPointValueNode,
     KeyTimeInstanceNode,
@@ -28,6 +28,59 @@ from analysis_engine import settings
 
 
 logger = logging.getLogger(__name__)
+
+
+def save_test_data(node, locals):
+    '''
+    Saves derive method arguments to node files within test_data and returns
+    code for loading node files within a test case.
+    
+    Example usage:
+    
+    class MyKeyPointValue(KeyPointValueNode):
+        def derive(self, airspeed=P('Airspeed'), alt_aal=P('Altitude AAL')):
+            from analysis_engine.utils import save_test_data
+            save_test_data(self, locals())
+            ...
+    
+    Creates:
+    
+     - tests/test_data/MyKeyPointValue_airspeed_01.nod
+     - tests/test_data/MyKeyPointValue_alt_aal_01.nod
+    
+    :param node: Node to create test data for.
+    :type node: Node
+    :param locals: locals() from within the derive method.
+    :type locals: dict
+    :returns: Code for importing test data.
+    :rtype: str
+    '''
+    # work out test_data location
+    package_dir = os.path.dirname(os.path.realpath(__file__))
+    test_data_dir = os.path.join(
+        os.path.dirname(package_dir),
+        'tests',
+        'test_data',
+    )
+    
+    code = []
+    code.append("test_data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_data')")
+    
+    code.append("node = %s()" % node.__class__.__name__)
+    for var_name in getargspec(node.derive).args[1:]:
+        # generate unique filename
+        counter = 1
+        while True:
+            filename = '%s_%s_%02d.nod' % (node.__class__.__name__, var_name, counter)
+            file_path = os.path.join(test_data_dir, filename)
+            if not os.path.exists(file_path):
+                break
+            counter += 1
+        save(locals[var_name], file_path)
+        
+        code.append("%s = load(os.path.join(test_data_path, '%s'))" % (var_name, filename))
+    code.append("node.derive(%s)" % ', '.join(getargspec(node.derive).args[1:]))
+    return '\n'.join(code)
 
 
 def open_node_container(zip_path):
