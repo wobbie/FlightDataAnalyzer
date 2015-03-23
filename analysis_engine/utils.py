@@ -137,7 +137,7 @@ def get_aircraft_info(tail_number):
         api_handler = get_api_handler(settings.LOCAL_API_HANDLER)
         aircraft_info = api_handler.get_aircraft(tail_number)
     logger.info("Using aircraft_info provided by '%s' '%s'.",
-                api_handler.__class__.__name__, aircraft_info)        
+                api_handler.__class__.__name__, aircraft_info)
     return aircraft_info
 
 

@@ -123,7 +123,7 @@ def derive_parameters(hdf, node_mgr, process_order, params={}, force=False):
         
         elif param_name in params:
             node = params[param_name]
-            # populate output
+            # populate output already at 1Hz
             if node.node_type is KeyPointValueNode:
                 kpvs[param_name] = list(node)
             elif node.node_type is KeyTimeInstanceNode:

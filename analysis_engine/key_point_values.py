@@ -4718,8 +4718,8 @@ class DistanceFromRotationToRunwayEnd(KeyPointValueNode):
         for roll in toff_rolls:
             rot_idx = roll.stop_edge
             rot_end = runway_distance_from_end(rwy.value,
-                                                lat.array[rot_idx],
-                                                lon.array[rot_idx])
+                                               lat.array[rot_idx],
+                                               lon.array[rot_idx])
             self.create_kpv(rot_idx, rot_end)
 
 
