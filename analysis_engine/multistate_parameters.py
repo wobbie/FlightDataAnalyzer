@@ -46,7 +46,11 @@ from analysis_engine.library import (
     step_values,
     vstack_params_where_state,
 )
-from settings import MIN_N1_RUNNING
+from settings import (
+    MIN_CORE_RUNNING,
+    MIN_FAN_RUNNING,
+    MIN_FUEL_FLOW_RUNNING,
+)
 
 logger = logging.getLogger(name=__name__)
 
@@ -621,21 +625,111 @@ class Eng_Oil_Press_Warning(MultistateDerivedParameterNode):
         ).any(axis=0)
 
 
-class Eng_AllRunning(MultistateDerivedParameterNode):
+class EngRunning(object):
     '''
-    Discrete parameter describing when all available engines are running.
-
-    TODO: Include Fuel cut-off switch if recorded?
-
-    TODO: Confirm that all engines were recording for the N2 Min / Fuel Flow
-    Min parameters - theoretically there could be only three engines in the
-    frame for a four engine aircraft. Use "Engine Count".
+    Abstract class for inheriting by EngRunning derived parameters.
     '''
-    name = 'Eng (*) All Running'
+    engnum = 0  # Replace with '2' for Eng (2)
     values_mapping = {
         0: 'Not Running',
         1: 'Running',
     }
+
+    @classmethod
+    def can_operate(cls, available):
+        return 'Eng (%d) N1' % cls.engnum in available or \
+               'Eng (%d) N2' % cls.engnum in available or \
+               'Eng (%d) Np' % cls.engnum in available or \
+               'Eng (%d) Fuel Flow' % cls.engnum in available
+
+    def determine_running(self, eng_n1, eng_n2, eng_np, fuel_flow):
+        '''
+        TODO: Include Fuel cut-off switch if recorded?
+        TODO: Confirm that all engines were recording for the N2 Min / Fuel Flow
+        Min parameters - theoretically there could be only three engines in the
+        frame for a four engine aircraft. Use "Engine Count".        
+        '''
+        if eng_np:
+            # If it's got propellors, this overrides core engine measurements.
+            return eng_np.array > MIN_FAN_RUNNING
+        elif eng_n2 or fuel_flow:
+            # Ideally have N2 and Fuel Flow with both available,
+            # otherwise use just one source
+            n2_running = eng_n2.array > MIN_CORE_RUNNING if eng_n2 \
+                else np.ones_like(fuel_flow.array, dtype=bool)
+            fuel_flowing = fuel_flow.array > MIN_FUEL_FLOW_RUNNING if fuel_flow \
+                else np.ones_like(eng_n2.array, dtype=bool)
+            return n2_running & fuel_flowing
+        else:
+            # Fall back on N1
+            return eng_n1.array > MIN_FAN_RUNNING
+
+
+class Eng1Running(EngRunning, MultistateDerivedParameterNode):
+    '''
+    Discrete parameter describing when the engine is running.
+    '''
+    engnum = 1
+    name = 'Eng (1) Running'
+
+    def derive(self,
+               eng_n1=P('Eng (1) N1'),
+               eng_n2=P('Eng (1) N2'),
+               eng_np=P('Eng (1) Np'),
+               fuel_flow=P('Eng (1) Fuel Flow')):
+        self.array = self.determine_running(eng_n1, eng_n2, eng_np, fuel_flow)
+
+
+class Eng2Running(EngRunning, MultistateDerivedParameterNode):
+    '''
+    Discrete parameter describing when the engine is running.
+    '''
+    engnum = 2
+    name = 'Eng (2) Running'
+
+    def derive(self,
+               eng_n1=P('Eng (2) N1'),
+               eng_n2=P('Eng (2) N2'),
+               eng_np=P('Eng (2) Np'),
+               fuel_flow=P('Eng (2) Fuel Flow')):
+        self.array = self.determine_running(eng_n1, eng_n2, eng_np, fuel_flow)
+
+
+class Eng3Running(EngRunning, MultistateDerivedParameterNode):
+    '''
+    Discrete parameter describing when the engine is running.
+    '''
+    engnum = 3
+    name = 'Eng (3) Running'
+
+    def derive(self,
+               eng_n1=P('Eng (3) N1'),
+               eng_n2=P('Eng (3) N2'),
+               eng_np=P('Eng (3) Np'),
+               fuel_flow=P('Eng (3) Fuel Flow')):
+        self.array = self.determine_running(eng_n1, eng_n2, eng_np, fuel_flow)
+
+
+class Eng4Running(EngRunning, MultistateDerivedParameterNode):
+    '''
+    Discrete parameter describing when the engine is running.
+    '''
+    engnum = 4
+    name = 'Eng (4) Running'
+
+    def derive(self,
+               eng_n1=P('Eng (4) N1'),
+               eng_n2=P('Eng (4) N2'),
+               eng_np=P('Eng (4) Np'),
+               fuel_flow=P('Eng (4) Fuel Flow')):
+        self.array = self.determine_running(eng_n1, eng_n2, eng_np, fuel_flow)
+
+
+class Eng_AllRunning(MultistateDerivedParameterNode, EngRunning):
+    '''
+    Discrete parameter describing when all available engines are running.
+    '''
+    name = 'Eng (*) All Running'
 
     @classmethod
     def can_operate(cls, available):
@@ -649,25 +743,10 @@ class Eng_AllRunning(MultistateDerivedParameterNode):
                eng_n2=P('Eng (*) N2 Min'),
                eng_np=P('Eng (*) Np Min'),
                fuel_flow=P('Eng (*) Fuel Flow Min')):
-        # TODO: move values to settings
-
-        if eng_np:
-            # If it's got propellors, this overrides core engine measurements.
-            self.array = eng_np.array > 10
-        elif eng_n2 or fuel_flow:
-            # Ideally have N2 and Fuel Flow with both available,
-            # otherwise use just one source
-            n2_running = eng_n2.array > 10 if eng_n2 \
-                else np.ones_like(fuel_flow.array, dtype=bool)
-            fuel_flowing = fuel_flow.array > 50 if fuel_flow \
-                else np.ones_like(eng_n2.array, dtype=bool)
-            self.array = n2_running & fuel_flowing
-        else:
-            # Fall back on N1
-            self.array = eng_n1.array > MIN_N1_RUNNING
+        self.array = self.determine_running(eng_n1, eng_n2, eng_np, fuel_flow)
 
 
-class Eng_AnyRunning(MultistateDerivedParameterNode):
+class Eng_AnyRunning(MultistateDerivedParameterNode, EngRunning):
     '''
     Discrete parameter describing when any engines are running.
 
@@ -675,11 +754,7 @@ class Eng_AnyRunning(MultistateDerivedParameterNode):
     running.
     '''
     name = 'Eng (*) Any Running'
-    values_mapping = {
-        0: 'Not Running',
-        1: 'Running',
-    }
-
+    
     @classmethod
     def can_operate(cls, available):
         return 'Eng (*) N1 Max' in available or \
@@ -692,20 +767,7 @@ class Eng_AnyRunning(MultistateDerivedParameterNode):
                eng_n2=P('Eng (*) N2 Max'),
                eng_np=P('Eng (*) Np Max'),
                fuel_flow=P('Eng (*) Fuel Flow Max')):
-
-        if eng_np:
-            self.array = eng_np.array > 10
-        elif eng_n2 or fuel_flow:
-            # TODO: move values to settings
-            n2_running = eng_n2.array > 10 if eng_n2 \
-                else np.ones_like(fuel_flow.array, dtype=bool)
-            fuel_flowing = fuel_flow.array > 50 if fuel_flow \
-                else np.ones_like(eng_n2.array, dtype=bool)
-            # must have N2 and Fuel Flow if both are available
-            self.array = n2_running & fuel_flowing
-        else:
-            # Only have N1 available
-            self.array = eng_n1.array > MIN_N1_RUNNING
+        self.array = self.determine_running(eng_n1, eng_n2, eng_np, fuel_flow)
 
 
 class ThrustModeSelected(MultistateDerivedParameterNode):

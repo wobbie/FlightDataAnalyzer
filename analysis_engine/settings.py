@@ -320,12 +320,12 @@ CORE_START_SPEED = 35.0  # %
 # Note: Challenger 300 reports 49.5% after engine start.
 CORE_STOP_SPEED = 35.0  # %
 
-# Minimum fan speed at idle for engines where N2/N3 not recorded.
-MIN_FAN_RUNNING = 5.0  # %
 
-#Minimum N1 for running engine, used in segment type detection as well as Eng
-#running multistates
-MIN_N1_RUNNING = 10
+# Minimum values for determining a running engine, used in segment type 
+# detection as well as Eng Running multistates
+MIN_FAN_RUNNING = 10.0  # N1/Np %
+MIN_CORE_RUNNING = 10.0  # N2/N3/Ng %
+MIN_FUEL_FLOW_RUNNING = 50  # kg/hr
 
 # Minimum proportion of valid data for unused fuel tanks.
 MIN_VALID_FUEL = 0.25

@@ -39,6 +39,13 @@ from analysis_engine.multistate_parameters import (
     Daylight,
     DualInput,
     ThrustModeSelected,
+    EngRunning,
+    Eng1Running,
+    Eng2Running,
+    Eng3Running,
+    Eng4Running,
+    Eng_AllRunning,
+    Eng_AnyRunning,
     Eng_1_Fire,
     Eng_2_Fire,
     Eng_3_Fire,
@@ -912,10 +919,33 @@ class TestEng_Fire(unittest.TestCase, NodeTest):
         self.assertTrue(False, msg='Test not implemented.')
 
 
+class TestEngRunning(unittest.TestCase):
+    
+    def test_class_name(self):
+        self.assertEqual(Eng1Running.get_name(), 'Eng (1) Running')
+        self.assertEqual(Eng2Running.get_name(), 'Eng (2) Running')
+        self.assertEqual(Eng3Running.get_name(), 'Eng (3) Running')
+        self.assertEqual(Eng4Running.get_name(), 'Eng (4) Running')
+    
+    def test_can_operate(self):
+        self.assertTrue(EngRunning.can_operate(['Eng (0) N1']))
+        self.assertTrue(EngRunning.can_operate(['Eng (0) N2']))
+        self.assertTrue(EngRunning.can_operate(['Eng (0) Np']))
+        self.assertTrue(EngRunning.can_operate(['Eng (0) Fuel Flow']))
+        self.assertTrue(EngRunning.can_operate(['Eng (0) N1', 'Eng (0) N2']))
+        # Check engnums are replaced correctly
+        self.assertTrue(Eng1Running.can_operate(['Eng (1) N1']))
+        self.assertTrue(Eng2Running.can_operate(['Eng (2) N1']))
+        self.assertTrue(Eng3Running.can_operate(['Eng (3) N1']))
+        self.assertTrue(Eng4Running.can_operate(['Eng (4) N1']))
+    
+    def test_determine_running(self):
+        # This is tested by the TestEng_AllRunning below.
+        pass
+    
+
 class TestEng_AllRunning(unittest.TestCase, NodeTest):
     def setUp(self):
-        from analysis_engine.multistate_parameters import Eng_AllRunning
-
         self.node_class = Eng_AllRunning
         self.operational_combinations = [
             ('Eng (*) N1 Min',),
@@ -972,8 +1002,6 @@ class TestEng_AllRunning(unittest.TestCase, NodeTest):
 
 class TestEng_AnyRunning(unittest.TestCase, NodeTest):
     def setUp(self):
-        from analysis_engine.multistate_parameters import Eng_AnyRunning
-
         self.node_class = Eng_AnyRunning
         self.operational_combinations = [
             ('Eng (*) N1 Max',),
