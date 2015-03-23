@@ -258,6 +258,7 @@ from analysis_engine.key_point_values import (
     EngOilQtyMin,
     EngOilTempForXMinMax,
     EngOilTempMax,
+    EngRunningDuration,
     EngShutdownDuringFlightDuration,
     EngTPRAtTOGADuringTakeoffMin,
     EngTPRDuringGoAround5MinRatingMax,
@@ -5820,15 +5821,19 @@ class TestEngShutdownDuringFlightDuration(unittest.TestCase, NodeTest):
 
     def test_derive(self):
         eng_running = M(
-            array=np.ma.array([0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1]),
+            array=np.ma.array([0, 0, 1, 1, 1, 1, 0, 1, 1, 1,
+                               1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+                               0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                               0, 0, 0, 1, 1, 1, 1, 1, 1, 1]),
             values_mapping={0: 'Not Running', 1: 'Running'},
         )
-        airborne = S(items=[Section('', slice(4, 20), 4.1, 20.1)])
+        airborne = S(items=[Section('Airborne', slice(4, 40), 4.1, 30.1)])
         node = self.node_class(frequency=2)
         node.derive(eng_running=eng_running, airborne=airborne)
-        # Note: Should only be single KPV (as must be greater than one second)
+        # Note: Should only be single KPV (as must be greater than 4 seconds)
         self.assertEqual(node, [
-            KeyPointValue(index=10, value=3.5, name='Eng Shutdown During Flight Duration'),
+            KeyPointValue(index=20, value=10.0, name='Eng Shutdown During Flight Duration'),
         ])
 
 
@@ -10372,6 +10377,46 @@ class TestMasterWarningDuration(unittest.TestCase, NodeTest):
                    M(array=np.ma.array([0,0,0,0,0]), 
                      values_mapping={1: 'Running'})                   )
         self.assertEqual(len(warn), 0)
+        
+        
+class TestEngRunningDuration(unittest.TestCase):
+    
+    def test_can_operate(self):
+        opts = EngRunningDuration.get_operational_combinations()
+        self.assertEqual(len(opts), 15)
+        self.assertIn(('Eng (1) Running',), opts)
+        self.assertIn(('Eng (2) Running',),  opts)
+        self.assertIn(('Eng (3) Running',), opts)
+        self.assertIn(('Eng (4) Running',),  opts)
+        self.assertIn(('Eng (1) Running', 'Eng (2) Running'), opts)
+        self.assertIn(('Eng (1) Running', 'Eng (2) Running', 'Eng (3) Running'), opts)
+        self.assertIn(('Eng (1) Running', 'Eng (2) Running', 'Eng (3) Running', 'Eng (4) Running'), opts)
+
+    def test_derive(self):
+        eng1 = M('Eng (1) Running', np.ma.array([0,1,0,0,1,1,1,1,0,0,1,1,1,1,1,1,0,0]),
+                 values_mapping={0: 'Not Running', 1: 'Running'})
+        eng2 = M('Eng (2) Running', np.ma.array([0,1,1,0,1,1,1,0,0,0,0,1,1,1,1,1,0,0]),
+                 values_mapping={0: 'Not Running', 1: 'Running'})
+        eng3 = M('Eng (3) Running', np.ma.array([0,1,0,0,1,1,1,0,0,0,0,1,1,1,1,1,1,0]),
+                 values_mapping={0: 'Not Running', 1: 'Running'})
+        eng4 = None
+        
+        running = EngRunningDuration()
+        running.derive(eng1, eng2, eng3, eng4)
+        
+        self.assertEqual(len(running), 6)
+        self.assertEqual(running[0].name, 'Eng (1) Running Duration')
+        self.assertEqual(running[0].index, 4)
+        self.assertEqual(running[0].value, 4)
+        self.assertEqual(running[1].name, 'Eng (1) Running Duration')
+        self.assertEqual(running[1].index, 10)
+        self.assertEqual(running[1].value, 6)
+        self.assertEqual(running[2].name, 'Eng (2) Running Duration')
+        self.assertEqual(running[2].index, 4)
+        self.assertEqual(running[2].value, 3)
+        self.assertEqual(running[-1].name, 'Eng (3) Running Duration')
+        self.assertEqual(running[-1].index, 11)
+        self.assertEqual(running[-1].value, 6)
 
 
 class TestMasterWarningDuringTakeoffDuration(unittest.TestCase, NodeTest):

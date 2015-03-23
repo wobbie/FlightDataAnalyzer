@@ -8385,13 +8385,36 @@ class EngShutdownDuringFlightDuration(KeyPointValueNode):
 
         eng_off = eng_running.array == 'Not Running'
         for air in airborne:
-            for _slice in runs_of_ones(eng_off[air.slice]):
-                dur = float(_slice.stop - _slice.start) / self.frequency
-                if dur > 4:
-                    # Must be at least 4 seconds not running to extend over a
-                    # complete frame:
-                    self.create_kpv(_slice.start + air.slice.start, dur)
+            slices = runs_of_ones(eng_off[air.slice],
+                                  min_samples=4*self.frequency)
+            slices = shift_slices(slices, air.slice.start)
+            self.create_kpvs_from_slice_durations(slices, self.frequency, mark='start')
 
+
+class EngRunningDuration(KeyPointValueNode):
+    '''
+    Measure the duration each engine was running for. Will create multiple
+    measurements for each time the engine was running. If you have more than
+    one measurement, this implies engine run-ups.
+    '''
+    
+    units = ut.SECOND
+    NAME_FORMAT = 'Eng (%(engnum)d) Running Duration'
+    NAME_VALUES = {'engnum': [1,2,3,4]}
+    
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(cls.get_dependency_names(), available)
+    
+    def derive(self, eng1=M('Eng (1) Running'), eng2=M('Eng (2) Running'),
+               eng3=M('Eng (3) Running'), eng4=M('Eng (4) Running')):
+        for engnum, eng in enumerate([eng1, eng2, eng3, eng4], start=1):
+            if eng is None:
+                continue
+            # min 4 seconds duration
+            slices = runs_of_ones(eng.array == 'Running', min_samples=4*self.frequency)
+            self.create_kpvs_from_slice_durations(slices, self.frequency,
+                                                  mark='start', engnum=engnum)
 
 ##############################################################################
 
