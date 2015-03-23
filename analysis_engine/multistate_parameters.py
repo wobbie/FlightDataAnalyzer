@@ -634,6 +634,9 @@ class EngRunning(object):
         0: 'Not Running',
         1: 'Running',
     }
+    # Workaround for NotImplementedError: Unknown Type raised from
+    # process_flight
+    node_type = MultistateDerivedParameterNode
 
     @classmethod
     def can_operate(cls, available):
