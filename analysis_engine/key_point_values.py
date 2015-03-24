@@ -58,6 +58,7 @@ from analysis_engine.library import (ambiguous_runway,
                                      integrate,
                                      is_index_within_slice,
                                      lookup_table,
+                                     nearest_neighbour_mask_repair,
                                      mask_inside_slices,
                                      mask_outside_slices,
                                      max_abs_value,
@@ -8412,7 +8413,8 @@ class EngRunningDuration(KeyPointValueNode):
             if eng is None:
                 continue
             # min 4 seconds duration
-            slices = runs_of_ones(eng.array == 'Running', min_samples=4*self.frequency)
+            array = nearest_neighbour_mask_repair(eng.array, repair_gap_size=4)
+            slices = runs_of_ones(array == 'Running', min_samples=4 * self.frequency)
             self.create_kpvs_from_slice_durations(slices, self.frequency,
                                                   mark='start', engnum=engnum)
 
