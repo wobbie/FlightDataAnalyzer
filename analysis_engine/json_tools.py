@@ -5,6 +5,9 @@ import dateutil.parser
 
 from datetime import datetime
 
+from analysis_engine import settings
+from analysis_engine.utils import get_derived_nodes
+
 
 # VERSION will be included in json output. Only json matching the current VERSION number will be loaded.
 VERSION = '0.1'
@@ -177,19 +180,19 @@ def process_flight_to_nodes(pf_results):
     '''
     from analysis_engine import node
     
-    node_classes = {
-        'kti': node.KeyTimeInstanceNode,
-        'kpv': node.KeyPointValueNode,
-        'phases': node.FlightPhaseNode,
-        'approach': node.ApproachNode,
-        'flight': node.FlightAttributeNode,
-    }
+    derived_nodes = get_derived_nodes(settings.NODE_MODULES)
     
     params = {}
     
     for node_type, nodes in pf_results.iteritems():
-        node_cls = node_classes[node_type]
+        
         for node_name, items in nodes.iteritems():
+            try:
+                node_cls = derived_nodes[node_name]
+            except KeyError:
+                #logger.warning('Derived node not found in code base: %s', node_name)
+                continue
+            
             if node_type == 'flight' and items:
                 flight_attr = node.FlightAttributeNode(node_name)
                 flight_attr.set_flight_attr(items[0].value)

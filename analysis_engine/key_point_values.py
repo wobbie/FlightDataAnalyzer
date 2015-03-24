@@ -58,6 +58,7 @@ from analysis_engine.library import (ambiguous_runway,
                                      integrate,
                                      is_index_within_slice,
                                      lookup_table,
+                                     nearest_neighbour_mask_repair,
                                      mask_inside_slices,
                                      mask_outside_slices,
                                      max_abs_value,
@@ -4718,8 +4719,8 @@ class DistanceFromRotationToRunwayEnd(KeyPointValueNode):
         for roll in toff_rolls:
             rot_idx = roll.stop_edge
             rot_end = runway_distance_from_end(rwy.value,
-                                                lat.array[rot_idx],
-                                                lon.array[rot_idx])
+                                               lat.array[rot_idx],
+                                               lon.array[rot_idx])
             self.create_kpv(rot_idx, rot_end)
 
 
@@ -8397,22 +8398,25 @@ class EngRunningDuration(KeyPointValueNode):
     measurements for each time the engine was running. If you have more than
     one measurement, this implies engine run-ups.
     '''
-    
+
     units = ut.SECOND
     NAME_FORMAT = 'Eng (%(engnum)d) Running Duration'
-    NAME_VALUES = {'engnum': [1,2,3,4]}
-    
+    NAME_VALUES = {'engnum': [1, 2, 3, 4]}
+
     @classmethod
     def can_operate(cls, available):
         return any_of(cls.get_dependency_names(), available)
-    
+
     def derive(self, eng1=M('Eng (1) Running'), eng2=M('Eng (2) Running'),
                eng3=M('Eng (3) Running'), eng4=M('Eng (4) Running')):
         for engnum, eng in enumerate([eng1, eng2, eng3, eng4], start=1):
             if eng is None:
                 continue
             # min 4 seconds duration
-            slices = runs_of_ones(eng.array == 'Running', min_samples=4*self.frequency)
+            array = nearest_neighbour_mask_repair(
+                eng.array, repair_gap_size=4 * self.frequency)
+            slices = runs_of_ones(
+                array == 'Running', min_samples=4 * self.frequency)
             self.create_kpvs_from_slice_durations(slices, self.frequency,
                                                   mark='start', engnum=engnum)
 
