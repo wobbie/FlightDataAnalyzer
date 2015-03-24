@@ -22,6 +22,7 @@ from analysis_engine.library import (
     slices_and,
     slice_duration,
     slices_not,
+    slices_remove_small_gaps,
 )
 
 from analysis_engine.node import A, M, P, S, KTI, KeyTimeInstanceNode
@@ -1543,11 +1544,15 @@ class AltitudeWhenClimbing(KeyTimeInstanceNode):
     NAME_VALUES = NAME_VALUES_CLIMB
 
     def derive(self,
+               takeoff=S('Takeoff'),
                initial_climb=S('Initial Climb'),
                climb=S('Climb'),
                alt_aal=P('Altitude AAL'),
                alt_std=P('Altitude STD Smoothed')):
-        for climb in list(initial_climb) + list(climb):
+
+        climbs = list(takeoff) + list(initial_climb) + list(climb)
+        climb_slices = slices_remove_small_gaps([c.slice for c in climbs])
+        for climb_slice in climb_slices:
             for alt_threshold in self.NAME_VALUES['altitude']:
                 # Will trigger a single KTI per height (if threshold is crossed)
                 # per climbing phase.
@@ -1558,7 +1563,7 @@ class AltitudeWhenClimbing(KeyTimeInstanceNode):
                     # Use standard altitudes.
                     alt = alt_std.array
 
-                index = index_at_value(alt, alt_threshold, climb.slice)
+                index = index_at_value(alt, alt_threshold, climb_slice)
                 if index:
                     self.create_kti(index, altitude=alt_threshold)
 
