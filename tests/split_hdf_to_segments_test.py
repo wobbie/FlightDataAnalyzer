@@ -23,6 +23,12 @@ test_data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 this_year = datetime.now().year
 
 
+class MockHDF(dict):
+    def __init__(self, data={}, duration=1):
+        self.update(data)
+        self.duration = duration
+
+
 class TestInvalidYears(unittest.TestCase):
     def test_mask_invalid_years(self):
         array = np.ma.array([0, 2, 9, 10, 13, 14, 15, 88, 99,
@@ -385,7 +391,7 @@ class TestSplitSegments(unittest.TestCase):
         settings.MINIMUM_SPLIT_PARAM_VALUE = 0.175
         settings.HEADING_RATE_SPLITTING_THRESHOLD = 0.1
         settings.MAX_TIMEBASE_AGE = 365 * 10
-        settings.MIN_N1_RUNNING = 10
+        settings.MIN_FAN_RUNNING = 10
 
         hdf_path = os.path.join(test_data_path, "split_segments_multiple_types.hdf5")
         temp_path = copy_file(hdf_path)
@@ -472,27 +478,27 @@ class mocked_hdf(object):
         else:
             if self.path == 'invalid timestamps':
                 if key == 'Year':
-                    data = np.ma.array([0] * 60)
+                    data = np.ma.array([0] * self.duration)
                 elif key == 'Month':
-                    data = np.ma.array([13] * 60)
+                    data = np.ma.array([13] * self.duration)
                 elif key == 'Day':
-                    data = np.ma.array([31] * 60)
+                    data = np.ma.array([31] * self.duration)
                 else:
-                    data = np.ma.array(range(0, 60))
+                    data = np.ma.array(range(0, self.duration))
             else:
                 if key == 'Year':
                     if self.path == 'future timestamps':
-                        data = np.ma.array([2020] * 60)
+                        data = np.ma.array([2020] * self.duration)
                     elif self.path == 'old timestamps':
-                        data = np.ma.array([1999] * 60)
+                        data = np.ma.array([1999] * self.duration)
                     else:
-                        data = np.ma.array([2012] * 60)
+                        data = np.ma.array([2012] * self.duration)
                 elif key == 'Month':
-                    data = np.ma.array([12] * 60)
+                    data = np.ma.array([12] * self.duration)
                 elif key == 'Day':
-                    data = np.ma.array([25] * 60)
+                    data = np.ma.array([25] * self.duration)
                 else:
-                    data = np.ma.array(range(0, 60))
+                    data = np.ma.array(range(0, self.duration))
         return P(key, array=data)
 
 
@@ -583,14 +589,14 @@ class TestSegmentInfo(unittest.TestCase):
     def test_calculate_start_datetime(self):
         """
         """
-        hdf = {
+        hdf = MockHDF({
             'Year': P('Year', np.ma.array([2011])),
             'Month': P('Month', np.ma.array([11])),
             'Day': P('Day', np.ma.array([11])),
             'Hour': P('Hour', np.ma.array([11])),
             'Minute': P('Minute', np.ma.array([11])),
             'Second': P('Second', np.ma.array([11]))
-        }
+        })
         dt = datetime(2012, 12, 12, 12, 12, 12, tzinfo=pytz.utc)
         # test with all params
         res = _calculate_start_datetime(hdf, dt)
@@ -624,15 +630,15 @@ class TestSegmentInfo(unittest.TestCase):
         # NB: 12's are the fallback_dt, 11's are the recorded time parameters
         dt = datetime(2012, 12, 12, 12, 12, 10, tzinfo=pytz.utc)
         # Test only without second and empty year
-        hdf = {
+        hdf = MockHDF({
             'Month': P('Month', np.ma.array([11, 11, 11, 11])),
             'Day': P('Day', np.ma.array([])),
             'Hour': P('Hour', np.ma.array([11, 11, 11, 11], mask=[True, False, False, False])),
             'Minute': P('Minute', np.ma.array([11, 11]), frequency=0.5),
-        }
+        }, duration=4)
         res = _calculate_start_datetime(hdf, dt)
         # 9th second as the first sample (10th second) was masked
-        self.assertEqual(res, datetime(2012, 11, 12, 11, 11, 9, tzinfo=pytz.utc))
+        self.assertEqual(res, datetime(2012, 11, 12, 11, 11, 10, tzinfo=pytz.utc))
 
     def test_year_00_uses_fallback_year(self):
         # Ensure that a timebase error is not raised due to old date!
@@ -640,19 +646,19 @@ class TestSegmentInfo(unittest.TestCase):
         # can be all 0's
         dt = datetime(2012, 12, 12, 12, 12, 10, tzinfo=pytz.utc)
         # Test only without second and empty year
-        hdf = {
+        hdf = MockHDF({
             'Year': P('Year', np.ma.array([0, 0, 0, 0])),
             'Month': P('Month', np.ma.array([11, 11, 11, 11])),
             'Day': P('Day', np.ma.array([11, 11, 11, 11])),
             'Hour': P('Hour', np.ma.array([11, 11, 11, 11], mask=[True, False, False, False])),
             'Minute': P('Minute', np.ma.array([11, 11]), frequency=0.5),
-        }
+        }, duration=4)
         # add a masked invalid value
         hdf['Year'].array[2] = 50
         hdf['Year'].array[2] = np.ma.masked
         res = _calculate_start_datetime(hdf, dt)
         print hdf, dt
-        self.assertEqual(res, datetime(2012, 11, 11, 11, 11, 9, tzinfo=pytz.utc))
+        self.assertEqual(res, datetime(2012, 11, 11, 11, 11, 10, tzinfo=pytz.utc))
 
     def test_no_year_with_a_very_recent_fallback(self):
         """When fallback is a year after the flight and Year is not recorded,
@@ -669,15 +675,33 @@ class TestSegmentInfo(unittest.TestCase):
         # Year is not recorded, and the data is for the very end of the
         # previous year. NB: This test could fail if ran on the very last day
         # of the month!
-        hdf = {
+        hdf = MockHDF({
             'Month': P('Month', np.ma.array([12, 12])),  # last month of year
             'Day': P('Day', np.ma.array([31, 31])),  # last day
             'Hour': P('Hour', np.ma.array([23, 23])),  # last hour
             'Minute': P('Minute', np.ma.array([59, 59])),  # last minute
             'Second': P('Minute', np.ma.array([58, 59])),  # last two seconds
-        }
+        }, duration=2)
         res = _calculate_start_datetime(hdf, dt)
         # result is a year behind the fallback datetime, even though the
         # fallback Year was used.
         self.assertEqual(res.year, datetime.now().year - 1)
         #self.assertEqual(res, datetime(2012,6,01,11,11,1))
+        
+    def test_midnight_rollover(self):
+        """
+        When a flight starts just before midnight, the majority of the
+        flight will be in the next day so the fallback_dt needs to adjust
+        throughout the data otherwise it will try to force the next day's
+        flight to appear to that of the previous.
+        """
+        # fallback is at start of the recording
+        dt = datetime(2012, 12, 12, 23, 59, 58, tzinfo=pytz.utc)
+        hdf = MockHDF({
+            'Hour': P('Hour', np.ma.array([23, 23] + [0]*18)),
+            'Minute': P('Minute', np.ma.array([59, 59] + [0]*18)),
+            'Second': P('Minute', np.ma.array([58, 59] + range(18))),  # last two seconds and start of next flight
+        }, duration=20)
+        res = _calculate_start_datetime(hdf, dt)
+        # result is the exact start of the data for the timestamp (not a day before!)
+        self.assertEqual(res, datetime(2012, 12, 12, 23, 59, 58, tzinfo=pytz.utc))    

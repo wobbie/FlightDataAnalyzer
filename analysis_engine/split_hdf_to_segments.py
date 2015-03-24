@@ -557,6 +557,11 @@ def _mask_invalid_years(array, latest_year):
 def get_dt_arrays(hdf, fallback_dt):
     now = datetime.utcnow().replace(tzinfo=pytz.utc)
 
+    if fallback_dt:
+        fallback_dts = []
+        for secs in xrange(0, int(hdf.duration)):
+            fallback_dts.append(fallback_dt + timedelta(seconds=secs))
+
     onehz = P(frequency=1)
     dt_arrays = []
     for name in ('Year', 'Month', 'Day', 'Hour', 'Minute', 'Second'):
@@ -577,9 +582,9 @@ def get_dt_arrays(hdf, fallback_dt):
                 dt_arrays.append(array)
                 continue
         if fallback_dt:
-            array = [getattr(fallback_dt, name.lower())]
-            logger.warning("%s not available, using %d from fallback_dt %s",
-                           name, array[0], fallback_dt)
+            array = [getattr(dt, name.lower()) for dt in fallback_dts]
+            logger.warning("%s not available, using range from %d to %d from fallback_dt %s",
+                           name, array[0], array[-1], fallback_dt)
             dt_arrays.append(array)
             continue
         else:
