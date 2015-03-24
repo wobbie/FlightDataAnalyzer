@@ -13,7 +13,7 @@ from hdfaccess.file import hdf_file
 
 from analysis_engine import hooks, settings, __version__
 from analysis_engine.dependency_graph import dependency_order
-from analysis_engine.json_tools import process_flight_to_nodes
+from analysis_engine.json_tools import json_to_process_flight, process_flight_to_nodes
 from analysis_engine.library import np_ma_masked_zeros, repair_mask
 from analysis_engine.node import (ApproachNode, Attribute,
                                   derived_param_from_hdf,
@@ -706,6 +706,10 @@ def main():
                         help='Engine series.')
     parser.add_argument('-engine-type', dest='engine_type', type=str,
                         help='Engine type.')
+    
+    parser.add_argument('-initial', dest='initial', type=str,
+                        help='Path to initial nodes in json format.')
+    
 
     args = parser.parse_args()
 
@@ -758,6 +762,13 @@ def main():
     if args.strip:
         with hdf_file(hdf_copy) as hdf:
             hdf.delete_params(hdf.derived_keys())
+    
+    if args.initial:
+        if not os.path.exists(args.initial):
+            parser.error('Path for initial json data not found: %s' % args.initial)
+        initial = json_to_process_flight(open(args.initial, 'rb').read())
+    else:
+        initial = {}
 
     segment_info = {
         'File': hdf_copy,
@@ -766,7 +777,8 @@ def main():
     res = process_flight(
         segment_info, args.tail_number, aircraft_info=aircraft_info,
         requested=args.requested, required=args.required,
-        additional_modules=['flightdataprofiles.fcp.kpvs']
+        additional_modules=['flightdataprofiles.fcp.kpvs'],
+        initial=initial,
     )
     # Flatten results.
     res = {k: list(itertools.chain.from_iterable(v.itervalues()))
