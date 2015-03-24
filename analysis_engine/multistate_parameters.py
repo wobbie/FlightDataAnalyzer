@@ -654,7 +654,7 @@ class EngRunning(object):
         '''
         if eng_np:
             # If it's got propellors, this overrides core engine measurements.
-            return eng_np.array > MIN_FAN_RUNNING
+            return np.ma.where(eng_np.array > MIN_FAN_RUNNING, 'Running', 'Not Running')
         elif eng_n2 or fuel_flow:
             # Ideally have N2 and Fuel Flow with both available,
             # otherwise use just one source
@@ -662,10 +662,10 @@ class EngRunning(object):
                 else np.ones_like(fuel_flow.array, dtype=bool)
             fuel_flowing = fuel_flow.array > MIN_FUEL_FLOW_RUNNING if fuel_flow \
                 else np.ones_like(eng_n2.array, dtype=bool)
-            return n2_running & fuel_flowing
+            return np.ma.where(n2_running & fuel_flowing, 'Running', 'Not Running')
         else:
             # Fall back on N1
-            return eng_n1.array > MIN_FAN_RUNNING
+            return np.ma.where(eng_n1.array > MIN_FAN_RUNNING, 'Running', 'Not Running')
 
 
 class Eng1Running(EngRunning, MultistateDerivedParameterNode):
