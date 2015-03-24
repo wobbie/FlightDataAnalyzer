@@ -187,7 +187,12 @@ def process_flight_to_nodes(pf_results):
     for node_type, nodes in pf_results.iteritems():
         
         for node_name, items in nodes.iteritems():
-            node_cls = derived_nodes[node_name]
+            try:
+                node_cls = derived_nodes[node_name]
+            except KeyError:
+                #logger.warning('Derived node not found in code base: %s', node_name)
+                continue
+            
             if node_type == 'flight' and items:
                 flight_attr = node.FlightAttributeNode(node_name)
                 flight_attr.set_flight_attr(items[0].value)
