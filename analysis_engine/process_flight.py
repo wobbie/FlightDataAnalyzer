@@ -571,6 +571,8 @@ def process_flight(segment_info, tail_number, aircraft_info={}, achieved_flight_
                 ['analysis_engine.flight_attribute']).keys()))
     
     initial = process_flight_to_nodes(initial)
+    for node_name in requested:
+        initial.pop(node_name, None)
 
     # open HDF for reading
     with hdf_file(hdf_path) as hdf:
