@@ -11,6 +11,8 @@ from analysis_engine.split_hdf_to_segments import (
     _get_normalised_split_params,
     _mask_invalid_years,
     append_segment_info,
+    calculate_fallback_dt,
+    has_constant_time,
     split_segments,
     TimebaseError)
 from analysis_engine.node import P, Parameter
@@ -43,6 +45,27 @@ class TestInvalidYears(unittest.TestCase):
                     1, 1]
         res = _mask_invalid_years(array, latest_year=2013)
         self.assertTrue(np.all(res.mask == exp_mask))
+
+
+class TestDateTimeFunctions(unittest.TestCase):
+    def test_calculate_fallback_dt(self):
+        hdf = mocked_hdf()('slow')
+        dt = datetime(2012, 12, 12, 12, 13, 2, tzinfo=pytz.utc)
+        # test no change
+        new_dt = calculate_fallback_dt(hdf, dt, True)
+        self.assertEqual(new_dt, dt)
+        # test 50 seconds (duration) earlier as relative to end
+        new_dt = calculate_fallback_dt(hdf, dt, False)
+        expected_dt = datetime(2012, 12, 12, 12, 12, 12, tzinfo=pytz.utc)
+        self.assertEqual(new_dt, expected_dt)
+    
+    def test_constant_time(self):
+        hdf = mocked_hdf()('slow')
+        # mocked hdf seconds increment
+        self.assertFalse(has_constant_time(hdf))
+        
+        #TODO: Test case for calculate_fallback_dt where has_constant_time is
+        # True
 
 
 class TestSplitSegments(unittest.TestCase):

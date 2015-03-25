@@ -611,11 +611,25 @@ def has_constant_time(hdf):
     return samples > 5 and duration > 5 and np.ptp(minutes.array) == 0
 
 
-def calculate_fallback_dt(hdf, fallback_dt=None):
+def calculate_fallback_dt(hdf, fallback_dt=None, fallback_relative_to_start=True):
     """
     Check the time parameters in the HDF5 file and update the fallback_dt.
+    
+    Takes into account adjustment of fallback datetime if it's relative to
+    the end of data and if there's a constant timebase within the data it
+    will use this as the fallback datetime.
     """
+    if fallback_dt and not fallback_relative_to_start:
+        # fallback_dt is relative to the end of the data; remove the data
+        # duration to make it relative to the start of the data
+        secs = hdf.duration
+        fallback_dt -= timedelta(seconds=secs)  # Q: minus the number of segments * gaps between them?  # ADDRESS!
+        logger.info("Reduced fallback_dt by %ddays %dhr %dmin to %s",
+                    secs // 86400, secs % 86400 // 3600,
+                    secs % 86400 % 3600 // 60, fallback_dt)
+        
     if not has_constant_time(hdf):
+        # we don't need to do any further corrections
         return fallback_dt
 
     try:
@@ -625,7 +639,7 @@ def calculate_fallback_dt(hdf, fallback_dt=None):
         return fallback_dt
     else:
         logger.warning("Time doesn't change, using the starting time as the fallback_dt")
-        return timebase + timedelta(seconds=hdf.duration)
+        return timebase
 
 
 def _calculate_start_datetime(hdf, fallback_dt):
@@ -792,7 +806,8 @@ def append_segment_info(hdf_segment_path, segment_type, segment_slice, part,
     return segment
 
 
-def split_hdf_to_segments(hdf_path, aircraft_info, fallback_dt=None,
+def split_hdf_to_segments(hdf_path, aircraft_info, fallback_dt=None, 
+                          fallback_relative_to_start=True,
                           draw=False, dest_dir=None):
     """
     Main method - analyses an HDF file for flight segments and splits each
@@ -839,16 +854,9 @@ def split_hdf_to_segments(hdf_path, aircraft_info, fallback_dt=None,
         else:
             logger.info("No PRE_FILE_ANALYSIS actions to perform")
 
-        fallback_dt = calculate_fallback_dt(hdf, fallback_dt)
+
+        fallback_dt = calculate_fallback_dt(hdf, fallback_dt, fallback_relative_to_start)
         segment_tuples = split_segments(hdf)
-        if fallback_dt:
-            # fallback_dt is relative to the end of the data; remove the data
-            # duration to make it relative to the start of the data
-            secs = hdf.duration
-            fallback_dt -= timedelta(seconds=secs)
-            logger.info("Reduced fallback_dt by %ddays %dhr %dmin to %s",
-                        secs // 86400, secs % 86400 // 3600,
-                        secs % 86400 % 3600 // 60, fallback_dt)
 
     # process each segment (into a new file) having closed original hdf_path
     segments = []
@@ -880,7 +888,7 @@ def split_hdf_to_segments(hdf_path, aircraft_info, fallback_dt=None,
 
         if fallback_dt:
             # move the fallback_dt on to be relative to start of next segment
-            fallback_dt += segment.stop_dt - segment.start_dt
+            fallback_dt += segment.stop_dt - segment.start_dt  # plus a small gap between flights
         segments.append(segment)
         if draw:
             plot_essential(dest_path)
