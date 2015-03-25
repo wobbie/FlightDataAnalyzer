@@ -8414,7 +8414,7 @@ class EngRunningDuration(KeyPointValueNode):
                 continue
             # min 4 seconds duration
             array = nearest_neighbour_mask_repair(
-                eng.array, repair_gap_size=4 * self.frequency)
+                eng.array, repair_gap_size=5 * self.frequency)
             slices = runs_of_ones(
                 array == 'Running', min_samples=4 * self.frequency)
             self.create_kpvs_from_slice_durations(slices, self.frequency,
