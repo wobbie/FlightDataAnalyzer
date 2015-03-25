@@ -8412,9 +8412,10 @@ class EngRunningDuration(KeyPointValueNode):
         for engnum, eng in enumerate([eng1, eng2, eng3, eng4], start=1):
             if eng is None:
                 continue
-            # min 4 seconds duration
+            # remove gaps in data shorter than 10s
             array = nearest_neighbour_mask_repair(
-                eng.array, repair_gap_size=5 * self.frequency)
+                eng.array, repair_gap_size=10 * self.frequency)
+            # min 4s duration
             slices = runs_of_ones(
                 array == 'Running', min_samples=4 * self.frequency)
             self.create_kpvs_from_slice_durations(slices, self.frequency,
