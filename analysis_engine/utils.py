@@ -333,7 +333,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     subparser = parser.add_subparsers(dest='command',
                                       description="Utility command, currently "
-                                      "only 'trimmer' is supported",
+                                      "'trimmer' and 'list' are supported",
                                       help='Additional help')
     trimmer_parser = subparser.add_parser('trimmer')
     trimmer_parser.add_argument('input_file_path', help='Input hdf filename.')  
