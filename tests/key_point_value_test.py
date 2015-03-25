@@ -10404,19 +10404,16 @@ class TestEngRunningDuration(unittest.TestCase):
         running = EngRunningDuration()
         running.derive(eng1, eng2, eng3, eng4)
         
-        self.assertEqual(len(running), 6)
+        self.assertEqual(len(running), 3)
         self.assertEqual(running[0].name, 'Eng (1) Running Duration')
-        self.assertEqual(running[0].index, 4)
-        self.assertEqual(running[0].value, 4)
-        self.assertEqual(running[1].name, 'Eng (1) Running Duration')
-        self.assertEqual(running[1].index, 10)
-        self.assertEqual(running[1].value, 6)
-        self.assertEqual(running[2].name, 'Eng (2) Running Duration')
-        self.assertEqual(running[2].index, 4)
-        self.assertEqual(running[2].value, 3)
-        self.assertEqual(running[-1].name, 'Eng (3) Running Duration')
-        self.assertEqual(running[-1].index, 11)
-        self.assertEqual(running[-1].value, 6)
+        self.assertEqual(running[0].index, 10)
+        self.assertEqual(running[0].value, 6)
+        self.assertEqual(running[1].name, 'Eng (2) Running Duration')
+        self.assertEqual(running[1].index, 11)
+        self.assertEqual(running[1].value, 5)
+        self.assertEqual(running[2].name, 'Eng (3) Running Duration')
+        self.assertEqual(running[2].index, 11)
+        self.assertEqual(running[2].value, 6)
 
 
 class TestMasterWarningDuringTakeoffDuration(unittest.TestCase, NodeTest):
