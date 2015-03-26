@@ -662,7 +662,7 @@ class EngRunning(object):
                 else np.ones_like(fuel_flow.array, dtype=bool)
             fuel_flowing = fuel_flow.array > MIN_FUEL_FLOW_RUNNING if fuel_flow \
                 else np.ones_like(eng_n2.array, dtype=bool)
-            mask = n2_running.mask | fuel_flowing.mask
+            mask = n2_running.mask & fuel_flowing.mask
             array = np.ma.where(n2_running | fuel_flowing, 'Running', 'Not Running')
             array.mask = mask
             return array
