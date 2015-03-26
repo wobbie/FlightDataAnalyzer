@@ -650,7 +650,7 @@ class EngRunning(object):
         TODO: Include Fuel cut-off switch if recorded?
         TODO: Confirm that all engines were recording for the N2 Min / Fuel Flow
         Min parameters - theoretically there could be only three engines in the
-        frame for a four engine aircraft. Use "Engine Count".        
+        frame for a four engine aircraft. Use "Engine Count".
         '''
         if eng_np:
             # If it's got propellors, this overrides core engine measurements.
@@ -662,7 +662,10 @@ class EngRunning(object):
                 else np.ones_like(fuel_flow.array, dtype=bool)
             fuel_flowing = fuel_flow.array > MIN_FUEL_FLOW_RUNNING if fuel_flow \
                 else np.ones_like(eng_n2.array, dtype=bool)
-            return np.ma.where(n2_running | fuel_flowing, 'Running', 'Not Running')
+            mask = n2_running.mask | fuel_flowing.mask
+            array = np.ma.where(n2_running | fuel_flowing, 'Running', 'Not Running')
+            array.mask = mask
+            return array
         else:
             # Fall back on N1
             return np.ma.where(eng_n1.array > MIN_FAN_RUNNING, 'Running', 'Not Running')
