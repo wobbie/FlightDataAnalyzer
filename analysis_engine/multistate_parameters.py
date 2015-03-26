@@ -662,7 +662,7 @@ class EngRunning(object):
                 else np.ones_like(fuel_flow.array, dtype=bool)
             fuel_flowing = fuel_flow.array > MIN_FUEL_FLOW_RUNNING if fuel_flow \
                 else np.ones_like(eng_n2.array, dtype=bool)
-            return np.ma.where(n2_running & fuel_flowing, 'Running', 'Not Running')
+            return np.ma.where(n2_running | fuel_flowing, 'Running', 'Not Running')
         else:
             # Fall back on N1
             return np.ma.where(eng_n1.array > MIN_FAN_RUNNING, 'Running', 'Not Running')
