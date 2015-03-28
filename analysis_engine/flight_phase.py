@@ -1413,6 +1413,16 @@ class TakeoffRotation(FlightPhaseNode):
         end = lift_index + 15
         self.create_phase(slice(start, end))
 
+class TakeoffRotationWow(FlightPhaseNode):
+    '''
+    Used by correlation tests which need to use only the rotation period while the mainwheels are on the ground. Specifically, AOA.
+    '''
+    name = 'Takeoff Rotation WOW'
+    def derive(self, toff_rots=S('Takeoff Rotation')):
+        for toff_rot in toff_rots:
+            self.create_phase(slice(toff_rot.slice.start,
+                                    toff_rot.slice.stop-15))
+
 
 ################################################################################
 # Takeoff/Go-Around Ratings
