@@ -2,6 +2,7 @@ import argparse
 import logging
 import os
 import re
+import simplejson
 import zipfile
 
 from collections import defaultdict
@@ -90,14 +91,15 @@ def open_node_container(zip_path):
     TODO: Do not compress to the current directory.
     '''
     with zipfile.ZipFile(zip_path, 'r') as zip_file:
-        filenames = zip_file.namelist()
+        filenames = set(zip_file.namelist())
         
         flight_filenames = defaultdict(dict)
         
         for filename in filenames:
             match = re.match('^(?P<flight_pk>\d+) - (?P<node_name>[\w\d\s()]+).nod$', filename)
             if not match:
-                print "Skipping invalid filename '%s'" % filename
+                if not re.match('^(?P<flight_pk>\d+)\.json$', filename):
+                    print "Skipping invalid filename '%s'" % filename
                 continue
             
             groupdict = match.groupdict()
@@ -108,7 +110,10 @@ def open_node_container(zip_path):
             for node_name, filename in node_filenames.iteritems():
                 nodes[node_name] = loads(zip_file.read(filename))
             
-            yield flight_pk, nodes
+            json_filename = '%s.json' % flight_pk
+            attrs = simplejson.loads(zip_file.read(json_filename)) if json_filename in filenames else {}
+            
+            yield flight_pk, nodes, attrs
 
 
 def get_aircraft_info(tail_number):
