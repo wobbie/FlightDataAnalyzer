@@ -1025,6 +1025,13 @@ class TakeoffAccelerationStart(KeyTimeInstanceNode):
                 self.create_kti(start_accel)
 
 
+class TakeoffStart(KeyTimeInstanceNode):
+    def derive(self,
+               acc_start=KTI('Takeoff Acceleration Start'),
+               throttle=P('Throttle Levers')):
+        self.create_kti(acc_start.get_first().index)
+
+
 class TakeoffPeakAcceleration(KeyTimeInstanceNode):
     """
     As for landing, the point of maximum acceleration, is used to identify the
