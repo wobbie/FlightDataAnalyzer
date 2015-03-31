@@ -2346,9 +2346,10 @@ class AirspeedWithFlapIncludingTransition20AndSlatFullyExtendedMax(KeyPointValue
                flap=M('Flap Including Transition'),
                slat=M('Slat Including Transition'),
                fast=S('Fast'),
-               family=A('Family')):
+               family=A('Family'),
+               series=A('Series')):
 
-        slat_fully_ext_value = max(at.get_slat_map(family=family.value).iteritems(), key=operator.itemgetter(0))[1]
+        slat_fully_ext_value = max(at.get_slat_map(family=family.value, series=series.value).iteritems(), key=operator.itemgetter(0))[1]
         # Fast scope traps flap changes very late on the approach and
         # raising flaps before 80 kt on the landing run.
         #
