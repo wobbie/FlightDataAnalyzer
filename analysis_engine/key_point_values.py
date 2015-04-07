@@ -9514,7 +9514,7 @@ class PitchAbove1000FtMin(KeyPointValueNode):
     '''
     Minimum Pitch above 1000ft AAL in flight.
     '''
-    units = 'deg'
+    units = ut.DEGREE
 
     def derive(self, pitch=P('Pitch'), alt=P('Altitude AAL')):
         self.create_kpvs_within_slices(pitch.array,
@@ -9525,7 +9525,7 @@ class PitchAbove1000FtMax(KeyPointValueNode):
     '''
     Maximum Pitch above 1000ft AAL in flight.
     '''
-    units = 'deg'
+    units = ut.DEGREE
 
     def derive(self, pitch=P('Pitch'), alt=P('Altitude AAL')):
         self.create_kpvs_within_slices(pitch.array,
