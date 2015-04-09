@@ -1641,7 +1641,7 @@ class AirspeedMinusV235ToClimbAccelerationStartMin(KeyPointValueNode):
     '''
 
     name = 'Airspeed Minus V2 35 To Climb Acceleration Start Min'
-    units = ut.FPM
+    units = ut.KT
 
     def derive(self,
                spd_v2=P('Airspeed Minus V2'),
@@ -1665,7 +1665,7 @@ class AirspeedMinusV235ToClimbAccelerationStartMax(KeyPointValueNode):
     '''
 
     name = 'Airspeed Minus V2 35 To Climb Acceleration Start Max'
-    units = ut.FPM
+    units = ut.KT
 
     def derive(self,
                spd_v2=P('Airspeed Minus V2'),
@@ -1689,7 +1689,7 @@ class AirspeedMinusV2For3Sec35ToClimbAccelerationStartMin(KeyPointValueNode):
     '''
 
     name = 'Airspeed Minus V2 For 3 Sec 35 To Climb Acceleration Start Min'
-    units = ut.FPM
+    units = ut.KT
 
     def derive(self,
                spd_v2=P('Airspeed Minus V2 For 3 Sec'),
@@ -1713,7 +1713,7 @@ class AirspeedMinusV2For3Sec35ToClimbAccelerationStartMax(KeyPointValueNode):
     '''
 
     name = 'Airspeed Minus V2 For 3 Sec 35 To Climb Acceleration Start Max'
-    units = ut.FPM
+    units = ut.KT
 
     def derive(self,
                spd_v2=P('Airspeed Minus V2 For 3 Sec'),
@@ -1824,6 +1824,8 @@ class AirspeedMinusMinimumAirspeedAbove10000FtMin(KeyPointValueNode):
     limit below which there is a reduced manoeuvring capability.
     '''
 
+    units = ut.KT
+
     def derive(self,
                air_spd=P('Airspeed Minus Minimum Airspeed'),
                alt_std=P('Altitude STD Smoothed')):
@@ -1839,6 +1841,8 @@ class AirspeedMinusMinimumAirspeed35To10000FtMin(KeyPointValueNode):
     10,000 ft. A positive value measured ensures that the aircraft is above the
     speed limit below which there is a reduced manoeuvring capability.
     '''
+
+    units = ut.KT
 
     def derive(self,
                air_spd=P('Airspeed Minus Minimum Airspeed'),
@@ -1866,6 +1870,8 @@ class AirspeedMinusMinimumAirspeed10000To50FtMin(KeyPointValueNode):
     speed limit below which there is a reduced manoeuvring capability.
     '''
 
+    units = ut.KT
+
     def derive(self,
                air_spd=P('Airspeed Minus Minimum Airspeed'),
                alt_aal=P('Altitude AAL For Flight Phases'),
@@ -1889,6 +1895,8 @@ class AirspeedMinusMinimumAirspeedDuringGoAroundMin(KeyPointValueNode):
     the aircraft is above the speed limit below which there is a reduced
     manoeuvring capability.
     '''
+
+    units = ut.KT
 
     def derive(self,
                air_spd=P('Airspeed Minus Minimum Airspeed'),
