@@ -96,7 +96,7 @@ def open_node_container(zip_path):
         flight_filenames = defaultdict(dict)
         
         for filename in filenames:
-            match = re.match('^(?P<flight_pk>\d+) - (?P<node_name>[\w\d\s()]+).nod$', filename)
+            match = re.match('^(?P<flight_pk>\d+) - (?P<node_name>[\w\d\s\*()]+).nod$', filename)
             if not match:
                 if not re.match('^(?P<flight_pk>\d+)\.json$', filename):
                     print "Skipping invalid filename '%s'" % filename
