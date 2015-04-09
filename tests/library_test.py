@@ -1285,7 +1285,7 @@ class TestIncludingTransition(unittest.TestCase):
     def test_calculate_flap_19(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_19.npz'))
         flap_inc = including_transition(array, self.flap_map_2)
-        self.assertEqual(flap_inc.tolist(), [20] * 36 + [25] * 18 + [30] * 11)
+        self.assertEqual(flap_inc.tolist(), [20] * 36 + [25] * 29) #+ [30] * 11)
     
     def test_calculate_flap_20(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_20.npz'))
@@ -1333,6 +1333,28 @@ class TestIncludingTransition(unittest.TestCase):
         self.assertTrue(np.ma.all(flap_inc[2727:2735] == 1))
         self.assertTrue(np.ma.all(flap_inc[2735:3489] == 0))
         # Do not test further transitions for brevity.
+    
+    def test_calculate_flap_23(self):
+        array = load_compressed(os.path.join(test_data_path, 'flap_including_transition_flap_angle_2.npz'))
+        flap_inc = including_transition(array, self.flap_map_4)
+        self.assertTrue(flap_inc.mask[0])
+        self.assertTrue(np.ma.all(flap_inc[1:2758] == 0))
+        self.assertTrue(np.ma.all(flap_inc[2758:3646] == 1))
+        self.assertTrue(np.ma.all(flap_inc[3646:11800] == 0))
+        self.assertTrue(np.ma.all(flap_inc[11800:12130] == 1))
+        self.assertTrue(np.ma.all(flap_inc[12130:12135] == 2))
+        self.assertTrue(np.ma.all(flap_inc[12135:12247] == 5))
+        self.assertTrue(np.ma.all(flap_inc[12247:12252] == 10))
+        self.assertTrue(np.ma.all(flap_inc[12255:12308] == 15))
+        self.assertTrue(np.ma.all(flap_inc[12308:12315] == 25))
+        self.assertTrue(np.ma.all(flap_inc[12315:12655] == 30))
+        self.assertTrue(np.ma.all(flap_inc[12655:12662] == 25))
+        self.assertTrue(np.ma.all(flap_inc[12662:12668] == 15))
+        self.assertTrue(np.ma.all(flap_inc[12668:12673] == 10))
+        self.assertTrue(np.ma.all(flap_inc[12673:12680] == 5))
+        self.assertTrue(np.ma.all(flap_inc[12680:12685] == 2))
+        self.assertTrue(np.ma.all(flap_inc[12685:12706] == 1))
+        self.assertTrue(np.ma.all(flap_inc[12706:] == 0))
 
 
 class TestCalculateSurfaceAngle(unittest.TestCase):

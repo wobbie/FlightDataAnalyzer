@@ -6340,14 +6340,19 @@ def including_transition(array, steps, threshold=0.2):
     '''
     # XXX: Problematic signals could benefit from second_window.
     #array = second_window(array, 1, 10, extend_window=True)
+    
+    # first raise the array to the next step if it exceeds the previous step
+    # plus a minimal threshold (step as early as possible)
     output = np_ma_zeros_like(array, mask=array.mask)
     steps = sorted(steps)
-    bounds = [(x + ((y - x) * threshold), y)
-              for x, y in zip(steps, steps[1:])]
-    for above, next_step in bounds:
-        above_slices = runs_of_ones(array >= above)
-        for above_slice in above_slices:
-            output[above_slice] = next_step
+    for step, next_step in zip(steps, steps[1:]):
+        step_threshold = ((next_step - step) * threshold)
+        for above_slice in runs_of_ones(array >= step + step_threshold):
+            # check that the section reached 2 * threshold, otherwise the
+            # 'early stepping' is being too eager.
+            if np.ma.max(array[above_slice]) >= step + (2 * step_threshold):
+                output[above_slice] = next_step
+    
     return output
 
 
