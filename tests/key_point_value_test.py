@@ -3770,9 +3770,9 @@ class TestAlphaFloorDuration(unittest.TestCase, NodeTest):
 
         name = self.node_class.get_name()
         expected = KPV(name=name, items=[
-            KeyPointValue(name=name, index=4.5, value=3),
-            KeyPointValue(name=name, index=9, value=2),
-            KeyPointValue(name=name, index=13, value=2),
+            KeyPointValue(name=name, index=3, value=3),
+            KeyPointValue(name=name, index=8, value=2),
+            KeyPointValue(name=name, index=12, value=2),
         ])
 
         node = self.node_class()
@@ -6340,7 +6340,7 @@ class TestEngN154to72PercentWithThrustReversersDeployedDurationMax(unittest.Test
         node.derive(eng_1, None, None, None, thrust_reversers, eng_series)
 
         self.assertEqual(node[0].name, 'Eng (1) N1 54 To 72 Percent With Thrust Reversers Deployed Duration Max')
-        self.assertEqual(node[0].index, 64)
+        self.assertEqual(node[0].index, 61)
         self.assertEqual(node[0].value, 6)
         self.assertEqual(len(node), 1)
 
@@ -8867,7 +8867,7 @@ class TestAlternateLawDuration(unittest.TestCase, NodeTest):
         airborne = buildsection('Airborne', 2, 20)
         name = self.node_class.get_name()
         expected = KPV(name=name, items=[
-            KeyPointValue(name=name, index=10.5, value=7),
+            KeyPointValue(name=name, index=7, value=7),
         ])
         node = self.node_class()
         node.derive(alternate_law, pitch_alternate_law, roll_alternate_law, airborne)
@@ -8895,7 +8895,7 @@ class TestDirectLawDuration(unittest.TestCase, NodeTest):
         airborne = buildsection('Airborne', 2, 20)
         name = self.node_class.get_name()
         expected = KPV(name=name, items=[
-            KeyPointValue(name=name, index=10.5, value=7),
+            KeyPointValue(name=name, index=7, value=7),
         ])
         node = self.node_class()
         node.derive(direct_law, pitch_direct_law, roll_direct_law, airborne)

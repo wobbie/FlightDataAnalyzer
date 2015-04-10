@@ -1929,7 +1929,7 @@ class KeyPointValueNode(FormattedNameNode):
         self.create_kpv(index, value, **kwargs)
 
     def create_kpvs_from_slice_durations(self, slices, frequency,
-                                         min_duration=0.0, mark='midpoint',
+                                         min_duration=0.0, mark='start',
                                          **kwargs):
         '''
         Shortcut for creating KPVs from slices based only on the slice duration.

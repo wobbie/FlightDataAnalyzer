@@ -1250,15 +1250,15 @@ class TestKeyPointValueNode(unittest.TestCase):
                         [slice(1, 2), slice(3, 4), slice(5, 6)], max_value)
         self.assertEqual(list(knode)[-1],
                          KeyPointValue(index=5, value=20, name='Kpv'))
-        
+
     def test_create_kpvs_from_slice_durations_basic(self):
         # Basic
         knode = self.knode
         slices = [slice(2,5), slice(9,13)]
         knode.create_kpvs_from_slice_durations(slices, 1.0, min_duration=4.0)
-        self.assertEqual(knode[0].index, 11)
+        self.assertEqual(knode[0].index, 9)
         self.assertEqual(knode[0].value, 4)
-        
+
     def test_create_kpvs_from_slice_durations_faster_samples(self):
         # Higher frequency results in shorter durations...
         knode = self.knode
