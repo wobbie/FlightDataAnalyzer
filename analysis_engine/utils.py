@@ -86,9 +86,12 @@ def save_test_data(node, locals):
 
 def open_node_container(zip_path):
     '''
-    Opens a zip file containing nodes.
+    Opens a zip file containing nodes and yields (flight_pk, nodes, attrs) tuples.
     
     TODO: Do not compress to the current directory.
+    
+    :param zip_path: Path of node container zip file.
+    :type zip_path: str
     '''
     with zipfile.ZipFile(zip_path, 'r') as zip_file:
         filenames = set(zip_file.namelist())
@@ -96,7 +99,7 @@ def open_node_container(zip_path):
         flight_filenames = defaultdict(dict)
         
         for filename in filenames:
-            match = re.match('^(?P<flight_pk>\d+) - (?P<node_name>[\w\d\s()]+).nod$', filename)
+            match = re.match('^(?P<flight_pk>\d+) - (?P<node_name>[\w\d\s\*()]+).nod$', filename)
             if not match:
                 if not re.match('^(?P<flight_pk>\d+)\.json$', filename):
                     print "Skipping invalid filename '%s'" % filename
