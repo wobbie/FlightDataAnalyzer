@@ -767,25 +767,26 @@ def scan_ils(beam, ils_dots, height, scan_slice, frequency,
     # last time we were within 2.5dots
     scan_start_idx = index_at_value(ils_abs, 2.5, slice(ils_lost_idx-1, scan_slice.start-1, -1))
 
-    if scan_start_idx:
-        # Found a point to start scanning from, now look for the ILS goes
-        # below 1 dot.
-        ils_capture_idx = index_at_value(ils_abs, ILS_CAPTURE, slice(scan_start_idx, ils_lost_idx))
-    else:
-        # Reached start of section without passing 2.5 dots so check if we
-        # started established
-        first_valid_idx, first_valid_value = first_valid_sample(ils_abs[scan_slice.start:ils_lost_idx])
+    first_valid_idx, first_valid_value = first_valid_sample(ils_abs[scan_slice.start:ils_lost_idx])
 
-        # If there is no valid data in this range, we cannot be captured.
-        if first_valid_idx is None:
-            return None
-
-        if first_valid_value < ILS_CAPTURE:
-            # started established
-            ils_capture_idx = scan_slice.start + first_valid_idx
+    if scan_start_idx or first_valid_value > ILS_CAPTURE:
+        # Look for first instance of being established
+        if not scan_start_idx:
+            scan_start_idx = index_at_value(ils_abs, ILS_CAPTURE, slice(scan_slice.start, ils_lost_idx))
+        half_dot = np.ma.masked_greater(ils_abs, 0.5)
+        est = np.ma.clump_unmasked(half_dot)
+        est_slices = slices_and(est, (slice(scan_start_idx, ils_lost_idx),))
+        est_slices = slices_remove_small_slices(est_slices, duration, hz=frequency)
+        if est_slices:
+            ils_capture_idx = est_slices[0].start
         else:
-            # Find first index of ILS_CAPTURE dots from start of scan slice
-            ils_capture_idx = index_at_value(ils_abs, ILS_CAPTURE, slice(scan_slice.start, ils_lost_idx))
+            return None
+    elif first_valid_value < ILS_CAPTURE:
+        # started established
+        ils_capture_idx = scan_slice.start + first_valid_idx
+    if first_valid_idx is None:
+        # no valid data
+        return None
 
     if ils_capture_idx is None or ils_lost_idx is None:
         return None
@@ -842,6 +843,7 @@ class ILSLocalizerEstablished(FlightPhaseNode):
                     # No valid ils localizer data for this approach.
                     continue
                 valid_slices = np.ma.clump_unmasked(ils_loc.array[_slice])
+                valid_slices = slices_remove_small_gaps(valid_slices, count=5)
                 last_valid_slice = shift_slice(valid_slices[-1], _slice.start)
                 create_ils_phases([last_valid_slice])
             self.info("No ILS Frequency used. Created %d established phases" % len(self))
@@ -1071,10 +1073,12 @@ class Taxiing(FlightPhaseNode):
     '''
 
     @classmethod
-    def can_operate(cls, available):
-        constraint = (all_of(('Takeoff', 'Landing'), available) or
-                      'Airborne' in available)
-        return constraint and ('Mobile' in available)
+    def can_operate(cls, available, seg_type=A('Segment Type')):
+        ground_only = seg_type and seg_type.value == 'GROUND_ONLY' and \
+            all_of(('Mobile', 'Rejected Takeoff'), available)
+        default = all_of(('Mobile', 'Takeoff', 'Landing', 'Airborne',
+                             'Rejected Takeoff'), available)
+        return default or ground_only
 
     def derive(self, mobiles=S('Mobile'), gspd=P('Groundspeed'),
                toffs=S('Takeoff'), lands=S('Landing'),

@@ -53,8 +53,8 @@ from analysis_engine.flight_phase import (
 )
 from analysis_engine.key_time_instances import BottomOfDescent, TopOfClimb, TopOfDescent
 from analysis_engine.library import integrate
-from analysis_engine.node import (Attribute, KTI, KeyTimeInstance, M, Parameter,
-                                  P, S, Section, SectionNode, load)
+from analysis_engine.node import (A, Attribute, KTI, KeyTimeInstance, KPV, M,
+                                  Parameter, P, S, Section, SectionNode, load)
 from analysis_engine.process_flight import process_flight
 
 from analysis_engine.settings import AIRSPEED_THRESHOLD
@@ -469,6 +469,10 @@ class TestBouncedLanding(unittest.TestCase):
 
 
 class TestILSGlideslopeEstablished(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = ILSGlideslopeEstablished
+
     def test_can_operate(self):
         expected=[('ILS Glideslope', 'ILS Localizer Established',
                    'Altitude AAL For Flight Phases')]
@@ -498,8 +502,31 @@ class TestILSGlideslopeEstablished(unittest.TestCase):
         sections
         self.assertTrue(False, msg='Test not implemented.')
 
+    def test_ils_localizer_example(self):
+        ils_loc_array = np.load(os.path.join(test_data_path, 'ILS_glideslope_example.npy'))
+        ils_loc_array = np.ma.masked_invalid(ils_loc_array)
+        ils_loc = P('ILS Glideslope', array=ils_loc_array, frequency=2)
+
+        aal_array = np.load(os.path.join(test_data_path, 'ILS_established_example_AAL.npy'))
+        aal_array = np.ma.masked_invalid(aal_array)
+        aal = P('Altitude AAL For Flight Phases', array=aal_array, frequency=2)
+
+        ils_est = buildsection('ILS Localizer Established', 215, 424)
+        ils_est.frequency = 2
+
+        node = self.node_class()
+        node.derive(ils_loc, ils_est, aal)
+
+        self.assertEqual(len(node), 1)
+        self.assertAlmostEqual(node[0].slice.start, 215, delta=1)
+        self.assertAlmostEqual(node[0].slice.stop, 365, delta=1)
+
 
 class TestILSLocalizerEstablished(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = ILSLocalizerEstablished
+
     def test_can_operate(self):
         opts = ILSLocalizerEstablished.get_operational_combinations()
         self.assertIn(('ILS Localizer', 'Altitude AAL For Flight Phases', 'Approach And Landing'), opts)
@@ -508,13 +535,14 @@ class TestILSLocalizerEstablished(unittest.TestCase):
         self.assertIn(('ILS Localizer', 'Altitude AAL For Flight Phases', 'Approach And Landing', 'ILS Frequency', 'Heading', 'Heading During Landing'), opts)
 
     def test_ils_localizer_established_basic(self):
-        ils = P('ILS Localizer',np.ma.arange(-3, 0, 0.3))
+        ils_array = np.ma.concatenate((np.ma.arange(-2.5, 0, 0.05), [-0.15]*50))
+        ils = P('ILS Localizer', ils_array)
         alt_aal = P('Alttiude AAL For Flight Phases',
-                    np.ma.arange(1000, 0, -100))
-        app = S(items=[Section('Approach', slice(0, 10), 0, 10)])
+                    np.ma.arange(1000, 0, -10))
+        app = S(items=[Section('Approach', slice(0, 100), 0, 100)])
         establish = ILSLocalizerEstablished()
         establish.derive(ils, alt_aal, app, None)
-        expected = buildsection('ILS Localizer Established', 7, 10)
+        expected = buildsection('ILS Localizer Established', 41, 100)
         # Slightly daft choice of ils array makes exact equality impossible!
         self.assertAlmostEqual(establish.get_first().start_edge,
                                expected.get_first().start_edge, places=0)
@@ -535,16 +563,17 @@ class TestILSLocalizerEstablished(unittest.TestCase):
         '''
         Same data as basic test but has masked ils data before and after
         '''
-        ils_array = np.ma.zeros(50)
-        ils_array.mask = True
-        ils_array[20:30] = np.ma.arange(-3, 0, 0.3)
+        ils_array = np.ma.concatenate((np.ma.arange(-2.5, 0, 0.05), [-0.15]*50))
+        ils_array.mask = np.ma.getmaskarray(ils_array)
+        ils_array.mask[0:45] = True
+        ils_array.mask[70:] = True
         ils = P('ILS Localizer', ils_array)
         alt_aal = P('Alttiude AAL For Flight Phases',
-                    np.ma.arange(1000, 0, -100))
-        app = S(items=[Section('Approach', slice(0, 50), 0, 50)])
+                    np.ma.arange(1000, 0, -10))
+        app = S(items=[Section('Approach', slice(0, 100), 0, 100)])
         establish = ILSLocalizerEstablished()
         establish.derive(ils, alt_aal, app, None)
-        expected = buildsection('ILS Localizer Established', 20+7, 30)
+        expected = buildsection('ILS Localizer Established', 45, 70)
         # Slightly daft choice of ils array makes exact equality impossible!
         self.assertAlmostEqual(establish.get_first().start_edge,
                                expected.get_first().start_edge, places=0)
@@ -566,12 +595,12 @@ class TestILSLocalizerEstablished(unittest.TestCase):
         self.assertEqual(establish.get_slices(), expected.get_slices())
 
     def test_ils_localizer_established_only_last_segment(self):
-        app = S(items=[Section('Approach', slice(2, 9), 2, 9)])
-        alt_aal = P('Alttiude AAL For Flight Phases', np.ma.arange(1000, 0,-100))
-        ils = P('ILS Localizer',np.ma.array([0,0,0,1,3,3,2,1,0,0]), frequency=0.5)
+        app = S(items=[Section('Approach', slice(20, 90), 20, 90)])
+        alt_aal = P('Alttiude AAL For Flight Phases', np.ma.arange(1000, 0,-10))
+        ils = P('ILS Localizer',np.ma.repeat([0,0,0,1,3,3,2,1,0,0], 10), frequency=0.5)
         establish = ILSLocalizerEstablished()
         establish.derive(ils, alt_aal, app, None)
-        expected = buildsection('ILS Localizer Established', 7, 9)
+        expected = buildsection('ILS Localizer Established', 80, 90)
         self.assertEqual(int(establish.get_slices()[0].start), 
                          expected.get_slices()[0].start)
         self.assertEqual(establish.get_slices()[0].stop, 
@@ -579,22 +608,23 @@ class TestILSLocalizerEstablished(unittest.TestCase):
 
 
     def test_ils_localizer_stays_established_with_large_visible_deviations(self):
-        app = S(items=[Section('Approach', slice(1, 9), 1, 9)])
+        app = S(items=[Section('Approach', slice(10, 90), 10, 90)])
         alt_aal = P('Alttiude AAL For Flight Phases', np.ma.arange(1000, 0,-100))
-        ils = P('ILS Localizer',np.ma.array([0,0,0,1,2.3,2.3,2,1,0,0]))
+        ils = P('ILS Localizer',np.ma.array(np.repeat([0,0,0,1,2.3,2.3,2,1,0,0], 10)))
         establish = ILSLocalizerEstablished()
         establish.derive(ils, alt_aal, app, None)
-        expected = buildsection('ILS Localizer Established', 1, 9)
+        expected = buildsection('ILS Localizer Established', 10, 90)
         self.assertEqual(establish.get_slices(), expected.get_slices())
 
     def test_ils_localizer_insensitive_to_few_masked_values(self):
-        app = S(items=[Section('Approach', slice(1, 9), 1, 9)])
+        app = S(items=[Section('Approach', slice(10, 90), 10, 90)])
         alt_aal = P('Alttiude AAL For Flight Phases', np.ma.arange(1000, 0,-100))
-        ils = P('ILS Localizer',np.ma.array(data=[0,0,0,1,2.3,2.3,2,1,0,0],
-                                            mask=[0,0,0,0,0,1,1,0,0,0]))
+        ils = P('ILS Localizer',np.ma.array(np.repeat([0,0,0,1,2.3,2.3,2,1,0,0], 10)))
+        ils.array.mask = np.ma.getmaskarray(ils.array)
+        ils.array.mask[60:62] = True
         establish = ILSLocalizerEstablished()
         establish.derive(ils, alt_aal, app, None)
-        expected = buildsection('ILS Localizer Established', 1, 9)
+        expected = buildsection('ILS Localizer Established', 10, 90)
         self.assertEqual(establish.get_slices(), expected.get_slices())
 
     def test_ils_localizer_skips_too_many_masked_values(self):
@@ -639,6 +669,25 @@ class TestILSLocalizerEstablished(unittest.TestCase):
         self.assertAlmostEqual(establish[1].slice.start, 12296, places=0)
         self.assertAlmostEqual(establish[1].slice.stop, 12363, places=0)
 
+    def test_ils_localizer_example(self):
+        ils_loc_array = np.load(os.path.join(test_data_path, 'ILS_localiser_example.npy'))
+        ils_loc_array = np.ma.masked_invalid(ils_loc_array)
+        ils_loc = P('ILS Localizer', array=ils_loc_array, frequency=2)
+
+        aal_array = np.load(os.path.join(test_data_path, 'ILS_established_example_AAL.npy'))
+        aal_array = np.ma.masked_invalid(aal_array)
+        aal = P('Altitude AAL For Flight Phases', array=aal_array, frequency=2)
+
+        apps = buildsection('Approach And Landing', 1, 424)
+        apps.frequency = 2
+        hdg_ldg = KPV('Heading During Landing')
+        hdg = P('Heading', array=[], frequency=2)
+
+        node = self.node_class()
+        node.derive(ils_loc, aal, apps, None, hdg, hdg_ldg)
+
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].slice, slice(215, 424))
 
 class TestInitialApproach(unittest.TestCase):
     def test_can_operate(self):
@@ -1800,12 +1849,18 @@ class TestTaxiIn(unittest.TestCase):
 class TestTaxiing(unittest.TestCase):
     def test_can_operate(self):
         combinations = Taxiing.get_operational_combinations()
-        self.assertTrue(('Mobile', 'Airborne') in combinations)
-        self.assertTrue(('Mobile', 'Takeoff', 'Landing') in combinations)
-        self.assertTrue(('Mobile', 'Groundspeed', 'Airborne') in combinations)
-        self.assertTrue(
-            ('Mobile', 'Groundspeed', 'Takeoff', 'Landing', 'Airborne')
-            in combinations)
+        expected = [
+            ('Mobile', 'Takeoff', 'Landing', 'Rejected Takeoff', 'Airborne'),
+            ('Mobile', 'Groundspeed', 'Takeoff', 'Landing', 'Rejected Takeoff', 'Airborne')
+        ]
+
+        self.assertEqual(combinations, expected)
+        #self.assertTrue(('Mobile', 'Airborne') in combinations)
+        #self.assertTrue(('Mobile', 'Takeoff', 'Landing') in combinations)
+        #self.assertTrue(('Mobile', 'Groundspeed', 'Airborne') in combinations)
+        #self.assertTrue(
+            #('Mobile', 'Groundspeed', 'Takeoff', 'Landing', 'Airborne')
+            #in combinations)
 
     def test_taxiing_mobile_airborne(self):
         mobiles = buildsection('Mobile', 10, 90)
