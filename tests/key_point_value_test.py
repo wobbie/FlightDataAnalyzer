@@ -40,6 +40,7 @@ from analysis_engine.key_point_values import (
     AccelerationLateralWhileTaxiingTurnMax,
     AccelerationLongitudinalDuringLandingMin,
     AccelerationLongitudinalDuringTakeoffMax,
+    AccelerationLongitudinalOffset,
     AccelerationNormal20FtToFlareMax,
     AccelerationNormalAtLiftoff,
     AccelerationNormalAtTouchdown,
@@ -1060,6 +1061,17 @@ class TestAccelerationLateralOffset(unittest.TestCase, NodeTest):
 
 ########################################
 # Acceleration: Longitudinal
+
+
+class TestAccelerationLongitudinalOffset(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = AccelerationLongitudinalOffset
+        self.operational_combinations = [('Acceleration Longitudinal', 'Mobile', 'Fast')]
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
 
 
 class TestAccelerationLongitudinalDuringTakeoffMax(unittest.TestCase, CreateKPVFromSlicesTest):

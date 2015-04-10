@@ -400,19 +400,24 @@ class AccelerationLongitudinalOffset(KeyPointValueNode):
     AccelerationNormalOffset. We use all the taxiing phase and assume that
     the accelerations and decelerations will roughly balance out over the
     duration of the taxi phase.
+
+    Note: using mobile sections which are not Fast in place of taxiing in
+    order to aviod circular dependancy with Taxiing, Rejected Takeoff and
+    Acceleration Longitudinal Offset Removed
     '''
 
     units = ut.G
 
     def derive(self,
-               acc_lat=P('Acceleration Lateral'),
-               taxiing=S('Taxiing')):
+               acc_lon=P('Acceleration Longitudinal'),
+               mobiles=S('Mobile'),
+               fasts=S('Fast')):
 
         total_sum = 0.0
         total_count = 0
-        taxis = [s.slice for s in list(taxiing)]
+        taxis = slices_and_not(mobiles.get_slices(), fasts.get_slices())
         for taxi in taxis:
-            unmasked_data = np.ma.compressed(acc_lat.array[taxi])
+            unmasked_data = np.ma.compressed(acc_lon.array[taxi])
             count = len(unmasked_data)
             if count:
                 total_count += count
