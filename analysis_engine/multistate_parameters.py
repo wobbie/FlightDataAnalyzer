@@ -2293,7 +2293,7 @@ class StableApproach(MultistateDerivedParameterNode):
     5. Glideslope deviation within 1 dot
     6. Localizer deviation within 1 dot
     7. Vertical speed between -1100 and -200 fpm
-    8. Engine Thurst greater than 45% N1 or 35% (A319/B787) or 1.09 EPR (for 10 secs)
+    8. Engine Thurst greater than 40% N1 or 35% (A319/B787) or 1.09 EPR (for 10 secs) or 1.02 (A319, A320, A321)
 
     if all the above steps are met, the result is the declaration of:
     9. "Stable"
