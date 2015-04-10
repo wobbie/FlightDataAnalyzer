@@ -1132,53 +1132,63 @@ class TestFast(unittest.TestCase):
 
 class TestGrounded(unittest.TestCase):
     def test_can_operate(self):
-        self.assertEqual(Grounded.get_operational_combinations(),
-                         [('Airspeed For Flight Phases',),
-                          ('Airborne', 'Airspeed For Flight Phases',)])
+        expected = [
+            ('HDF Duration',),
+            ('Airborne', 'HDF Duration'),
+            ('Airspeed For Flight Phases', 'HDF Duration'),
+            ('Airborne', 'Airspeed For Flight Phases', 'HDF Duration')
+        ]
+
+        self.assertEqual(Grounded.get_operational_combinations(), expected)
 
     def test_grounded_phase_basic(self):
         slow_and_fast_data = \
             np.ma.array(range(60, 120, 10) + [120] * 300 + range(120, 50, -10))
         ias = Parameter('Airspeed For Flight Phases', slow_and_fast_data, 1, 0)
+        duration = A('HDF Duration', len(ias.array)/ias.frequency)
         air = buildsection('Airborne', 2, 311)
         phase_grounded = Grounded()
-        phase_grounded.derive(air, ias)
+        phase_grounded.derive(air, ias, duration)
         expected = buildsections('Grounded', [0, 2], [311, 313])
         self.assertEqual(phase_grounded.get_slices(), expected.get_slices())
 
     def test_grounded_all_fast(self):
         grounded_data = np.ma.array([120] * 10)
         ias = Parameter('Airspeed For Flight Phases', grounded_data, 1, 0)
+        duration = A('HDF Duration', len(ias.array)/ias.frequency)
         air = buildsection('Airborne', None, None)
         phase_grounded = Grounded()
-        phase_grounded.derive(air, ias)
+        phase_grounded.derive(air, ias, duration)
         expected = buildsection('Grounded', None, None)
         self.assertEqual(phase_grounded.get_slices(), expected.get_slices())
 
     def test_grounded_all_slow(self):
         grounded_data = np.ma.array([12]*10)
         ias = Parameter('Airspeed For Flight Phases', grounded_data, 1, 0)
+        duration = A('HDF Duration', len(ias.array)/ias.frequency)
         air = buildsection('Airborne', None, None)
         phase_grounded = Grounded()
-        phase_grounded.derive(air, ias)
+        phase_grounded.derive(air, ias, duration)
         expected = buildsection('Grounded', 0, 9)
         self.assertEqual(phase_grounded.get_first().slice, expected[0].slice)
 
     def test_grounded_landing_only(self):
         grounded_data = np.ma.arange(110,60,-10)
         ias = Parameter('Airspeed For Flight Phases', grounded_data,1,0)
+        duration = A('HDF Duration', len(ias.array)/ias.frequency)
         air = buildsection('Airborne',None,4)
         phase_grounded = Grounded()
-        phase_grounded.derive(air, ias)
+        phase_grounded.derive(air, ias, duration)
         expected = buildsection('Grounded',4,4)
         self.assertEqual(phase_grounded.get_first().slice, expected[0].slice)
 
     def test_grounded_speeding_only(self):
         grounded_data = np.ma.arange(60,120,10)
         ias = Parameter('Airspeed For Flight Phases', grounded_data,1,0)
+        duration = A('HDF Duration', len(ias.array)/ias.frequency)
         air = buildsection('Airborne',2,None)
         phase_grounded = Grounded()
-        phase_grounded.derive(air, ias)
+        phase_grounded.derive(air, ias, duration)
         expected = buildsection('Grounded',0,1)
         self.assertEqual(phase_grounded.get_first().slice, expected[0].slice)
 

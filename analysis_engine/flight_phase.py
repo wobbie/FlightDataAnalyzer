@@ -1035,10 +1035,11 @@ class Grounded(FlightPhaseNode):
 
     @classmethod
     def can_operate(cls, available):
-        return 'Airspeed For Flight Phases' in available
+        return 'HDF Duration' in available
 
-    def derive(self, air=S('Airborne'), speed=P('Airspeed For Flight Phases')):
-        data_end=len(speed.array)
+    def derive(self, air=S('Airborne'), speed=P('Airspeed For Flight Phases'),
+               hdf_duration=A('HDF Duration')):
+        data_end = hdf_duration.value if hdf_duration else None
         if air:
             gnd_phases = slices_not(air.get_slices(), begin_at=0, end_at=data_end)
             if not gnd_phases:
