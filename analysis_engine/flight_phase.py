@@ -1290,9 +1290,11 @@ class Takeoff(FlightPhaseNode):
     introduced by hysteresis, which is applied to avoid hunting in level
     flight conditions, and make sure the 35ft endpoint is exact.
     """
+
     def derive(self, head=P('Heading Continuous'),
                alt_aal=P('Altitude AAL For Flight Phases'),
-               fast=S('Fast')):
+               fast=S('Fast'),
+               airs=S('Airborne')): # If never airborne didnt takeoff.
 
         # Note: This algorithm works across the entire data array, and
         # not just inside the speedy slice, so the final indexes are

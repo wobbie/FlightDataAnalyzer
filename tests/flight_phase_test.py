@@ -1701,8 +1701,10 @@ class TestRejectedTakeoff(unittest.TestCase):
 
 class TestTakeoff(unittest.TestCase):
     def test_can_operate(self):
+        # Airborne dependency added to avoid trying to derive takeoff when
+        # aircraft never airborne
         self.assertEqual(Takeoff.get_operational_combinations(),
-                         [('Heading Continuous', 'Altitude AAL For Flight Phases', 'Fast')])
+                         [('Heading Continuous', 'Altitude AAL For Flight Phases', 'Fast', 'Airborne')])
 
     def test_takeoff_basic(self):
         head = np.ma.array([ 0,0,10,20,20,20,20,20,20,20,20])
