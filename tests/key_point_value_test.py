@@ -7774,15 +7774,17 @@ class TestHeadingTrueDuringTakeoff(unittest.TestCase, NodeTest):
 class TestHeadingDuringLanding(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = HeadingDuringLanding
-        self.operational_combinations = [('Heading Continuous', 'Landing Roll')]
+        self.operational_combinations = [('Touchdown', 'Landing Roll', 'Landing Turn Off Runway', 'Heading Continuous')]
 
     def test_derive_basic(self):
         head = P('Heading Continuous',np.ma.array([0,1,2,3,4,5,6,7,8,9,10,-1,-1,
                                                    7,-1,-1,-1,-1,-1,-1,-1,-10]))
-        landing = buildsection('Landing',5,14)
+        landing = buildsection('Landing',4,15)
         head.array[13] = np.ma.masked
+        touchdowns = KTI(name='Touchdown', items=[KeyTimeInstance(index=5, name='Touchdown')])
+        turn_offs = KTI(name='Landing Turn Off Runway', items=[KeyTimeInstance(index=14, name='Landing Turn Off Runway')])
         kpv = HeadingDuringLanding()
-        kpv.derive(head, landing)
+        kpv.derive(head, landing, touchdowns, turn_offs)
         expected = [KeyPointValue(index=10, value=6.0,
                                   name='Heading During Landing')]
         self.assertEqual(kpv, expected)

@@ -5180,13 +5180,19 @@ class HeadingDuringLanding(KeyPointValueNode):
 
     def derive(self,
                hdg=P('Heading Continuous'),
-               landings=S('Landing Roll')):
+               landings=S('Landing Roll'),
+               touchdowns=KTI('Touchdown'),
+               ldg_turn_off=KTI('Landing Turn Off Runway')):
 
         for landing in landings:
             # Check the slice is robust.
-            if landing.slice.start and landing.slice.stop:
-                index = (landing.slice.start + landing.slice.stop) / 2.0
-                value = np.ma.median(hdg.array[landing.slice])
+            touchdown = touchdowns.get_first(within_slice=landing.slice)
+            turn_off = ldg_turn_off.get_first(within_slice=landing.slice)
+            start = touchdown.index if touchdown else landing.slice.start
+            stop = turn_off.index + 1 if turn_off else landing.slice.stop
+            if start and stop:
+                index = (start + stop) / 2.0
+                value = np.ma.median(hdg.array[start:stop])
                 self.create_kpv(index, value % 360.0)
 
 
