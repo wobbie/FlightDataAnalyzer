@@ -5707,6 +5707,13 @@ class TAT(DerivedParameterNode):
         if sat:
             # We compute the total air temperature, assuming a perfect sensor.
             # Where Mach is masked we use SAT directly
+            self.hz = sat.hz
+            if sat.hz > mach.hz:
+                mach = mach.get_aligned(sat)
+            elif mach.hz > sat.hz:
+                self.hz = mach.hz
+                sat = sat.get_aligned(mach)
+
             self.array = np.ma.where(
                 mach.array.mask, sat.array, machsat2tat(mach.array, sat.array,
                                                         recovery_factor=1.0))
