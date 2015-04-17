@@ -1738,6 +1738,24 @@ class DistanceToLanding(DerivedParameterNode):
             self.array.mask = True
 
 
+class DistanceFlown(DerivedParameterNode):
+    '''
+    Distance flown in Nautical Miles. Calculated using integral of
+    Airspeed True.
+    '''
+
+    units = ut.NM
+
+    def derive(self, tas=P('Airspeed True'), airs=S('Airborne')):
+
+        self.array = np_ma_zeros_like(tas.array)
+        start = airs.get_first().slice.start
+        stop = airs.get_last().slice.stop
+        _slice = slice(start, stop)
+        self.array[_slice] = integrate(tas.array[_slice], tas.frequency, scale=1.0 / 3600.0)
+        self.array[_slice.stop:] = self.array[_slice.stop-1]
+
+
 class DistanceTravelled(DerivedParameterNode):
     '''
     Distance travelled in Nautical Miles. Calculated using integral of

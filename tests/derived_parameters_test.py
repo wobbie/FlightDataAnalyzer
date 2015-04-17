@@ -83,6 +83,7 @@ from analysis_engine.derived_parameters import (
     ControlWheelForce,
     CoordinatesSmoothed,
     DescendForFlightPhases,
+    DistanceFlown,
     DistanceTravelled,
     DistanceToLanding,
     Drift,
@@ -1992,6 +1993,24 @@ class TestDistanceToLanding(unittest.TestCase):
         dtl = DistanceToLanding()
         dtl.derive(distance_travelled, tdwns)
         ma_test.assert_array_equal(dtl.array, expected_result)
+
+
+class TestDistanceFlown(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = DistanceFlown
+
+    def test_can_operate(self):
+        ops = self.node_class.get_operational_combinations()
+        self.assertEqual(ops, [('Airspeed True', 'Airborne')])
+
+    def test_derive_basic(self):
+        tas=P('Airspeed True', array=np.ma.array([360.0]*20))
+        airborne = buildsections('Airborne', [5, 17])
+        node = self.node_class()
+        node.get_derived((tas, airborne))
+        expected = np.ma.concatenate(([0]*5, np.ma.arange(0.0, 1.0, 0.1), [1.1]*5))
+        ma_test.assert_array_almost_equal(node.array, expected, decimal=1)
 
 
 class TestDistanceTravelled(unittest.TestCase):
