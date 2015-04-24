@@ -2293,7 +2293,10 @@ class StableApproach(MultistateDerivedParameterNode):
     1. Gear is down
     2. Landing Flap is set
     3. Track is aligned to Runway (within 12 degrees or 30 if offset approach)
-    4. Airspeed minus selected approach speed within -5 to +10 knots (for 3 secs)
+    4. Airspeed:
+        - airspeed minus selected approach speed within -5 to +15 knots (for 3 secs)
+        - or Vapp within -5 to +15 knots (for 3 secs)
+        - or Vref within -5 to +35 knots (for 3 secs)
     5. Glideslope deviation within 1 dot
     6. Localizer deviation within 1 dot
     7. Vertical speed between -1100 and -200 fpm
