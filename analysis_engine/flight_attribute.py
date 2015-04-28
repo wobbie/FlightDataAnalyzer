@@ -682,13 +682,18 @@ class TakeoffPilot(FlightAttributeNode, DeterminePilot):
             'Roll (FO)',
             'Takeoff',
         ), available)
+        forces = all_of((
+            'Control Column Force (Capt)',
+            'Control Column Force (FO)',
+            'Takeoff',
+        ), available)
         autopilot = all_of((
             'AP (1) Engaged',
             'AP (2) Engaged',
             'Liftoff',
             # Optional: 'AP (3) Engaged'
         ), available)
-        return pilot_flying or controls or autopilot
+        return pilot_flying or controls or forces or autopilot
 
     def derive(self,
                pilot_flying=M('Pilot Flying'),
@@ -1003,13 +1008,18 @@ class LandingPilot(FlightAttributeNode, DeterminePilot):
             'Roll (FO)',
             'Landing',
         ), available)
+        forces = all_of((
+            'Control Column Force (Capt)',
+            'Control Column Force (FO)',
+            'Landing',
+        ), available)
         autopilot = all_of((
             'AP (1) Engaged',
             'AP (2) Engaged',
             'Touchdown',
             # Optional: 'AP (3) Engaged'
         ), available)
-        return pilot_flying or controls or autopilot
+        return pilot_flying or controls or forces or autopilot
 
     def derive(self,
                pilot_flying=M('Pilot Flying'),
