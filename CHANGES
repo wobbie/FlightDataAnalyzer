@@ -9,6 +9,44 @@ You can view the differences in tagged versions as follows:
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
 
+v0.21.1
+-------
+
+ - Added
+   - machsat2tat() function to allow reverse computation of adiabatic
+     temperature rise.
+   - new derived parameter "SAT International Standard Atmosphere" to make it
+     clear that this is not a measured air temperature, but the SAT for ISA
+     conditions only
+   - FirstEngFuelFlowStart / LastEngFuelFlowStop KTIs
+   - EngRunning parameters added for each engine independently
+   - EngRunningDuration KPVs added
+   - AirspeedWithFlapIncludingTransition20AndSlatFullyExtendedMax KPV
+   - TakeoffStart KTI
+   - Distance Flown Derived Paramete
+   - ThrustReversersEffective multistate
+ - Fixed
+   - AltitudeOvershootAtLevelBust KPV: fix duplicates
+   - Altutude During Climbing: merge phases to detect altitude changes
+   - Fix for calculate timebase to account for flights taking off just before
+     midnight
+   - Fix some incorrect and missing units
+ - Improved
+   - FlapWithSpeedbrakeDeployedMax uses Including Trans
+   - LandingGearToFlapDuration handles edge cases
+   - GearDownToLandingFlapConfigurationD: use v* table
+   - improved node reprocessing with process_flight()
+   - Use Climb and Descent phases for Altitude Climbing / Descending KTIs
+   - process_flight: Added reprocess kwarg
+   - process_flight: Added -initial option
+   - Split HDF to Segments fallback_dt can now be relative to start or end of
+     data
+   - Added Airborne dependency to Takeof
+   - Remove dependency for Airspeed from Grounded
+   - ILS established improvements
+   - Heading during landing
+
+
 v0.20.2
 -------
 
