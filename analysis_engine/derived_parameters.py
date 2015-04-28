@@ -3902,13 +3902,28 @@ class SlopeToLanding(DerivedParameterNode):
     http://eprints.port.ac.uk/4141/
     '''
 
-    units = ut.FT
+    units = ut.FT # Wrong, there are no units as we dived ft by ft.
 
     def derive(self, alt_aal=P('Altitude AAL'), dist=P('Distance To Landing')):
 
         self.array = alt_aal.array / (dist.array * FEET_PER_NM)
 
 
+class SlopeAngleToLanding(DerivedParameterNode):
+    '''
+    This parameter was developed as part of the Artificical Intelligence
+    analysis of approach profiles, 'Identifying Abnormalities in Aircraft
+    Flight Data and Ranking their Impact on the Flight' by Dr Edward Smart,
+    Institute of Industrial Research, University of Portsmouth.
+    http://eprints.port.ac.uk/4141/
+    This parameter shows the slope angle in degrees.
+    '''
+
+    units = ut.DEGREE
+
+    def derive(self, slope_to_ldg=P('Slope To Landing')):
+
+        self.array = np.degrees(np.arctan(slope_to_ldg.array))
 
 
 '''

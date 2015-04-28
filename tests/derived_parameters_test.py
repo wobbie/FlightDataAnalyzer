@@ -4670,6 +4670,16 @@ class TestSlopeToLanding(unittest.TestCase):
         self.assertTrue(False, msg='Test not implemented.')
 
 
+class TestAngleSlopeToLanding(unittest.TestCase):
+    @unittest.skip('Test Not Implemented')
+    def test_can_operate(self):
+        self.assertTrue(False, msg='Test not implemented.')
+        
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+        
+
 class TestSpeedbrake(unittest.TestCase):
     def test_can_operate(self):
         family = A(name='Family', value='B737 Classic')
