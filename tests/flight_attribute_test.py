@@ -644,21 +644,19 @@ class TestLandingPilot(unittest.TestCase):
             # Only Pilot Flying
             ('Pilot Flying', 'Landing'),
             # Only Controls:
-            ('Pitch (Capt)', 'Pitch (FO)', 'Roll (Capt)', 'Roll (FO)',
-                'Landing'),
+            ('Pitch (Capt)', 'Pitch (FO)', 'Roll (Capt)', 'Roll (FO)', 'Landing'),
+            # Only Control Column Forces:
+            ('Control Column Force (Capt)', 'Control Column Force (FO)', 'Landing'),
             # Only Autopilot:
             ('AP (1) Engaged', 'AP (2) Engaged', 'Touchdown'),
-            # Combinations:
-            ('Pitch (Capt)', 'Pitch (FO)', 'Roll (Capt)', 'Roll (FO)',
-                'AP (1) Engaged', 'Landing', 'Touchdown'),
-            ('Pitch (Capt)', 'Roll (Capt)', 'AP (1) Engaged',
-                'AP (2) Engaged', 'Landing', 'Touchdown'),
             # Everything:
-            ('Pitch (Capt)', 'Pitch (FO)', 'Roll (Capt)', 'Roll (FO)',
-                'AP (1) Engaged', 'AP (2) Engaged', 'Landing', 'Touchdown'),
+            ('Pilot Flying',
+             'Pitch (Capt)', 'Pitch (FO)', 'Roll (Capt)', 'Roll (FO)',
+             'Control Column Force (Capt)', 'Control Column Force (FO)',
+             'AP (1) Engaged', 'AP (2) Engaged', 'Landing', 'Touchdown'),
         ]
         for combination in combinations:
-            self.assertTrue(combination in opts, msg=combination)
+            self.assertIn(combination, opts, msg=combination)
 
     @patch('analysis_engine.library.value_at_index')
     def test_derive(self, value_at_index):
@@ -1062,21 +1060,19 @@ class TestTakeoffPilot(unittest.TestCase):
             # Only Pilot Flying
             ('Pilot Flying', 'Takeoff'),
             # Only Controls:
-            ('Pitch (Capt)', 'Pitch (FO)', 'Roll (Capt)', 'Roll (FO)',
-                'Takeoff'),
+            ('Pitch (Capt)', 'Pitch (FO)', 'Roll (Capt)', 'Roll (FO)', 'Takeoff'),
+            # Only Control Column Forces:
+            ('Control Column Force (Capt)', 'Control Column Force (FO)', 'Takeoff'),
             # Only Autopilot:
             ('AP (1) Engaged', 'AP (2) Engaged', 'Liftoff'),
-            # Combinations:
-            ('Pitch (Capt)', 'Pitch (FO)', 'Roll (Capt)', 'Roll (FO)',
-                'AP (1) Engaged', 'Takeoff', 'Liftoff'),
-            ('Pitch (Capt)', 'Roll (Capt)', 'AP (1) Engaged',
-                'AP (2) Engaged', 'Takeoff', 'Liftoff'),
             # Everything:
-            ('Pitch (Capt)', 'Pitch (FO)', 'Roll (Capt)', 'Roll (FO)',
-                'AP (1) Engaged', 'AP (2) Engaged', 'Takeoff', 'Liftoff'),
+            ('Pilot Flying',
+             'Pitch (Capt)', 'Pitch (FO)', 'Roll (Capt)', 'Roll (FO)',
+             'Control Column Force (Capt)', 'Control Column Force (FO)',
+             'AP (1) Engaged', 'AP (2) Engaged', 'Takeoff', 'Liftoff'),
         ]
         for combination in combinations:
-            self.assertTrue(combination in opts)
+            self.assertIn(combination, opts, msg=combination)
 
     @patch('analysis_engine.library.value_at_index')
     def test_derive(self, value_at_index):

@@ -23,6 +23,7 @@ from analysis_engine.library import (
     calculate_flap,
     calculate_slat,
     calculate_surface_angle,
+    clump_multistate,
     datetime_of_index,
     find_edges_on_state_change,
     including_transition,
@@ -40,6 +41,7 @@ from analysis_engine.library import (
     repair_mask,
     runs_of_ones,
     second_window,
+    slices_and,
     slices_from_to,
     slices_remove_small_gaps,
     slices_remove_small_slices,
@@ -50,6 +52,8 @@ from settings import (
     MIN_CORE_RUNNING,
     MIN_FAN_RUNNING,
     MIN_FUEL_FLOW_RUNNING,
+    REVERSE_THRUST_EFFECTIVE_EPR,
+    REVERSE_THRUST_EFFECTIVE_N1,
 )
 
 logger = logging.getLogger(name=__name__)
@@ -2289,7 +2293,10 @@ class StableApproach(MultistateDerivedParameterNode):
     1. Gear is down
     2. Landing Flap is set
     3. Track is aligned to Runway (within 12 degrees or 30 if offset approach)
-    4. Airspeed minus selected approach speed within -5 to +10 knots (for 3 secs)
+    4. Airspeed:
+        - airspeed minus selected approach speed within -5 to +15 knots (for 3 secs)
+        - or Vapp within -5 to +15 knots (for 3 secs)
+        - or Vref within -5 to +35 knots (for 3 secs)
     5. Glideslope deviation within 1 dot
     6. Localizer deviation within 1 dot
     7. Vertical speed between -1100 and -200 fpm
@@ -2686,6 +2693,39 @@ class ThrustReversers(MultistateDerivedParameterNode):
         mask = np.ma.where(mask_stack.mask.sum(axis=0).astype(float) / len(mask_stack) * 100 > 50, 1, 0)
         self.array = array
         self.array.mask = mask
+
+
+class ThrustReversersEffective(MultistateDerivedParameterNode):
+    values_mapping = {
+        0: '-',
+        1: 'Effective'}
+
+    @classmethod
+    def can_operate(cls, available):
+        power_ok = any_of(('Eng (*) EPR Max', 'Eng (*) N1 Max'), available)
+        return power_ok and all_of(('Thrust Reversers', 'Landing'), available)
+
+    def derive(self,
+               tr=M('Thrust Reversers'),
+               eng_epr=P('Eng (*) EPR Max'),  # must come before N1 where available
+               eng_n1=P('Eng (*) N1 Max'),
+               landings=S('Landing')):
+
+        if eng_epr:
+            power = eng_epr
+            threshold = REVERSE_THRUST_EFFECTIVE_EPR
+        else:
+            power = eng_n1
+            threshold = REVERSE_THRUST_EFFECTIVE_N1
+
+        self.array = np_ma_zeros_like(tr.array)
+        high_power = np.ma.masked_less(power.array, threshold)
+        high_power_slices = np.ma.clump_unmasked(high_power)
+        for landing in landings:
+            high_power_landing_slices = slices_and(high_power_slices, [landing.slice])
+            effective_slices = clump_multistate(tr.array, 'Deployed', high_power_landing_slices)
+            for sl in effective_slices:
+                self.array[sl] = 'Effective'
 
 
 class TAWSAlert(MultistateDerivedParameterNode):
