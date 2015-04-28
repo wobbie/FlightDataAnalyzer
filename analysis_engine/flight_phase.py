@@ -773,6 +773,9 @@ def scan_ils(beam, ils_dots, height, scan_slice, frequency,
         # Look for first instance of being established
         if not scan_start_idx:
             scan_start_idx = index_at_value(ils_abs, ILS_CAPTURE, slice(scan_slice.start, ils_lost_idx))
+        if scan_start_idx is None:
+            # didnt start established and didnt move within 2.5 dots
+            return None
         half_dot = np.ma.masked_greater(ils_abs, 0.5)
         est = np.ma.clump_unmasked(half_dot)
         est_slices = slices_and(est, (slice(scan_start_idx, ils_lost_idx),))
