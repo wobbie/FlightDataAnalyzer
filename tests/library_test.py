@@ -1191,108 +1191,108 @@ class TestIncludingTransition(unittest.TestCase):
         plot_parameter(array, show=False)
         plot_parameter(flap_inc)
     
-    def test_calculate_flap_1(self):
+    def test_including_transition_1(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_1.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [0] * 12 + [15] * 17)
     
-    def test_calculate_flap_2(self):
+    def test_including_transition_2(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_2.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         #self._plot(array, flap_inc)
         self.assertEqual(flap_inc.tolist(), [15] * 23 + [0] * 14)
     
-    def test_calculate_flap_3(self):
+    def test_including_transition_3(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_3.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [0] * 14 + [15] * 19)
     
-    def test_calculate_flap_4(self):
+    def test_including_transition_4(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_4.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [15] * 13 + [30] * 16)
     
-    def test_calculate_flap_5(self):
+    def test_including_transition_5(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_5.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [30] * 24)
     
-    def test_calculate_flap_6(self):
+    def test_including_transition_6(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_6.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [30] * 22 + [15] * 15  + [0] * 12)
     
-    def test_calculate_flap_7(self):
+    def test_including_transition_7(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_7.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [0] * 23)
     
-    def test_calculate_flap_8(self):
+    def test_including_transition_8(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_8.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [0] * 40)
     
-    def test_calculate_flap_9(self):
+    def test_including_transition_9(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_9.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [0] * 13 + [15] * 16)
     
-    def test_calculate_flap_10(self):
+    def test_including_transition_10(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_10.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [15] * 25 + [0] * 15)
     
-    def test_calculate_flap_11(self):
+    def test_including_transition_11(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_11.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [0] * 13 + [15] * 16)
     
-    def test_calculate_flap_12(self):
+    def test_including_transition_12(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_12.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [15] * 16 + [30] * 17)
     
-    def test_calculate_flap_13(self):
+    def test_including_transition_13(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_13.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [30] * 23 + [15] * 15 + [0] * 15)
     
-    def test_calculate_flap_14(self):
+    def test_including_transition_14(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_14.npz'))
         flap_inc = including_transition(array, self.flap_map_2)
         self.assertEqual(flap_inc.tolist(), [0] * 12 + [1] * 22 + [5] * 27)
     
-    def test_calculate_flap_15(self):
+    def test_including_transition_15(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_15.npz'))
         flap_inc = including_transition(array, self.flap_map_2)
         self.assertEqual(flap_inc.tolist(), [5] * 32 + [1] * 26 + [0] * 14)
     
-    def test_calculate_flap_16(self):
+    def test_including_transition_16(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_16.npz'))
         flap_inc = including_transition(array, self.flap_map_2)
         self.assertEqual(flap_inc.tolist(), [0] * 12 + [1] * 33)
     
-    def test_calculate_flap_17(self):
+    def test_including_transition_17(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_17.npz'))
         flap_inc = including_transition(array, self.flap_map_2)
         self.assertEqual(flap_inc.tolist(), [1] * 17 + [5] * 29)
     
-    def test_calculate_flap_18(self):
+    def test_including_transition_18(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_18.npz'))
         flap_inc = including_transition(array, self.flap_map_2)
         self.assertEqual(flap_inc.tolist(), [5] * 14 + [15] * 11 + [20] * 18)
     
-    def test_calculate_flap_19(self):
+    def test_including_transition_19(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_19.npz'))
         flap_inc = including_transition(array, self.flap_map_2)
         self.assertEqual(flap_inc.tolist(), [20] * 36 + [25] * 29) #+ [30] * 11)
     
-    def test_calculate_flap_20(self):
+    def test_including_transition_20(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_20.npz'))
         flap_inc = including_transition(array, self.flap_map_2)
         self.assertEqual(flap_inc.tolist(), [30] * 17 + [25] * 4 + [20] * 10 + [15] * 11 + [5] * 23 + [1] * 26 + [0] * 15)
     
-    def test_calculate_flap_21(self):
+    def test_including_transition_21(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_21.npz'))
         flap_inc = including_transition(array, self.flap_map_3)
         
@@ -1306,7 +1306,7 @@ class TestIncludingTransition(unittest.TestCase):
         self.assertTrue(np.ma.all(flap_inc[9267:-6] == 0))
         self.assertTrue(flap_inc.mask[-6:].all())
     
-    def test_calculate_flap_22(self):
+    def test_including_transition_22(self):
         array = load_compressed(os.path.join(test_data_path, 'flap_including_transition_flap_angle.npz'))
         flap_inc = including_transition(array, self.flap_map_4)
         self.assertTrue(np.ma.all(flap_inc[:92] == 0))
@@ -1334,7 +1334,7 @@ class TestIncludingTransition(unittest.TestCase):
         self.assertTrue(np.ma.all(flap_inc[2735:3489] == 0))
         # Do not test further transitions for brevity.
     
-    def test_calculate_flap_23(self):
+    def test_including_transition_23(self):
         array = load_compressed(os.path.join(test_data_path, 'flap_including_transition_flap_angle_2.npz'))
         flap_inc = including_transition(array, self.flap_map_4)
         self.assertTrue(flap_inc.mask[0])
@@ -1356,28 +1356,31 @@ class TestIncludingTransition(unittest.TestCase):
         self.assertTrue(np.ma.all(flap_inc[12685:12707] == 1))
         self.assertTrue(np.ma.all(flap_inc[12707:] == 0))
     
-    def test_calculate_flap_24(self):
+    def test_including_transition_24(self):
+        '''
+        Test that all flap settings are included from 0 to 30.
+        '''
         array = load_compressed(os.path.join(test_data_path, 'flap_including_transition_flap_angle_3.npz'))
         flap_inc = including_transition(array, self.flap_map_4)
-        flap_inc
-        #self.assertTrue(flap_inc.mask[0])
-        #self.assertTrue(np.ma.all(flap_inc[1:2758] == 0))
-        #self.assertTrue(np.ma.all(flap_inc[2758:3646] == 1))
-        #self.assertTrue(np.ma.all(flap_inc[3646:11800] == 0))
-        #self.assertTrue(np.ma.all(flap_inc[11800:12130] == 1))
-        #self.assertTrue(np.ma.all(flap_inc[12130:12135] == 2))
-        #self.assertTrue(np.ma.all(flap_inc[12135:12247] == 5))
-        #self.assertTrue(np.ma.all(flap_inc[12247:12252] == 10))
-        #self.assertTrue(np.ma.all(flap_inc[12255:12308] == 15))
-        #self.assertTrue(np.ma.all(flap_inc[12308:12315] == 25))
-        #self.assertTrue(np.ma.all(flap_inc[12315:12655] == 30))
-        #self.assertTrue(np.ma.all(flap_inc[12655:12662] == 25))
-        #self.assertTrue(np.ma.all(flap_inc[12662:12668] == 15))
-        #self.assertTrue(np.ma.all(flap_inc[12668:12673] == 10))
-        #self.assertTrue(np.ma.all(flap_inc[12673:12680] == 5))
-        #self.assertTrue(np.ma.all(flap_inc[12680:12685] == 2))
-        #self.assertTrue(np.ma.all(flap_inc[12685:12706] == 1))
-        #self.assertTrue(np.ma.all(flap_inc[12706:] == 0))    
+        self.assertTrue(np.ma.all(flap_inc[2000:2133] == 0))
+        self.assertTrue(np.ma.all(flap_inc[2133:2143] == 1))
+        self.assertTrue(np.ma.all(flap_inc[2143:2146] == 2))
+        self.assertTrue(np.ma.all(flap_inc[2146:2164] == 5))
+        self.assertTrue(np.ma.all(flap_inc[2164:2174] == 10))
+        self.assertTrue(np.ma.all(flap_inc[2174:2193] == 15))
+        self.assertTrue(np.ma.all(flap_inc[2193:2203] == 25))
+        self.assertTrue(np.ma.all(flap_inc[2203:2379] == 30))
+    
+    def test_including_transition_25(self):
+        '''
+        Test that including transition does not jump prematurely to 1.
+        '''
+        array = load_compressed(os.path.join(test_data_path, 'flap_including_transition_flap_angle_4.npz'))
+        flap_inc = including_transition(array, self.flap_map_4)
+        self.assertTrue(np.ma.all(flap_inc[2000:2663] == 0))
+        self.assertTrue(np.ma.all(flap_inc[2663:2709] == 1))
+        self.assertTrue(np.ma.all(flap_inc[2710:2711] == 2))
+        self.assertTrue(np.ma.all(flap_inc[2711:2777] == 5))
 
 
 class TestCalculateSurfaceAngle(unittest.TestCase):
