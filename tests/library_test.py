@@ -1220,7 +1220,7 @@ class TestIncludingTransition(unittest.TestCase):
     def test_calculate_flap_6(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_6.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
-        self.assertEqual(flap_inc.tolist(), [30] * 21 + [15] * 16  + [0] * 12)
+        self.assertEqual(flap_inc.tolist(), [30] * 22 + [15] * 15  + [0] * 12)
     
     def test_calculate_flap_7(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_7.npz'))
@@ -1235,7 +1235,7 @@ class TestIncludingTransition(unittest.TestCase):
     def test_calculate_flap_9(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_9.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
-        self.assertEqual(flap_inc.tolist(), [0] * 12 + [15] * 17)
+        self.assertEqual(flap_inc.tolist(), [0] * 13 + [15] * 16)
     
     def test_calculate_flap_10(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_10.npz'))
@@ -1245,7 +1245,7 @@ class TestIncludingTransition(unittest.TestCase):
     def test_calculate_flap_11(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_11.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
-        self.assertEqual(flap_inc.tolist(), [0] * 12 + [15] * 17)
+        self.assertEqual(flap_inc.tolist(), [0] * 13 + [15] * 16)
     
     def test_calculate_flap_12(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_12.npz'))
@@ -1255,17 +1255,17 @@ class TestIncludingTransition(unittest.TestCase):
     def test_calculate_flap_13(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_13.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
-        self.assertEqual(flap_inc.tolist(), [30] * 22 + [15] * 17 + [0] * 14)
+        self.assertEqual(flap_inc.tolist(), [30] * 23 + [15] * 15 + [0] * 15)
     
     def test_calculate_flap_14(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_14.npz'))
         flap_inc = including_transition(array, self.flap_map_2)
-        self.assertEqual(flap_inc.tolist(), [0] * 12 + [1] * 23 + [5] * 26)
+        self.assertEqual(flap_inc.tolist(), [0] * 12 + [1] * 22 + [5] * 27)
     
     def test_calculate_flap_15(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_15.npz'))
         flap_inc = including_transition(array, self.flap_map_2)
-        self.assertEqual(flap_inc.tolist(), [5] * 31 + [1] * 27 + [0] * 14)
+        self.assertEqual(flap_inc.tolist(), [5] * 32 + [1] * 26 + [0] * 14)
     
     def test_calculate_flap_16(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_16.npz'))
@@ -1275,7 +1275,7 @@ class TestIncludingTransition(unittest.TestCase):
     def test_calculate_flap_17(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_17.npz'))
         flap_inc = including_transition(array, self.flap_map_2)
-        self.assertEqual(flap_inc.tolist(), [1] * 18 + [5] * 28)
+        self.assertEqual(flap_inc.tolist(), [1] * 17 + [5] * 29)
     
     def test_calculate_flap_18(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_18.npz'))
@@ -1290,7 +1290,7 @@ class TestIncludingTransition(unittest.TestCase):
     def test_calculate_flap_20(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_20.npz'))
         flap_inc = including_transition(array, self.flap_map_2)
-        self.assertEqual(flap_inc.tolist(), [30] * 16 + [25] * 5 + [20] * 10 + [15] * 11 + [5] * 22 + [1] * 27 + [0] * 15)
+        self.assertEqual(flap_inc.tolist(), [30] * 17 + [25] * 4 + [20] * 10 + [15] * 11 + [5] * 23 + [1] * 26 + [0] * 15)
     
     def test_calculate_flap_21(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_21.npz'))
@@ -1298,27 +1298,27 @@ class TestIncludingTransition(unittest.TestCase):
         
         self.assertTrue(flap_inc.mask[:4].all())
         self.assertTrue(np.ma.all(flap_inc[4:3032] == 0))
-        self.assertTrue(np.ma.all(flap_inc[3032:3897] == 15))
-        self.assertTrue(np.ma.all(flap_inc[3897:8791] == 0))
+        self.assertTrue(np.ma.all(flap_inc[3032:3896] == 15))
+        self.assertTrue(np.ma.all(flap_inc[3896:8791] == 0))
         self.assertTrue(np.ma.all(flap_inc[8791:8849] == 15))
         self.assertTrue(np.ma.all(flap_inc[8849:9253] == 30))
-        self.assertTrue(np.ma.all(flap_inc[9253:9268] == 15))
-        self.assertTrue(np.ma.all(flap_inc[9268:-6] == 0))
+        self.assertTrue(np.ma.all(flap_inc[9253:9267] == 15))
+        self.assertTrue(np.ma.all(flap_inc[9267:-6] == 0))
         self.assertTrue(flap_inc.mask[-6:].all())
     
     def test_calculate_flap_22(self):
         array = load_compressed(os.path.join(test_data_path, 'flap_including_transition_flap_angle.npz'))
         flap_inc = including_transition(array, self.flap_map_4)
         self.assertTrue(np.ma.all(flap_inc[:92] == 0))
-        self.assertTrue(np.ma.all(flap_inc[92:100] == 1))
-        self.assertTrue(np.ma.all(flap_inc[100:109] == 2))
+        self.assertTrue(np.ma.all(flap_inc[92:99] == 1))
+        self.assertTrue(np.ma.all(flap_inc[99:109] == 2))
         self.assertTrue(np.ma.all(flap_inc[109:523] == 5))
-        self.assertTrue(np.ma.all(flap_inc[523:533] == 2))
-        self.assertTrue(np.ma.all(flap_inc[533:541] == 1))
-        self.assertTrue(np.ma.all(flap_inc[541:2371] == 0))
-        self.assertTrue(np.ma.all(flap_inc[2371:2429] == 1))
-        self.assertTrue(np.ma.all(flap_inc[2429:2439] == 2))
-        self.assertTrue(np.ma.all(flap_inc[2439:2537] == 5))
+        self.assertTrue(np.ma.all(flap_inc[523:534] == 2))
+        self.assertTrue(np.ma.all(flap_inc[534:540] == 1))
+        self.assertTrue(np.ma.all(flap_inc[540:2371] == 0))
+        self.assertTrue(np.ma.all(flap_inc[2371:2428] == 1))
+        self.assertTrue(np.ma.all(flap_inc[2428:2438] == 2))
+        self.assertTrue(np.ma.all(flap_inc[2438:2537] == 5))
         self.assertTrue(np.ma.all(flap_inc[2537:2541] == 10))
         self.assertTrue(np.ma.all(flap_inc[2541:2555] == 15))
         self.assertTrue(np.ma.all(flap_inc[2555:2557] == 25))
@@ -1329,8 +1329,8 @@ class TestIncludingTransition(unittest.TestCase):
         self.assertTrue(np.ma.all(flap_inc[2653:2706] == 15))
         self.assertTrue(np.ma.all(flap_inc[2706:2710] == 10))
         self.assertTrue(np.ma.all(flap_inc[2710:2718] == 5))
-        self.assertTrue(np.ma.all(flap_inc[2718:2727] == 2))
-        self.assertTrue(np.ma.all(flap_inc[2727:2735] == 1))
+        self.assertTrue(np.ma.all(flap_inc[2718:2728] == 2))
+        self.assertTrue(np.ma.all(flap_inc[2728:2735] == 1))
         self.assertTrue(np.ma.all(flap_inc[2735:3489] == 0))
         # Do not test further transitions for brevity.
     
@@ -1340,21 +1340,44 @@ class TestIncludingTransition(unittest.TestCase):
         self.assertTrue(flap_inc.mask[0])
         self.assertTrue(np.ma.all(flap_inc[1:2758] == 0))
         self.assertTrue(np.ma.all(flap_inc[2758:3646] == 1))
-        self.assertTrue(np.ma.all(flap_inc[3646:11800] == 0))
-        self.assertTrue(np.ma.all(flap_inc[11800:12130] == 1))
+        self.assertTrue(np.ma.all(flap_inc[3646:11799] == 0))
+        self.assertTrue(np.ma.all(flap_inc[11799:12130] == 1))
         self.assertTrue(np.ma.all(flap_inc[12130:12135] == 2))
         self.assertTrue(np.ma.all(flap_inc[12135:12247] == 5))
         self.assertTrue(np.ma.all(flap_inc[12247:12252] == 10))
-        self.assertTrue(np.ma.all(flap_inc[12255:12308] == 15))
-        self.assertTrue(np.ma.all(flap_inc[12308:12315] == 25))
-        self.assertTrue(np.ma.all(flap_inc[12315:12655] == 30))
-        self.assertTrue(np.ma.all(flap_inc[12655:12662] == 25))
-        self.assertTrue(np.ma.all(flap_inc[12662:12668] == 15))
-        self.assertTrue(np.ma.all(flap_inc[12668:12673] == 10))
+        self.assertTrue(np.ma.all(flap_inc[12255:12309] == 15))
+        self.assertTrue(np.ma.all(flap_inc[12309:12316] == 25))
+        self.assertTrue(np.ma.all(flap_inc[12316:12654] == 30))
+        self.assertTrue(np.ma.all(flap_inc[12654:12661] == 25))
+        self.assertTrue(np.ma.all(flap_inc[12661:12667] == 15))
+        self.assertTrue(np.ma.all(flap_inc[12667:12673] == 10))
         self.assertTrue(np.ma.all(flap_inc[12673:12680] == 5))
         self.assertTrue(np.ma.all(flap_inc[12680:12685] == 2))
-        self.assertTrue(np.ma.all(flap_inc[12685:12706] == 1))
-        self.assertTrue(np.ma.all(flap_inc[12706:] == 0))
+        self.assertTrue(np.ma.all(flap_inc[12685:12707] == 1))
+        self.assertTrue(np.ma.all(flap_inc[12707:] == 0))
+    
+    def test_calculate_flap_24(self):
+        array = load_compressed(os.path.join(test_data_path, 'flap_including_transition_flap_angle_3.npz'))
+        flap_inc = including_transition(array, self.flap_map_4)
+        flap_inc
+        #self.assertTrue(flap_inc.mask[0])
+        #self.assertTrue(np.ma.all(flap_inc[1:2758] == 0))
+        #self.assertTrue(np.ma.all(flap_inc[2758:3646] == 1))
+        #self.assertTrue(np.ma.all(flap_inc[3646:11800] == 0))
+        #self.assertTrue(np.ma.all(flap_inc[11800:12130] == 1))
+        #self.assertTrue(np.ma.all(flap_inc[12130:12135] == 2))
+        #self.assertTrue(np.ma.all(flap_inc[12135:12247] == 5))
+        #self.assertTrue(np.ma.all(flap_inc[12247:12252] == 10))
+        #self.assertTrue(np.ma.all(flap_inc[12255:12308] == 15))
+        #self.assertTrue(np.ma.all(flap_inc[12308:12315] == 25))
+        #self.assertTrue(np.ma.all(flap_inc[12315:12655] == 30))
+        #self.assertTrue(np.ma.all(flap_inc[12655:12662] == 25))
+        #self.assertTrue(np.ma.all(flap_inc[12662:12668] == 15))
+        #self.assertTrue(np.ma.all(flap_inc[12668:12673] == 10))
+        #self.assertTrue(np.ma.all(flap_inc[12673:12680] == 5))
+        #self.assertTrue(np.ma.all(flap_inc[12680:12685] == 2))
+        #self.assertTrue(np.ma.all(flap_inc[12685:12706] == 1))
+        #self.assertTrue(np.ma.all(flap_inc[12706:] == 0))    
 
 
 class TestCalculateSurfaceAngle(unittest.TestCase):
