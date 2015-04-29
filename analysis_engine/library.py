@@ -3,7 +3,7 @@ import pytz
 import numpy as np
 import math
 
-from collections import OrderedDict, namedtuple
+from collections import defaultdict, OrderedDict, namedtuple
 from copy import copy
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -6325,7 +6325,7 @@ def step_local_cusp(array, span):
         return 0
 
 
-def including_transition(array, steps, threshold=0.2):
+def including_transition(array, steps, threshold=0.20):
     '''
     Snaps signal to step values including transition, e.g.:
           _____
@@ -6340,17 +6340,32 @@ def including_transition(array, steps, threshold=0.2):
     '''
     # XXX: Problematic signals could benefit from second_window.
     #array = second_window(array, 1, 10, extend_window=True)
+    steps = sorted(steps)
+    
+    # Identify the angles which correspond to steps as these can differ.
+    # This is required as a 'tuned' threshold approach cannot match all cases.
+    step_data = defaultdict(list)
+    diff = np.ma.abs(np.ma.ediff1d(array))
+    for stable_slice in runs_of_ones(diff < 0.01, min_samples=5):
+        step_array = array[stable_slice]
+        step = min(steps, key=lambda s: abs(step_array[0] - s))
+        step_data[step].append(step_array)
+    
+    step_angles = {s: float(np.ma.mean(np.ma.concatenate(a))) for s, a in step_data.iteritems()}
     
     # first raise the array to the next step if it exceeds the previous step
     # plus a minimal threshold (step as early as possible)
     output = np_ma_zeros_like(array, mask=array.mask)
-    steps = sorted(steps)
+    
     for step, next_step in zip(steps, steps[1:]):
-        step_threshold = ((next_step - step) * threshold)
-        for above_slice in runs_of_ones(array >= step + step_threshold):
+        step_angle = step_angles.get(step, step)
+        next_step_angle = step_angles.get(next_step, next_step)
+        
+        step_threshold = ((next_step_angle - step_angle) * threshold)
+        for above_slice in runs_of_ones(array >= step_angle + step_threshold):
             # check that the section reached 2 * threshold, otherwise the
             # 'early stepping' is being too eager.
-            if np.ma.max(array[above_slice]) >= step + (2 * step_threshold):
+            if np.ma.max(array[above_slice]) >= step_angle + (2 * step_threshold):
                 output[above_slice] = next_step
     
     return output
