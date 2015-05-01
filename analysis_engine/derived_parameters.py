@@ -4,11 +4,11 @@ import numpy as np
 import geomag
 
 from copy import deepcopy
+from datetime import date
 from math import radians
 from scipy import interp
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.signal import medfilt
-from scipy.stats import mode
 
 from flightdatautilities import aircrafttables as at, units as ut
 
@@ -4744,11 +4744,7 @@ class LongitudeSmoothed(DerivedParameterNode, CoordinatesSmoothed):
                ):
         precision = bool(getattr(precise, 'value', False))
 
-        if hdg_true:
-            hdg = hdg_true
-        else:
-            hdg = hdg_mag
-
+        hdg = hdg_true if hdg_true else hdg_mag
         lat_adj, lon_adj = self._adjust_track(lon, lat, ils_loc, app_range, hdg,
                                             gspd, tas, toff, toff_rwy,
                                             tdwns, approaches, mobile, precision)
@@ -4800,13 +4796,7 @@ class MagneticVariation(DerivedParameterNode):
         lon = lon or lon_coarse
         mag_var_frequency = 64 * self.frequency
         mag_vars = []
-        if start_datetime.value:
-            start_date = start_datetime.value.date()
-        else:
-            import datetime
-            start_date = datetime.date.today()
-            # logger.warn('Start date time set to today')
-
+        start_date = start_datetime.value.date() if start_datetime.value else date.today()
 
         # TODO: Optimize.
         for lat_val, lon_val, alt_aal_val in zip(lat.array[::mag_var_frequency],
@@ -5095,11 +5085,11 @@ class VerticalSpeed(DerivedParameterNode):
     def derive(self, alt_std=P('Altitude STD Smoothed'), frame=A('Frame')):
         frame_name = frame.value if frame else ''
 
-        if frame_name in ['146'] or \
-           frame_name.startswith('747-200') or \
-           frame_name.startswith('737-6'):
+        if (frame_name == '146' or
+            frame_name.startswith('747-200') or
+            frame_name.startswith('737-6')):
             self.array = rate_of_change(alt_std, 11.0) * 60.0
-        elif frame_name in ['L382-Hercules']:
+        elif frame_name == 'L382-Hercules':
             self.array = rate_of_change(alt_std, 15.0, method='regression') * 60.0
         else:
             self.array = rate_of_change(alt_std, 4.0) * 60.0
@@ -5211,15 +5201,8 @@ class LongitudePrepared(DerivedParameterNode, CoordinatesStraighten):
             """
             self.array = self._smooth_coordinates(lon, lat)
         else:
-            if hdg_true:
-                hdg = hdg_true
-            else:
-                hdg = hdg_mag
-
-            if gspd:
-                speed = gspd
-            else:
-                speed = tas
+            hdg = hdg_true if hdg_true else hdg_mag
+            speed = gspd if gspd else tas
 
             _, lon_array = air_track(
                 lat_lift.get_first().value, lon_lift.get_first().value,
@@ -5263,15 +5246,8 @@ class LatitudePrepared(DerivedParameterNode, CoordinatesStraighten):
         if lat and lon:
             self.array = self._smooth_coordinates(lat, lon)
         else:
-            if hdg_true:
-                hdg = hdg_true
-            else:
-                hdg = hdg_mag
-
-            if gspd:
-                speed = gspd
-            else:
-                speed = tas
+            hdg = hdg_true if hdg_true else hdg_mag
+            speed = gspd if gspd else tas
 
             lat_array, _ = air_track(
                 lat_lift.get_first().value, lon_lift.get_first().value,
@@ -5339,7 +5315,7 @@ class PitchRate(DerivedParameterNode):
 
         frame_name = frame.value if frame else ''
 
-        if frame_name in ['L382-Hercules']:
+        if frame_name == 'L382-Hercules':
             self.array = rate_of_change(pitch, 8.0, method='regression')
         else:
             # See http://www.flightdatacommunity.com/blog/ for commentary on pitch rate techniques.
@@ -6175,7 +6151,7 @@ class Stabilizer(DerivedParameterNode):
 
         frame_name = frame.value if frame else ''
 
-        if frame_name in ['777']:
+        if frame_name == '777':
             sources = [src_1, src_2, src_3]
             self.offset = 0.0
             self.frequency = src_1.frequency
@@ -6436,11 +6412,7 @@ class WindDirectionTrue(DerivedParameterNode):
     def derive(self, wind=P('Wind Direction'),
                rwy_var=P('Magnetic Variation From Runway'),
                mag_var=P('Magnetic Variation')):
-        if rwy_var and np.ma.count(rwy_var.array):
-            # use this in preference
-            var = rwy_var.array
-        else:
-            var = mag_var.array
+        var = rwy_var.array if rwy_var and np.ma.count(rwy_var.array) else mag_var.array
         self.array = (wind.array + var) % 360.0
 
 
@@ -7645,14 +7617,9 @@ class AirspeedMinusV2(DerivedParameterNode):
         for start in starts:
             start.index = max(start.index - 5 * 64 * self.hz, 0)
         phases = slices_from_ktis(starts, climb_starts)
-
-        if v2_recorded:
-            v2 = v2_recorded
-        elif airspeed_selected:
-            v2 = airspeed_selected
-        elif v2_lookup:
-            v2 = v2_lookup
-        else:
+        
+        v2 = v2_recorded or airspeed_selected or v2_lookup
+        if not v2:
             return
 
         for phase in phases:
@@ -7920,11 +7887,7 @@ class AirspeedRelative(DerivedParameterNode):
                vref=P('Airspeed Minus Vref')):
 
         approach = vapp or vref
-
-        if approach:
-            app_array = approach.array
-        else:
-            app_array = np_ma_masked_zeros_like(takeoff.array)
+        app_array = approach.array if approach else np_ma_masked_zeros_like(takeoff.array)
 
         if takeoff:
             toff_array = takeoff.array
@@ -7967,12 +7930,7 @@ class AirspeedRelativeFor3Sec(DerivedParameterNode):
                vref=P('Airspeed Minus Vref For 3 Sec')):
 
         approach = vapp or vref
-
-        if approach:
-            app_array = approach.array
-        else:
-            app_array = np_ma_masked_zeros_like(takeoff.array)
-
+        app_array = approach.array if approach else np_ma_masked_zeros_like(takeoff.array)
         if takeoff:
             toff_array = takeoff.array
             # We know the two areas of interest cannot overlap so we just add
