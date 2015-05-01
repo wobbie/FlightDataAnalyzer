@@ -874,6 +874,8 @@ class FlightType(FlightAttributeNode):
             raise InvalidFlightType('TOUCHDOWN_ONLY')
             #self.set_flight_attr('TOUCHDOWN_ONLY')
             #return
+        
+        types = FlightType.Type
 
         if liftoffs and touchdowns:
             first_touchdown = touchdowns.get_first()
@@ -895,30 +897,30 @@ class FlightType(FlightAttributeNode):
                     #self.set_flight_attr('LIFTOFF_ONLY')
                     #return
 
-            if afr_type in [FlightType.Type.FERRY,
-                            FlightType.Type.LINE_TRAINING,
-                            FlightType.Type.POSITIONING,
-                            FlightType.Type.TEST,
-                            FlightType.Type.TRAINING]:
+            if afr_type in {types.FERRY,
+                            types.LINE_TRAINING,
+                            types.POSITIONING,
+                            types.TEST,
+                            types.TRAINING}:
                 flight_type = afr_type
             else:
-                flight_type = FlightType.Type.COMPLETE
+                flight_type = types.COMPLETE
         elif rejected_to:
             # Rejected takeoff but no takeoff or landing
-            flight_type = FlightType.Type.REJECTED_TAKEOFF
+            flight_type = types.REJECTED_TAKEOFF
         elif fast:
             # Midflight as no takeoff, rejected takeoff or landing but went fast
-            flight_type = FlightType.Type.INCOMPLETE
+            flight_type = types.INCOMPLETE
         elif mobile:
             # The aircraft moved on the ground.
-            flight_type = FlightType.Type.GROUND_RUN
+            flight_type = types.GROUND_RUN
         elif eng_start:
             # Engines were running at some point
-            flight_type = FlightType.Type.ENGINE_RUN_UP
+            flight_type = types.ENGINE_RUN_UP
         else:
             # TODO: not detected flight type should we fall back to No Movement?
             # should we raise an error
-            flight_type = FlightType.Type.INCOMPLETE
+            flight_type = types.INCOMPLETE
         self.set_flight_attr(flight_type)
 
 #Q: Not sure if we can identify Destination from the data?
