@@ -4203,7 +4203,7 @@ class TestEng_VibN1Max(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = Eng_VibN1Max
-        self.operational_combination_length = 4095 # 2**12-1
+        self.operational_combination_length = 65535 # 2**16-1
         self.check_operational_combination_length_only = True
 
     @unittest.skip('Test Not Implemented')
@@ -4215,7 +4215,7 @@ class TestEng_VibN2Max(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = Eng_VibN2Max
-        self.operational_combination_length = 255
+        self.operational_combination_length = 1023 # 2**10-1
         self.check_operational_combination_length_only = True
 
     @unittest.skip('Test Not Implemented')
@@ -4227,7 +4227,7 @@ class TestEng_VibN3Max(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = Eng_VibN3Max
-        self.operational_combination_length = 15
+        self.operational_combination_length = 255 # 2**8-1
         self.check_operational_combination_length_only = True
 
     @unittest.skip('Test Not Implemented')

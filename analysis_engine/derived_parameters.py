@@ -3152,14 +3152,18 @@ class Eng_VibN1Max(DerivedParameterNode):
                eng4=P('Eng (4) Vib N1'),
                fan1=P('Eng (1) Vib N1 Fan'),
                fan2=P('Eng (2) Vib N1 Fan'),
+               fan3=P('Eng (3) Vib N1 Fan'),
+               fan4=P('Eng (4) Vib N1 Fan'),
                lpt1=P('Eng (1) Vib N1 Turbine'),
                lpt2=P('Eng (2) Vib N1 Turbine'),
+               lpt3=P('Eng (3) Vib N1 Turbine'),
+               lpt4=P('Eng (4) Vib N1 Turbine'),
                comp1=P('Eng (1) Vib N1 Compressor'),
                comp2=P('Eng (2) Vib N1 Compressor'),
                gear1=P('Eng (1) Vib N1 Gearbox'),
                gear2=P('Eng (2) Vib N1 Gearbox')):
 
-        params = eng1, eng2, eng3, eng4, fan1, fan2, lpt1, lpt2, comp1, comp2, gear1, gear2
+        params = eng1, eng2, eng3, eng4, fan1, fan2, fan3, fan4, lpt1, lpt2, lpt3, lpt4, comp1, comp2, gear1, gear2
         engines = vstack_params_sw(8, *params)
         self.array = np.ma.max(engines, axis=0)
         self.offset = offset_select('mean', params)
@@ -3192,9 +3196,11 @@ class Eng_VibN2Max(DerivedParameterNode):
                hpc1=P('Eng (1) Vib N2 Compressor'),
                hpc2=P('Eng (2) Vib N2 Compressor'),
                hpt1=P('Eng (1) Vib N2 Turbine'),
-               hpt2=P('Eng (2) Vib N2 Turbine')):
+               hpt2=P('Eng (2) Vib N2 Turbine'),
+               hpt3=P('Eng (3) Vib N2 Turbine'),
+               hpt4=P('Eng (4) Vib N2 Turbine')):
 
-        params = eng1, eng2, eng3, eng4, hpc1, hpc2, hpt1, hpt2
+        params = eng1, eng2, eng3, eng4, hpc1, hpc2, hpt1, hpt2, hpt3, hpt4
         engines = vstack_params_sw(8, *params)
         self.array = np.ma.max(engines, axis=0)
         self.offset = offset_select('mean', params)
@@ -3223,9 +3229,13 @@ class Eng_VibN3Max(DerivedParameterNode):
                eng1=P('Eng (1) Vib N3'),
                eng2=P('Eng (2) Vib N3'),
                eng3=P('Eng (3) Vib N3'),
-               eng4=P('Eng (4) Vib N3')):
+               eng4=P('Eng (4) Vib N3'),
+               hpt1=P('Eng (1) Vib N3 Turbine'),
+               hpt2=P('Eng (2) Vib N3 Turbine'),
+               hpt3=P('Eng (3) Vib N3 Turbine'),
+               hpt4=P('Eng (4) Vib N3 Turbine')):
 
-        params = eng1, eng2, eng3, eng4
+        params = eng1, eng2, eng3, eng4, hpt1, hpt2, hpt3, hpt4
         engines = vstack_params_sw(8, *params)
         self.array = np.ma.max(engines, axis=0)
         self.offset = offset_select('mean', params)
