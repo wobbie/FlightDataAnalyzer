@@ -1092,11 +1092,6 @@ class AltitudeQNH(DerivedParameterNode):
     takeoff airfield elevation, and from that point onwards it is referenced
     to the landing airfield elevation.
 
-    We can determine the elevation in the following ways:
-
-    1. Take the average elevation between the start and end of the runway.
-    2. Take the general elevation of the airfield.
-
     If we can only determine the takeoff elevation, the landing elevation
     will using the same value as the error will be the difference in pressure
     altitude between the takeoff and landing airports on the day which is
@@ -1113,102 +1108,45 @@ class AltitudeQNH(DerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
 
-        return 'Altitude AAL' in available and 'Altitude Peak' in available
+        return 'Altitude AAL' in available
 
-    def derive(self, alt_aal=P('Altitude AAL'), alt_std=P('Altitude STD Smoothed'),
-               alt_peak=KTI('Altitude Peak'),
-               l_apt=A('FDR Landing Airport'), l_rwy=A('FDR Landing Runway'),
-               t_apt=A('FDR Takeoff Airport'), t_rwy=A('FDR Takeoff Runway'),
-               climbs=S('Climb'), descends=S('Descent')):
-        '''
-        We attempt to adjust Altitude AAL by adding elevation at takeoff and
-        landing. We need to know the takeoff and landing runway to get the most
-        precise elevation, falling back to the airport elevation if they are
-        not available.
-        '''
-        alt_qnh = np.ma.copy(alt_aal.array)  # copy only required for test case
+    def derive(self,
+               alt_aal=P('Altitude AAL'),
+               alt_std=P('Altitude STD Smoothed'),
+               l_apt=A('FDR Landing Airport'),
+               t_apt=A('FDR Takeoff Airport'),
+               climbs=S('Climb'),
+               descends=S('Descent')):
 
-        # Attempt to determine elevation at takeoff:
-        t_elev = None
-        if t_rwy:
-            t_elev = self._calc_rwy_elev(t_rwy.value)
-        if t_elev is None and t_apt:
-            t_elev = self._calc_apt_elev(t_apt.value)
-
-        # Attempt to determine elevation at landing:
-        l_elev = None
-        if l_rwy:
-            l_elev = self._calc_rwy_elev(l_rwy.value)
-        if l_elev is None and l_apt:
-            l_elev = self._calc_apt_elev(l_apt.value)
+        # Attempt to determine elevations at takeoff and landing:
+        t_elev = t_apt.value.get('elevation') if t_apt else None
+        l_elev = l_apt.value.get('elevation') if l_apt else None
 
         if t_elev is None or l_elev is None:
-            self.warning("No Takeoff or Landing elevation, using Altitude AAL")
-            self.array = alt_qnh
-            return  # BAIL OUT!
+            self.warning('No takeoff or landing elevation, using Altitude AAL.')
+            self.array = np.ma.copy(alt_aal.array)
+            return
         elif t_elev is None:
-            self.warning("No Takeoff elevation, using %dft at Landing", l_elev)
-            #smooth = False
+            self.warning('No takeoff elevation, using %d ft from landing airport.', l_elev)
             t_elev = l_elev
         elif l_elev is None:
-            self.warning("No Landing elevation, using %dft at Takeoff", t_elev)
-            #smooth = False
+            self.warning("No landing elevation, using %d ft from takeoff airport.", t_elev)
             l_elev = t_elev
         else:
-            # both have valid values
-            #smooth = True
             pass
-
-        ### Break the "journey" at the "midpoint" - actually max altitude aal -
-        ### and be sure to account for rise/fall in the data and stick the peak
-        ### in the correct half:
-        ##peak = alt_peak.get_first()  # NOTE: Fix for multiple approaches...
-        ##fall = alt_aal.array[peak.index - 1] > alt_aal.array[peak.index + 1]
-        ##peak = peak.index
-        ##if fall:
-            ##peak += int(fall)
-
-        ### Add the elevation at takeoff to the climb portion of the array:
-        ##alt_qnh[:peak] += t_elev
-
-        ### Add the elevation at landing to the descent portion of the array:
-        ##alt_qnh[peak:] += l_elev
-
-        ### Attempt to smooth out any ugly transitions due to differences in
-        ### pressure so that we don't get horrible bumps in visualisation:
-        ##if smooth:
-            ### step jump transforms into linear slope
-            ##delta = np.ma.ptp(alt_qnh[peak - 1:peak + 1])
-            ##width = ceil(delta * alt_aal.frequency / 3)
-            ##window = slice(peak - width, peak + width + 1)
-            ##alt_qnh[window] = np.ma.masked
-            ##repair_mask(
-                ##array=alt_qnh,
-                ##repair_duration=window.stop - window.start,
-            ##)
 
         # We adjust the height during the climb and descent so that the cruise is at pressure altitudes.
 
         # TODO: Improvement would be to adjust to half the difference if the cruise is below 10,000ft
 
-        #if not climbs and descends:
-            ## just do the descent part (STOP_ONLY)
-            ## both elevations should be the same from earlier assumptions
-            #assert t_elev == l_elev, 'unhandled elevation and climb/descent logic!'
-            #adjustment = self._qnh_adjust(alt_aal.array[descends[-1].slice,
-                                          #alt_std.array,
-                                          #t_elev)
-            #self.array = alt_aal.array + adjustment
-            #return
-
         alt_qnh = np_ma_masked_zeros_like(alt_aal.array)
+
         if climbs:
             # Climb phase adjustment
-            first_climb = slice(climbs[0].slice.start,
-                                climbs[0].slice.stop+1)
+            first_climb = slice(climbs[0].slice.start, climbs[0].slice.stop + 1)
             adjust_up = self._qnh_adjust(alt_aal.array[first_climb],
-                                    alt_std.array[first_climb],
-                                    t_elev, 'climb')
+                                         alt_std.array[first_climb],
+                                         t_elev, 'climb')
             # Before first climb
             alt_qnh[:first_climb.start] = alt_aal.array[:first_climb.start] + t_elev
 
@@ -1217,12 +1155,10 @@ class AltitudeQNH(DerivedParameterNode):
 
         if descends:
             # Descent phase adjustment
-            last_descent = slice(descends[-1].slice.stop+1,
-                                 descends[-1].slice.start,
-                                 -1)
+            last_descent = slice(descends[-1].slice.stop + 1, descends[-1].slice.start, -1)
             adjust_down = self._qnh_adjust(alt_aal.array[last_descent],
-                                      alt_std.array[last_descent],
-                                      l_elev, 'descent')
+                                           alt_std.array[last_descent],
+                                           l_elev, 'descent')
             # Last descent adjusted
             alt_qnh[last_descent] = alt_aal.array[last_descent] + adjust_down
 
@@ -1231,44 +1167,26 @@ class AltitudeQNH(DerivedParameterNode):
 
         # Use pressure altitude in the cruise
         cruise_start = first_climb.stop if climbs else 0
-        cruise_stop = last_descent.stop+1 if descends else len(alt_std.array)
+        cruise_stop = last_descent.stop + 1 if descends else len(alt_std.array)
         alt_qnh[cruise_start:cruise_stop] = alt_std.array[cruise_start:cruise_stop]
 
         self.array = np.ma.array(data=alt_qnh, mask=alt_aal.array.mask)
 
-    @staticmethod
-    def _qnh_adjust(aal, std, elev, mode):
+    @classmethod
+    def _qnh_adjust(cls, aal, std, elev, mode):
         if mode == 'climb':
             datum = CLIMB_THRESHOLD
         elif mode == 'descent':
             datum = LANDING_THRESHOLD_HEIGHT
         else:
-            raise ValueError("Unrecognised mode in _qnh_adjust")
-        # numpy.linspace(start, stop, num=50, endpoint=True)
+            raise ValueError('Unrecognised mode in %s._qnh_adjust()' % cls.__name__)
         press_offset = std[0] - elev - datum
         if abs(press_offset) > 4000.0:
-            raise ValueError("Excessive difference between pressure altitude (%s) and airport elevation (%s) of '%s' implies incorrect altimeter scaling.",
-                             std[0], elev, press_offset)
-        return np.linspace(elev, std[-1]-aal[-1], num=len(aal))
-
-    @staticmethod
-    def _calc_apt_elev(apt):
-        '''
-        '''
-        return apt.get('elevation')
-
-    @staticmethod
-    def _calc_rwy_elev(rwy):
-        '''
-        '''
-        elev_s = rwy.get('start', {}).get('elevation')
-        elev_e = rwy.get('end', {}).get('elevation')
-        if elev_s is None:
-            return elev_e
-        if elev_e is None:
-            return elev_s
-        # FIXME: Determine based on liftoff/touchdown coordinates?
-        return (elev_e + elev_s) / 2
+            raise ValueError('Excessive difference between pressure altitude '
+                             '(%.1f) and airport elevation (%.1f) of %.1f '
+                             'implies incorrect altimeter scaling.' %
+                             (std[0], elev, press_offset))
+        return np.linspace(elev, std[-1] - aal[-1], num=len(aal))
 
 
 '''
