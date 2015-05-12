@@ -4674,11 +4674,10 @@ class TestSAT_ISA(unittest.TestCase):
 
 class TestTAT(unittest.TestCase):
     def test_can_operate(self):
-        self.assertEqual(
-            TAT.get_operational_combinations(),
-            [('TAT (1)', 'TAT (2)'),
-             ('SAT',)])
-             
+        opts = TAT.get_operational_combinations()
+        self.assertIn(('TAT (1)', 'TAT (2)'), opts)
+        self.assertIn(('SAT', 'Mach'), opts)
+    
     def test_combination(self):
         t1 = P('TAT (1)', array = [1,3,5])
         t2 = P('TAT (2)', array = [2,4,6])

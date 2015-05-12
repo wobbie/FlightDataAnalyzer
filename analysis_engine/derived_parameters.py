@@ -5612,8 +5612,8 @@ class TAT(DerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available):
-        return ('TAT (1)' in available and 'TAT (2)' in available) or \
-               'SAT' in available
+        return (('TAT (1)' in available and 'TAT (2)' in available) or \
+                ('SAT' in available and 'Mach' in available))
 
     # TODO: Review naming convention - rename to "Total Air Temperature"?
 
@@ -5622,23 +5622,25 @@ class TAT(DerivedParameterNode):
     units = ut.CELSIUS
 
     def derive(self,
-               source_1 = P('TAT (1)'),
-               source_2 = P('TAT (2)'),
-               sat = P('SAT'), mach = P('Mach')):
+               source_1=P('TAT (1)'),
+               source_2=P('TAT (2)'),
+               sat=P('SAT'), mach=P('Mach')):
 
         if sat:
             # We compute the total air temperature, assuming a perfect sensor.
             # Where Mach is masked we use SAT directly
-            self.hz = sat.hz
             if sat.hz > mach.hz:
+                self.hz = sat.hz
+                self.offset = sat.offset
                 mach = mach.get_aligned(sat)
             elif mach.hz > sat.hz:
                 self.hz = mach.hz
+                self.offset = mach.offset
                 sat = sat.get_aligned(mach)
 
             self.array = np.ma.where(
-                mach.array.mask, sat.array, machsat2tat(mach.array, sat.array,
-                                                        recovery_factor=1.0))
+                np.ma.getmaskarray(mach.array), sat.array, machsat2tat(mach.array, sat.array,
+                                                                       recovery_factor=1.0))
 
         else:
             # Alternate samples (1)&(2) are blended.
