@@ -6900,7 +6900,7 @@ def straighten_overflows(array, min_val, max_val, threshold=4):
         for idx in np.where(np.abs(diff) > total_range - partition)[0]:
             sign = np.sign(diff[idx])
             overflow -= sign
-            straight[idx + 1:] -= sign * total_range
+            straight[unmasked_slice.start + idx + 1:] -= sign * total_range
         
         last_value = array[unmasked_slice.stop - 1]
     
