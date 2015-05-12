@@ -2467,17 +2467,24 @@ class StableApproach(MultistateDerivedParameterNode):
                 self.array[_slice][stable] = 4
                 if aspd_minus_sel:
                     # Airspeed relative to selected speed
+                    if aspd_rel:
+                        low_limit_airspeed = repair(aspd_rel.array, _slice)
+                    else:
+                        low_limit_airspeed = airspeed
                     STABLE_AIRSPEED_BELOW_REF = -5
                     STABLE_AIRSPEED_ABOVE_REF = 15
                 elif vapp:
                     # Those aircraft which record a variable Vapp shall have more constraint thresholds
+                    low_limit_airspeed = airspeed
                     STABLE_AIRSPEED_BELOW_REF = -5
                     STABLE_AIRSPEED_ABOVE_REF = 10
                 else:
                     # Most aircraft record only Vref - as we don't know the wind correction be more lenient
+                    low_limit_airspeed = airspeed
                     STABLE_AIRSPEED_BELOW_REF = -5
                     STABLE_AIRSPEED_ABOVE_REF = 35
-                stable_airspeed = (airspeed >= STABLE_AIRSPEED_BELOW_REF) & (airspeed <= STABLE_AIRSPEED_ABOVE_REF)
+
+                stable_airspeed = (low_limit_airspeed >= STABLE_AIRSPEED_BELOW_REF) & (airspeed <= STABLE_AIRSPEED_ABOVE_REF)
                 # extend the stability at the end of the altitude threshold through to landing
                 stable_airspeed[altitude < 50] = stable_airspeed[index_at_50]
                 stable &= stable_airspeed.filled(True)  # if no V Ref speed, values are masked so consider stable as one is not flying to the vref speed??
