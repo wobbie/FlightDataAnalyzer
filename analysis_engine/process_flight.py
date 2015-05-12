@@ -90,7 +90,7 @@ def get_node_type(node, node_subclasses):
     return node.__class__.__name__
 
 
-def derive_parameters(hdf, node_mgr, process_order, params={}, force=False):
+def derive_parameters(hdf, node_mgr, process_order, params=None, force=False):
     '''
     Derives parameters in process_order. Dependencies are sourced via the
     node_mgr.
@@ -104,6 +104,8 @@ def derive_parameters(hdf, node_mgr, process_order, params={}, force=False):
         be processed
     :type process_order: list of strings
     '''
+    if not params:
+        params = {}
     # OPT: local lookup is faster than module-level (small).
     node_subclasses = NODE_SUBCLASSES
     
