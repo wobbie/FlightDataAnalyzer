@@ -1881,6 +1881,146 @@ class SlatIncludingTransition(MultistateDerivedParameterNode):
         )
 
 
+class SlatFullyExtended(MultistateDerivedParameterNode):
+    '''
+    '''
+
+    values_mapping = {
+        0: '-',
+        1: 'Extended'
+    }
+
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               slat_l1=P('Slat (L1) Fully Extended'),
+               slat_l2=P('Slat (L2) Fully Extended'),
+               slat_l3=P('Slat (L3) Fully Extended'),
+               slat_l4=P('Slat (L4) Fully Extended'),
+               slat_r1=P('Slat (R1) Fully Extended'),
+               slat_r2=P('Slat (R2) Fully Extended'),
+               slat_r3=P('Slat (R3) Fully Extended'),
+               slat_r4=P('Slat (R4) Fully Extended')):
+
+        extended_params = (slat_l1, slat_l2, slat_l3, slat_l4, slat_r1, slat_r2, slat_r3, slat_r4)
+        extended_stack = vstack_params_where_state(*[(d, 'Extended') for d in extended_params])
+
+        array = np_ma_zeros_like(extended_stack[0], dtype=np.short)
+        array = np.ma.where(extended_stack.all(axis=0), 1, array)
+
+        # mask indexes with greater than 50% masked values
+        mask = np.ma.where(extended_stack.mask.sum(axis=0).astype(float) / len(extended_stack) * 100 > 50, 1, 0)
+        self.array = array
+        self.array.mask = mask
+
+
+class SlatPartExtended(MultistateDerivedParameterNode):
+    '''
+    '''
+
+    values_mapping = {
+        0: '-',
+        1: 'Part Extended'
+    }
+
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               slat_l1=P('Slat (L1) Part Extended'),
+               slat_l2=P('Slat (L2) Part Extended'),
+               slat_l3=P('Slat (L3) Part Extended'),
+               slat_l4=P('Slat (L4) Part Extended'),
+               slat_r1=P('Slat (R1) Part Extended'),
+               slat_r2=P('Slat (R2) Part Extended'),
+               slat_r3=P('Slat (R3) Part Extended'),
+               slat_r4=P('Slat (R4) Part Extended')):
+
+        extended_params = (slat_l1, slat_l2, slat_l3, slat_l4, slat_r1, slat_r2, slat_r3, slat_r4)
+        extended_stack = vstack_params_where_state(*[(d, 'Part Extended') for d in extended_params])
+
+        array = np_ma_zeros_like(extended_stack[0], dtype=np.short)
+        array = np.ma.where(extended_stack.all(axis=0), 1, array)
+
+        # mask indexes with greater than 50% masked values
+        mask = np.ma.where(extended_stack.mask.sum(axis=0).astype(float) / len(extended_stack) * 100 > 50, 1, 0)
+        self.array = array
+        self.array.mask = mask
+
+
+class SlatInTransit(MultistateDerivedParameterNode):
+    '''
+    '''
+
+    values_mapping = {
+        0: '-',
+        1: 'In Transit'
+    }
+
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               slat_l1=P('Slat (L1) In Transit'),
+               slat_l2=P('Slat (L2) In Transit'),
+               slat_l3=P('Slat (L3) In Transit'),
+               slat_l4=P('Slat (L4) In Transit'),
+               slat_r1=P('Slat (R1) In Transit'),
+               slat_r2=P('Slat (R2) In Transit'),
+               slat_r3=P('Slat (R3) In Transit'),
+               slat_r4=P('Slat (R4) In Transit')):
+
+        transit_params = (slat_l1, slat_l2, slat_l3, slat_l4, slat_r1, slat_r2, slat_r3, slat_r4)
+        transit_stack = vstack_params_where_state(*[(d, 'In Transit') for d in transit_params])
+
+        array = np_ma_zeros_like(transit_stack[0], dtype=np.short)
+        array = np.ma.where(transit_stack.all(axis=0), 1, array)
+
+        # mask indexes with greater than 50% masked values
+        mask = np.ma.where(transit_stack.mask.sum(axis=0).astype(float) / len(transit_stack) * 100 > 50, 1, 0)
+        self.array = array
+        self.array.mask = mask
+
+
+class SlatRetracted(MultistateDerivedParameterNode):
+    '''
+    '''
+
+    values_mapping = {
+        0: '-',
+        1: 'Retracted'
+    }
+
+    @classmethod
+    def can_operate(cls, available):
+        return any_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               slat_l1=P('Slat (L1) Retracted'),
+               slat_l2=P('Slat (L2) Retracted'),
+               slat_l3=P('Slat (L3) Retracted'),
+               slat_l4=P('Slat (L4) Retracted'),
+               slat_r1=P('Slat (R1) Retracted'),
+               slat_r2=P('Slat (R2) Retracted'),
+               slat_r3=P('Slat (R3) Retracted'),
+               slat_r4=P('Slat (R4) Retracted')):
+
+        retracted_params = (slat_l1, slat_l2, slat_l3, slat_l4, slat_r1, slat_r2, slat_r3, slat_r4)
+        retracted_stack = vstack_params_where_state(*[(d, 'Retracted') for d in retracted_params])
+
+        array = np_ma_zeros_like(retracted_stack[0], dtype=np.short)
+        array = np.ma.where(retracted_stack.all(axis=0), 1, array)
+
+        # mask indexes with greater than 50% masked values
+        mask = np.ma.where(retracted_stack.mask.sum(axis=0).astype(float) / len(retracted_stack) * 100 > 50, 1, 0)
+        self.array = array
+        self.array.mask = mask
+
+
 class StickPusher(MultistateDerivedParameterNode):
     '''
     Where two Stick Pusher systems are recorded the results are OR'd to make

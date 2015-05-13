@@ -76,7 +76,11 @@ from analysis_engine.multistate_parameters import (
     PitchAlternateLaw,
     Slat,
     SlatExcludingTransition,
+    SlatFullyExtended,
     SlatIncludingTransition,
+    SlatInTransit,
+    SlatPartExtended,
+    SlatRetracted,
     SpeedControl,
     SpeedbrakeDeployed,
     SpeedbrakeSelected,
@@ -2341,6 +2345,198 @@ class TestSlatIncludingTransition(unittest.TestCase, NodeTest):
         self.assertIsInstance(node.array, MappedArray)
         self.assertEqual(node.frequency, 4)
         self.assertEqual(node.array.raw.tolist(), [0] * 11 + [25] * 62 + [None])
+
+
+class TestSlatFullyExtended(unittest.TestCase):
+
+    def test_can_operate(self):
+        node = self.node_class()
+        operational_combinations = node.get_operational_combinations()
+        self.assertEqual(len(operational_combinations), 255) # 2**8-1
+
+    def setUp(self):
+        extended_l_array = [ 0,  0,  0,  0,  0,  1,  1,  0,  0,  0]
+        extended_r_array = [ 0,  0,  0,  0,  1,  1,  1,  0,  0,  0]
+
+        self.extended_l = M(name='Slat (L1) Fully Extended', array=np.ma.array(extended_l_array), values_mapping={1:'Extended'})
+        self.extended_r = M(name='Slat (R3) Fully Extended', array=np.ma.array(extended_r_array), values_mapping={1:'Extended'})
+        self.node_class = SlatFullyExtended
+
+    def test_derive(self):
+        result = [ 0,  0,  0,  0,  0,  1,  1,  0,  0,  0]
+        node = self.node_class()
+        node.derive(self.extended_l,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    self.extended_r,
+                    None,)
+        np.testing.assert_equal(node.array.data, result)
+
+    def test_derive_masked_value(self):
+        self.extended_l.array.mask = [ 0,  0,  0,  1,  0,  1,  0,  0,  1,  0]
+        self.extended_r.array.mask = [ 0,  0,  0,  0,  0,  1,  0,  0,  1,  0]
+
+        result_array = [ 0,  0,  0,  0,  0,  0,  1,  0,  0,  0]
+        result_mask =  [ 0,  0,  0,  0,  0,  1,  0,  0,  1,  0]
+
+        node = self.node_class()
+        node.derive(self.extended_l,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    self.extended_r,
+                    None,)
+        np.testing.assert_equal(node.array.data, result_array)
+        np.testing.assert_equal(node.array.mask, result_mask)
+
+
+class TestSlatPartExtended(unittest.TestCase):
+
+    def test_can_operate(self):
+        node = self.node_class()
+        operational_combinations = node.get_operational_combinations()
+        self.assertEqual(len(operational_combinations), 255) # 2**8-1
+
+    def setUp(self):
+        extended_l_array = [ 0,  0,  0,  0,  0,  1,  1,  0,  0,  0]
+        extended_r_array = [ 0,  0,  0,  0,  1,  1,  1,  0,  0,  0]
+
+        self.extended_l = M(name='Slat (L1) Part Extended', array=np.ma.array(extended_l_array), values_mapping={1:'Part Extended'})
+        self.extended_r = M(name='Slat (R3) Part Extended', array=np.ma.array(extended_r_array), values_mapping={1:'Part Extended'})
+        self.node_class = SlatPartExtended
+
+    def test_derive(self):
+        result = [ 0,  0,  0,  0,  0,  1,  1,  0,  0,  0]
+        node = self.node_class()
+        node.derive(self.extended_l,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    self.extended_r,
+                    None,)
+        np.testing.assert_equal(node.array.data, result)
+
+    def test_derive_masked_value(self):
+        self.extended_l.array.mask = [ 0,  0,  0,  1,  0,  1,  0,  0,  1,  0]
+        self.extended_r.array.mask = [ 0,  0,  0,  0,  0,  1,  0,  0,  1,  0]
+
+        result_array = [ 0,  0,  0,  0,  0,  0,  1,  0,  0,  0]
+        result_mask =  [ 0,  0,  0,  0,  0,  1,  0,  0,  1,  0]
+
+        node = self.node_class()
+        node.derive(self.extended_l,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    self.extended_r,
+                    None,)
+        np.testing.assert_equal(node.array.data, result_array)
+        np.testing.assert_equal(node.array.mask, result_mask)
+
+
+class TestSlatInTransit(unittest.TestCase):
+
+    def test_can_operate(self):
+        node = self.node_class()
+        operational_combinations = node.get_operational_combinations()
+        self.assertEqual(len(operational_combinations), 255) # 2**8-1
+
+    def setUp(self):
+        transit_l_array = [ 0,  0,  0,  0,  0,  1,  1,  0,  0,  0]
+        transit_r_array = [ 0,  0,  0,  0,  1,  1,  1,  0,  0,  0]
+
+        self.transit_l = M(name='Slat (L1) In Transit', array=np.ma.array(transit_l_array), values_mapping={1:'In Transit'})
+        self.transit_r = M(name='Slat (R3) In Transit', array=np.ma.array(transit_r_array), values_mapping={1:'In Transit'})
+        self.node_class = SlatInTransit
+
+    def test_derive(self):
+        result = [ 0,  0,  0,  0,  0,  1,  1,  0,  0,  0]
+        node = self.node_class()
+        node.derive(self.transit_l,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    self.transit_r,
+                    None,)
+        np.testing.assert_equal(node.array.data, result)
+
+    def test_derive_masked_value(self):
+        self.transit_l.array.mask = [ 0,  0,  0,  1,  0,  1,  0,  0,  1,  0]
+        self.transit_r.array.mask = [ 0,  0,  0,  0,  0,  1,  0,  0,  1,  0]
+
+        result_array = [ 0,  0,  0,  0,  0,  0,  1,  0,  0,  0]
+        result_mask =  [ 0,  0,  0,  0,  0,  1,  0,  0,  1,  0]
+
+        node = self.node_class()
+        node.derive(self.transit_l,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    self.transit_r,
+                    None,)
+        np.testing.assert_equal(node.array.data, result_array)
+        np.testing.assert_equal(node.array.mask, result_mask)
+
+
+class TestSlatRetracted(unittest.TestCase):
+
+    def test_can_operate(self):
+        node = self.node_class()
+        operational_combinations = node.get_operational_combinations()
+        self.assertEqual(len(operational_combinations), 255) # 2**8-1
+
+    def setUp(self):
+        retracted_l_array = [ 0,  0,  0,  0,  0,  1,  1,  0,  0,  0]
+        retracted_r_array = [ 0,  0,  0,  0,  1,  1,  1,  0,  0,  0]
+
+        self.retracted_l = M(name='Slat (L1) Retracted', array=np.ma.array(retracted_l_array), values_mapping={1:'Retracted'})
+        self.retracted_r = M(name='Slat (R3) Retracted', array=np.ma.array(retracted_r_array), values_mapping={1:'Retracted'})
+        self.node_class = SlatRetracted
+
+    def test_derive(self):
+        result = [ 0,  0,  0,  0,  0,  1,  1,  0,  0,  0]
+        node = self.node_class()
+        node.derive(self.retracted_l,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    self.retracted_r,
+                    None,)
+        np.testing.assert_equal(node.array.data, result)
+
+    def test_derive_masked_value(self):
+        self.retracted_l.array.mask = [ 0,  0,  0,  1,  0,  1,  0,  0,  1,  0]
+        self.retracted_r.array.mask = [ 0,  0,  0,  0,  0,  1,  0,  0,  1,  0]
+
+        result_array = [ 0,  0,  0,  0,  0,  0,  1,  0,  0,  0]
+        result_mask =  [ 0,  0,  0,  0,  0,  1,  0,  0,  1,  0]
+
+        node = self.node_class()
+        node.derive(self.retracted_l,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    self.retracted_r,
+                    None,)
+        np.testing.assert_equal(node.array.data, result_array)
+        np.testing.assert_equal(node.array.mask, result_mask)
 
 
 class TestSpeedbrakeDeployed(unittest.TestCase):
