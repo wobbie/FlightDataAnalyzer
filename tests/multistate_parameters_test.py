@@ -1297,7 +1297,7 @@ class TestFlapIncludingTransition(unittest.TestCase, NodeTest):
         array = np.ma.array([0] * 5 + range(42) + [42] * 5)
         flap = P(name='Flap Angle', array=array, frequency=2)
         node = self.node_class()
-        node.derive(flap, *attributes)
+        node.derive(flap, None, *attributes)
         attributes = (a.value for a in attributes)
         at.get_flap_map.assert_called_once_with(*attributes)
         self.assertEqual(node.values_mapping, at.get_flap_map.return_value)

@@ -970,7 +970,7 @@ class FlapIncludingTransition(MultistateDerivedParameterNode):
                     model=A('Model'), series=A('Series'), family=A('Family')):
 
         if not all_of(('Flap Angle', 'Model', 'Series', 'Family'), available):
-            return False
+            return all_of(('Flap', 'Model', 'Series', 'Family'), available)
 
         try:
             at.get_flap_map(model.value, series.value, family.value)
@@ -981,10 +981,15 @@ class FlapIncludingTransition(MultistateDerivedParameterNode):
 
         return True
     
-    def derive(self, flap_angle=P('Flap Angle'),
+    def derive(self, flap_angle=P('Flap Angle'), flap=M('Flap'),
                model=A('Model'), series=A('Series'), family=A('Family')):
         self.values_mapping = at.get_flap_map(model.value, series.value, family.value)
-        self.array = including_transition(flap_angle.array, self.values_mapping)
+        if flap_angle:
+            self.array = including_transition(flap_angle.array, self.values_mapping)
+        else:
+            # if we do not have flap angle use flap
+            self.array = MappedArray(flap.array,
+                                 values_mapping=self.values_mapping)
 
 
 class FlapExcludingTransition(MultistateDerivedParameterNode):
