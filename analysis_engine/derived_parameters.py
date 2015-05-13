@@ -59,6 +59,7 @@ from analysis_engine.library import (actuator_mismatch,
                                      merge_masks,
                                      most_common_value,
                                      moving_average,
+                                     nearest_neighbour_mask_repair,
                                      np_ma_ones_like,
                                      np_ma_masked_zeros_like,
                                      np_ma_zeros_like,
@@ -3888,7 +3889,8 @@ class SlatAngle(DerivedParameterNode):
 
 class SlatAngle(DerivedParameterNode):
     '''
-    Combines Slat Angle (L) and Slat Angle (R).
+    Combines Slat Angle (L) and Slat Angle (R) if available alternativly
+    looks up appropriate slat angles for discrete slat positions.
     '''
 
     align = False
@@ -3897,12 +3899,41 @@ class SlatAngle(DerivedParameterNode):
     @classmethod
     def can_operate(cls, available):
 
-        return any_of(('Slat Angle (L)', 'Slat Angle (R)'), available)
+        slat_angles = any_of(('Slat Angle (L)', 'Slat Angle (R)'), available)
+        aircraft_info = ('Model', 'Series', 'Family')
+        slat_discretes = 'Slat Fully Extended' in available and all_of(aircraft_info, available)
+        return slat_angles or slat_discretes
 
-    def derive(self, slat_l=P('Slat Angle (L)'), slat_r=P('Slat Angle (R)')):
+    def derive(self, slat_l=P('Slat Angle (L)'), slat_r=P('Slat Angle (R)'),
+               slat_full=M('Slat Fully Extended'), slat_part=M('Slat Part Extended'),
+               slat_retracted=M('Slat Retracted'), model=A('Model'),
+               series=A('Series'), family=A('Family')):
 
-        self.array, self.frequency, self.offset = \
-            blend_two_parameters(slat_l, slat_r)
+        if slat_l or slat_r:
+            self.array, self.frequency, self.offset = \
+                blend_two_parameters(slat_l, slat_r)
+        else:
+            detents = at.get_slat_map(model.value, series.value, family.value).keys()
+            detents.sort()
+            # align
+            master = first_valid_parameter(slat_full, slat_part, slat_retracted)
+            self.frequency = master.frequency
+            self.offset = master.offset
+            if slat_retracted:
+                # If Retracted parameter use it
+                array = np_ma_masked_zeros_like(master.array)
+                slat_retracted = slat_retracted.get_aligned(master)
+                array[slat_retracted.array == 'Retracted'] = detents[0]
+            else:
+                # If no explicit Retracted parameter default to Retracted
+                array = np_ma_zeros_like(master.array)
+            if slat_full:
+                array[slat_full.array == 'Extended'] = detents[-1]
+            if slat_part:
+                part_extended = slat_part.get_aligned(master)
+                array[part_extended.array == 'Part Extended'] = detents[1]
+            # TODO: Handle slat in transit parameter
+            self.array = nearest_neighbour_mask_repair(array)
 
 
 class SlopeToLanding(DerivedParameterNode):

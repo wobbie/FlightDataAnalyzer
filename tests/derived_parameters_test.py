@@ -2555,7 +2555,7 @@ class TestFuelQtyC(unittest.TestCase):
                       array=np.ma.array([2,4,6], mask=[False, False, False]))
         fuel_qty3 = P('Fuel Qty (C) (3)',
                       array=np.ma.array([3,6,9], mask=[False, True, False]))
-        fuel_qty_node = FuelQtyL()
+        fuel_qty_node = self.node_class()
         fuel_qty_node.derive(fuel_qty1, None, None, None)
         np.testing.assert_array_equal(fuel_qty_node.array,
                                       np.ma.array([1, 2, 3]))
@@ -4665,14 +4665,54 @@ class TestRudderPedal(unittest.TestCase):
 
 
 class TestSlatAngle(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = SlatAngle
+
+        ac_model = A('Model', 'B777-212')
+        ac_series = A('Series', 'B777-200')
+        ac_family = A('Family', 'B777')
+        self.ac_info_attributes = (ac_model, ac_series, ac_family)
+
     def test_can_operate(self):
-        self.assertEqual(
-            SlatAngle.get_operational_combinations(),
-            [('Slat Angle (L)',), ('Slat Angle (R)',), ('Slat Angle (L)', 'Slat Angle (R)')])
-    
+        self.assertTrue(self.node_class().can_operate(('Slat Angle (L)',)))
+        self.assertTrue(self.node_class().can_operate(('Slat Angle (R)',)))
+        self.assertTrue(self.node_class().can_operate(('Slat Angle (L)', 'Slat Angle (R)')))
+        discretes = ('Model', 'Series', 'Family', 'Slat Fully Extended')
+        self.assertTrue(self.node_class().can_operate(discretes))
+
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
         self.assertTrue(False, msg='Test not implemented.')
+
+    @patch('analysis_engine.derived_parameters.at')
+    def test_derive_discretes(self, at):
+        at.get_slat_map.return_value = {f: str(f) for f in (0, 22, 32)}
+
+        slat_full = M(
+            name='Slat Fully Extended',
+            array=np.ma.repeat((0, 0, 1, 0, 0), 10),
+            values_mapping={0: '-', 1: 'Extended'},
+        )
+        slat_part = M(
+            name='Slat Part Extended',
+            array=np.ma.repeat((0, 1, 0, 1, 0), 10),
+            values_mapping={0: '-', 1: 'Part Extended'},
+        )
+        slat_retracted = M(
+            name='Slat Retracted',
+            array=np.ma.repeat((1, 0, 0, 0, 1), 10),
+            values_mapping={0: '-', 1: 'Retracted'},
+        )
+        node = self.node_class()
+        node.derive(None, None,
+                   slat_full,
+                   slat_part,
+                   slat_retracted,
+                   *self.ac_info_attributes)
+        expected = np.ma.repeat((0, 22, 32, 22, 0), 10)
+        ma_test.assert_almost_equal(node.array, expected)
+
 
 
 class TestSlopeToLanding(unittest.TestCase):
