@@ -3515,13 +3515,14 @@ class FuelQtyL(DerivedParameterNode):
     def derive(self, fuel_qty_l_1=P('Fuel Qty (L) (1)'),
                fuel_qty_l_2=P('Fuel Qty (L) (2)'),
                fuel_qty_l_3=P('Fuel Qty (L) (3)'),
-               fuel_qty_l_4=P('Fuel Qty (L) (4)')):
+               fuel_qty_l_4=P('Fuel Qty (L) (4)'),
+               fuel_qty_l_5=P('Fuel Qty (L) (5)')):
         # Sum all the available measurements! Masked values are maintained as
         # all tanks must be reading valid values to be summed together. Fuel in
         # both tanks but a masked value in one should not result in half the
         # measured fuel quantity!
         stacked_params = vstack_params(fuel_qty_l_1, fuel_qty_l_2,
-                                       fuel_qty_l_3, fuel_qty_l_4)
+                                       fuel_qty_l_3, fuel_qty_l_4, fuel_qty_l_5)
         self.array = np.ma.sum(stacked_params, axis=0)
 
 
@@ -3538,13 +3539,14 @@ class FuelQtyR(DerivedParameterNode):
     def derive(self, fuel_qty_r_1=P('Fuel Qty (R) (1)'),
                fuel_qty_r_2=P('Fuel Qty (R) (2)'),
                fuel_qty_r_3=P('Fuel Qty (R) (3)'),
-               fuel_qty_r_4=P('Fuel Qty (R) (4)')):
+               fuel_qty_r_4=P('Fuel Qty (R) (4)'),
+               fuel_qty_r_5=P('Fuel Qty (R) (5)')):
         # Sum all the available measurements! Masked values are maintained as
         # all tanks must be reading valid values to be summed together. Fuel in
         # both tanks but a masked value in one should not result in half the
         # measured fuel quantity!
         stacked_params = vstack_params(fuel_qty_r_1, fuel_qty_r_2,
-                                       fuel_qty_r_3, fuel_qty_r_4)
+                                       fuel_qty_r_3, fuel_qty_r_4, fuel_qty_r_5)
         self.array = np.ma.sum(stacked_params, axis=0)
 
 
