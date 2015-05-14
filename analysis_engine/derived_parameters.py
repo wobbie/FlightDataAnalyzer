@@ -3815,12 +3815,22 @@ class SlatAngle(DerivedParameterNode):
     units = ut.DEGREE
 
     @classmethod
-    def can_operate(cls, available):
+    def can_operate(cls, available,
+                    model=A('Model'), series=A('Series'), family=A('Family')):
 
-        slat_angles = any_of(('Slat Angle (L)', 'Slat Angle (R)'), available)
-        aircraft_info = ('Model', 'Series', 'Family')
-        slat_discretes = 'Slat Fully Extended' in available and all_of(aircraft_info, available)
-        return slat_angles or slat_discretes
+        if any_of(('Slat Angle (L)', 'Slat Angle (R)'), available):
+            return True
+        else:
+            if not all_of(('Slat Fully Extended', 'Model', 'Series', 'Family'), available):
+                return False
+            try:
+                at.get_slat_map(model.value, series.value, family.value)
+            except KeyError:
+                cls.debug("No slat mapping available for '%s', '%s', '%s'.",
+                          model.value, series.value, family.value)
+                return False
+
+            return True
 
     def derive(self, slat_l=P('Slat Angle (L)'), slat_r=P('Slat Angle (R)'),
                slat_full=M('Slat Fully Extended'), slat_part=M('Slat Part Extended'),
