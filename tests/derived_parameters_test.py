@@ -4602,12 +4602,27 @@ class TestSlatAngle(unittest.TestCase):
         ac_family = A('Family', 'B777')
         self.ac_info_attributes = (ac_model, ac_series, ac_family)
 
-    def test_can_operate(self):
+
+
+    @patch('analysis_engine.derived_parameters.at')
+    def test_can_operate(self, at):
         self.assertTrue(self.node_class().can_operate(('Slat Angle (L)',)))
         self.assertTrue(self.node_class().can_operate(('Slat Angle (R)',)))
         self.assertTrue(self.node_class().can_operate(('Slat Angle (L)', 'Slat Angle (R)')))
-        discretes = ('Model', 'Series', 'Family', 'Slat Fully Extended')
-        self.assertTrue(self.node_class().can_operate(discretes))
+
+        at.get_slat_map.side_effect = ({}, KeyError)
+        self.assertTrue(self.node_class.can_operate(
+            ('Slat Fully Extended', 'Model', 'Series', 'Family'),
+            model=A('Model', 'CRJ900 (CL-600-2D24)'),
+            series=A('Series', 'CRJ900'),
+            family=A('Family', 'CL-600'),
+        ))
+        self.assertFalse(self.node_class.can_operate(
+            ('Slat Fully Extended', 'Model', 'Series', 'Family'),
+            model=A('Model', 'B737-333'),
+            series=A('Series', 'B737-300'),
+            family=A('Family', 'B737 Classic'),
+        ))
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
