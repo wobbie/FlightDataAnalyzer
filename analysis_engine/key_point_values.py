@@ -3872,9 +3872,12 @@ class AirspeedAtFlapExtension(KeyPointValueNode):
     NAME_VALUES = NAME_VALUES_LEVER
     units = ut.KT
 
-    def derive(self, flap=M('Flap Lever'), air_spd=P('Airspeed'),
+    def derive(self, flap_lever=M('Flap Lever'),
+               flap_synth=M('Flap Lever (Synthetic)'),
+               air_spd=P('Airspeed'),
                airborne=S('Airborne')):
 
+        flap = flap_lever or flap_synth
         # Raw flap values must increase to detect extensions.
         extend = np.ma.diff(flap.array.raw) > 0
 
