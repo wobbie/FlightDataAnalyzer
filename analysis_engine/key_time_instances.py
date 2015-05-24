@@ -418,7 +418,7 @@ class EngStart(KeyTimeInstanceNode):
                 if i is not None and v >= limit:
                     self.warning(
                         'Eng (%d) Start: `%s` spin up not detected, '
-                        'sampling at the beginning of the data.' %
+                        'set at the first valid data sample.' %
                         (number, eng_nx.name))
                     self.create_kti(i, replace_values={'number': number})
 
@@ -536,7 +536,7 @@ class EngStop(KeyTimeInstanceNode):
                 if i is not None and v >= limit:
                     self.warning(
                         'Eng (%d) Stop: `%s` spin down not detected, '
-                        'sampling at the end of the data.' % (number,
+                        'set at the last valid data sample.' % (number,
                                                               eng_nx.name))
                     self.create_kti(i - 1, replace_values={'number': number})
 
