@@ -6055,16 +6055,21 @@ class TestSlicesOr(unittest.TestCase):
     def test_slices_or_one_list(self):
         self.assertEqual(slices_or([slice(1,2)]), [slice(1,2)])
 
-    def test_slices_or_raises_with_none(self):
-        self.assertRaises(slices_or([None]))
-    
-    def test_slices_or_None(self):
+    def test_slices_or_with_none(self):
+        result = slices_or([None], [slice(1, 3)])
+        self.assertEqual(result, [slice(1, 3)])
+        result = slices_or([slice(1, 3)], [None])
+        self.assertEqual(result, [slice(1, 3)])
+        result = slices_or([None])
+        self.assertEqual(result, [])
+
+    def test_slices_or_open_range(self):
         slice_list_a = [slice(2, 10)]
         slice_list_b = [slice(None, 4), slice(7, 9)]
         slice_list_c = [slice(6, None)]
         self.assertEqual(slices_or(slice_list_a, slice_list_b, slice_list_c),
                          [slice(None, None)])
-        
+
     def test_slices_or_real_example(self):
         # This comes from a flight where two radio altimeters were starting
         # to operate during the descent. The original code produced an answer

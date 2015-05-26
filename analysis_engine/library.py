@@ -3673,7 +3673,8 @@ def slices_or(*slice_lists):
     recheck = False
     for slice_list in slice_lists:
         for input_slice in slice_list:
-
+            if input_slice is None:
+                continue
             modified = False
             for output_slice in copy(slices):
                 if slices_overlap(input_slice, output_slice):
