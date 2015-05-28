@@ -9062,11 +9062,16 @@ class FuelQtyWingDifferenceMax(KeyPointValueNode):
     Maximum difference between fuel quantity in wing tanks where positive
     difference is additional fuel in Right hand tank.
     '''
-    def derive(self, left_wing=P('Fuel Qty (L)'), right_wing=P('Fuel Qty (R)')):
+    def derive(self, left_wing=P('Fuel Qty (L)'), right_wing=P('Fuel Qty (R)'),
+               airbornes=S('Airborne')):
 
         diff = right_wing.array - left_wing.array
-        value = max_abs_value(diff)
-        self.create_kpv(*value)
+        #value = max_abs_value(diff)
+        self.create_kpv_from_slices(
+            diff,
+            airbornes.get_slices(),
+            max_abs_value
+        )
 
 
 class FuelQtyLowWarningDuration(KeyPointValueNode):
