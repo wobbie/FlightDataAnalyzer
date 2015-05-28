@@ -3665,8 +3665,8 @@ class AltitudeOvershootAtSuspectedLevelBust(KeyPointValueNode):
                 # avoid duplicates
                 continue
 
-            fwd_slice = slice(idx, idx + bust_samples)
-            rev_slice = slice(idx, idx - bust_samples, -1)
+            fwd_slice = slice(idx, idx + bust_samples*0.5)
+            rev_slice = slice(idx, idx - bust_samples*0.5, -1)
 
             for min_bust_val in (val + bust_min, val - bust_min):
                 # check bust value is exceeded before and after
@@ -3698,6 +3698,11 @@ class AltitudeOvershootAtSuspectedLevelBust(KeyPointValueNode):
 
                 if val < 3000 and lvl_off_val < 0:
                     # Undershoots under 3000 ft are excluded due to inconsistent Go Around behaviour.
+                    continue
+
+                if abs(lvl_off_val) > val * 0.9:
+                    # Ignore lvl_off_val more than 90% of val as indicates
+                    # short hop flights
                     continue
 
                 self.create_kpv(idx, lvl_off_val)
