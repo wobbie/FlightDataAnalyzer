@@ -8538,13 +8538,14 @@ class TestFuelQtyAtTouchdown(unittest.TestCase):
 class TestFuelQtyWingDifferenceMax(unittest.TestCase):
     def test_can_operate(self):
         opts = FuelQtyWingDifferenceMax.get_operational_combinations()
-        self.assertEqual(opts, [('Fuel Qty (L)', 'Fuel Qty (R)')])
+        self.assertEqual(opts, [('Fuel Qty (L)', 'Fuel Qty (R)', 'Airborne')])
 
     def test_derive_basic(self):
         qty_l = P('Fuel Qty (L)', array=np.ma.array([100, 90, 80, 70, 60, 50]))
         qty_r = P('Fuel Qty (R)', array=np.ma.array([110, 100, 95, 80, 70, 60]))
+        airs = buildsection('Airborne', 1, 4)
         node = FuelQtyWingDifferenceMax()
-        node.derive(qty_l, qty_r)
+        node.derive(qty_l, qty_r, airs)
         self.assertEqual(len(node), 1)
         self.assertEqual(node[0].index, 2)
         self.assertEqual(node[0].value, 15)
@@ -8552,8 +8553,9 @@ class TestFuelQtyWingDifferenceMax(unittest.TestCase):
     def test_derive_handed(self):
         qty_r = P('Fuel Qty (R)', array=np.ma.array([100, 90, 80, 70, 60, 50]))
         qty_l = P('Fuel Qty (L)', array=np.ma.array([110, 100, 95, 80, 70, 60]))
+        airs = buildsection('Airborne', 1, 4)
         node = FuelQtyWingDifferenceMax()
-        node.derive(qty_l, qty_r)
+        node.derive(qty_l, qty_r, airs)
         self.assertEqual(len(node), 1)
         self.assertEqual(node[0].index, 2)
         self.assertEqual(node[0].value, -15)
