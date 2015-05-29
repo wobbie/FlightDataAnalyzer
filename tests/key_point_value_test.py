@@ -6291,8 +6291,8 @@ class TestEngN1AtTOGADuringTakeoff(unittest.TestCase):
         n1_toga.derive(eng_n1=eng_n1_min,
                       toga=toga,
                       takeoff=toff)
-        self.assertEqual(n1_toga[0].value, 12.5)
-        self.assertEqual(n1_toga[0].index, 2.5)
+        self.assertEqual(n1_toga[0].value, 13)
+        self.assertEqual(n1_toga[0].index, 3)
 
 
 class TestEngN154to72PercentWithThrustReversersDeployedDurationMax(unittest.TestCase):
