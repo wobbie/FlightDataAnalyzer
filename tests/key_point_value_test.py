@@ -3912,7 +3912,7 @@ class TestAltitudeOvershootAtSuspectedLevelBust(unittest.TestCase, NodeTest):
         node.derive(alt_std, alt_aal)
         self.assertEqual(len(node), 1)
         self.assertAlmostEqual(node[0].index, 2478, places=0)
-        self.assertAlmostEqual(node[0].value, -416, places=0)
+        self.assertAlmostEqual(node[0].value, -418, places=0)
 
     def test_derive_level_flights(self):
         node = AltitudeOvershootAtSuspectedLevelBust()
