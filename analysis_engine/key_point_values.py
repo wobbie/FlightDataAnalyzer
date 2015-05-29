@@ -57,6 +57,7 @@ from analysis_engine.library import (ambiguous_runway,
                                      index_of_last_stop,
                                      integrate,
                                      is_index_within_slice,
+                                     is_index_within_slices,
                                      lookup_table,
                                      nearest_neighbour_mask_repair,
                                      mask_inside_slices,
@@ -91,6 +92,7 @@ from analysis_engine.library import (ambiguous_runway,
                                      slices_or,
                                      slices_and,
                                      slices_remove_small_slices,
+                                     slices_remove_small_gaps,
                                      trim_slices,
                                      level_off_index,
                                      valid_slices_within_array,
@@ -3659,14 +3661,16 @@ class AltitudeOvershootAtSuspectedLevelBust(KeyPointValueNode):
         bust_min = 300  # ft
         bust_samples = 3 * 60 * self.frequency  # 3 mins # + 1 min to account for late level flight stabilisation.
 
+        alt_diff = np.ma.abs(np.ma.diff(alt_std.array)) < (2 * alt_std.hz)
+
         for idx, val in zip(*cycle_finder(alt_std.array, min_step=300)):
 
             if self and (idx - self[-1].index) < bust_samples:
                 # avoid duplicates
                 continue
 
-            fwd_slice = slice(idx, idx + bust_samples*0.5)
-            rev_slice = slice(idx, idx - bust_samples*0.5, -1)
+            fwd_slice = slice(idx, idx + bust_samples)
+            rev_slice = slice(idx, idx - bust_samples, -1)
 
             for min_bust_val in (val + bust_min, val - bust_min):
                 # check bust value is exceeded before and after
@@ -3684,9 +3688,9 @@ class AltitudeOvershootAtSuspectedLevelBust(KeyPointValueNode):
                 lvl_off_vals = []
                 for bust_slice in (fwd_slice, rev_slice):
                     # find level off indices
-                    alt_diff = np.ma.abs(np.ma.diff(alt_std.array[bust_slice])) < (2 * alt_std.hz)
+                    #alt_diff = np.ma.abs(np.ma.diff(alt_std.array[bust_slice])) < (2 * alt_std.hz)
                     try:
-                        lvl_off_val = alt_std.array[bust_slice.start + ((bust_slice.step or 1) * np.ma.where(alt_diff)[0][0])]
+                        lvl_off_val = alt_std.array[bust_slice.start + ((bust_slice.step or 1) * np.ma.where(alt_diff[bust_slice])[0][0])]
                     except IndexError:
                         continue
                     lvl_off_vals.append(val - lvl_off_val)
@@ -3698,11 +3702,19 @@ class AltitudeOvershootAtSuspectedLevelBust(KeyPointValueNode):
 
                 if val < 3000 and lvl_off_val < 0:
                     # Undershoots under 3000 ft are excluded due to inconsistent Go Around behaviour.
+                    self.info('Overshoot not detected: Undershoot below 3000ft')
                     continue
 
                 if abs(lvl_off_val) > val * 0.9:
                     # Ignore lvl_off_val more than 90% of val as indicates
                     # short hop flights
+                    self.info('Overshoot not detected: Exceeds 90% of height')
+                    continue
+
+                level_off_slices = slices_remove_small_slices(slices_remove_small_gaps(runs_of_ones(alt_diff)), count=bust_samples)
+                # check hasn't been level for over bust_samples
+                if is_index_within_slices(idx, level_off_slices):
+                    self.info('Overshoot not detected: Index in period of level flight')
                     continue
 
                 self.create_kpv(idx, lvl_off_val)
