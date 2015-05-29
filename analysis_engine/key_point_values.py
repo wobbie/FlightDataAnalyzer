@@ -6633,6 +6633,8 @@ class EngEPRAtTOGADuringTakeoffMax(KeyPointValueNode):
         indexes = find_edges_on_state_change('TOGA', toga.array,
                                              change='entering', phase=takeoff)
         for index in indexes:
+            # Measure at known state instead of interpolated transition
+            index = ceil(index)
             value = value_at_index(eng_epr_max.array, index)
             self.create_kpv(index, value)
 
@@ -6654,6 +6656,8 @@ class EngTPRAtTOGADuringTakeoffMin(KeyPointValueNode):
         indexes = find_edges_on_state_change('TOGA', toga.array,
                                              change='entering', phase=takeoff)
         for index in indexes:
+            # Measure at known state instead of interpolated transition
+            index = ceil(index)
             value = value_at_index(eng_tpr_max.array, index)
             self.create_kpv(index, value)
 
@@ -7411,6 +7415,8 @@ class EngN1AtTOGADuringTakeoff(KeyPointValueNode):
 
         indexes = find_edges_on_state_change('TOGA', toga.array, change='entering', phase=takeoff)
         for index in indexes:
+            # Measure at known state instead of interpolated transition
+            index = ceil(index)
             value = value_at_index(eng_n1.array, index)
             self.create_kpv(index, value)
 
@@ -8589,6 +8595,8 @@ class HeadingDeviationFromRunwayAtTOGADuringTakeoff(KeyPointValueNode):
             return
         indexes = find_edges_on_state_change('TOGA', toga.array, phase=takeoff)
         for index in indexes:
+            # Measure at known state instead of interpolated transition
+            index = ceil(index)
             brg = value_at_index(head.array, index)
             dev = runway_deviation(brg, rwy.value)
             self.create_kpv(index, dev)
@@ -9252,6 +9260,8 @@ class GroundspeedAtTOGA(KeyPointValueNode):
 
         indexes = find_edges_on_state_change('TOGA', toga.array, phase=takeoffs)
         for index in indexes:
+            # Measure at known state instead of interpolated transition
+            index = ceil(index)
             self.create_kpv(index, value_at_index(gnd_spd.array, index))
 
 
