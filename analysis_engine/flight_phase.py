@@ -1119,15 +1119,30 @@ class Mobile(FlightPhaseNode):
     def can_operate(cls, available):
         return 'Heading Rate' in available
 
-    def derive(self, rot=P('Heading Rate')):
-        move = np.ma.flatnotmasked_edges(np.ma.masked_less\
-                                         (np.ma.abs(rot.array),
-                                          HEADING_RATE_FOR_MOBILE))
+    def derive(self,
+               rot=P('Heading Rate'),
+               gspd=P('Groundspeed')):
+        turning = np.ma.masked_less(np.ma.abs(rot.array), HEADING_RATE_FOR_MOBILE)
+        movement = np.ma.flatnotmasked_edges(turning)
+        if movement is not None:
+            movement_start = movement[0]
+            movement_stop = movement[1]
+        else:
+            movement_start = None
+            movement_stop = None
 
-        if move is None:
-            return # for the case where nothing happened
+        if gspd is not None:
+            moving = np.ma.masked_less(gspd.array, GROUNDSPEED_FOR_MOBILE)
+            mobile = np.ma.flatnotmasked_edges(moving)
+            if mobile is not None and movement is not None:
+                movement_start = min(movement_start, mobile[0])
+                movement_stop = max(movement_stop, mobile[1])
+            elif movement is None:
+                movement_start = mobile[0]
+                movement_stop = mobile[1]
 
-        self.create_phase(slice(move[0], move[1]))
+        if movement_start is not None and movement_stop is not None:
+            self.create_phase(slice(movement_start, movement_stop))
 
 
 class Landing(FlightPhaseNode):
