@@ -9,7 +9,26 @@ You can view the differences in tagged versions as follows:
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
 
+v0.21.3
+-------
 
+ - Boeing 747:
+   - Added additional Vib parameters
+   - Added Slat discrete multistates parameters
+   - Derive Slat Angle from Slat Discretes
+ - Airbus A380:
+   - Added 5th left and right fuel tanks
+ - New:
+   - Derived Parameter: Slope Angle To Landing
+ - Improvements
+   - Remove runway elevations from Altitude QNH.
+   - TAT: Fixed broken can_operate
+   - StableApproach: use airspeed relative as low limit
+   - Airspeed At Flap Extension amended to use synthetic flap extension
+   - FuelQtyWingDifferenceMax: restricted to airborne phases
+   - Level Bust: check if index is within period of level flight
+   - Level Bust: reinstated test to prevent short hop flights being detected as Level bust
+   - TOGA KPV's: Measure at known state instead of interpolated transition
 
 v0.21.2
 -------
