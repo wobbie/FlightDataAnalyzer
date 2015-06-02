@@ -161,6 +161,7 @@ from analysis_engine.derived_parameters import (
     SidestickAngleCapt,
     SidestickAngleFO,
     SlatAngle,
+    SlopeAngleToLanding,
     Speedbrake,
     Stabilizer,
     TAT,
@@ -4668,15 +4669,19 @@ class TestSlopeToLanding(unittest.TestCase):
         self.assertTrue(False, msg='Test not implemented.')
 
 
-class TestAngleSlopeToLanding(unittest.TestCase):
-    @unittest.skip('Test Not Implemented')
+class TestSlopeAngleToLanding(unittest.TestCase):
     def test_can_operate(self):
-        self.assertTrue(False, msg='Test not implemented.')
-        
-    @unittest.skip('Test Not Implemented')
+        self.assertEqual(
+            SlopeAngleToLanding.get_operational_combinations(),
+            [('Slope To Landing',)],
+        )
+    
     def test_derive(self):
-        self.assertTrue(False, msg='Test not implemented.')
-        
+        slope = P('Slope To Landing', np.ma.array([0.5, 1, 2, 4, 8, 16]))
+        node = SlopeAngleToLanding()
+        node.derive(slope)
+        ma_test.assert_array_almost_equal(node.array, [26.6, 45.0, 63.43, 76.0, 82.9, 86.4], decimal=1)
+
 
 class TestSpeedbrake(unittest.TestCase):
     def test_can_operate(self):
