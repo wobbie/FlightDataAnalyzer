@@ -5636,10 +5636,22 @@ class SAT(DerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available):
-        return all_of(('TAT', 'Mach'), available)
+        return any_of (('SAT (1)', 'SAT (2)', 'SAT (3)'), available) or all_of(('TAT', 'Mach'), available)
 
-    def derive(self, tat=P('TAT'), mach=P('Mach')):
-        self.array = machtat2sat(mach.array, tat.array)
+    def derive(self,
+               sat1=P('SAT (1)'),
+               sat2=P('SAT (2)'),
+               sat3=P('SAT (3)'),
+               tat=P('TAT'),
+               mach=P('Mach')):
+        sat_params = [p for p in (sat1, sat2, sat3) if p is not None]
+        if sat_params:
+            sats = vstack_params(*sat_params)
+            self.array = np.ma.average(sats, axis=0)
+            # Use average offset of the sat parameters
+            self.offset = sum(p.offset for p in sat_params) / len(sat_params)
+        else:
+            self.array = machtat2sat(mach.array, tat.array)
 
 
 class SAT_ISA(DerivedParameterNode):

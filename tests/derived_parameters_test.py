@@ -4718,12 +4718,6 @@ class TestSpeedbrake(unittest.TestCase):
 
 
 class TestSAT(unittest.TestCase):
-
-    def test_can_operate(self):
-        self.assertEqual(
-            SAT.get_operational_combinations(),
-            [('TAT', 'Mach')])
-
     @unittest.skip('Test Not Implemented')
     def test_basic(self):
         pass
