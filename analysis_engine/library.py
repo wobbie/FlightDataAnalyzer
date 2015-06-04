@@ -6908,7 +6908,7 @@ def straighten_overflows(array, min_val, max_val, threshold=4):
 
 
 def straighten_longitude(array):
-    return straighten_overflows(array, -180, 180, threshold=8)
+    return straighten_overflows(array, -180, 180, threshold=32)
 
 
 def subslice(orig, new):

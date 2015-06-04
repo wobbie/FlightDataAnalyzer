@@ -6429,6 +6429,10 @@ class TestStraightenLongitude(unittest.TestCase):
         '''
         data = load_compressed(os.path.join(test_data_path, 'straighten_longitude_2.npz'))
         np.testing.assert_array_almost_equal(straighten_longitude(data), data)
+    
+    def test_straighten_longitude_4(self):
+        data = load_compressed(os.path.join(test_data_path, 'straighten_longitude_4.npz'))
+        np.testing.assert_array_almost_equal(straighten_longitude(data), data)
 
 
 class TestStraightenHeadings(unittest.TestCase):
