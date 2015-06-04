@@ -3498,7 +3498,7 @@ class GrossWeight(DerivedParameterNode):
         takeoff_weight = afr_takeoff_wgt.value if afr_takeoff_wgt else None
         land_fuel = afr_land_fuel.value if afr_land_fuel else None
         takeoff_fuel = afr_takeoff_fuel.value if afr_takeoff_fuel else None
-        duration = hdf_duration.value if hdf_duration else None
+        duration = hdf_duration.value * self.frequency if hdf_duration else None
 
         if land_weight and duration:
             self.array = np.ma.zeros(duration)

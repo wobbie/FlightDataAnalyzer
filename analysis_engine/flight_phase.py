@@ -1044,7 +1044,7 @@ class Grounded(FlightPhaseNode):
 
     def derive(self, air=S('Airborne'), speed=P('Airspeed For Flight Phases'),
                hdf_duration=A('HDF Duration')):
-        data_end = hdf_duration.value if hdf_duration else None
+        data_end = hdf_duration.value * self.frequency if hdf_duration else None
         if air:
             gnd_phases = slices_not(air.get_slices(), begin_at=0, end_at=data_end)
             if not gnd_phases:

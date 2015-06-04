@@ -1789,10 +1789,11 @@ class AirspeedMinusV2For3Sec35To1000FtMax(KeyPointValueNode):
                alt_aal=P('Altitude AAL For Flight Phases'),
                duration=A('HDF Duration')):
 
+        hdf_duration = duration.value * self.frequency if duration else None
         self.create_kpvs_within_slices(
             spd_v2.array,
             trim_slices(alt_aal.slices_from_to(35, 1000), 3, self.frequency,
-                        duration.value),
+                        hdf_duration),
             max_value,
         )
 
@@ -1812,10 +1813,11 @@ class AirspeedMinusV2For3Sec35To1000FtMin(KeyPointValueNode):
                alt_aal=P('Altitude AAL For Flight Phases'),
                duration=A('HDF Duration')):
 
+        hdf_duration = duration.value * self.frequency if duration else None
         self.create_kpvs_within_slices(
             spd_v2.array,
             trim_slices(alt_aal.slices_from_to(35, 1000), 3, self.frequency,
-                        duration.value),
+                        hdf_duration),
             min_value,
         )
 
@@ -2044,10 +2046,11 @@ class AirspeedRelativeFor3Sec1000To500FtMax(KeyPointValueNode):
                alt_aal=P('Altitude AAL For Flight Phases'),
                duration=A('HDF Duration')):
 
+        hdf_duration = duration.value * self.frequency if duration else None
         self.create_kpvs_within_slices(
             spd_rel.array,
             trim_slices(alt_aal.slices_from_to(1000, 500), 3, self.frequency,
-                        duration.value),
+                        hdf_duration),
             max_value,
         )
 
@@ -2063,10 +2066,11 @@ class AirspeedRelativeFor3Sec1000To500FtMin(KeyPointValueNode):
                alt_aal=P('Altitude AAL For Flight Phases'),
                duration=A('HDF Duration')):
 
+        hdf_duration = duration.value * self.frequency if duration else None
         self.create_kpvs_within_slices(
             spd_rel.array,
             trim_slices(alt_aal.slices_from_to(1000, 500), 3, self.frequency,
-                        duration.value),
+                        hdf_duration),
             min_value,
         )
 
@@ -2082,10 +2086,11 @@ class AirspeedRelativeFor3Sec500To20FtMax(KeyPointValueNode):
                alt_aal=P('Altitude AAL For Flight Phases'),
                duration=A('HDF Duration')):
 
+        hdf_duration = duration.value * self.frequency if duration else None
         self.create_kpvs_within_slices(
             spd_rel.array,
             trim_slices(alt_aal.slices_from_to(500, 20), 3, self.frequency,
-                        duration.value),
+                        hdf_duration),
             max_value,
         )
 
@@ -2101,10 +2106,11 @@ class AirspeedRelativeFor3Sec500To20FtMin(KeyPointValueNode):
                alt_aal=P('Altitude AAL For Flight Phases'),
                duration=A('HDF Duration')):
 
+        hdf_duration = duration.value * self.frequency if duration else None
         self.create_kpvs_within_slices(
             spd_rel.array,
             trim_slices(alt_aal.slices_from_to(500, 20), 3, self.frequency,
-                        duration.value),
+                        hdf_duration),
             min_value,
         )
 
@@ -2121,10 +2127,11 @@ class AirspeedRelativeFor3Sec20FtToTouchdownMax(KeyPointValueNode):
                touchdowns=KTI('Touchdown'),
                duration=A('HDF Duration')):
 
+        hdf_duration = duration.value * self.frequency if duration else None
         self.create_kpvs_within_slices(
             spd_rel.array,
             trim_slices(alt_aal.slices_to_kti(20, touchdowns), 3,
-                        self.frequency, duration.value),
+                        self.frequency, hdf_duration),
             max_value,
         )
 
@@ -2141,10 +2148,11 @@ class AirspeedRelativeFor3Sec20FtToTouchdownMin(KeyPointValueNode):
                touchdowns=KTI('Touchdown'),
                duration=A('HDF Duration')):
 
+        hdf_duration = duration.value * self.frequency if duration else None
         self.create_kpvs_within_slices(
             spd_rel.array,
             trim_slices(alt_aal.slices_to_kti(20, touchdowns), 3,
-                        self.frequency, duration.value),
+                        self.frequency, hdf_duration),
             min_value,
         )
 
@@ -6590,10 +6598,11 @@ class EngEPRFor5Sec500To50FtMin(KeyPointValueNode):
                alt_aal=P('Altitude AAL For Flight Phases'),
                duration=A('HDF Duration')):
 
+        hdf_duration = duration.value * self.frequency if duration else None
         self.create_kpvs_within_slices(
             eng_epr_min.array,
             trim_slices(alt_aal.slices_from_to(500, 50), 5, self.frequency,
-                        duration.value),
+                        hdf_duration),
             min_value,
         )
 
@@ -6610,10 +6619,11 @@ class EngEPRFor5Sec1000To500FtMin(KeyPointValueNode):
                alt_aal=P('Altitude AAL For Flight Phases'),
                duration=A('HDF Duration')):
 
+        hdf_duration = duration.value * self.frequency if duration else None
         self.create_kpvs_within_slices(
             eng_epr_min.array,
             trim_slices(alt_aal.slices_from_to(1000, 500), 5, self.frequency,
-                        duration.value),
+                        hdf_duration),
             min_value,
         )
 
@@ -7272,10 +7282,11 @@ class EngN1For5Sec500To50FtMin(KeyPointValueNode):
                alt_aal=P('Altitude AAL For Flight Phases'),
                duration=A('HDF Duration')):
 
+        hdf_duration = duration.value * self.frequency if duration else None
         self.create_kpvs_within_slices(
             eng_n1_min.array,
             trim_slices(alt_aal.slices_from_to(500, 50), 5, self.frequency,
-                        duration.value),
+                        hdf_duration),
             min_value,
         )
 
@@ -7292,10 +7303,11 @@ class EngN1For5Sec1000To500FtMin(KeyPointValueNode):
                alt_aal=P('Altitude AAL For Flight Phases'),
                duration=A('HDF Duration')):
 
+        hdf_duration = duration.value * self.frequency if duration else None
         self.create_kpvs_within_slices(
             eng_n1_min.array,
             trim_slices(alt_aal.slices_from_to(1000, 500), 5, self.frequency,
-                        duration.value),
+                        hdf_duration),
             min_value,
         )
 
