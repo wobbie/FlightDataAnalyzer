@@ -2969,7 +2969,7 @@ class TestThrustReversers(unittest.TestCase):
                                 self.eng_2_deployed,
                                 None,
                                 None,
-                                self.eng_2_unlocked] + [None] * 19)
+                                self.eng_2_unlocked] + [None] * 21)
         np.testing.assert_equal(self.thrust_reversers.array.data, result)
 
     def test_derive_masked_value(self):
@@ -2991,7 +2991,7 @@ class TestThrustReversers(unittest.TestCase):
                                 self.eng_2_deployed,
                                 None,
                                 None,
-                                self.eng_2_unlocked] + [None] * 19)
+                                self.eng_2_unlocked] + [None] * 21)
         np.testing.assert_equal(self.thrust_reversers.array.data, result_array)
         np.testing.assert_equal(self.thrust_reversers.array.mask, result_mask)
 
@@ -3009,7 +3009,7 @@ class TestThrustReversers(unittest.TestCase):
                                 self.eng_2_deployed,
                                 None,
                                 None,
-                                self.eng_2_unlocked] + [None] * 19)
+                                self.eng_2_unlocked] + [None] * 21)
         np.testing.assert_equal(self.thrust_reversers.array.data, result)
 
     def test_derive_unlock_at_edges(self):
@@ -3039,7 +3039,7 @@ class TestThrustReversers(unittest.TestCase):
                                 eng_2_deployed,
                                 None,
                                 None,
-                                eng_2_unlocked] + [None] * 19)
+                                eng_2_unlocked] + [None] * 21)
         np.testing.assert_equal(self.thrust_reversers.array.data, result)
 
 

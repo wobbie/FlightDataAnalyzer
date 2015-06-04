@@ -2751,28 +2751,25 @@ class ThrustReversers(MultistateDerivedParameterNode):
 
     @classmethod
     def can_operate(cls, available):
-        return all_of((
+        return any_of((
             'Eng (1) Thrust Reverser (L) Deployed',
-            #'Eng (1) Thrust Reverser (L) Unlocked',   # bonus if available!
             'Eng (1) Thrust Reverser (R) Deployed',
-            #'Eng (1) Thrust Reverser (R) Unlocked',   # bonus if available!
             'Eng (2) Thrust Reverser (L) Deployed',
-            #'Eng (2) Thrust Reverser (L) Unlocked',   # bonus if available!
             'Eng (2) Thrust Reverser (R) Deployed',
-            #'Eng (2) Thrust Reverser (R) Unlocked',   # bonus if available!
-        ), available) or all_of((
-            #'Eng (1) Thrust Reverser Unlocked',   # bonus if available!
+            'Eng (3) Thrust Reverser (L) Deployed',
+            'Eng (3) Thrust Reverser (R) Deployed',
+            'Eng (4) Thrust Reverser (L) Deployed',
+            'Eng (4) Thrust Reverser (R) Deployed',
+        ), available) or any_of((
             'Eng (1) Thrust Reverser Deployed',
-            #'Eng (2) Thrust Reverser Unlocked',  # bonus if available!
             'Eng (2) Thrust Reverser Deployed',
-        ), available) or all_of((
-            'Eng (1) Thrust Reverser In Transit',
-            'Eng (1) Thrust Reverser Deployed',
-            'Eng (2) Thrust Reverser In Transit',
-            'Eng (2) Thrust Reverser Deployed',
-        ), available) or all_of((
+            'Eng (3) Thrust Reverser Deployed',
+            'Eng (4) Thrust Reverser Deployed',
+        ), available) or any_of((
             'Eng (1) Thrust Reverser',
             'Eng (2) Thrust Reverser',
+            'Eng (3) Thrust Reverser',
+            'Eng (4) Thrust Reverser',
         ), available)
 
     def derive(self,
@@ -2805,12 +2802,14 @@ class ThrustReversers(MultistateDerivedParameterNode):
                e4_ulk_rgt=M('Eng (4) Thrust Reverser (R) Unlocked'),
                e4_tst_all=M('Eng (4) Thrust Reverser In Transit'),
                e1_status=M('Eng (1) Thrust Reverser'),
-               e2_status=M('Eng (2) Thrust Reverser'),):
+               e2_status=M('Eng (2) Thrust Reverser'),
+               e3_status=M('Eng (3) Thrust Reverser'),
+               e4_status=M('Eng (4) Thrust Reverser')):
 
         deployed_params = (e1_dep_all, e1_dep_lft, e1_dep_rgt, e2_dep_all,
                            e2_dep_lft, e2_dep_rgt, e3_dep_all, e3_dep_lft,
                            e3_dep_rgt, e4_dep_all, e4_dep_lft, e4_dep_rgt,
-                           e1_status, e2_status)
+                           e1_status, e2_status, e3_status, e4_status)
 
         deployed_stack = vstack_params_where_state(*[(d, 'Deployed') for d in deployed_params])
 
@@ -2835,6 +2834,7 @@ class ThrustReversers(MultistateDerivedParameterNode):
                 (e1_tst_all, 'In Transit'), (e2_tst_all, 'In Transit'),
                 (e3_tst_all, 'In Transit'), (e4_tst_all, 'In Transit'),
                 (e1_status, 'In Transit'), (e2_status, 'In Transit'),
+                (e3_status, 'In Transit'), (e4_status, 'In Transit'),
             )
             array = np.ma.where(transit_stack.any(axis=0), 1, array)
             stacks.append(transit_stack)
