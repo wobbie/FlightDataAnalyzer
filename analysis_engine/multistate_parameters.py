@@ -2190,8 +2190,11 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
             return any_of(('Speedbrake', 'Speedbrake Handle'), available)
         elif family and family.value in ('CRJ 100/200', 'B777'):
             return 'Speedbrake Handle' in x
-        elif family and family.value in ('A318', 'A319', 'A320', 'A321', 'A330'):
+        elif family and family.value in ('A318', 'A319', 'A320', 'A321'):
             return 'Speedbrake' in x and 'Speedbrake Armed' in x
+        elif family and family.value == 'A330':
+            return ('Speedbrake Deployed' in x or
+                    all_of(('Speedbrake', 'Speedbrake Handle'), x))
         else:
             return ('Speedbrake Deployed' in x or
                     ('Family' in x and 'Speedbrake Switch' in x) or
@@ -2385,10 +2388,10 @@ class SpeedbrakeSelected(MultistateDerivedParameterNode):
             self.array = self.a320_speedbrake(armed, spdbrk)
 
         elif family_name == 'A330':
-            self.array = np.ma.where((spdbrk.array > 5.0),
-                         'Deployed/Cmd Up', 'Stowed')
             self.array = np.ma.where((handle.array < -1.0),
-                         'Armed/Cmd Dn', self.array)
+                         'Armed/Cmd Dn', 'Stowed')
+            self.array = np.ma.where((spdbrk.array > 5.0),
+                                     'Deployed/Cmd Up', self.array)
 
         elif family_name == 'Learjet':
             self.array = self.learjet_speedbrake(spdsw)
