@@ -531,8 +531,8 @@ class TestILSLocalizerEstablished(unittest.TestCase):
         opts = ILSLocalizerEstablished.get_operational_combinations()
         self.assertIn(('ILS Localizer', 'Altitude AAL For Flight Phases', 'Approach And Landing'), opts)
         self.assertIn(('ILS Localizer', 'Altitude AAL For Flight Phases', 'Approach And Landing', 'ILS Frequency'), opts)
-        self.assertIn(('ILS Localizer', 'Altitude AAL For Flight Phases', 'Approach And Landing', 'ILS Frequency', 'Heading'), opts)
-        self.assertIn(('ILS Localizer', 'Altitude AAL For Flight Phases', 'Approach And Landing', 'ILS Frequency', 'Heading', 'Heading During Landing'), opts)
+        self.assertIn(('ILS Localizer', 'Altitude AAL For Flight Phases', 'Approach And Landing', 'ILS Frequency', 'Heading Continuous'), opts)
+        self.assertIn(('ILS Localizer', 'Altitude AAL For Flight Phases', 'Approach And Landing', 'ILS Frequency', 'Heading Continuous', 'Heading During Landing'), opts)
 
     def test_ils_localizer_established_basic(self):
         ils_array = np.ma.concatenate((np.ma.arange(-2.5, 0, 0.05), [-0.15]*50))

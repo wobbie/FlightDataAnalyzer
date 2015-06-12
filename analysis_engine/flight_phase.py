@@ -10,6 +10,7 @@ from analysis_engine.library import (
     find_low_alts,
     first_order_washout,
     first_valid_sample,
+    heading_diff,
     index_at_value,
     is_index_within_slices,
     is_index_within_slice,
@@ -709,7 +710,7 @@ def scan_ils(beam, ils_dots, height, scan_slice, frequency,
                 break
 
         if hdg_landing:
-            diff = np.ma.abs(hdg[scan_slice] - hdg_landing)
+            diff = np.ma.abs(heading_diff(hdg[scan_slice] % 360, hdg_landing))
             facing = shift_slices(
                 np.ma.clump_unmasked(np.ma.masked_greater(diff, 90.0)),
                 scan_slice.start)
@@ -827,7 +828,7 @@ class ILSLocalizerEstablished(FlightPhaseNode):
                alt_aal=P('Altitude AAL For Flight Phases'),
                apps=S('Approach And Landing'),
                ils_freq=P('ILS Frequency'),
-               hdg=P('Heading'),
+               hdg=P('Heading Continuous'),
                hdg_ldg=KPV('Heading During Landing')):
 
         def create_ils_phases(slices):
