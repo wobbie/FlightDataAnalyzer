@@ -192,7 +192,7 @@ GRAVITY_METRIC = 9.81  # m/sec^2 - used for comibining acceleration and groundsp
 GROUNDSPEED_LAG_TC = 6.0  # seconds
 
 # Threshold for start and end of Mobile phase when groundspeed is available.
-GROUNDSPEED_FOR_MOBILE = 5.0  # kts
+GROUNDSPEED_FOR_MOBILE = 2.0  # kts
 
 # The minimum amount of heading change in degrees that would satisfy movement
 # on the ground representative of taxiing. Any flight / taxi will normally
