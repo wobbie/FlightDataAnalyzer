@@ -663,9 +663,9 @@ class EngRunning(object):
             # Ideally have N2 and Fuel Flow with both available,
             # otherwise use just one source
             n2_running = eng_n2.array > MIN_CORE_RUNNING if eng_n2 \
-                else np.ones_like(fuel_flow.array, dtype=bool)
+                else np.zeros_like(fuel_flow.array, dtype=bool)
             fuel_flowing = fuel_flow.array > MIN_FUEL_FLOW_RUNNING if fuel_flow \
-                else np.ones_like(eng_n2.array, dtype=bool)
+                else np.zeros_like(eng_n2.array, dtype=bool)
             data = n2_running.data | fuel_flowing.data
             mask = n2_running.mask & fuel_flowing.mask
             return np.ma.where(np.ma.array(data, mask=mask), 'Running', 'Not Running')
