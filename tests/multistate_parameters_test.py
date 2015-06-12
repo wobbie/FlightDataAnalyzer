@@ -2759,7 +2759,7 @@ class TestStableApproach(unittest.TestCase):
 
         self.assertEqual(list(stable.array.data),
         #index: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20
-               [0, 1, 1, 4, 9, 2, 8, 6, 5, 8, 8, 3, 3, 8, 9, 9, 9, 9, 9, 9, 0])
+               [0, 1, 1, 4, 9, 2, 8, 6, 5, 8, 8, 3, 3, 9, 9, 9, 9, 9, 9, 9, 0])
         self.assertEqual(list(stable.array.mask),
                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
 
@@ -2772,7 +2772,7 @@ class TestStableApproach(unittest.TestCase):
         stable.derive(apps, phases, gear, flap, track, aspd, None, vert_spd, glide2, loc, eng, None, alt, None)
         self.assertEqual(list(stable.array.data),
         #index: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20
-               [0, 1, 1, 4, 9, 2, 8, 8, 8, 8, 8, 3, 3, 8, 9, 9, 9, 9, 9, 9, 0])
+               [0, 1, 1, 4, 9, 2, 8, 8, 8, 8, 8, 3, 3, 9, 9, 9, 9, 9, 9, 9, 0])
         
         #========== VERTICAL SPEED ==========
         # Test with a lot of vertical speed (rather than just gusts above)
