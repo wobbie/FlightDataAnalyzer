@@ -830,7 +830,7 @@ def split_hdf_to_segments(hdf_path, aircraft_info, fallback_dt=None,
     :returns: List of Segments
     :rtype: List of Segment recordtypes ('slice type part duration path hash')
     """
-    logger.info("Processing file: %s", hdf_path)
+    logger.debug("Processing file: %s", hdf_path)
 
     if dest_dir is None:
         dest_dir = os.path.dirname(hdf_path)
@@ -843,12 +843,12 @@ def split_hdf_to_segments(hdf_path, aircraft_info, fallback_dt=None,
         superframe_present = hdf.superframe_present
 
         # Confirm aircraft tail for the entire datafile
-        logger.info("Validating aircraft matches that recorded in data")
+        logger.debug("Validating aircraft matches that recorded in data")
         validate_aircraft(aircraft_info, hdf)
 
         # now we know the Aircraft is correct, go and do the PRE FILE ANALYSIS
         if hooks.PRE_FILE_ANALYSIS:
-            logger.info("Performing PRE_FILE_ANALYSIS analysis: %s",
+            logger.debug("Performing PRE_FILE_ANALYSIS analysis: %s",
                         hooks.PRE_FILE_ANALYSIS.func_name)
             hooks.PRE_FILE_ANALYSIS(hdf, aircraft_info)
         else:
