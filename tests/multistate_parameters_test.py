@@ -979,7 +979,7 @@ class TestEng_AllRunning(unittest.TestCase, NodeTest):
         n2 = P('Eng (*) N2 Min', array=n2_array)
         ff_array = np.ma.array([10, 20, 50, 55, 51, 51, 10])
         ff = P('Eng (*) Fuel Flow Min', array=ff_array)
-        expected = [False, False, False, True, True, False, False]
+        expected = [False, False, True, True, True, True, False]
         node = self.node_class()
         node.derive(None, n2, None, ff)
         self.assertEqual(node.array.raw.tolist(), expected)
@@ -1035,7 +1035,7 @@ class TestEng_AnyRunning(unittest.TestCase, NodeTest):
         n2 = P('Eng (*) N2 Max', array=n2_array)
         ff_array = np.ma.array([10, 20, 50, 55, 51, 51, 10])
         ff = P('Eng (*) Fuel Flow Max', array=ff_array)
-        expected = [False, False, False, True, True, False, False]
+        expected = [False, False, True, True, True, True, False]
         node = self.node_class()
         node.derive(None, n2, None, ff)
         self.assertEqual(node.array.raw.tolist(), expected)
