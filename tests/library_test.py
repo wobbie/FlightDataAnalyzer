@@ -2962,6 +2962,25 @@ class TestHeadingDiff(unittest.TestCase):
         self.assertEqual(heading_diff(320, 340), 20)
         self.assertEqual(heading_diff(340, 320), -20)
 
+    def test_heading_diff_array(self):
+        headings = np.ma.concatenate((np.arange(345,360),np.arange(0,25)))
+        np.testing.assert_array_equal(heading_diff(headings, 250), np.ma.arange(-95, -135, -1))
+        np.testing.assert_array_equal(heading_diff(headings, 50), np.ma.arange(65, 25, -1))
+        np.testing.assert_array_equal(heading_diff(headings, 180),
+                                      np.ma.concatenate((np.arange(-165, -180, -1), np.arange(180, 155, -1))))
+
+        np.testing.assert_array_equal(heading_diff(250, headings), np.ma.arange(95, 135))
+        np.testing.assert_array_equal(heading_diff(50, headings), np.ma.arange(-65, -25))
+        np.testing.assert_array_equal(heading_diff(180, headings),
+                                      np.ma.concatenate((np.arange(165, 180), np.arange(-180, -155))))
+
+        np.testing.assert_array_equal(heading_diff(np.ma.arange(95, 135), np.ma.arange(95, 135)), np.ma.array([0]*40))
+        # values taken from test_heading_diff test cases above
+        array1 = np.ma.array([0,10,0,0,47.81925103290594,1.6407827938370874,10,350,320,340])
+        array2 = np.ma.array([0,0,10,180,53.00950000000029,359.8320000000002,350,10,340,320])
+        expected = np.ma.array([0,-10,10,180,5.1902489670943481,-1.8087827938368832,-20,20,20,-20])
+        np.testing.assert_array_equal(heading_diff(array1, array2), expected)
+
 
 class TestHysteresis(unittest.TestCase):
     def test_hysteresis(self):

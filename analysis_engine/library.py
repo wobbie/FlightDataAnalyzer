@@ -2341,19 +2341,30 @@ def heading_diff(heading1, heading2):
     '''
     Difference between heading1 and heading2. If heading1 is greater than
     heading2, the returned difference will be negative.
-    
-    :type heading1: int or float
-    :type heading2: int or float
+
+    :type heading1: int or float or MaskedArray
+    :type heading2: int or float or MaskedArray
+    :rtype: value of int or float else masked array
     '''
-    assert (0 <= heading1 < 360) and (0 <= heading2 < 360)
+    # validate heading values are between 0 and 360
+    array_input = False
+    for heading in (heading1, heading2):
+        if isinstance(heading,  np.ma.MaskedArray):
+            array_input = True
+            assert (0 <= heading).all() & (heading < 360).all()
+        else:
+            assert (0 <= heading < 360)
+
     diff = heading2 - heading1
     abs_diff = abs(diff)
-    if abs_diff <= 180:
-        return diff
-    elif heading2 > heading1:
-        return abs_diff - 360
+    array = 360 - abs_diff
+    array = np.ma.where(abs_diff <= 180, diff, array)
+    array = np.ma.where(np.ma.logical_and(abs_diff > 180, heading2 > heading1),
+                        abs_diff - 360, array)
+    if array_input:
+        return array
     else:
-        return 360 - abs_diff
+        return array.flatten()[0]
 
 
 def runway_distances(runway):
