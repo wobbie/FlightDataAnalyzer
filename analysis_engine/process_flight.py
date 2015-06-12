@@ -179,7 +179,7 @@ def derive_parameters(hdf, node_mgr, process_order, params=None, force=False):
         node._p = params
         node._h = hdf
         node._n = node_mgr
-        logger.info("Processing %s `%s`", get_node_type(node, node_subclasses), param_name)
+        logger.debug("Processing %s `%s`", get_node_type(node, node_subclasses), param_name)
         # Derive the resulting value
         
         try:
@@ -542,7 +542,7 @@ def process_flight(segment_info, tail_number, aircraft_info={}, achieved_flight_
     if 'Start Datetime' not in segment_info:
         import pytz
         segment_info['Start Datetime'] = datetime.utcnow().replace(tzinfo=pytz.utc)
-    logger.info("Processing: %s", hdf_path)
+    logger.debug("Processing: %s", hdf_path)
 
     if aircraft_info:
         # Aircraft info has already been provided.
@@ -563,7 +563,7 @@ def process_flight(segment_info, tail_number, aircraft_info={}, achieved_flight_
             list(set(requested).intersection(set(derived_nodes)))
     else:
         # if requested isn't set, try using ALL derived_nodes!
-        logger.info("No requested nodes declared, using all derived nodes")
+        logger.debug("No requested nodes declared, using all derived nodes")
         requested = derived_nodes.keys()
 
     # include all flight attributes as requested
