@@ -1577,13 +1577,21 @@ class TestMobile(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = Mobile
-        self.operational_combinations = [('Heading Rate',),]
+        self.operational_combinations = [('Heading Rate',), ('Heading Rate', 'Groundspeed')]
 
     def test_rot_only(self):
-        rot = np.ma.array([0,0,5,5,5,0,0])
+        rot = np.ma.array([0, 0, 5, 5, 5, 0, 0])
         move = Mobile()
-        move.derive(P('Heading Rate',rot))
+        move.derive(P('Heading Rate', rot), None)
         expected = buildsection('Mobile', 2, 4)
+        self.assertEqual(move.get_slices(), expected.get_slices())
+
+    def test_gspd(self):
+        rot = np.ma.array([0, 0, 5, 5, 5, 0, 0])
+        gspd = np.ma.array([1, 2, 3, 5, 5, 2, 1])
+        move = Mobile()
+        move.derive(P('Heading Rate', rot), P('Grundspeed', gspd))
+        expected = buildsection('Mobile', 1, 5)
         self.assertEqual(move.get_slices(), expected.get_slices())
 
 
