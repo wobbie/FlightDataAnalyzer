@@ -24,6 +24,7 @@ from analysis_engine.node import (ApproachNode, Attribute,
                                   KeyTimeInstanceNode,
                                   NodeManager, P, Section, SectionNode,
                                   NODE_SUBCLASSES)
+from analysis_engine.settings import NODE_CACHE
 from analysis_engine.utils import get_aircraft_info, get_derived_nodes
 
 
@@ -117,6 +118,7 @@ def derive_parameters(hdf, node_mgr, process_order, params=None, force=False):
     # 'Node Name' : node()  pass in node.get_accessor()
     sections = {}
     flight_attrs = {}
+    cache = {} if NODE_CACHE else None
     duration = hdf.duration
 
     for param_name in process_order:
@@ -160,7 +162,7 @@ def derive_parameters(hdf, node_mgr, process_order, params=None, force=False):
                 # available on DerivedParameterNode
                 try:
                     dp = derived_param_from_hdf(hdf.get_param(
-                        dep_name, valid_only=True))
+                        dep_name, valid_only=True), cache=cache)
                 except KeyError:
                     # Parameter is invalid.
                     dp = None
@@ -174,7 +176,7 @@ def derive_parameters(hdf, node_mgr, process_order, params=None, force=False):
                 "Node: %s" % node_class.__name__)
 
         # initialise node
-        node = node_class()
+        node = node_class(cache=cache)
         # shhh, secret accessors for developing nodes in debug mode
         node._p = params
         node._h = hdf

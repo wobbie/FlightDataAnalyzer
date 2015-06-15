@@ -34,7 +34,7 @@ from analysis_engine.library import (
     value_at_time,
 )
 from analysis_engine.recordtype import recordtype
-from analysis_engine.settings import NODE_CACHE, NODE_CACHE_OFFSET_DP
+from analysis_engine.settings import NODE_CACHE_OFFSET_DP
 
 # FIXME: a better place for this class
 from hdfaccess.parameter import MappedArray
@@ -191,7 +191,6 @@ class Node(object):
     align_frequency = None  # Force frequency of Node by overriding
     align_offset = None  # Force offset of Node by overriding
     data_type = None  # Q: What should the default be? Q: Should this dictate the numpy dtype saved to the HDF file or should it be inferred from the array?
-    cache = {}
 
     def __init__(self, name='', frequency=1, offset=0, **kwargs):
         """
@@ -215,6 +214,7 @@ class Node(object):
         # cast frequency as a float to avoid integer division
         self.frequency = float(frequency) # Hz
         self.offset = offset # secs
+        self._cache = kwargs.get('cache')
 
     def __repr__(self):
         '''
@@ -331,8 +331,7 @@ def can_operate(cls, available):
         offset = round(offset, dp) if dp else offset
         return name, frequency, offset
     
-    @classmethod
-    def get_cache(cls, key):
+    def get_cache(self, key):
         '''
         Get a Node from the cache matching key.
         
@@ -341,10 +340,9 @@ def can_operate(cls, available):
         :returns: Cached Node if it exists, else None.
         :rtype: Node or None
         '''
-        return cls.cache.get(key)
+        return self._cache.get(key) if self._cache else None
     
-    @classmethod
-    def set_cache(cls, key, node):
+    def set_cache(self, key, node):
         '''
         Set the Node as a key in the cache.
         
@@ -354,7 +352,8 @@ def can_operate(cls, available):
         :type node: Node
         :rtype: None
         '''
-        cls.cache[key] = node
+        if self._cache is not None:
+            self._cache[key] = node
     
     def get_aligned(self, align_to_param):
         """
@@ -379,6 +378,7 @@ def can_operate(cls, available):
             '%s: incorrect number of arguments for derive() method' % self.__class__.__name__
         dependencies_to_align = \
             [d for d in args if d is not None and d.frequency]
+        
         if dependencies_to_align and self.align:
 
             if self.align_frequency and self.align_offset is not None:
@@ -399,7 +399,7 @@ def can_operate(cls, available):
                 alignment_param = dependencies_to_align.pop(0)
                 self.frequency = alignment_param.frequency
                 self.offset = alignment_param.offset
-
+                
             # align the dependencies
             aligned_args = []
             for arg in args:
@@ -631,11 +631,10 @@ class DerivedParameterNode(Node):
         :returns: A copy of self aligned to the input parameter.
         :rtype: DerivedParameterNode
         '''
-        if NODE_CACHE:
-            cache_key = self.cache_key(self.name, param.frequency, param.offset)
-            cached_node = self.get_cache(cache_key)
-            if cached_node:
-                return cached_node
+        cache_key = self.cache_key(self.name, param.frequency, param.offset)
+        cached_node = self.get_cache(cache_key)
+        if cached_node:
+            return cached_node
         
         # Create temporary new aligned parameter of correct type:
         aligned_param = self.__class__(
@@ -652,8 +651,7 @@ class DerivedParameterNode(Node):
         if hasattr(self, 'values_mapping'):
             aligned_param.values_mapping = self.values_mapping
         
-        if NODE_CACHE:
-            self.set_cache(cache_key, aligned_param)
+        self.set_cache(cache_key, aligned_param)
         
         return aligned_param
 
@@ -924,7 +922,7 @@ class MultistateDerivedParameterNode(DerivedParameterNode):
 M = MultistateDerivedParameterNode  # shorthand
 
 
-def derived_param_from_hdf(hdf_parameter):
+def derived_param_from_hdf(hdf_parameter, cache=None):
     '''
     Loads and wraps an HDF parameter with either DerivedParameterNode or
     MultistateDerivedParameterNode classes.
@@ -937,7 +935,8 @@ def derived_param_from_hdf(hdf_parameter):
             name=hdf_parameter.name, array=hdf_parameter.array,
             frequency=hdf_parameter.frequency, offset=hdf_parameter.offset,
             data_type=hdf_parameter.data_type,
-            values_mapping=hdf_parameter.values_mapping
+            values_mapping=hdf_parameter.values_mapping,
+            cache=cache,
         )
         return result
 
@@ -945,7 +944,7 @@ def derived_param_from_hdf(hdf_parameter):
         return Parameter(
             name=hdf_parameter.name, array=hdf_parameter.array,
             frequency=hdf_parameter.frequency, offset=hdf_parameter.offset,
-            data_type=hdf_parameter.data_type
+            data_type=hdf_parameter.data_type, cache=cache,
         )
 
 
