@@ -408,7 +408,7 @@ def can_operate(cls, available):
                         aligned_arg = arg.get_aligned(self)
                     except AttributeError:
                         # If parameter came from an HDF its missing get_aligned
-                        arg = derived_param_from_hdf(arg)
+                        arg = derived_param_from_hdf(arg, cache=self._cache)
                         aligned_arg = arg.get_aligned(self)
                     aligned_args.append(aligned_arg)
                 else:

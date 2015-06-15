@@ -118,6 +118,7 @@ def derive_parameters(hdf, node_mgr, process_order, params=None, force=False):
     # 'Node Name' : node()  pass in node.get_accessor()
     sections = {}
     flight_attrs = {}
+    # cache of nodes to avoid repeated array alignment
     cache = {} if NODE_CACHE else None
     duration = hdf.duration
 
