@@ -112,6 +112,20 @@ class TestNode(unittest.TestCase):
 
         self.assertEqual(KeyPointValue123.get_dependency_names(),
                          ['Parameter A', 'Parameter B'])
+    
+    def test_cache_key(self):
+        name = 'Parameter A'
+        frequency = 1
+        offset = 0
+        self.assertEqual(Node.cache_key(name, frequency, offset, dp=None),
+                         (name, frequency, offset))
+        name = 'Parameter B'
+        frequency = 4
+        offset = 0.15
+        self.assertEqual(Node.cache_key(name, frequency, offset, dp=None),
+                         (name, frequency, offset))
+        self.assertEqual(Node.cache_key(name, frequency, offset, dp=1),
+                         (name, frequency, 0.1))
 
     def test_can_operate(self):
         deps = ['a', 'b', 'c']

@@ -34,6 +34,7 @@ from analysis_engine.library import (
     value_at_time,
 )
 from analysis_engine.recordtype import recordtype
+from analysis_engine.settings import NODE_CACHE, NODE_CACHE_OFFSET_DP
 
 # FIXME: a better place for this class
 from hdfaccess.parameter import MappedArray
@@ -190,6 +191,7 @@ class Node(object):
     align_frequency = None  # Force frequency of Node by overriding
     align_offset = None  # Force offset of Node by overriding
     data_type = None  # Q: What should the default be? Q: Should this dictate the numpy dtype saved to the HDF file or should it be inferred from the array?
+    cache = {}
 
     def __init__(self, name='', frequency=1, offset=0, **kwargs):
         """
@@ -310,7 +312,50 @@ def can_operate(cls, available):
         dependencies_powerset = powerset(cls.get_dependency_names())
         return [args for args in dependencies_powerset if
                 cls.can_operate(args, **kwargs)]
-
+    
+    @staticmethod
+    def cache_key(name, frequency, offset, dp=NODE_CACHE_OFFSET_DP):
+        '''
+        Generate a cache key for a Node.
+        
+        :param name: Name of Node.
+        :param frequency: Frequency for the Node to be aligned to.
+        :type frequency: float or int
+        :param offset: Offset for the Node to be aligned to.
+        :type offset: float or int
+        :param dp: Decimal places of offset.
+        :type dp: int or None
+        :returns: Cache key tuple containing (name, frequency, offset).
+        :rtype: (str, float, float)
+        '''
+        offset = round(offset, dp) if dp else offset
+        return name, frequency, offset
+    
+    @classmethod
+    def get_cache(cls, key):
+        '''
+        Get a Node from the cache matching key.
+        
+        :param key: Cache key (see cache_key method).
+        :type key: tuple
+        :returns: Cached Node if it exists, else None.
+        :rtype: Node or None
+        '''
+        return cls.cache.get(key)
+    
+    @classmethod
+    def set_cache(cls, key, node):
+        '''
+        Set the Node as a key in the cache.
+        
+        :param key: Cache key (see cache_key method).
+        :type key: tuple
+        :param node: Node to set in the cache.
+        :type node: Node
+        :rtype: None
+        '''
+        cls.cache[key] = node
+    
     def get_aligned(self, align_to_param):
         """
         :returns: version of self which is aligned to the incoming argument.
@@ -586,6 +631,12 @@ class DerivedParameterNode(Node):
         :returns: A copy of self aligned to the input parameter.
         :rtype: DerivedParameterNode
         '''
+        if NODE_CACHE:
+            cache_key = self.cache_key(self.name, param.frequency, param.offset)
+            cached_node = self.get_cache(cache_key)
+            if cached_node:
+                return cached_node
+        
         # Create temporary new aligned parameter of correct type:
         aligned_param = self.__class__(
             name=self.name,
@@ -600,7 +651,10 @@ class DerivedParameterNode(Node):
         # Ensure that we copy attributes required for multi-states:
         if hasattr(self, 'values_mapping'):
             aligned_param.values_mapping = self.values_mapping
-
+        
+        if NODE_CACHE:
+            self.set_cache(cache_key, aligned_param)
+        
         return aligned_param
 
     def slices_above(self, value):
@@ -1634,6 +1688,7 @@ class KeyTimeInstanceNode(FormattedNameNode):
             # case arrises
             aligned_kti.index = index_aligned
             aligned_node.append(aligned_kti)
+        
         return aligned_node
 
 

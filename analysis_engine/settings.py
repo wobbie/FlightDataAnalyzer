@@ -87,6 +87,19 @@ SPLIT_PARAMETERS = ('Eng (1) N1', 'Eng (2) N1', 'Eng (3) N1', 'Eng (4) N1',
 
 
 ##############################################################################
+# Node Cache
+
+
+# Node cache determines whether Nodes will be cached during processing to avoid
+# unnecessary array alignment. Caching parameters will increase memory usage.
+NODE_CACHE = True
+
+# The number of decimal places which the offset of cached parameters will be
+# accurate to. A value of None will retain full accuracy.
+NODE_CACHE_OFFSET_DP = None
+
+
+##############################################################################
 # Parameter Analysis
 
 
