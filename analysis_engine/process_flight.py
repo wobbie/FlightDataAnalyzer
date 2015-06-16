@@ -582,12 +582,6 @@ def process_flight(segment_info, tail_number, aircraft_info={}, achieved_flight_
     # open HDF for reading
     with hdf_file(hdf_path) as hdf:
         hdf.start_datetime = segment_info['Start Datetime']
-        if hooks.PRE_FLIGHT_ANALYSIS:
-            logger.info("Performing PRE_FLIGHT_ANALYSIS action '%s' with options: %s",
-                        hooks.PRE_FLIGHT_ANALYSIS.func_name, pre_flight_kwargs)
-            hooks.PRE_FLIGHT_ANALYSIS(hdf, aircraft_info, **pre_flight_kwargs)
-        else:
-            logger.info("No PRE_FLIGHT_ANALYSIS actions to perform")
         # Track nodes.
         param_names = hdf.valid_lfl_param_names() if reprocess else hdf.valid_param_names()
         node_mgr = NodeManager(
@@ -596,6 +590,25 @@ def process_flight(segment_info, tail_number, aircraft_info={}, achieved_flight_
             achieved_flight_record)
         # calculate dependency tree
         process_order, gr_st = dependency_order(node_mgr, draw=False)
+        params_to_validate = set(hdf.valid_lfl_param_names()) & set(process_order)
+        if hasattr(pre_flight_kwargs, 'params'):
+            pre_flight_kwargs['params'] = set(pre_flight_kwargs['params']) | params_to_validate
+        else:
+            pre_flight_kwargs['params'] = params_to_validate
+        if hooks.PRE_FLIGHT_ANALYSIS:
+            logger.info("Performing PRE_FLIGHT_ANALYSIS action '%s' with options: %s",
+                        hooks.PRE_FLIGHT_ANALYSIS.func_name, pre_flight_kwargs)
+            hooks.PRE_FLIGHT_ANALYSIS(hdf, aircraft_info, **pre_flight_kwargs)
+        else:
+            logger.info("No PRE_FLIGHT_ANALYSIS actions to perform")
+
+        param_names = hdf.valid_lfl_param_names() if reprocess else hdf.valid_param_names()
+        node_mgr = NodeManager(
+            segment_info, hdf.duration, param_names,
+            requested, required, derived_nodes, aircraft_info,
+            achieved_flight_record)
+        process_order, gr_st = dependency_order(node_mgr, draw=False)
+
         if settings.CACHE_PARAMETER_MIN_USAGE:
             # find params used more than
             for node in gr_st.nodes():
@@ -812,3 +825,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
