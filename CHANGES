@@ -8,6 +8,11 @@ You can view the differences in tagged versions as follows:
 
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
+v0.21.6
+-------
+ - Updated heading_diff to operate on arrays
+ - Fix: scan_ils handle heading moving between 360 and 0
+
 v0.21.5
 -------
  - bumped straighten longitude threshold
