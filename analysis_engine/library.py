@@ -775,7 +775,7 @@ def calculate_timebase(years, months, days, hours, mins, secs):
        len(hours) == len(mins) == len(secs):
         raise ValueError("Arrays must be of same length")
 
-    for step, (yr, mth, day, hr, mn, sc) in enumerate(izip(years, months, days, hours, mins, secs)):
+    for step, (yr, mth, day, hr, mn, sc) in enumerate(np.transpose((years, months, days, hours, mins, secs))):
         #TODO: Try using numpy datetime functions for speedup?
         #try:
             #date = np.datetime64('%d-%d-%d' % (yr, mth, day), 'D')
