@@ -3752,7 +3752,7 @@ def slices_remove_small_gaps(slice_list, time_limit=10, hz=1, count=None):
     return new_list
 
 
-def slices_remove_small_slices(slice_list, time_limit=10, hz=1, count=None):
+def slices_remove_small_slices(slices, time_limit=10, hz=1, count=None):
     '''
     Routine to remove small slices in a list of slices.
 
@@ -3769,19 +3769,10 @@ def slices_remove_small_slices(slice_list, time_limit=10, hz=1, count=None):
 
     :returns: slice list.
     '''
-    if slice_list is None or slice_list == []:
-        return slice_list
-    
-    if count is not None:
-        sample_limit = count
-    else:
-        sample_limit = time_limit * hz
-
-    new_list = []
-    for each_slice in slice_list:
-        if each_slice.stop - each_slice.start > sample_limit:
-            new_list.append(each_slice)
-    return new_list
+    if slices is None or slices == []:
+        return slices
+    sample_limit = count if count is not None else time_limit * hz
+    return [s for s in slices if s.stop - s.start > sample_limit]
 
 
 def trim_slices(slices, seconds, frequency, hdf_duration):
