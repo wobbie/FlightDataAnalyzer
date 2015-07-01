@@ -464,16 +464,18 @@ class TestAltitudeWhenClimbing(unittest.TestCase):
     def test_can_operate(self):
         self.assertEqual(
             AltitudeWhenClimbing.get_operational_combinations(),
-            [('Initial Climb', 'Climb', 'Altitude AAL', 'Altitude STD Smoothed')])
+            [('Takeoff', 'Initial Climb', 'Climb', 'Altitude AAL', 'Altitude STD Smoothed')])
 
     def test_derive(self):
-        initial_climb = S('Initial Climb',
-                          items=[Section('Initial Climb', slice(4, 30), 4, 30)])
+        takeoff = S(
+            'Takeoff', items=[Section('Takeoff', slice(4, 13), 4, 13)])
+        initial_climb = S(
+            'Initial Climb', items=[Section('Initial Climb', slice(14, 30), 14, 30)])
         climb = S('Climb')
         arr = np.ma.arange(20, 200, 5)
         alt_aal = P('Altitude AAL', arr)
         altitude_when_climbing = AltitudeWhenClimbing()
-        altitude_when_climbing.derive(initial_climb, climb, alt_aal)
+        altitude_when_climbing.derive(takeoff, initial_climb, climb, alt_aal)
         self.assertEqual(
             list(altitude_when_climbing),
             [KeyTimeInstance(index=6, name='50 Ft Climbing'),
