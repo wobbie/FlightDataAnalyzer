@@ -12,6 +12,8 @@ from analysis_engine.key_time_instances import (
     AltitudeWhenDescending,
     APDisengagedSelection,
     APEngagedSelection,
+    APUStart,
+    APUStop,
     ATDisengagedSelection,
     ATEngagedSelection,
     Autoland,
@@ -1173,6 +1175,36 @@ class TestExitHold(unittest.TestCase):
         eh = EnterHold()
         eh.derive(hold)
         self.assertEqual(eh, expected)
+
+
+class TestAPUStart(unittest.TestCase):
+    def test_can_operate(self):
+        expected = [('APU Running',)]
+        self.assertEqual(expected, APUStart.get_operational_combinations())
+
+    def test_derive(self):
+        array = ['-'] * 3 + ['Running'] * 2 + ['-'] * 2
+        mapping = {0: '-', 1: 'Running'}
+        apu = M('APU Running', array, values_mapping=mapping)
+        astart = APUStart()
+        astart.derive(apu)
+        self.assertEqual(len(astart), 1)
+        self.assertEqual(astart[0].index, 2.5)
+
+
+class TestAPUStop(unittest.TestCase):
+    def test_can_operate(self):
+        expected = [('APU Running',)]
+        self.assertEqual(expected, APUStop.get_operational_combinations())
+
+    def test_derive(self):
+        array = ['-'] * 3 + ['Running'] * 2 + ['-'] * 2
+        mapping = {0: '-', 1: 'Running'}
+        apu = M('APU Running', array, values_mapping=mapping)
+        astop = APUStop()
+        astop.derive(apu)
+        self.assertEqual(len(astop), 1)
+        self.assertEqual(astop[0].index, 4.5)
 
 
 ##############################################################################

@@ -330,6 +330,30 @@ class ClimbThrustDerateDeselected(KeyTimeInstanceNode):
         )
 
 
+class APUStart(KeyTimeInstanceNode):
+    name = 'APU Start'
+
+    def derive(self,
+               apu=P('APU Running')):
+        self.create_ktis_on_state_change(
+            'Running',
+            apu.array,
+            change='entering',
+        )
+
+
+class APUStop(KeyTimeInstanceNode):
+    name = 'APU Stop'
+
+    def derive(self,
+               apu=P('APU Running')):
+        self.create_ktis_on_state_change(
+            'Running',
+            apu.array,
+            change='leaving',
+        )
+
+
 class EngStart(KeyTimeInstanceNode):
     '''
     Records the moment of engine start for each engine in turn.
