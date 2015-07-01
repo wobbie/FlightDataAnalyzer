@@ -114,16 +114,17 @@ class TestBottomOfDescent(unittest.TestCase):
         )
 
     def test_bottom_of_descent_basic(self):
-        testwave = np.cos(np.arange(0,6.3,0.1))*(2500)+2560
+        testwave = np.cos(np.arange(3.2, 9.6, 0.1)) * (2500) + 2560
         alt_std = Parameter('Altitude STD Smoothed', np.ma.array(testwave))
         from analysis_engine.flight_phase import ClimbCruiseDescent
+        airs = S('Airborne', items=[Section('Airborne', slice(0, 64), 0, 64)])
         ccd = ClimbCruiseDescent()
         #air = buildsection('Airborne', 0,50)
         #duration = A('HDF Duration', 63)
-        ccd.derive(alt_std)
+        ccd.derive(alt_std, airs)
         bod = BottomOfDescent()
         bod.derive(ccd)
-        expected = [KeyTimeInstance(index=31, name='Bottom Of Descent')]
+        expected = [KeyTimeInstance(index=62, name='Bottom Of Descent')]
         self.assertEqual(bod, expected)
 
     def test_bottom_of_descent_complex(self):
@@ -138,14 +139,6 @@ class TestBottomOfDescent(unittest.TestCase):
         expected = [KeyTimeInstance(index=1254, name='Bottom Of Descent'),
                     KeyTimeInstance(index=1652, name='Bottom Of Descent'),
                     KeyTimeInstance(index=2055, name='Bottom Of Descent')]
-        self.assertEqual(bod, expected)
-
-    def test_bod_air_only(self):
-        air = buildsection('Airborne', 0,51)
-        duration = A('HDF Duration', 100)
-        bod = BottomOfDescent()
-        bod.derive(None, air, duration)
-        expected = [KeyTimeInstance(index=51, name='Bottom Of Descent')]
         self.assertEqual(bod, expected)
 
     def test_bod_ccd_only(self):
