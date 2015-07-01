@@ -978,18 +978,23 @@ class TestEngStart(unittest.TestCase):
                          'Eng (3) N3', 'Eng (4) N3') in combinations)
 
     def test_basic(self):
-        eng2 = Parameter('Eng (2) N2', np.ma.array([0,20,40,60]))
-        eng1 = Parameter('Eng (1) N2', np.ma.array(data=[0,0,99,99,60,60,60],
-                                                   mask=[1,1, 1, 1, 0, 0, 0]))
+        eng2 = Parameter('Eng (2) N2', np.ma.array([0, 20, 40, 60]))
+        eng1 = Parameter(
+            'Eng (1) N2',
+            np.ma.array(data=[0, 0, 99, 99, 60, 60, 60], mask=[1, 1, 1, 1, 1, 1, 0]))
         es = EngStart()
-        es.derive(None, None, None, None, eng1, eng2, None, None, None, None, None, None)
-        self.assertEqual(len(es), 1)
-        self.assertEqual(es[0].name, 'Eng (2) Start')
-        self.assertEqual(es[0].index, 3)
+        es.derive(
+            None, None, None, None,
+            eng1, eng2, None, None,
+            None, None, None, None,
+            None, None, None, None,
+        )
+        self.assertEqual(es[1].name, 'Eng (2) Start')
+        self.assertEqual(es[1].index, 2)
 
     def test_prefer_N2(self):
-        eng_N1 = Parameter('Eng (1) N1', np.ma.array([50,50,50,50]))
-        eng_N2 = Parameter('Eng (1) N2', np.ma.array(data=[0,0,0,60]))
+        eng_N1 = Parameter('Eng (1) N1', np.ma.array([50, 50, 50, 50]))
+        eng_N2 = Parameter('Eng (1) N2', np.ma.array(data=[0, 0, 0, 60]))
         es = EngStart()
         es.derive(eng_N1, None, None, None, eng_N2, None, None, None, None, None, None, None)
         self.assertEqual(es[0].name, 'Eng (1) Start')
@@ -997,40 +1002,49 @@ class TestEngStart(unittest.TestCase):
         self.assertEqual(len(es), 1)
 
     def test_three_spool(self):
-        eng22 = Parameter('Eng (2) N2', np.ma.array([0,20,40,60, 0, 20, 40, 60]))
-        eng12 = Parameter('Eng (1) N2', np.ma.array(data=[0,0,99,99,60,60,60,60],
-                                                   mask=[1,1, 1, 1, 0, 0, 0, 0]))
-        eng23 = Parameter('Eng (2) N3', np.ma.array([0,40,60,60, 0, 0, 30, 60]))
-        eng13 = Parameter('Eng (1) N3', np.ma.array(data=[0,0,99,99,60,60,60, 60],
-                                                   mask=[1,1, 1, 1, 0, 0, 0, 0]))
+        eng22 = Parameter(
+            'Eng (2) N2', np.ma.array([0, 20, 40, 60, 0, 20, 40, 60]))
+        eng12 = Parameter(
+            'Eng (1) N2', np.ma.array(
+                data=[0, 0, 99, 99, 60, 60, 60, 60], mask=[1, 1, 1, 1, 0, 0, 0, 0]))
+        eng23 = Parameter('Eng (2) N3', np.ma.array([0, 40, 60, 60, 0, 0, 30, 60]))
+        eng13 = Parameter(
+            'Eng (1) N3', np.ma.array(
+                data=[0, 0, 99, 99, 60, 60, 60, 60], mask=[1, 1, 1, 1, 0, 0, 0, 0]))
         es = EngStart()
         es.derive(None, None, None, None, eng12, eng22, None, None, eng13, eng23, None, None)
-        self.assertEqual(len(es), 1)
-        self.assertEqual(es[0].name, 'Eng (2) Start')
-        self.assertEqual(es[0].index, 2)
+        self.assertEqual(len(es), 2)
+        self.assertEqual(es[1].name, 'Eng (2) Start')
+        self.assertEqual(es[1].index, 1)
 
     def test_N1_only(self):
-        eng_N1 = Parameter('Eng (1) N1', np.ma.array([0,5,10,10]))
+        eng_N1 = Parameter('Eng (1) N1', np.ma.array([0, 5, 10, 11]))
         es = EngStart()
-        es.derive(eng_N1, None, None, None,
-                  None, None, None, None,
-                  None, None, None, None)
+        es.derive(
+            eng_N1, None, None, None,
+            None, None, None, None,
+            None, None, None, None,
+            None, None, None, None,
+        )
         self.assertEqual(len(es), 1)
         self.assertEqual(es[0].name, 'Eng (1) Start')
-        self.assertEqual(es[0].index, 1)
+        self.assertEqual(es[0].index, 2)
 
     def test_short_dip(self):
         eng_1_n3 = load(os.path.join(test_data_path, 'eng_start_eng_1_n3.nod'))
         eng_2_n3 = load(os.path.join(test_data_path, 'eng_start_eng_2_n3.nod'))
         node = EngStart()
-        node.derive(None, None, None, None,
-                    None, None, None, None,
-                    eng_1_n3, eng_2_n3, None, None)
+        node.derive(
+            None, None, None, None,
+            None, None, None, None,
+            eng_1_n3, eng_2_n3, None, None,
+            None, None, None, None,
+        )
         self.assertEqual(len(node), 2)
         self.assertEqual(node[0].name, 'Eng (1) Start')
-        self.assertEqual(node[0].index, 164)
+        self.assertEqual(node[0].index, 161)
         self.assertEqual(node[1].name, 'Eng (2) Start')
-        self.assertEqual(node[1].index, 99)
+        self.assertEqual(node[1].index, 94)
 
 
 class TestFirstEngStartBeforeLiftoff(unittest.TestCase):
@@ -1053,7 +1067,7 @@ class TestFirstEngStartBeforeLiftoff(unittest.TestCase):
                                      KeyTimeInstance(80, name='Eng (2) Start'),
                                      KeyTimeInstance(360, name='Eng (1) Start'),
                                      KeyTimeInstance(370, name='Eng (1) Start'),
-                                     KeyTimeInstance(380, name='Eng (2) Start'),])
+                                     KeyTimeInstance(380, name='Eng (2) Start')])
         liftoffs = KTI('Liftoff', items=[KeyTimeInstance(100, 'Liftoff')])
         node = FirstEngStartBeforeLiftoff()
         node.derive(eng_starts, eng_count, liftoffs)
@@ -1073,29 +1087,36 @@ class TestEngStop(unittest.TestCase):
                          'Eng (3) N2', 'Eng (4) N2') in combinations)
 
     def test_basic(self):
-        eng2 = Parameter('Eng (2) N2', np.ma.array([60,40,20,0]),
-                         frequency=1/64.0)
-        eng1 = Parameter('Eng (1) N2', np.ma.array(data=[60,50,40,99,99, 0, 0],
-                                                   mask=[ 0, 0, 0, 1, 1, 1, 1]),
-                         frequency=1/64.0)
+        eng1 = Parameter(
+            'Eng (1) N2', np.ma.array(
+                data=[60, 50, 40, 99, 99, 0, 0], mask=[0, 0, 0, 1, 1, 1, 1]),
+            frequency=1 / 64.0)
+        eng2 = Parameter(
+            'Eng (2) N2', np.ma.array([60, 40, 20, 0]), frequency=1 / 64.0)
         es = EngStop()
-        es.get_derived([None, None, None, None,
-                        eng1, eng2, None, None,
-                        None, None, None, None])
+        es.get_derived([
+            None, None, None, None,
+            eng1, eng2, None, None,
+            None, None, None, None,
+            None, None, None, None,
+        ])
         self.assertEqual(len(es), 2)
         self.assertEqual(es[0].name, 'Eng (1) Stop')
-        self.assertEqual(es[0].index, 2)
+        self.assertEqual(es[0].index, 5)
         self.assertEqual(es[1].name, 'Eng (2) Stop')
-        self.assertEqual(es[1].index, 1)
+        self.assertEqual(es[1].index, 2)
 
     def test_short_dip(self):
         eng_1_n3 = load(os.path.join(test_data_path, 'eng_start_eng_1_n3.nod'))
         eng_2_n3 = load(os.path.join(test_data_path, 'eng_start_eng_2_n3.nod'))
         node = EngStop()
-        node.derive(None, None, None, None,
-                    None, None, None, None,
-                    eng_1_n3, eng_2_n3, None, None)
-        self.assertEqual(len(node), 0)
+        node.derive(
+            None, None, None, None,
+            None, None, None, None,
+            eng_1_n3, eng_2_n3, None, None,
+            None, None, None, None,
+        )
+        self.assertEqual(len(node), 2)
 
 
 class TestLastEngStopAfterTouchdown(unittest.TestCase):
@@ -1104,7 +1125,7 @@ class TestLastEngStopAfterTouchdown(unittest.TestCase):
         combinations = LastEngStopAfterTouchdown.get_operational_combinations()
         self.assertEqual(
             combinations,
-            [('Eng Stop', 'Engine Count', 'Touchdown', 'HDF Duration'),])
+            [('Eng Stop', 'Engine Count', 'Touchdown', 'HDF Duration')])
 
     def test_derive_basic(self):
         eng_count = A('Engine Count', 3)
