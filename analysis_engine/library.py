@@ -4092,7 +4092,7 @@ def min_value(array, _slice=slice(None), start_edge=None, stop_edge=None):
     return Value(index, value)
 
 
-def average_value(array, _slice=None):
+def average_value(array, _slice=slice(None), start_edge=None, stop_edge=None):
     '''
     Calculate the average value within an optional slice of the array and return
     both the midpoint index and the average.
