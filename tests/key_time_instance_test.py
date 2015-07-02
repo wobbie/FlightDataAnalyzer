@@ -50,6 +50,8 @@ from analysis_engine.key_time_instances import (
     LocalizerEstablishedStart,
     LowestAltitudeDuringApproach,
     MinsToTouchdown,
+    MovementStart,
+    MovementStop,
     OffBlocks,
     OnBlocks,
     SecsToTouchdown,
@@ -1806,6 +1808,30 @@ class TestTransmit(unittest.TestCase):
         tr.derive(hf, *[None] * 22)
         expected = [KeyTimeInstance(index=2.5, name='Transmit')]
         self.assertEqual(tr, expected)
+
+
+class TestMovementStart(unittest.TestCase):
+    def test_can_operate(self):
+        combinations = MovementStart.get_operational_combinations()
+        self.assertTrue(('Mobile',) in combinations)
+
+    def test_derive(self):
+        mobile = buildsections('Mobile', [5, 10], [15, None])
+        ms = MovementStart()
+        ms.derive(mobile)
+        self.assertEqual(len(ms), 2)
+
+
+class TestMovementStop(unittest.TestCase):
+    def test_can_operate(self):
+        combinations = MovementStop.get_operational_combinations()
+        self.assertTrue(('Mobile',) in combinations)
+
+    def test_derive(self):
+        mobile = buildsections('Mobile', [5, 10], [15, None])
+        ms = MovementStop()
+        ms.derive(mobile)
+        self.assertEqual(len(ms), 1)
 
 
 class TestOffBlocks(unittest.TestCase):

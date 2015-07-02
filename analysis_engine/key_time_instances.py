@@ -1750,6 +1750,28 @@ class GlideslopeEstablishedEnd(KeyTimeInstanceNode):
             self.create_kti(ils.slice.stop)
 
 
+class MovementStart(KeyTimeInstanceNode):
+    """
+    Aircraft stops moving.
+    """
+    def derive(self, mobile=S('Mobile')):
+        for moving in mobile:
+            if moving.slice.start:
+                # don't create KTI at the start of data
+                self.create_kti(moving.slice.start)
+
+
+class MovementStop(KeyTimeInstanceNode):
+    """
+    Aircraft stops moving.
+    """
+    def derive(self, mobile=S('Mobile')):
+        for moving in mobile:
+            if moving.slice.stop:
+                # don't create KTI at the end of data
+                self.create_kti(moving.slice.stop)
+
+
 class OffBlocks(KeyTimeInstanceNode):
     '''
     Simple KTI derived from the first point of heading change, so probably
