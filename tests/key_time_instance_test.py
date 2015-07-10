@@ -1813,25 +1813,28 @@ class TestTransmit(unittest.TestCase):
 class TestMovementStart(unittest.TestCase):
     def test_can_operate(self):
         combinations = MovementStart.get_operational_combinations()
-        self.assertTrue(('Mobile',) in combinations)
+        self.assertTrue(('Stationary',) in combinations)
 
     def test_derive(self):
-        mobile = buildsections('Mobile', [5, 10], [15, None])
+        stationary = buildsections('Stationary', [0, 5], [10, 15])
         ms = MovementStart()
-        ms.derive(mobile)
+        ms.derive(stationary)
         self.assertEqual(len(ms), 2)
+        self.assertEqual(ms[0].index, 6)
+        self.assertEqual(ms[1].index, 16)
 
 
 class TestMovementStop(unittest.TestCase):
     def test_can_operate(self):
         combinations = MovementStop.get_operational_combinations()
-        self.assertTrue(('Mobile',) in combinations)
+        self.assertTrue(('Stationary',) in combinations)
 
     def test_derive(self):
-        mobile = buildsections('Mobile', [5, 10], [15, None])
+        stationary = buildsections('Stationary', [0, 5], [10, 15])
         ms = MovementStop()
-        ms.derive(mobile)
+        ms.derive(stationary)
         self.assertEqual(len(ms), 1)
+        self.assertEqual(ms[0].index, 10)
 
 
 class TestOffBlocks(unittest.TestCase):

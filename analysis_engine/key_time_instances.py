@@ -1738,6 +1738,7 @@ class LocalizerEstablishedEnd(KeyTimeInstanceNode):
         for ils in ilss:
             self.create_kti(ils.slice.stop)
 
+
 class GlideslopeEstablishedStart(KeyTimeInstanceNode):
     def derive(self, ilss=S('ILS Glideslope Established')):
         for ils in ilss:
@@ -1754,22 +1755,22 @@ class MovementStart(KeyTimeInstanceNode):
     """
     Aircraft stops moving.
     """
-    def derive(self, mobile=S('Mobile')):
-        for moving in mobile:
-            if moving.slice.start:
-                # don't create KTI at the start of data
-                self.create_kti(moving.slice.start)
+    def derive(self, stationary=S('Stationary')):
+        for st in stationary:
+            if st.slice.stop:
+                # don't create KTI at the end of data
+                self.create_kti(st.slice.stop)
 
 
 class MovementStop(KeyTimeInstanceNode):
     """
     Aircraft stops moving.
     """
-    def derive(self, mobile=S('Mobile')):
-        for moving in mobile:
-            if moving.slice.stop:
-                # don't create KTI at the end of data
-                self.create_kti(moving.slice.stop)
+    def derive(self, stationary=S('Stationary')):
+        for st in stationary:
+            if st.slice.start:
+                # don't create KTI at the start of data
+                self.create_kti(st.slice.start)
 
 
 class OffBlocks(KeyTimeInstanceNode):
