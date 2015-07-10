@@ -1146,6 +1146,18 @@ class Mobile(FlightPhaseNode):
             self.create_phase(slice(movement_start, movement_stop))
 
 
+class Stationary(FlightPhaseNode):
+    """
+    Phases of the flight when the aircraft remains stationary.
+
+    This is useful in fuel monitoring.
+    """
+    def derive(self,
+               gspd=P('Groundspeed')):
+        not_moving = runs_of_ones(gspd.array < GROUNDSPEED_FOR_MOBILE)
+        self.create_phases(not_moving)
+
+
 class Landing(FlightPhaseNode):
     '''
     This flight phase starts at 50 ft in the approach and ends as the
