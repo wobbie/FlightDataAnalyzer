@@ -958,21 +958,25 @@ class AltitudeRadio(DerivedParameterNode):
                 # change. This prevents overflow_correction from correcting
                 # the parameter and leads to multiple touchdowns. example
                 # hash:acda842c2799
-                ptp = source.array.ptp()
-                if ptp > 4095:
+                max_jump = abs(np.ma.ediff1d(source.array.data, to_begin=0.0).max())
+                if max_jump > 4095:
                     max_val = 8191
-                elif ptp > 2047:
+                elif max_jump > 2047:
                     max_val = 4095
-                elif ptp > 1023:
+                elif max_jump > 1023:
                     max_val = 2047
-                else:
+                elif max_jump > 1023 * .75:
                     max_val = 1023
-                # correct for overflow, aligning the fast slice to each source
-                source.array = overflow_correction(
-                    source, fast.get_aligned(source), max_val=max_val)
-                # Mask values less than 20. These values were left unmasked
-                # previously for overflow_correction.
-                source.array = np.ma.masked_less(source.array, -20)
+                else:
+                    max_val = None
+
+                if max_val:
+                    # correct for overflow, aligning the fast slice to each source
+                    source.array = overflow_correction(
+                        source, fast.get_aligned(source), max_val=max_val)
+                    # Mask values less than 20. These values were left unmasked
+                    # previously for overflow_correction.
+                    source.array = np.ma.masked_less(source.array, -20)
                 osources.append(source)
             sources = osources
 
