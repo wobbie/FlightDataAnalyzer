@@ -56,12 +56,13 @@ Misc
    :maxdepth: 2
 
    Extending
+   Optimisation
    Profiling
    NumpyTips
    Changes
    TODO
    Authors
-   
+
 API Docstrings
 ~~~~~~~~~~~~~~
 
