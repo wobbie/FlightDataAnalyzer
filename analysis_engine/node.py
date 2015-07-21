@@ -1665,8 +1665,8 @@ class KeyTimeInstanceNode(FormattedNameNode):
         if phase is None:
             state_changes(state, repaired_array, change)
         else:
-            for each_period in phase:
-                state_changes(state, repaired_array, change, each_period.slice)
+            for p in phase:
+                state_changes(state, repaired_array, change, getattr(p, 'slice', p))
         return
 
     def get_aligned(self, param):

@@ -924,12 +924,8 @@ class GearUpSelection(KeyTimeInstanceNode):
                 end_at=air_slices[-1].stop,
             )
         )
-        good_phases = S(name='Airborne Not During Go Around',
-                        frequency=gear_up_sel.frequency,
-                        offset=gear_up_sel.offset)
-        good_phases.create_sections(air_not_ga)
         self.create_ktis_on_state_change('Up', gear_up_sel.array,
-                                         change='entering', phase=good_phases)
+                                         change='entering', phase=air_not_ga)
 
 
 class GearUpSelectionDuringGoAround(KeyTimeInstanceNode):
