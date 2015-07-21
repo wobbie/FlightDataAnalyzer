@@ -4142,7 +4142,7 @@ class AltitudeAtClimbThrustDerateDeselectedDuringClimbBelow33000Ft(KeyPointValue
 # Altitude: Gear
 
 
-class AltitudeAtGearDownSelection(KeyPointValueNode):
+class AltitudeAtLastGearDownSelection(KeyPointValueNode):
     '''
     '''
 
@@ -4152,7 +4152,7 @@ class AltitudeAtGearDownSelection(KeyPointValueNode):
                alt_aal=P('Altitude AAL'),
                gear_dn_sel=KTI('Gear Down Selection')):
 
-        self.create_kpvs_at_ktis(alt_aal.array, gear_dn_sel)
+        self.create_kpvs_at_ktis(alt_aal.array, [gear_dn_sel.get_last()])
 
 
 class AltitudeAtGearDownSelectionWithFlapDown(KeyPointValueNode):
@@ -4186,7 +4186,7 @@ class AltitudeAtGearDownSelectionWithFlapDown(KeyPointValueNode):
         self.create_kpvs_at_ktis(alt_aal.array, flap_dn_gear_downs)
 
 
-class AltitudeAtGearUpSelection(KeyPointValueNode):
+class AltitudeAtFirstGearUpSelection(KeyPointValueNode):
     '''
     Gear up selections after takeoff, not following a go-around (when it is
     normal to retract gear at significant height).
@@ -4198,7 +4198,7 @@ class AltitudeAtGearUpSelection(KeyPointValueNode):
                alt_aal=P('Altitude AAL'),
                gear_up_sel=KTI('Gear Up Selection')):
 
-        self.create_kpvs_at_ktis(alt_aal.array, gear_up_sel)
+        self.create_kpvs_at_ktis(alt_aal.array, [gear_up_sel.get_first()])
 
 
 class AltitudeAtGearUpSelectionDuringGoAround(KeyPointValueNode):

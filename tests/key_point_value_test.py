@@ -153,10 +153,10 @@ from analysis_engine.key_point_values import (
     AltitudeAtFirstFlapRetractionDuringGoAround,
     AltitudeAtFlapExtension,
     AltitudeAtFlapExtensionWithGearDownSelected,
-    AltitudeAtGearDownSelection,
+    AltitudeAtLastGearDownSelection,
     AltitudeAtGearDownSelectionWithFlapDown,
     AltitudeAtGearDownSelectionWithFlapUp,
-    AltitudeAtGearUpSelection,
+    AltitudeAtFirstGearUpSelection,
     AltitudeAtGearUpSelectionDuringGoAround,
     AltitudeAtLastAPDisengagedDuringApproach,
     AltitudeAtLastFlapChangeBeforeTouchdown,
@@ -4383,10 +4383,10 @@ class TestAltitudeAtClimbThrustDerateDeselectedDuringClimbBelow33000Ft(unittest.
 # Altitude: Gear
 
 
-class TestAltitudeAtGearDownSelection(unittest.TestCase, NodeTest):
+class TestAltitudeAtLastGearDownSelection(unittest.TestCase, NodeTest):
 
     def setUp(self):
-        self.node_class = AltitudeAtGearDownSelection
+        self.node_class = AltitudeAtLastGearDownSelection
         self.operational_combinations = [('Altitude AAL', 'Gear Down Selection')]
 
     @unittest.skip('Test Not Implemented')
@@ -4436,10 +4436,10 @@ class TestAltitudeAtGearDownSelectionWithFlapDown(unittest.TestCase, NodeTest):
         ]))
 
 
-class TestAltitudeAtGearUpSelection(unittest.TestCase, NodeTest):
+class TestAltitudeAtFirstGearUpSelection(unittest.TestCase, NodeTest):
 
     def setUp(self):
-        self.node_class = AltitudeAtGearUpSelection
+        self.node_class = AltitudeAtFirstGearUpSelection
         self.operational_combinations = [('Altitude AAL', 'Gear Up Selection')]
 
     @unittest.skip('Test Not Implemented')
