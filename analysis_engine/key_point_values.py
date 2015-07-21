@@ -650,7 +650,7 @@ class AccelerationNormalAtTouchdown(KeyPointValueNode):
             self.create_kpv(*bump(acc_norm, touchdown))
 
 
-class AccelerationNormalTakeoffMax(KeyPointValueNode):
+class AccelerationNormalLiftoffTo35FtMax(KeyPointValueNode):
     '''
     '''
 
@@ -658,9 +658,14 @@ class AccelerationNormalTakeoffMax(KeyPointValueNode):
 
     def derive(self,
                acc_norm=P('Acceleration Normal Offset Removed'),
+               liftoffs=S('Liftoff'),
                takeoffs=S('Takeoff')):
 
-        self.create_kpvs_within_slices(acc_norm.array, takeoffs, max_value)
+        slices = []
+        for liftoff in liftoffs:
+            takeoff = takeoffs.get(containing_index=liftoff.index)
+            slices.append(slice(liftoff.index, takeoff[0].stop_edge))
+        self.create_kpvs_within_slices(acc_norm.array, slices, max_value)
 
 
 class AccelerationNormalOffset(KeyPointValueNode):

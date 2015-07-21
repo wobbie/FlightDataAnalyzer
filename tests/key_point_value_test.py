@@ -46,7 +46,7 @@ from analysis_engine.key_point_values import (
     AccelerationNormalAtTouchdown,
     AccelerationNormalMax,
     AccelerationNormalOffset,
-    AccelerationNormalTakeoffMax,
+    AccelerationNormalLiftoffTo35FtMax,
     AccelerationNormalWithFlapDownWhileAirborneMax,
     AccelerationNormalWithFlapDownWhileAirborneMin,
     AccelerationNormalWithFlapUpWhileAirborneMax,
@@ -1344,16 +1344,27 @@ class TestAccelerationNormalAtTouchdown(unittest.TestCase, NodeTest):
         ])
 
 
-class TestAccelerationNormalTakeoffMax(unittest.TestCase, CreateKPVsWithinSlicesTest):
+class TestAccelerationNormalLiftoffTo35FtMax(unittest.TestCase, NodeTest):
 
     def setUp(self):
-        self.node_class = AccelerationNormalTakeoffMax
-        self.operational_combinations = [('Acceleration Normal Offset Removed', 'Takeoff')]
+        self.node_class = AccelerationNormalLiftoffTo35FtMax
+        self.operational_combinations = [('Acceleration Normal Offset Removed', 'Liftoff', 'Takeoff')]
         self.function = max_value
 
-    @unittest.skip('Test Not Implemented')
     def test_derive(self):
-        self.assertTrue(False, msg='Test Not Implemented')
+        acc_norm = P(
+            name='Acceleration Offset Normal Removed',
+            array=np.ma.array((0.05, 0.1, -0.2, -0.1, 0.2, 0.1) * 5),
+        )
+        liftoffs = KTI('Liftoff', items=[
+            KeyTimeInstance(5.5, 'Liftoff'),
+        ])
+        toff = buildsection('Takeoff', 2,9)
+        node = self.node_class()
+        node.derive(acc_norm, liftoffs, toff)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 7)
+        self.assertEqual(node[0].value, 0.1)
 
 
 class TestAccelerationNormalOffset(unittest.TestCase, NodeTest):
