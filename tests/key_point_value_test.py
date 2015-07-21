@@ -306,6 +306,7 @@ from analysis_engine.key_point_values import (
     GrossWeightAtLiftoff,
     GrossWeightAtTouchdown,
     GrossWeightDelta60SecondsInFlightMax,
+    GroundspeedAtLiftoff,
     GroundspeedAtTOGA,
     GroundspeedAtTouchdown,
     GroundspeedDuringRejectedTakeoffMax,
@@ -8650,6 +8651,17 @@ class TestGroundspeedDuringRejectedTakeoffMax(unittest.TestCase):
 
         self.assertAlmostEqual(gspd_rto[0].value, 95.4, 1)
         self.assertEqual(gspd_rto[0].index, 229)
+
+
+class TestGroundspeedAtLiftoff(unittest.TestCase, CreateKPVsAtKTIsTest):
+
+    def setUp(self):
+        self.node_class = GroundspeedAtLiftoff
+        self.operational_combinations = [('Groundspeed', 'Liftoff')]
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
 
 
 class TestGroundspeedAtTouchdown(unittest.TestCase, CreateKPVsAtKTIsTest):

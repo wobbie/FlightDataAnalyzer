@@ -9223,6 +9223,19 @@ class GroundspeedDuringRejectedTakeoffMax(KeyPointValueNode):
             self.create_kpv(rto_slice.start + index, value)
 
 
+class GroundspeedAtLiftoff(KeyPointValueNode):
+    '''
+    '''
+
+    units = ut.KT
+
+    def derive(self,
+               gnd_spd=P('Groundspeed'),
+               liftoffs=KTI('Liftoff')):
+
+        self.create_kpvs_at_ktis(gnd_spd.array, liftoffs)
+
+
 class GroundspeedAtTouchdown(KeyPointValueNode):
     '''
     '''
