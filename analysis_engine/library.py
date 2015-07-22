@@ -1851,8 +1851,8 @@ def find_toc_tod(alt_data, ccd_slice, frequency, mode=None):
     # Find the midpoint to separate tops and bottoms of climbs and descents.
     trough = min_value(alt_data, section_2)
     mid_alt = (peak.value + trough.value) / 2.0
-    mid_index = int(index_at_value(alt_data[section_2], mid_alt) + (section_2.start or 0))
-    
+    mid_index = int(index_at_value(alt_data[section_2], mid_alt, endpoint='nearest') + (section_2.start or 0))
+
     if mode == 'tod':
         # The first part is where the point of interest lies
         section_4 = slice(section_2.start, mid_index)
