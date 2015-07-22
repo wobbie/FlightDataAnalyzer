@@ -1985,11 +1985,8 @@ def find_edges_on_state_change(state, array, change='entering', phase=None, min_
 
     edge_list = []
     for period in phase:
-        if hasattr(period, 'slice'):
-            _slice = period.slice
-        else:
-            _slice = period
-        edges = state_changes(state, array, change, _slice=_slice,
+        period = getattr(period, 'slice', period)
+        edges = state_changes(state, array, change, _slice=period,
                               min_samples=min_samples)
         edge_list.extend(edges)
     return edge_list
