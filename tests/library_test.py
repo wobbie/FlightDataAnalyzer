@@ -47,7 +47,7 @@ class TestAnyOf(unittest.TestCase):
 
 
 class TestAirTrack(unittest.TestCase):
-    
+
     def test_air_track_basic(self):
         spd = np.ma.array([260,260,260,260,260,260,260], dtype=float)
         hdg = np.ma.array([0,0,0,90,90,90,270], dtype=float)
@@ -57,7 +57,7 @@ class TestAirTrack(unittest.TestCase):
         lat, lon = air_track(0.0, 0.0, 0.0035, 0.0035, spd, hdg, alt, 1.0)
         np.testing.assert_array_almost_equal(0.0035, lat[-1], decimal=4)
         np.testing.assert_array_almost_equal(0.0035, lon[-1], decimal=4)
-        
+
     def test_air_track_arrays_too_short(self):
         spd = np.ma.array([60,60])
         hdg = np.ma.array([0,0])
@@ -66,11 +66,11 @@ class TestAirTrack(unittest.TestCase):
         lat, lon = air_track(0.0, 0.0, 1.0, 1.0, spd, hdg, alt, 1.0)
         self.assertEqual(lat, None)
         self.assertEqual(lon, None)
-    
+
     def test_air_track_masked_end(self):
-        spd = np.ma.load(open(os.path.join(test_data_path, 
+        spd = np.ma.load(open(os.path.join(test_data_path,
                                            'air_track_spd.npy')))
-        hdg = np.ma.load(open(os.path.join(test_data_path, 
+        hdg = np.ma.load(open(os.path.join(test_data_path,
                                            'air_track_hdg.npy')))
         alt = np_ma_ones_like(hdg)
         alt[0] = 0.0
@@ -158,7 +158,7 @@ class TestFindLowAlts(unittest.TestCase):
                          slice(5009.0, 5071.0),
                          slice(5168.0, 6883.0),
                          slice(8433.0, 9058.0)]
-        
+
         low_alts = find_low_alts(array, 1.0, 500, 3000, 2000,
                                  level_flights=level_flights)
         self.assertEqual(len(low_alts), 5)
@@ -172,7 +172,7 @@ class TestFindLowAlts(unittest.TestCase):
         self.assertAlmostEqual(low_alts[3].stop, 7258, places=0)
         self.assertAlmostEqual(low_alts[4].start, 10362, places=0)
         self.assertAlmostEqual(low_alts[4].stop, 10815, places=0)
-        
+
         low_alts = find_low_alts(array, 1.0, 500, 500, 2000,
                                         level_flights=level_flights,
                                         relative_start=True,
@@ -188,7 +188,7 @@ class TestFindLowAlts(unittest.TestCase):
         self.assertAlmostEqual(low_alts[3].stop, 7265, places=0)
         self.assertAlmostEqual(low_alts[4].start, 10522, places=0)
         self.assertAlmostEqual(low_alts[4].stop, 10815, places=0)
-        
+
         low_alts = find_low_alts(array, 1.0, 500, 3000,
                                  level_flights=level_flights)
         self.assertEqual(len(low_alts), 5)
@@ -202,7 +202,7 @@ class TestFindLowAlts(unittest.TestCase):
         self.assertAlmostEqual(low_alts[3].stop, 7182, places=0)
         self.assertAlmostEqual(low_alts[4].start, 10362, places=0)
         self.assertAlmostEqual(low_alts[4].stop, 10815, places=0)
-        
+
         low_alts = find_low_alts(array, 1.0, 500, level_flights=level_flights)
         self.assertEqual(len(low_alts), 5)
         self.assertAlmostEqual(low_alts[0].start, 0, places=0)
@@ -215,8 +215,8 @@ class TestFindLowAlts(unittest.TestCase):
         self.assertAlmostEqual(low_alts[3].stop, 7182, places=0)
         self.assertAlmostEqual(low_alts[4].start, 10522, places=0)
         self.assertAlmostEqual(low_alts[4].stop, 10815, places=0)
-        
-        
+
+
         # Slices will include level flight without passing in slices.
         low_alts = find_low_alts(array, 1.0, 500, 3000, 2000)
         self.assertEqual(len(low_alts), 5)
@@ -231,7 +231,7 @@ class TestFindLowAlts(unittest.TestCase):
         self.assertAlmostEqual(low_alts[4].start, 10362, places=0)
         self.assertAlmostEqual(low_alts[4].stop, 10815, places=0)
 
-        
+
         # Support negative climbout_alt (search backwards).
         # Slices will include level flight without passing in slices.
         low_alts = find_low_alts(array, 1.0, 500, 3000, 50, stop_mode='descent',
@@ -247,7 +247,7 @@ class TestFindLowAlts(unittest.TestCase):
         self.assertAlmostEqual(low_alts[3].stop, 7171, places=0)
         self.assertAlmostEqual(low_alts[4].start, 10362, places=0)
         self.assertAlmostEqual(low_alts[4].stop, 10556, places=0)
-        
+
         # 0 climbout_alt (lowest point of descent).
         low_alts = find_low_alts(array, 1.0, 500, 3000, 0,
                                  level_flights=level_flights)
@@ -260,12 +260,12 @@ class TestFindLowAlts(unittest.TestCase):
         self.assertAlmostEqual(low_alts[2].stop, 7171, places=0)
         self.assertAlmostEqual(low_alts[3].start, 10362, places=0)
         self.assertAlmostEqual(low_alts[3].stop, 10569, places=0)
-        
+
     @unittest.skip('Known failure case')
     def test_find_low_alts_2(self):
         # Example flight with noisy alt aal
         array = load_compressed(os.path.join(test_data_path, 'find_low_alts_alt_aal_1.npz'))
-        
+
         level_flights = [
             slice(1856.0, 2392.0),
             slice(4062.0, 4382.0),
@@ -303,8 +303,8 @@ class TestFindLowAlts(unittest.TestCase):
             slice(18654.0, 20582.0),
             slice(21184.0, 21932.0),
         ]
-        
-        low_alts = find_low_alts(array, 3000, stop_alt=0, 
+
+        low_alts = find_low_alts(array, 3000, stop_alt=0,
                                  level_flights=level_flights)
         # With a default 500ft change in level for a low altitude excursion,
         # I think there really are 7 such periods in this test, hence why I
@@ -557,7 +557,7 @@ class TestAlign(unittest.TestCase):
         result = align(slave, master)
         np.testing.assert_array_almost_equal(result.data, [0.0, 0.5, 2.5, 5.0])
         np.testing.assert_array_equal(result.mask, [1,0,0,0])
-        
+
     def test_align_decreasing_hz_delayed_excessive_delay_in_master(self):
         # Master at lower frequency than slave
         master = P(array=np.ma.array([10,11,12,13],dtype=float),
@@ -879,7 +879,7 @@ class TestAlign(unittest.TestCase):
         result = align(slave, master)
         # np.testing.assert_array_equal(result.data, expected.data)
         np.testing.assert_array_equal(result.mask, expected.mask)
-    
+
     def test_align_downsample_same_offset(self):
         # Sample every other value.
         slave = P(array=np.ma.array([
@@ -906,7 +906,7 @@ class TestAlign(unittest.TestCase):
         slave = P('slave', np.ma.arange(15), frequency=5.0, offset=0.0)
         result = align(slave, master)
         ma_test.assert_array_equal(result, [0, 5, 10])
-        
+
     def test_align_5hz_reverse(self):
         master = P('master', np.ma.arange(15.0), frequency=5.0, offset=0.0)
         slave = P('slave', array=[1,2,3], frequency=1.0, offset=0.0)
@@ -914,7 +914,7 @@ class TestAlign(unittest.TestCase):
         expected = (master.array/5.0)+1.0
         expected[11:]=np.ma.masked
         ma_test.assert_array_almost_equal(result, expected)
-        
+
     def test_align_10hz(self):
         master = P('master', array=[1,2], frequency=1.0, offset=0.0)
         slave = P('slave', np.ma.arange(20), frequency=10.0, offset=0.0)
@@ -928,7 +928,7 @@ class TestAlign(unittest.TestCase):
         expected = (master.array/10.0)+2.0
         expected[21:]=np.ma.masked
         ma_test.assert_array_almost_equal(result, expected)
-        
+
     def test_align_20hz(self):
         master = P('master', array=[1,2], frequency=1.0, offset=0.0)
         slave = P('slave', np.ma.arange(40), frequency=20.0, offset=0.0)
@@ -942,12 +942,12 @@ class TestAlign(unittest.TestCase):
         expected = 6.0-(master.array/20.0)
         expected[81:]=np.ma.masked
         ma_test.assert_array_almost_equal(result, expected)
-        
+
     def test_align_5_10_20_offset_master(self):
         master = P('master', np.ma.arange(100.0), frequency=20.0, offset=0.1)
         slave = P('slave', array=[6,5,4,3,2], frequency=1.0, offset=0.0)
         self.assertRaises(ValueError, align, slave, master)
-        
+
     def test_align_5_10_20_offset_slave(self):
         master = P('master', np.ma.arange(10.0), frequency=2.0, offset=0.0)
         slave = P('slave', array=[6,5,4,3,2], frequency=5.0, offset=0.3)
@@ -1051,7 +1051,7 @@ class TestBearingsAndDistances(unittest.TestCase):
         ma_test.assert_masked_array_approx_equal(brg, compass)
         self.assertEqual(dist[0].mask,True)
         self.assertEqual(dist[2].mask,True)
-        
+
     def test_bearings_and_back_again(self):
         # One should be able to go back and forth between bearings and
         # distances and latitudes and longitudes without any loss of
@@ -1066,7 +1066,7 @@ class TestBearingsAndDistances(unittest.TestCase):
         self.assertAlmostEqual(end_lons[0], 2.55)
         self.assertAlmostEqual(end_lats[1], 53.6304)
         self.assertAlmostEqual(end_lons[1], 9.98823)
-                                        
+
 
 class TestLatitudesAndLongitudes(unittest.TestCase):
     def test_known_bearing_and_distance(self):
@@ -1184,118 +1184,118 @@ class TestIncludingTransition(unittest.TestCase):
     flap_map_2 = {0: '0', 1: '1', 5: '5', 15: '15', 20: '20', 25: '25', 30: '30'}
     flap_map_3 = {0: '0', 15: '15', 30: '30'}
     flap_map_4 = {0: '0', 1: '1', 2: '2', 5: '5', 10: '10', 15: '15', 25: '25', 30: '30', 40: '40'}
-    
+
     @staticmethod
     def _plot(array, flap_inc):
         from analysis_engine.plot_flight import plot_parameter
         plot_parameter(array, show=False)
         plot_parameter(flap_inc)
-    
+
     def test_including_transition_1(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_1.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [0] * 12 + [15] * 17)
-    
+
     def test_including_transition_2(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_2.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         #self._plot(array, flap_inc)
         self.assertEqual(flap_inc.tolist(), [15] * 23 + [0] * 14)
-    
+
     def test_including_transition_3(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_3.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [0] * 14 + [15] * 19)
-    
+
     def test_including_transition_4(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_4.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [15] * 13 + [30] * 16)
-    
+
     def test_including_transition_5(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_5.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [30] * 24)
-    
+
     def test_including_transition_6(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_6.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [30] * 22 + [15] * 15  + [0] * 12)
-    
+
     def test_including_transition_7(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_7.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [0] * 23)
-    
+
     def test_including_transition_8(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_8.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [0] * 40)
-    
+
     def test_including_transition_9(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_9.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [0] * 13 + [15] * 16)
-    
+
     def test_including_transition_10(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_10.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [15] * 25 + [0] * 15)
-    
+
     def test_including_transition_11(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_11.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [0] * 13 + [15] * 16)
-    
+
     def test_including_transition_12(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_12.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [15] * 16 + [30] * 17)
-    
+
     def test_including_transition_13(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_13.npz'))
         flap_inc = including_transition(array, self.flap_map_1)
         self.assertEqual(flap_inc.tolist(), [30] * 23 + [15] * 15 + [0] * 15)
-    
+
     def test_including_transition_14(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_14.npz'))
         flap_inc = including_transition(array, self.flap_map_2)
         self.assertEqual(flap_inc.tolist(), [0] * 12 + [1] * 22 + [5] * 27)
-    
+
     def test_including_transition_15(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_15.npz'))
         flap_inc = including_transition(array, self.flap_map_2)
         self.assertEqual(flap_inc.tolist(), [5] * 32 + [1] * 26 + [0] * 14)
-    
+
     def test_including_transition_16(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_16.npz'))
         flap_inc = including_transition(array, self.flap_map_2)
         self.assertEqual(flap_inc.tolist(), [0] * 12 + [1] * 33)
-    
+
     def test_including_transition_17(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_17.npz'))
         flap_inc = including_transition(array, self.flap_map_2)
         self.assertEqual(flap_inc.tolist(), [1] * 17 + [5] * 29)
-    
+
     def test_including_transition_18(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_18.npz'))
         flap_inc = including_transition(array, self.flap_map_2)
         self.assertEqual(flap_inc.tolist(), [5] * 14 + [15] * 11 + [20] * 18)
-    
+
     def test_including_transition_19(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_19.npz'))
         flap_inc = including_transition(array, self.flap_map_2)
         self.assertEqual(flap_inc.tolist(), [20] * 36 + [25] * 29) #+ [30] * 11)
-    
+
     def test_including_transition_20(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_20.npz'))
         flap_inc = including_transition(array, self.flap_map_2)
         self.assertEqual(flap_inc.tolist(), [30] * 17 + [25] * 4 + [20] * 10 + [15] * 11 + [5] * 23 + [1] * 26 + [0] * 15)
-    
+
     def test_including_transition_21(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_21.npz'))
         flap_inc = including_transition(array, self.flap_map_3)
-        
+
         self.assertTrue(flap_inc.mask[:4].all())
         self.assertTrue(np.ma.all(flap_inc[4:3032] == 0))
         self.assertTrue(np.ma.all(flap_inc[3032:3896] == 15))
@@ -1305,7 +1305,7 @@ class TestIncludingTransition(unittest.TestCase):
         self.assertTrue(np.ma.all(flap_inc[9253:9267] == 15))
         self.assertTrue(np.ma.all(flap_inc[9267:-6] == 0))
         self.assertTrue(flap_inc.mask[-6:].all())
-    
+
     def test_including_transition_22(self):
         array = load_compressed(os.path.join(test_data_path, 'flap_including_transition_flap_angle.npz'))
         flap_inc = including_transition(array, self.flap_map_4)
@@ -1333,7 +1333,7 @@ class TestIncludingTransition(unittest.TestCase):
         self.assertTrue(np.ma.all(flap_inc[2728:2735] == 1))
         self.assertTrue(np.ma.all(flap_inc[2735:3489] == 0))
         # Do not test further transitions for brevity.
-    
+
     def test_including_transition_23(self):
         array = load_compressed(os.path.join(test_data_path, 'flap_including_transition_flap_angle_2.npz'))
         flap_inc = including_transition(array, self.flap_map_4)
@@ -1355,7 +1355,7 @@ class TestIncludingTransition(unittest.TestCase):
         self.assertTrue(np.ma.all(flap_inc[12680:12685] == 2))
         self.assertTrue(np.ma.all(flap_inc[12685:12707] == 1))
         self.assertTrue(np.ma.all(flap_inc[12707:] == 0))
-    
+
     def test_including_transition_24(self):
         '''
         Test that all flap settings are included from 0 to 30.
@@ -1370,7 +1370,7 @@ class TestIncludingTransition(unittest.TestCase):
         self.assertTrue(np.ma.all(flap_inc[2174:2193] == 15))
         self.assertTrue(np.ma.all(flap_inc[2193:2203] == 25))
         self.assertTrue(np.ma.all(flap_inc[2203:2379] == 30))
-    
+
     def test_including_transition_25(self):
         '''
         Test that including transition does not jump prematurely to 1.
@@ -1387,10 +1387,10 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
     flap_map_1 = {0: '0', 15: '15', 30: '30', 45: '45'}
     flap_map_2 = {0: '0', 1: '1', 5: '5', 15: '15', 20: '20', 25: '25', 30: '30'}
     flap_map_3 = {0: '0', 15: '15', 30: '30'}
-    
+
     slat_map_1 = {0: '0', 15: '15', 25: '25'}
     slat_map_2 = {0: '0', 50: '50', 100: '100'}
-    
+
     @staticmethod
     def _call_calculate(func, parameter):
         args = [parameter, mock.Mock(), mock.Mock(), mock.Mock()]
@@ -1399,29 +1399,29 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
             func('including', *args)[1],
             func('lever', *args)[1],
         )
-    
+
     @classmethod
     def _calculate(cls, func, array, hz=2, align=False):
         parameter = P(array=array, frequency=hz)
         if align:
             return cls._call_calculate(func, parameter)
-        
+
         with patch('analysis_engine.library.align_args') as align_args:
             align_args.return_value = array
             return cls._call_calculate(func, parameter)
-    
+
     @classmethod
     @patch('analysis_engine.library.at')
     def _calculate_flap(cls, array, map, at, align=False):
         at.get_flap_map.return_value = map
         return cls._calculate(calculate_flap, array, align=align)
-    
+
     @classmethod
     @patch('analysis_engine.library.at')
     def _calculate_slat(cls, array, map, at, align=False):
         at.get_slat_map.return_value = map
         return cls._calculate(calculate_slat, array, align=align)
-    
+
     def test_calculate_flap_1(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_1.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array, self.flap_map_1)
@@ -1430,7 +1430,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(flap_exc.tolist(), late)
         self.assertEqual(flap_inc.tolist(), early)
         self.assertEqual(flap_lev.tolist(), early)
-    
+
     def test_calculate_flap_2(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_2.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array, self.flap_map_1)
@@ -1439,7 +1439,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(flap_exc.tolist(), early)
         self.assertEqual(flap_inc.tolist(), late)
         self.assertEqual(flap_lev.tolist(), early)
-    
+
     def test_calculate_flap_3(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_3.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array, self.flap_map_1)
@@ -1448,7 +1448,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(flap_exc.tolist(), late)
         self.assertEqual(flap_inc.tolist(), early)
         self.assertEqual(flap_lev.tolist(), early)
-    
+
     def test_calculate_flap_4(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_4.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array,  self.flap_map_1)
@@ -1457,7 +1457,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(flap_exc.tolist(), late)
         self.assertEqual(flap_inc.tolist(), early)
         self.assertEqual(flap_lev.tolist(), early)
-    
+
     def test_calculate_flap_5(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_5.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array, self.flap_map_1)
@@ -1465,7 +1465,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(flap_exc.tolist(), flat)
         self.assertEqual(flap_inc.tolist(), flat)
         self.assertEqual(flap_lev.tolist(), flat)
-    
+
     def test_calculate_flap_6(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_6.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array, self.flap_map_1)
@@ -1474,7 +1474,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(flap_exc.tolist(), early)
         self.assertEqual(flap_inc.tolist(), late)
         self.assertEqual(flap_lev.tolist(), early)
-    
+
     def test_calculate_flap_7(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_7.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array, self.flap_map_1)
@@ -1482,7 +1482,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(flap_exc.tolist(), flat)
         self.assertEqual(flap_inc.tolist(), flat)
         self.assertEqual(flap_lev.tolist(), flat)
-    
+
     def test_calculate_flap_8(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_8.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array, self.flap_map_1)
@@ -1490,7 +1490,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(flap_exc.tolist(), flat)
         self.assertEqual(flap_inc.tolist(), flat)
         self.assertEqual(flap_lev.tolist(), flat)
-    
+
     def test_calculate_flap_9(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_9.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array, self.flap_map_1)
@@ -1499,7 +1499,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(flap_exc.tolist(), late)
         self.assertEqual(flap_inc.tolist(), early)
         self.assertEqual(flap_lev.tolist(), early)
-    
+
     def test_calculate_flap_10(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_10.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array, self.flap_map_1)
@@ -1508,7 +1508,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(flap_exc.tolist(), early)
         self.assertEqual(flap_inc.tolist(), late)
         self.assertEqual(flap_lev.tolist(), early)
-    
+
     def test_calculate_flap_11(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_11.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array, self.flap_map_1)
@@ -1517,7 +1517,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(flap_exc.tolist(), late)
         self.assertEqual(flap_inc.tolist(), early)
         self.assertEqual(flap_lev.tolist(), early)
-    
+
     def test_calculate_flap_12(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_12.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array, self.flap_map_1)
@@ -1526,7 +1526,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(flap_exc.tolist(), late)
         self.assertEqual(flap_inc.tolist(), early)
         self.assertEqual(flap_lev.tolist(), early)
-    
+
     def test_calculate_flap_13(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_13.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array, self.flap_map_1)
@@ -1535,7 +1535,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(flap_exc.tolist(), early)
         self.assertEqual(flap_inc.tolist(), late)
         self.assertEqual(flap_lev.tolist(), early)
-    
+
     def test_calculate_flap_14(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_14.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array, self.flap_map_2)
@@ -1544,7 +1544,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(flap_exc.tolist(), late)
         self.assertEqual(flap_inc.tolist(), early)
         self.assertEqual(flap_lev.tolist(), early)
-    
+
     def test_calculate_flap_15(self):
         # This test case is a little problematic as the flap setting of 1 is skipped for Flap Excluding Transition.
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_15.npz'))
@@ -1554,7 +1554,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(flap_exc.tolist(), early)
         self.assertEqual(flap_inc.tolist(), late)
         self.assertEqual(flap_lev.tolist(), early)
-    
+
     def test_calculate_flap_16(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_16.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array, self.flap_map_2)
@@ -1563,7 +1563,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(flap_exc.tolist(), late)
         self.assertEqual(flap_inc.tolist(), early)
         self.assertEqual(flap_lev.tolist(), early)
-    
+
     def test_calculate_flap_17(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_17.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array, self.flap_map_2)
@@ -1572,7 +1572,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(flap_exc.tolist(), late)
         self.assertEqual(flap_inc.tolist(), early)
         self.assertEqual(flap_lev.tolist(), early)
-    
+
     def test_calculate_flap_18(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_18.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array, self.flap_map_2)
@@ -1581,7 +1581,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(flap_exc.tolist(), late)
         self.assertEqual(flap_inc.tolist(), early)
         self.assertEqual(flap_lev.tolist(), early)
-    
+
     def test_calculate_flap_19(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_19.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array, self.flap_map_2)
@@ -1590,7 +1590,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(flap_exc.tolist(), late)
         self.assertEqual(flap_inc.tolist(), early)
         self.assertEqual(flap_lev.tolist(), early)
-    
+
     def test_calculate_flap_20(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_20.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array, self.flap_map_2)
@@ -1599,11 +1599,11 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(flap_exc.tolist(), early)
         self.assertEqual(flap_inc.tolist(), late)
         self.assertEqual(flap_lev.tolist(), early)
-    
+
     def test_calculate_flap_21(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_flap_21.npz'))
         flap_exc, flap_inc, flap_lev = self._calculate_flap(array, self.flap_map_3)
-        
+
         self.assertTrue(flap_exc.mask[:4].all())
         self.assertTrue(np.ma.all(flap_exc[4:3040] == 0))
         self.assertTrue(np.ma.all(flap_exc[3040:3886] == 15))
@@ -1612,7 +1612,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertTrue(np.ma.all(flap_exc[8858:9243] == 30))
         self.assertTrue(np.ma.all(flap_exc[9243:-6] == 0))
         self.assertTrue(flap_exc.mask[-6:].all())
-        
+
         self.assertTrue(flap_inc.mask[:4].all())
         self.assertTrue(np.ma.all(flap_inc[4:3031] == 0))
         self.assertTrue(np.ma.all(flap_inc[3031:3899] == 15))
@@ -1621,7 +1621,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertTrue(np.ma.all(flap_inc[8848:9271] == 30))
         self.assertTrue(np.ma.all(flap_inc[9271:-6] == 0))
         self.assertTrue(flap_inc.mask[-6:].all())
-        
+
         self.assertTrue(flap_lev.mask[:4].all())
         self.assertTrue(np.ma.all(flap_lev[4:3031] == 0))
         self.assertTrue(np.ma.all(flap_lev[3031:3886] == 15))
@@ -1630,7 +1630,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertTrue(np.ma.all(flap_lev[8848:9243] == 30))
         self.assertTrue(np.ma.all(flap_lev[9243:-6] == 0))
         self.assertTrue(flap_lev.mask[-6:].all())
-    
+
     def test_calculate_slat_1(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_slat_1.npz'))
         slat_exc, slat_inc, slat_lev = self._calculate_slat(array, self.slat_map_1)
@@ -1639,7 +1639,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(slat_exc.tolist(), late)
         self.assertEqual(slat_inc.tolist(), early)
         self.assertEqual(slat_lev.tolist(), early)
-    
+
     def test_calculate_slat_2(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_slat_2.npz'))
         slat_exc, slat_inc, slat_lev = self._calculate_slat(array, self.slat_map_1)
@@ -1648,7 +1648,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(slat_exc.tolist(), early)
         self.assertEqual(slat_inc.tolist(), late)
         self.assertEqual(slat_lev.tolist(), early)
-    
+
     def test_calculate_slat_3(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_slat_3.npz'))
         slat_exc, slat_inc, slat_lev = self._calculate_slat(array, self.slat_map_2)
@@ -1657,7 +1657,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(slat_exc.tolist(), late)
         self.assertEqual(slat_inc.tolist(), early)
         self.assertEqual(slat_lev.tolist(), early)
-    
+
     def test_calculate_slat_4(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_slat_4.npz'))
         slat_exc, slat_inc, slat_lev = self._calculate_slat(array, self.slat_map_2)
@@ -1666,7 +1666,7 @@ class TestCalculateSurfaceAngle(unittest.TestCase):
         self.assertEqual(slat_exc.tolist(), early)
         self.assertEqual(slat_inc.tolist(), late)
         self.assertEqual(slat_lev.tolist(), early)
-    
+
     def test_calculate_slat_5(self):
         array = load_compressed(os.path.join(test_data_path, 'calculate_slat_5.npz'))
         slat_exc, slat_inc, slat_lev = self._calculate_slat(array, self.slat_map_2)
@@ -1707,7 +1707,7 @@ class TestCalculateTimebase(unittest.TestCase):
         #>>> datetime(2020,12,25,00,01,19) - timedelta(seconds=25)
         #datetime.datetime(2020, 12, 25, 0, 0, 50)
         self.assertEqual(start_dt, datetime(self.last_year, 12, 24, 23, 58, 54, tzinfo=pytz.utc))
-        
+
     def test_calculate_timebase(self):
         # 6th second is the first valid datetime(2020,12,25,23,59,0)
         years = [None] * 6 + [self.last_year] * 19  # 6 sec offset
@@ -1819,7 +1819,7 @@ class TestCoReg(unittest.TestCase):
         y=np.ma.array([1], dtype=float)
         self.assertRaises(ValueError, coreg, y)
     '''
-    
+
     def test_correlation_constant_arrays(self):
         x=np.ma.array([0,0,0,0,0,0], dtype=float)
         y=np.ma.arange(6)
@@ -1933,7 +1933,7 @@ class TestClosestUnmaskedValue(unittest.TestCase):
                          Value(3, 3))
         # Handles index out of range
         self.assertEqual(closest_unmasked_value(array, 10), Value(9, 9))
-        
+
     def test_closest_unmasked_value_negative_index(self):
         values = [
             0, 2503, 5012, 5003, 4968, 4925, 4844, 4893, 4476, 4385, 4395, 4332,
@@ -1947,7 +1947,7 @@ class TestClosestUnmaskedValue(unittest.TestCase):
         array = np.ma.array(values, mask=[True] * 2 + [False] * 68 + [True])
         self.assertEqual(closest_unmasked_value(array, -25), Value(46, 3093))
         self.assertEqual(closest_unmasked_value(array, -0.45), Value(69, 2708))
-    
+
     def test_closest_unmasked_index_relative_to_start(self):
         array = np.ma.arange(10)
         self.assertEqual(closest_unmasked_value(array, 6, start_index=0),
@@ -1990,11 +1990,11 @@ class TestActuatorMismatch(unittest.TestCase):
         self.act_l_array = np.ma.array(act_l_list)
         self.act_r_array = np.ma.array(act_r_list)
         self.surf_array = np.ma.array(surf_list)
-        
+
     def test_actuator_basic(self):
         scaling = 1 / 2.6  # 737 elevator specific at this time
-        amm = actuator_mismatch(self.ap_array, 
-                                self.fcc_l_array, 
+        amm = actuator_mismatch(self.ap_array,
+                                self.fcc_l_array,
                                 self.fcc_r_array,
                                 self.act_l_array,
                                 self.act_r_array,
@@ -2020,7 +2020,7 @@ class TestClumpMultistate(unittest.TestCase):
         self.assertEqual(result, expected)
         result2 = clump_multistate(p.array, 'two')
         self.assertEqual(result2, expected)
-        
+
 
     def test_complex(self):
         values_mapping = {1: 'one', 2: 'two', 3: 'three'}
@@ -2173,12 +2173,12 @@ class TestCycleSelect(unittest.TestCase):
         index, value = cycle_select(np.ma.array([0,0,5,5.0,2,2]),4.0, 3.0, 1.0)
         self.assertEqual(index, None)
         self.assertEqual(value, None)
-        
+
     def test_full_cycle_identified(self):
         index, value = cycle_select(np.ma.array([1,0,5,5.0,0,1]),4.0, 4.0, 1.0)
         self.assertEqual(index, 2)
         self.assertEqual(value, 5)
-        
+
     def test_cycle_select_with_offset(self):
         index, value = cycle_select(self.array, 3.0, 10, 1.0, 1234)
         self.assertEqual(index, 1234 + 25)
@@ -2392,15 +2392,15 @@ class TestFindEdges(unittest.TestCase):
         result = find_edges(array, slice(0,10), direction='all_edges')
         expected = [1.5,3.5,5.5,7.5]
         self.assertEqual(expected, result)
-        
+
     def test_find_edges_masked_edge(self):
         edges = np.ma.array([1,1,0,0,0,1,1], mask=[0,0,0,0,1,1,0])
         self.assertEqual(find_edges(edges, direction='all_edges'),
                          [1.5, 3.5])
-        
+
         no_edges = np.ma.array([1,1,0,0,0,1,1], mask=[0,0,1,1,1,0,0])
         self.assertFalse(find_edges(no_edges, direction='all_edges'))
-    
+
     def test_find_edges_too_small_slice(self):
         # Too small slice should not raise exception.
         edges = np.ma.arange(10)
@@ -2453,7 +2453,7 @@ class TestFindEdgesOnStateChange(unittest.TestCase):
         multi = self.Switch(array=np.ma.array([0,0,0,0,0,0]))
         edges = find_edges_on_state_change('on', multi.array)
         self.assertEqual(edges, [])
-        
+
     def test_min_samples(self):
         array = np.ma.zeros(30)
         array[4] = 1  # 1 sample
@@ -2463,22 +2463,22 @@ class TestFindEdgesOnStateChange(unittest.TestCase):
         array[25] = 0  # single sample while gear "Down" goes to "Up"
         touchdown = KeyTimeInstance(28, 'Touchdown')
         gear_down = MappedArray(array, values_mapping={0: 'Up', 1: 'Down'})
-        
+
         gear_down_indexes = find_edges_on_state_change(
             'Down', gear_down, change='entering', phase=[slice(0, touchdown.index)], min_samples=3)
         self.assertEqual(len(gear_down_indexes), 2)
         self.assertEqual(gear_down_indexes, [11.5, 19.5])
-        
+
         gear_down_indexes = find_edges_on_state_change(
                     'Down', gear_down, change='entering', phase=[slice(0, touchdown.index)], min_samples=2)
         self.assertEqual(gear_down_indexes, [6.5, 11.5, 19.5])
-        
+
         gear_down_indexes = find_edges_on_state_change(
                     'Down', gear_down, change='entering', phase=[slice(0, touchdown.index)], min_samples=1)
         self.assertEqual(gear_down_indexes, [3.5, 6.5, 11.5, 19.5, 25.5])
-                
-        
-        
+
+
+
 
 
 class TestFindTocTod(unittest.TestCase):
@@ -2542,7 +2542,7 @@ class TestFindTocTod(unittest.TestCase):
         alt *= 100
         ccd=slice(0,15,None)
         self.assertRaises(ValueError, find_toc_tod, alt, ccd, 1, 'oops')
-                    
+
     def test_basic(self):
         alt=np.ma.array([0,0,0,5,10,15,20,20,20,16,11,6,1,1,1])
         alt *= 100
@@ -2572,7 +2572,7 @@ class TestFindTocTod(unittest.TestCase):
         ccd=slice(None, None, None)
         self.assertEqual(find_toc_tod(alt, ccd, 0.1, 'toc'), 6)
 
-        
+
 class TestFirstOrderLag(unittest.TestCase):
 
     # first_order_lag (in_param, time_constant, hz, gain = 1.0, initial_value = 0.0)
@@ -2929,7 +2929,7 @@ class TestHashArray(unittest.TestCase):
         self.assertNotEqual(hash_array(np.ma.arange(10), section, 5),
                             hash_array(np.ma.arange(1,11), section, 5))
         # Tests that mask contents affect the generated hash.
-        
+
         ma1 = np.ma.array(np.ma.arange(100,200), mask=[False] * 100)
         ma2 = np.ma.array(np.ma.arange(100,200),
                           mask=[False] * 50 + [True] + 49 * [False])
@@ -3012,11 +3012,11 @@ class TestHysteresis(unittest.TestCase):
         result = hysteresis(data,2)
         np.testing.assert_array_equal(result.filled(999),
                                       [999,1,1,1,999,0,5,6,6,0.5])
-        
+
     def test_hysteresis_with_zero_or_negative_thresholod(self):
         data = np.ma.array([0,1])
         np.testing.assert_array_equal(data.data, hysteresis(data,0).data)
-        self.assertRaises(ValueError, hysteresis, data, -3)        
+        self.assertRaises(ValueError, hysteresis, data, -3)
 
     """
     Hysteresis may need to be speeded up, in which case this test can be
@@ -3191,9 +3191,9 @@ class TestIndexClosestValue(unittest.TestCase):
         self.assertEqual(index_closest_value(array, 6, slice(2, 5)), 4)
 
     '''
-    
+
     This test is for a function not currently avaialble, but included for future use.
-    
+
     def test_index_closest_value_backwards(self):
         array = np.ma.array([3, 2, 1, 4, 5, 6, 7])
         self.assertEqual(index_closest_value(array, -9, slice(5, 1, -1)), 2)
@@ -3323,7 +3323,7 @@ class TestInterpolateCoarse(unittest.TestCase):
         interpolated = interpolate_coarse(lat_c_array)
         self.assertEqual([('%.1f' % x) if x else None for x in interpolated.tolist()],
                          [None, None, '56.0', '56.3', '56.7', '57.0', '57.5', '58.0', '57.0', None, None, None, None])
-        
+
     def test_interpolate_coarse_2(self):
         lon_c_array = np.ma.array(
             [1000, 1000, 60, 60, 60, 61, 61, 61, 62, 63, 2000, 2000, 2000],
@@ -3506,7 +3506,7 @@ class TestIntegrate (unittest.TestCase):
         result = integrate(data,1.0)
         ma_test.assert_array_equal(np.ma.array(data=[0,1,2.5,2.5], mask=[0,0,0,1]),
                                    result)
-        
+
     def test_integration_masked_tail_repaired(self):
         # This test was added to assess the effect of masked values rolling back into the integrand.
         data = np.ma.array(data = [1,1,2,99],
@@ -3563,7 +3563,7 @@ class TestMaskInsideSlices(unittest.TestCase):
         expected_result.mask = np.array([True] * 6 + [False] * 4+ [True] *  12 + [False] * 3 + [True] * 17 + [False] * 8)
         ma_test.assert_masked_array_equal(mask_inside_slices(array, slices),
                              expected_result)
-        
+
     def test_mask_inside_slices_null_ends(self):
         slices = [slice(None, 20.5), slice(30.1, None)]
         array = np.ma.arange(50)
@@ -3627,7 +3627,7 @@ class TestMaskOutsideSlices(unittest.TestCase):
         expected_result.mask = np.array([True] * 15 + [False] * 5 + [True] * 10 + [False] * 10 + [True] * 10)
         ma_test.assert_masked_array_equal(mask_outside_slices(array, slices),
                              expected_result)
-        
+
     def test_mask_outside_slices_floating_ends(self):
         slices = [slice(10.5, 20.5), slice(30.1, 40.9)]
         array = np.ma.arange(50)
@@ -3652,7 +3652,7 @@ class TestMatchAltitudes(unittest.TestCase):
         expected = fine + 5000.0
         result = match_altitudes(fine, coarse)
         ma_test.assert_masked_array_approx_equal(result, expected)
-        
+
     def test_masked_fine(self):
         fine = np.ma.array(data=[1,2,3,4,-4995,-4994,-4993,-4992],
                            mask=[0,0,0,1,1,0,0,0])
@@ -3740,16 +3740,16 @@ class TestAverageValue(unittest.TestCase):
     def test_average_value(self):
         array = np.ma.arange(10)
         self.assertEqual(average_value(array), Value(5, 4.5))
-        
+
         array = np.ma.arange(30)
         self.assertEqual(average_value(array), Value(15, 14.5))
 
-         
+
 class TestMedianValue(unittest.TestCase):
     def test_median_value(self):
         array = np.ma.array(range(6) + range(4))
         self.assertEqual(median_value(array), Value(5, 2))
-        
+
         array = np.ma.arange(30)
         self.assertEqual(median_value(array), Value(15, 14.5))
 
@@ -3788,7 +3788,7 @@ class TestMergeMasks(unittest.TestCase):
             merge_masks([np.array([False, False, False, True, True]),
                          np.array([False, False, True, True, False])]),
             np.array([False, False, True, True, True]))
-    
+
     def test_merge_masks_two_unmasked(self):
         ma_test.assert_equal(
             merge_masks([np.array([False, False, False, True, True]),
@@ -3907,9 +3907,9 @@ class TestMinimumUnmasked(unittest.TestCase):
 
 
 class TestBlendParameters(unittest.TestCase):
-    
+
     # Reminder: blend_parameters(params, offset, frequency):
-    
+
     # The setup and complex example provide the bulk of the evidence of
     # satisfactory operation here. The other test cases are derived from the
     # old BlendTwoParameters test to illustrate that we have replaced an
@@ -3923,7 +3923,7 @@ class TestBlendParameters(unittest.TestCase):
                  1991,2090,2183,2269,2370,2473,2718,0]
         p_alt_a=P('Altitude Radio (A)', array=alt_a, frequency=0.5, offset=0.1)
         p_alt_a.array[-1]=np.ma.masked
-        
+
         alt_b = [-4,-4,-3,4,65,260,461,652,851,1089,1304,1504,1594,1677,
                  1749,1719,1815,2080,2260,2470,2830]
         p_alt_b=P('Altitude Radio (B)', array=alt_b, frequency=0.25, offset=1.1)
@@ -3933,9 +3933,9 @@ class TestBlendParameters(unittest.TestCase):
         p_alt_c=P('Altitude Radio (C)', array=alt_c, frequency=0.25, offset=3.1)
         p_alt_c.array.data[10:14]=0.0
         p_alt_c.array[10:14]=np.ma.masked
-        
+
         self.params = (p_alt_a, p_alt_b, p_alt_c)
-        
+
     def test_blend_parameters_assertion_errors(self):
         p1 = P(array=[0,0,0,1.0,2], frequency=1, offset=0.9)
         p2 = P(array=[1,2,3,4.0,5], frequency=1, offset=0.4)
@@ -3948,7 +3948,7 @@ class TestBlendParameters(unittest.TestCase):
         expected = []
         self.assertAlmostEqual(result[30], 19.45, places=2)
         self.assertAlmostEqual(result[80], 1208, places=0)
-        
+
     def test_blend_linear_two_parameters_p2_before_p1_equal_spacing(self):
         p1 = P(array=[0,0,0,1.0,2], frequency=1, offset=0.9)
         p2 = P(array=[1,2,3,4.0,5], frequency=1, offset=0.4)
@@ -3962,7 +3962,7 @@ class TestBlendParameters(unittest.TestCase):
         result = blend_parameters((p1, p2))
         self.assertGreater(result[2], 4.5)
         self.assertLess(result[2], 5.5)
-        
+
     def test_blend_linear_two_parameters_offset_order_back_low_freq(self):
         p1 = P(array=[5,10,7,8.0,8], frequency=0.25, offset=0.1)
         p2 = P(array=[1,2,3,4.0,5], frequency=0.25, offset=0.0)
@@ -3976,7 +3976,7 @@ class TestBlendParameters(unittest.TestCase):
         p1.array.mask = True
         result = blend_parameters((p1, None, p2))  # random None parameter too
         self.assertAlmostEqual(result[2], 3)
-        
+
     def test_blend_linear_two_parameters_lower_op_freq(self):
         p1 = P(array=[5,10,7,8,5,7,4,2], frequency=2, offset=0.1, name='First')
         p2 = P(array=[1,2,3,4,5,4,3,2], frequency=2, offset=0.0, name='Second')
@@ -3995,8 +3995,8 @@ class TestBlendParameters(unittest.TestCase):
         result = blend_parameters(self.params, offset=0.0, frequency=2.0, mode='cubic')
         expected = []
         self.assertAlmostEqual(result[30], 14.225, places=2)
-        self.assertAlmostEqual(result[80], 1208, places=0)
-        
+        self.assertAlmostEqual(result[80], 1215, places=0)
+
     def test_blend_cubic_two_parameters_p2_before_p1_equal_spacing(self):
         p1 = P(array=[0,0,0,1.0,2], frequency=1, offset=0.9)
         p2 = P(array=[1,2,3,4.0,5], frequency=1, offset=0.4)
@@ -4010,7 +4010,7 @@ class TestBlendParameters(unittest.TestCase):
         result = blend_parameters((p1, p2), mode='cubic')
         self.assertGreater(result[2], 4.5)
         self.assertLess(result[2], 5.5)
-        
+
     def test_blend_cubic_two_parameters_offset_order_back_low_freq(self):
         p1 = P(array=[5,10,7,8.0,8], frequency=0.25, offset=0.1)
         p2 = P(array=[1,2,3,4.0,5], frequency=0.25, offset=0.0)
@@ -4024,7 +4024,7 @@ class TestBlendParameters(unittest.TestCase):
         p1.array.mask = True
         result = blend_parameters((p1, None, p2), mode='cubic')  # random None parameter too
         self.assertAlmostEqual(result[2], 3)
-        
+
     def test_blend_cubic_two_parameters_lower_op_freq(self):
         p1 = P(array=[5,10,7,8,5,7,4,2], frequency=2, offset=0.1, name='First')
         p2 = P(array=[1,2,3,4,5,4,3,2], frequency=2, offset=0.0, name='Second')
@@ -4040,21 +4040,21 @@ class TestBlendParametersWeighting(unittest.TestCase):
         result = blend_parameters_weighting(array, 1.0)
         expected = [0.0,0.0,0.05,0.0,0.05,1.0,0.05,0.0,0.0,0.0,0.05,1.0,1.0]
         ma_test.assert_equal(result.data, expected)
-        
+
     def test_weighting_increased_freq(self):
         array=np.ma.array(data=[0,0,0,0,0,0],
                           mask=[1,1,1,0,0,0])
         result = blend_parameters_weighting(array, 2.0)
         expected = np.ma.masked_array([0.0, 0.0, 0.0, 0.0, 0.0, 0.05, 0.1, 0.3, 0.5, 0.5, 0.5, 0.5])
         ma_test.assert_masked_array_almost_equal(result, expected)
-        
+
     def test_weighting_decreased_freq(self):
         array=np.ma.array(data=[0,0,0,0,0,0],
                           mask=[1,1,1,0,0,0])
         result = blend_parameters_weighting(array, 0.5)
         expected = np.ma.array([0.0, 0.05, 2.0])
         ma_test.assert_masked_array_almost_equal(result, expected)
-        
+
     def test_weighting_decreased_freq_odd_samples(self):
         array=np.ma.array(data=[0,0,0,0,0,0,0],
                           mask=[1,1,1,0,0,0,0])
@@ -4150,7 +4150,7 @@ class TestModulo(unittest.TestCase):
     def test_modulo(self):
         self.assertEqual(modulo(10, 2), 0)
         self.assertEqual(modulo(11, 2), 1)
-        
+
         # Fails with floats due to IEEE 754 imprecision.
         self.assertNotEqual(6 % 0.2, 0)
         self.assertEqual(modulo(6, 0.2), 0)
@@ -4199,11 +4199,11 @@ class TestMovingAverage(unittest.TestCase):
         ma_test.assert_masked_array_approx_equal(res, expected)
 
     def test_masked_edges(self):
-        array = np.ma.array(data=[1,2,3,4,5,5,5,5,5,5,5,5,4,5,5], 
+        array = np.ma.array(data=[1,2,3,4,5,5,5,5,5,5,5,5,4,5,5],
                             mask=[0,0,0,0,0,0,0,0,0,1,1,1,0,0,1])
         res = moving_average(array, window=5)
         self.assertEqual(len(res), 15)
-        expected = np.ma.array(data=[1.6, 2.2, 3,3.8,4.4,4.8, 5, 4.8,4.6,4.4, 4.2, 4.2, 4.4, 4.6, 1], 
+        expected = np.ma.array(data=[1.6, 2.2, 3,3.8,4.4,4.8, 5, 4.8,4.6,4.4, 4.2, 4.2, 4.4, 4.6, 1],
                                mask=[  0,   0, 0,  0,  0,  0, 0,   0,  0,  1,   1,   1,   0,   0, 1])
         ma_test.assert_masked_array_approx_equal(res, expected)
 
@@ -4769,7 +4769,7 @@ class TestRepairMask(unittest.TestCase):
         self.basic_data = np.ma.array(
             [0, 0, 10, 0, 0, 20, 23, 26, 30, 0, 0],
             mask=[True] * 2 + [False] + [True] * 2 + [False] * 4 + [True] * 2)
-    
+
     def test_repair_mask_basic_fill_start(self):
         self.assertEqual(repair_mask(self.basic_data,
                                      method='fill_start').tolist(),
@@ -4777,7 +4777,7 @@ class TestRepairMask(unittest.TestCase):
         self.assertEqual(repair_mask(self.basic_data, extrapolate=True,
                                      method='fill_start').tolist(),
                          [10, 10, 10, 10, 10, 20, 23, 26, 30, 30, 30])
-    
+
     def test_repair_mask_basic_fill_stop(self):
         self.assertEqual(repair_mask(self.basic_data,
                                      method='fill_stop').tolist(),
@@ -4785,7 +4785,7 @@ class TestRepairMask(unittest.TestCase):
         self.assertEqual(repair_mask(self.basic_data, extrapolate=True,
                                      method='fill_stop').tolist(),
                          [10, 10, 10, 20, 20, 20, 23, 26, 30, 30, 30])
-    
+
     def test_repair_mask_basic_1(self):
         array = np.ma.arange(10)
         array[3] = np.ma.masked
@@ -4863,7 +4863,7 @@ class TestResample(unittest.TestCase):
         ma_test.assert_equal(
             resample(np.array([True, False, True, True]), 0.5, 1),
             np.array([True, True, False, False, True, True, True, True]))
-        
+
     def test_resample_downsample(self):
         ma_test.assert_equal(
             resample(np.array([True, False, True, False, True]), 4, 2),
@@ -5364,7 +5364,7 @@ class TestSlicesDuration(unittest.TestCase):
     def test_slices_duration(self):
         self.assertEqual(slices_duration([], 1), 0)
         self.assertEqual(slices_duration([slice(0, 10)], 1), 10)
-        self.assertEqual(slices_duration([slice(5, 10), slice(12,15), 
+        self.assertEqual(slices_duration([slice(5, 10), slice(12,15),
                                           slice(30, 60)], 2), 19)
 
 
@@ -5388,7 +5388,7 @@ class TestSlicesContract(unittest.TestCase):
         self.assertEqual(slices_contract(slices, 20), expected)
         expected = []
         self.assertEqual(slices_contract(slices, 20, max_index=80), expected)
-        
+
         # Negative step is not supported.
         slices = [slice(5, 25), slice(40, 60, -2)]
         self.assertRaises(NotImplementedError, slices_contract, slices, 2)
@@ -5467,7 +5467,7 @@ class TestSlicesFromTo(unittest.TestCase):
         self.assertRaises(ValueError, slices_from_to, array, 0, 10, threshold=-0.1)
         self.assertRaises(ValueError, slices_from_to, array, 0, 10, threshold=1.1)
         self.assertRaises(ValueError, slices_from_to, array, 0, 10, threshold=100)
-    
+
     def test_slices_from_to(self):
         array = np.ma.arange(20)
         array.mask = [True] * 10 + [False] * 10
@@ -5524,7 +5524,7 @@ class TestSlicesFromTo(unittest.TestCase):
         self.assertEqual(slices, [])
         _, slices = slices_from_to(array, 6, 4)
         self.assertEqual(slices, [])
-    
+
     def test_slices_from_to_single_sample(self):
         '''
         Single samples will only be detected if there is an unmasked sample
@@ -5554,7 +5554,7 @@ class TestSlicesFromTo(unittest.TestCase):
         array.mask[3] = True
         _, slices = slices_from_to(array, 4, 2)
         self.assertEqual(slices, [])
-    
+
     def test_slices_from_to_two_samples(self):
         '''
         #Single samples will only be detected if there is an unmasked sample
@@ -5584,7 +5584,7 @@ class TestSlicesFromTo(unittest.TestCase):
         array.mask[4] = True
         _, slices = slices_from_to(array, 6, 2)
         self.assertEqual(slices, [slice(2, 4)])
-    
+
     def test_slices_from_to_dip(self):
         array = np.ma.array([10, 8, 6, 4, 2, 4, 6, 8, 10])
         _, slices = slices_from_to(array, 9, 3)
@@ -5615,7 +5615,7 @@ class TestSlicesFromTo(unittest.TestCase):
         self.assertEqual(slices, [slice(2, 4)])
         _, slices = slices_from_to(array, 8, 0, threshold=0.8)
         self.assertEqual(slices, [])
-    
+
     def test_slices_from_to_peak(self):
         array = np.ma.array([2, 4, 6, 8, 10, 8, 6, 4, 2])
         #_, slices = slices_from_to(array, 9, 3)
@@ -5636,7 +5636,7 @@ class TestSlicesFromTo(unittest.TestCase):
         self.assertEqual(slices, [slice(15, 18)])
         _, slices = slices_from_to(array, 12, 20, threshold=1)
         self.assertEqual(slices, [slice(15, 18)])
-    
+
     def test_slices_from_to_only_within_range(self):
         array = np.ma.array([5, 5, 5, 5, 5, 5, 5, 5, 5])
         # level data should not be considered as changing from one value
@@ -5682,7 +5682,7 @@ class TestSlicesFromTo(unittest.TestCase):
         array[-1:] = np.ma.masked
         _, slices = slices_from_to(array, 9, 1)
         self.assertEqual(slices, [slice(2, 6)])
-    
+
     def test_slices_from_to_starts_within_range(self):
         # stops outside of range
         # linear climbing
@@ -5719,7 +5719,7 @@ class TestSlicesFromTo(unittest.TestCase):
         self.assertEqual(slices, [slice(5, 11)])
         _, slices = slices_from_to(array, 9, 17)
         self.assertEqual(slices, [slice(0, 5)])
-    
+
     def test_slices_from_to_stops_within_range(self):
         # stops outside of range
         # linear climbing
@@ -5756,7 +5756,7 @@ class TestSlicesFromTo(unittest.TestCase):
         self.assertEqual(slices, [slice(7, 13)])
         _, slices = slices_from_to(array, 9, 17)
         self.assertEqual(slices, [slice(2, 7)])
-    
+
     def test_slices_from_to_only_outside_of_range(self):
         array = np.ma.array([5, 5, 5, 5, 5, 5, 5, 5, 5])
         _, slices = slices_from_to(array, 2, 4)
@@ -5767,12 +5767,12 @@ class TestSlicesFromTo(unittest.TestCase):
         self.assertEqual(slices, [])
         _, slices = slices_from_to(array, 15, 7)
         self.assertEqual(slices, [])
-    
+
     def test_slices_from_to_invalid_range(self):
         array = np.ma.arange(10)
         self.assertRaises(ValueError, slices_from_to, array, 2, 2)
         self.assertRaises(ValueError, slices_from_to, array, -2, -2)
-    
+
     def test_slices_from_to_alt_aal(self):
         '''
         Altitude AAL features a Go Around which provides an example of a dip
@@ -5822,7 +5822,7 @@ class TestSlicesFromKtis(unittest.TestCase):
         self.assertEqual(slices, [])
         slices = slices_from_ktis(None, None)
         self.assertEqual(slices, [])
-    
+
     def test_not_lists(self):
         kti_1 = KTI(items=[KeyTimeInstance(5, 'KTI_1')])[0]
         kti_2 = KeyTimeInstance(8, 'KTI_2')
@@ -5847,7 +5847,7 @@ class TestSlicesMultiply(unittest.TestCase):
         slices = [slice(1,2,3),slice(None,None,None),slice(1,2,None)]
         result = [slice(3,6,9),slice(None,None,None),slice(3,6,None)]
         self.assertEqual(slices_multiply(slices,3),result)
- 
+
     def test_slices_multiply_with_zero_start(self):
         slices = [slice(0,2,None)]
         result = [slice(0,8,None)]
@@ -5924,7 +5924,7 @@ class TestSlicesRemoveSmallGaps(unittest.TestCase):
         newlist = slices_remove_small_gaps(slicelist, count=10)
         expected = [slice(1, 7), slice(20, 22)]
         self.assertEqual(expected, newlist)
-        
+
     def test_slice_removal_big_time(self):
         slicelist = [slice(1, 3), slice(5, 7), slice(20, 22)]
         newlist = slices_remove_small_gaps(slicelist,time_limit=15)
@@ -6040,7 +6040,7 @@ class TestSlicesNot(unittest.TestCase):
 
 
 class TestSlicesOr(unittest.TestCase):
-    
+
     def test_slices_or_single_list(self):
         '''
         The contents of a single list should be OR'd.
@@ -6048,7 +6048,7 @@ class TestSlicesOr(unittest.TestCase):
         slices = [slice(None, 15), slice(25, 45), slice(65, None)]
         expected = [slice(None, 15), slice(25, 45), slice(65, None)]
         self.assertEqual(slices_or(slices), slices)
-    
+
     def test_slices_or_with_overlap(self):
         slice_list_a = [slice(10,13)]
         slice_list_b = [slice(16,25)]
@@ -6094,11 +6094,11 @@ class TestSlicesOr(unittest.TestCase):
         # to operate during the descent. The original code produced an answer
         # [slice(0.0, 394, None), slice(979.0, 1198, None), slice(972.0, 1198, None)]
         # inerror.
-        self.assertEqual(slices_or([slice(0.0, 394, None), 
-                                     slice(975.0, 980, None), 
-                                     slice(984.0, 1198, None)], 
-                                    [slice(0.0, 394, None), 
-                                     slice(972.0, 977, None), 
+        self.assertEqual(slices_or([slice(0.0, 394, None),
+                                     slice(975.0, 980, None),
+                                     slice(984.0, 1198, None)],
+                                    [slice(0.0, 394, None),
+                                     slice(972.0, 977, None),
                                      slice(979.0, 1198, None)]),
                                    [slice(0,394), slice(972,1198)])
 
@@ -6109,14 +6109,14 @@ class TestSlicesOr(unittest.TestCase):
         expected = [slice(572.0, 575, None), slice(576.0, 579, None), slice(8114.0, 8116, None), slice(8296.0, 8298, None), slice(596.0, 599, None), slice(10.0, 13, None), slice(14.0, 17, None), slice(18.0, 21, None), slice(22.0, 25, None), slice(36.0, 39, None), slice(40.0, 43, None), slice(44.0, 47, None), slice(48.0, 51, None), slice(52.0, 55, None), slice(56.0, 59, None), slice(60.0, 63, None), slice(64.0, 67, None), slice(68.0, 71, None), slice(72.0, 75, None), slice(76.0, 79, None), slice(80.0, 83, None), slice(84.0, 87, None), slice(88.0, 91, None), slice(92.0, 95, None), slice(96.0, 99, None), slice(100.0, 103, None), slice(104.0, 107, None), slice(108.0, 111, None), slice(112.0, 115, None), slice(116.0, 119, None), slice(120.0, 123, None), slice(124.0, 127, None), slice(128.0, 131, None), slice(132.0, 135, None), slice(136.0, 139, None), slice(140.0, 143, None), slice(144.0, 147, None), slice(148.0, 151, None), slice(152.0, 155, None), slice(156.0, 159, None), slice(160.0, 163, None), slice(164.0, 167, None), slice(168.0, 171, None), slice(172.0, 175, None), slice(176.0, 179, None), slice(180.0, 183, None), slice(184.0, 187, None), slice(188.0, 191, None), slice(192.0, 195, None), slice(196.0, 199, None), slice(200.0, 203, None), slice(204.0, 207, None), slice(208.0, 211, None), slice(212.0, 215, None), slice(216.0, 219, None), slice(220.0, 223, None), slice(224.0, 227, None), slice(228.0, 231, None), slice(232.0, 235, None), slice(236.0, 239, None), slice(240.0, 243, None), slice(244.0, 247, None), slice(248.0, 251, None), slice(252.0, 255, None), slice(256.0, 259, None), slice(260.0, 263, None), slice(264.0, 267, None), slice(268.0, 271, None), slice(272.0, 275, None), slice(276.0, 279, None), slice(280.0, 283, None), slice(284.0, 287, None), slice(288.0, 291, None), slice(292.0, 295, None), slice(296.0, 299, None), slice(300.0, 303, None), slice(304.0, 307, None), slice(308.0, 311, None), slice(312.0, 315, None), slice(316.0, 319, None), slice(320.0, 323, None), slice(324.0, 327, None), slice(328.0, 331, None), slice(332.0, 335, None), slice(336.0, 339, None), slice(340.0, 343, None), slice(344.0, 347, None), slice(348.0, 351, None), slice(352.0, 355, None), slice(356.0, 359, None), slice(360.0, 363, None), slice(364.0, 367, None), slice(368.0, 371, None), slice(372.0, 375, None), slice(376.0, 379, None), slice(380.0, 383, None), slice(384.0, 387, None), slice(388.0, 391, None), slice(392.0, 395, None), slice(396.0, 399, None), slice(400.0, 403, None), slice(404.0, 407, None), slice(408.0, 411, None), slice(412.0, 415, None), slice(416.0, 419, None), slice(420.0, 423, None), slice(424.0, 427, None), slice(428.0, 431, None), slice(432.0, 435, None), slice(436.0, 439, None), slice(440.0, 443, None), slice(444.0, 447, None), slice(448.0, 451, None), slice(452.0, 455, None), slice(456.0, 459, None), slice(460.0, 463, None), slice(464.0, 467, None), slice(468.0, 471, None), slice(472.0, 475, None), slice(476.0, 479, None), slice(480.0, 483, None), slice(484.0, 487, None), slice(488.0, 491, None), slice(492.0, 495, None), slice(496.0, 499, None), slice(500.0, 503, None), slice(504.0, 507, None), slice(508.0, 511, None), slice(512.0, 515, None), slice(516.0, 519, None), slice(520.0, 523, None), slice(524.0, 527, None), slice(528.0, 531, None), slice(532.0, 535, None), slice(536.0, 539, None), slice(540.0, 543, None), slice(544.0, 547, None), slice(548.0, 551, None), slice(552.0, 555, None), slice(556.0, 559, None), slice(560.0, 563, None), slice(564.0, 567, None), slice(568.0, 571, None), slice(580.0, 583, None), slice(584.0, 587, None), slice(588.0, 591, None), slice(592.0, 595, None), slice(600.0, 603, None), slice(604.0, 607, None), slice(608.0, 611, None), slice(612.0, 615, None), slice(616.0, 619, None), slice(620.0, 623, None), slice(624.0, 627, None), slice(628.0, 631, None), slice(632.0, 635, None), slice(636.0, 639, None), slice(640.0, 643, None), slice(644.0, 647, None), slice(648.0, 651, None), slice(652.0, 655, None), slice(656.0, 659, None), slice(660.0, 663, None), slice(664.0, 667, None), slice(668.0, 671, None), slice(672.0, 675, None), slice(676.0, 679, None), slice(680.0, 683, None), slice(684.0, 687, None), slice(688.0, 691, None), slice(692.0, 695, None), slice(696.0, 699, None), slice(700.0, 703, None), slice(704.0, 707, None), slice(708.0, 711, None), slice(712.0, 715, None), slice(716.0, 719, None), slice(720.0, 723, None), slice(724.0, 727, None), slice(728.0, 731, None), slice(732.0, 735, None), slice(736.0, 739, None), slice(740.0, 743, None), slice(744.0, 747, None), slice(748.0, 751, None), slice(752.0, 755, None), slice(756.0, 759, None), slice(760.0, 763, None), slice(764.0, 767, None), slice(768.0, 771, None), slice(772.0, 775, None), slice(776.0, 779, None), slice(780.0, 783, None), slice(784.0, 787, None), slice(788.0, 791, None), slice(792.0, 795, None), slice(796.0, 799, None), slice(7620.0, 7623, None), slice(7624.0, 7627, None), slice(7628.0, 7631, None), slice(7632.0, 7635, None), slice(7636.0, 7639, None), slice(7640.0, 7643, None), slice(7644.0, 7647, None), slice(7648.0, 7651, None), slice(7652.0, 7655, None), slice(7656.0, 7659, None), slice(7660.0, 7663, None), slice(7664.0, 7667, None), slice(7668.0, 7671, None), slice(7672.0, 7675, None), slice(7676.0, 7679, None), slice(7680.0, 7683, None), slice(7684.0, 7687, None), slice(7688.0, 7691, None), slice(7692.0, 7695, None), slice(7696.0, 7699, None), slice(7700.0, 7703, None), slice(7704.0, 7707, None), slice(7708.0, 7711, None), slice(7712.0, 7715, None), slice(7716.0, 7719, None), slice(7720.0, 7723, None), slice(7724.0, 7727, None), slice(7728.0, 7731, None), slice(7732.0, 7735, None), slice(7736.0, 7739, None), slice(7740.0, 7743, None), slice(7744.0, 7747, None), slice(7748.0, 7751, None), slice(7752.0, 7755, None), slice(7756.0, 7759, None), slice(7760.0, 7763, None), slice(7764.0, 7767, None), slice(7768.0, 7771, None), slice(7772.0, 7775, None), slice(7776.0, 7779, None), slice(7780.0, 7783, None), slice(7784.0, 7787, None), slice(7788.0, 7791, None), slice(7792.0, 7795, None), slice(7796.0, 7799, None), slice(7800.0, 7803, None), slice(7804.0, 7807, None), slice(7808.0, 7811, None), slice(7812.0, 7815, None), slice(7816.0, 7819, None), slice(7820.0, 7823, None), slice(7824.0, 7827, None), slice(7828.0, 7831, None), slice(7832.0, 7835, None), slice(7836.0, 7839, None), slice(7840.0, 7843, None), slice(7844.0, 7847, None), slice(7848.0, 7851, None), slice(7852.0, 7855, None), slice(7856.0, 7859, None), slice(7860.0, 7863, None), slice(7864.0, 7867, None), slice(7868.0, 7871, None), slice(7872.0, 7875, None), slice(7876.0, 7879, None), slice(7880.0, 7883, None), slice(7884.0, 7887, None), slice(7888.0, 7891, None), slice(7892.0, 7895, None), slice(7896.0, 7899, None), slice(7900.0, 7903, None), slice(7904.0, 7907, None), slice(7908.0, 7911, None), slice(7912.0, 7915, None), slice(7916.0, 7919, None), slice(7920.0, 7923, None), slice(7924.0, 7927, None), slice(7928.0, 7931, None), slice(7932.0, 7935, None), slice(7936.0, 7939, None), slice(7940.0, 7943, None), slice(7944.0, 7947, None), slice(7948.0, 7951, None), slice(7952.0, 7955, None), slice(28.0, 32, None), slice(32.0, 36, None), slice(7118.0, 7121, None), slice(7956.0, 7983, None), slice(7985.0, 8030, None), slice(8030.0, 8034, None), slice(8034.0, 8038, None), slice(8038.0, 8042, None), slice(8042.0, 8046, None), slice(8046.0, 8050, None), slice(8050.0, 8054, None), slice(8054.0, 8058, None), slice(8058.0, 8062, None), slice(8062.0, 8066, None), slice(8066.0, 8070, None), slice(8070.0, 8074, None), slice(8074.0, 8113, None), slice(8146.0, 8220, None), slice(8220.0, 8224, None), slice(8224.0, 8228, None), slice(8228.0, 8232, None), slice(8233.0, 8236, None), slice(8237.0, 8240, None), slice(8241.0, 8244, None), slice(8244.0, 8248, None), slice(8248.0, 8252, None), slice(8252.0, 8256, None), slice(8257.0, 8260, None), slice(8261.0, 8264, None), slice(8264.0, 8268, None), slice(8268.0, 8272, None), slice(8272.0, 8276, None), slice(8276.0, 8280, None), slice(8280.0, 8284, None), slice(8284.0, 8288, None), slice(8288.0, 8292, None), slice(8292.0, 8296, None)]
         self.assertEqual(result,
                          expected)
-        
+
 class TestStepLocalCusp(unittest.TestCase):
     def test_step_cusp_basic(self):
         array = np.ma.array([3,7,9,9])
         test_slice=slice(0, 4, 1)
         cusp = step_local_cusp(array, test_slice)
         self.assertEqual(cusp, 2)
-              
+
     def test_step_cusp_downward(self):
         array = np.ma.array([9,8,9,9,8,5,1,1,1,1])
         test_slice=slice(3, None, None)
@@ -6128,25 +6128,25 @@ class TestStepLocalCusp(unittest.TestCase):
         test_slice=slice(7, 0, -1)
         cusp = step_local_cusp(array, test_slice)
         self.assertEqual(cusp, 4)
-    
+
     def test_step_cusp_level_start(self):
         array = np.ma.array([1,1,1,1,1,5,8,9,9,9,9])
         test_slice=slice(None, None, None)
         cusp = step_local_cusp(array, test_slice)
         self.assertEqual(cusp, 0)
-    
+
     def test_step_cusp_level_start_reverse(self):
         array = np.ma.array([1,1,1,1,1,5,8,9,9,9,9])
         test_slice=slice(9, 0, -1)
         cusp = step_local_cusp(array, test_slice)
         self.assertEqual(cusp, 0)
-    
+
     def test_step_cusp_static(self):
         array = np.ma.array([33]*8)
         test_slice=slice(None, None, None)
         cusp = step_local_cusp(array, test_slice)
         self.assertEqual(cusp, 0)
-        
+
     def test_step_cusp_short(self):
         array = np.ma.array([33])
         test_slice=slice(None, None, None)
@@ -6160,14 +6160,14 @@ class TestStepValues(unittest.TestCase):
     settings, e.g. flap settings. As the nature of the data is irregular,
     specimen data has been used as the primary source, and manually checked
     graph outputs were used to derive the test result arrays.
-    
+
     # useful for plotting most of the test cases:
     from analysis_engine.plot_flight import plot_parameter; plot_parameter(array); plot_parameter(stepped)
-    
+
     # useful for compressing results:
     print compress_iter_repr(stepped, int)
     '''
-    
+
     def test_step_values(self):
         # borrowed from TestSlat
         array = np.ma.array(range(25) + range(-5,0))
@@ -6198,47 +6198,47 @@ class TestStepValues(unittest.TestCase):
         # now this:
         self.assertEqual(list(stepped),
                          [0]*3+[1]+[5]*5+[10]*2+[15]*2+[10]*3+[5]*2+[1]*5+[0]*3)
-    
+
     def test_step_move_start(self):
         array = np.ma.array(data=[0]*5+[1,2,3,4]+[5]*5)
         stepped = step_values(array, (0, 4), step_at='move_start')
         self.assertEqual(list(stepped), [0]*5+[4]*9)
-        
+
     def test_step_leading_edge_real_data(self):
-        array = np.ma.array([0, 0, 0, 0, 0, 0, 0.12, 0.37, 0.5, 0.49, 0.49, 
-                             0.67, 0.98, 1.15, 1.28, 1.5, 1.71, 1.92, 2.12, 
-                             2.32, 2.53, 2.75, 2.96, 3.18, 3.39, 3.6, 3.83, 
-                             4.06, 4.3, 4.57, 4.82, 5.1, 5.41, 5.85, 7.12, 
-                             9.92, 13.24, 15.03, 15.36, 15.36, 15.36, 15.37, 
+        array = np.ma.array([0, 0, 0, 0, 0, 0, 0.12, 0.37, 0.5, 0.49, 0.49,
+                             0.67, 0.98, 1.15, 1.28, 1.5, 1.71, 1.92, 2.12,
+                             2.32, 2.53, 2.75, 2.96, 3.18, 3.39, 3.6, 3.83,
+                             4.06, 4.3, 4.57, 4.82, 5.1, 5.41, 5.85, 7.12,
+                             9.92, 13.24, 15.03, 15.36, 15.36, 15.36, 15.37,
                              15.38, 15.39, 15.37, 15.37, 15.41, 15.44])
         array = np.ma.concatenate((array,array[::-1]))
         stepped = step_values(array, (0, 1, 5, 15), step_at='move_start')
         self.assertEqual(list(stepped),
                          [0]*11+[1]*3+[5]*19+[15]*26+[5]*7+[1]*19+[0]*11)
-        
+
     @unittest.skip('skip was used when creating Flap Lever from Flap Surface '
                    'but this is no longer required.')
     def test_step_leading_edge_skip_real_data(self):
         # from docstring:
         #:param skip: Selects whether steps that are passed straight through should be mapped or not. Only relates to 'move_start' or 'move_end' options.
-        #:type skip: logical, default = False        
-        array = np.ma.array([0, 0, 0, 0, 0, 0, 0.12, 0.37, 0.5, 0.49, 0.49, 
-                             0.67, 0.98, 1.15, 1.28, 1.5, 1.71, 1.92, 2.12, 
-                             2.32, 2.53, 2.75, 2.96, 3.18, 3.39, 3.6, 3.83, 
-                             4.06, 4.3, 4.57, 4.82, 5.1, 5.41, 5.85, 7.12, 
-                             9.92, 13.24, 15.03, 15.36, 15.36, 15.36, 15.37, 
+        #:type skip: logical, default = False
+        array = np.ma.array([0, 0, 0, 0, 0, 0, 0.12, 0.37, 0.5, 0.49, 0.49,
+                             0.67, 0.98, 1.15, 1.28, 1.5, 1.71, 1.92, 2.12,
+                             2.32, 2.53, 2.75, 2.96, 3.18, 3.39, 3.6, 3.83,
+                             4.06, 4.3, 4.57, 4.82, 5.1, 5.41, 5.85, 7.12,
+                             9.92, 13.24, 15.03, 15.36, 15.36, 15.36, 15.37,
                              15.38, 15.39, 15.37, 15.37, 15.41, 15.44])
         array = np.ma.concatenate((array,array[::-1]))
-        stepped = step_values(array, (0, 1, 5, 15), step_at='move_start', 
+        stepped = step_values(array, (0, 1, 5, 15), step_at='move_start',
                               skip=True, rate_threshold=0.1)
         self.assertEqual(list(stepped), [0]*10+[15]*47+[0]*39)
-        
+
     def test_step_midpoint_real_data(self):
-        array = np.ma.array([0, 0, 0, 0, 0, 0, 0.12, 0.37, 0.5, 0.49, 0.49, 
-                             0.67, 0.98, 1.15, 1.28, 1.5, 1.71, 1.92, 2.12, 
-                             2.32, 2.53, 2.75, 2.96, 3.18, 3.39, 3.6, 3.83, 
-                             4.06, 4.3, 4.57, 4.82, 5.1, 5.41, 5.85, 7.12, 
-                             9.92, 13.24, 15.03, 15.36, 15.36, 15.36, 15.37, 
+        array = np.ma.array([0, 0, 0, 0, 0, 0, 0.12, 0.37, 0.5, 0.49, 0.49,
+                             0.67, 0.98, 1.15, 1.28, 1.5, 1.71, 1.92, 2.12,
+                             2.32, 2.53, 2.75, 2.96, 3.18, 3.39, 3.6, 3.83,
+                             4.06, 4.3, 4.57, 4.82, 5.1, 5.41, 5.85, 7.12,
+                             9.92, 13.24, 15.03, 15.36, 15.36, 15.36, 15.37,
                              15.38, 15.39, 15.37, 15.37, 15.41, 15.44])
         array = np.ma.concatenate((array,array[::-1]))
         stepped = step_values(array, (0, 1, 5, 15), step_at='midpoint')
@@ -6246,11 +6246,11 @@ class TestStepValues(unittest.TestCase):
                          [0]*11+[1]*12+[5]*13+[15]*24+[5]*13+[1]*12+[0]*11)
 
     def test_step_excluding_transition_real_data(self):
-        array = np.ma.array([0, 0, 0, 0, 0, 0, 0.12, 0.37, 0.5, 0.49, 0.49, 
-                             0.67, 0.98, 1.15, 1.28, 1.5, 1.71, 1.92, 2.12, 
-                             2.32, 2.53, 2.75, 2.96, 3.18, 3.39, 3.6, 3.83, 
-                             4.06, 4.3, 4.57, 4.82, 5.1, 5.41, 5.85, 7.12, 
-                             9.92, 13.24, 15.03, 15.36, 15.36, 15.36, 15.37, 
+        array = np.ma.array([0, 0, 0, 0, 0, 0, 0.12, 0.37, 0.5, 0.49, 0.49,
+                             0.67, 0.98, 1.15, 1.28, 1.5, 1.71, 1.92, 2.12,
+                             2.32, 2.53, 2.75, 2.96, 3.18, 3.39, 3.6, 3.83,
+                             4.06, 4.3, 4.57, 4.82, 5.1, 5.41, 5.85, 7.12,
+                             9.92, 13.24, 15.03, 15.36, 15.36, 15.36, 15.37,
                              15.38, 15.39, 15.37, 15.37, 15.41, 15.44])
         array = np.ma.concatenate((array,array[::-1]))
         stepped = step_values(array, (0, 1, 5, 15), step_at='excluding_transition')
@@ -6258,14 +6258,14 @@ class TestStepValues(unittest.TestCase):
         ##self.assertEqual(list(stepped),[0]*12+[1]*19+[5]*6+[15]*21+[5]*6+[1]*19+[0]*13)
         # this is what we've got though (not too shabby)
         self.assertEqual(list(stepped), [0]*12+[1]*18+[5]*7+[15]*22+[5]*7+[1]*19+[0]*11)
-        
+
 
     def test_step_including_transition_real_data(self):
-        array = np.ma.array([0, 0, 0, 0, 0, 0, 0.12, 0.37, 0.5, 0.49, 0.49, 
-                             0.67, 0.98, 1.15, 1.28, 1.5, 1.71, 1.92, 2.12, 
-                             2.32, 2.53, 2.75, 2.96, 3.18, 3.39, 3.6, 3.83, 
-                             4.06, 4.3, 4.57, 4.82, 5.1, 5.41, 5.85, 7.12, 
-                             9.92, 13.24, 15.03, 15.36, 15.36, 15.36, 15.37, 
+        array = np.ma.array([0, 0, 0, 0, 0, 0, 0.12, 0.37, 0.5, 0.49, 0.49,
+                             0.67, 0.98, 1.15, 1.28, 1.5, 1.71, 1.92, 2.12,
+                             2.32, 2.53, 2.75, 2.96, 3.18, 3.39, 3.6, 3.83,
+                             4.06, 4.3, 4.57, 4.82, 5.1, 5.41, 5.85, 7.12,
+                             9.92, 13.24, 15.03, 15.36, 15.36, 15.36, 15.37,
                              15.38, 15.39, 15.37, 15.37, 15.41, 15.44])
         array = np.ma.concatenate((array,array[::-1]))
         stepped = step_values(array, (0, 1, 5, 15), step_at='including_transition')
@@ -6278,15 +6278,15 @@ class TestStepValues(unittest.TestCase):
         self.assertEqual(list(stepped),[0]+[1]*6+[0]*3+[1]*2)
 
     def test_step_trailing_edge_real_data(self):
-        array = np.ma.array([0, 0, 0, 0, 0, 0, 0.12, 0.37, 0.5, 0.49, 0.49, 
-                             0.67, 0.98, 1.15, 1.28, 1.5, 1.71, 1.92, 2.12, 
-                             2.32, 2.53, 2.75, 2.96, 3.18, 3.39, 3.6, 3.83, 
-                             4.06, 4.3, 4.57, 4.82, 5.1, 5.41, 5.85, 7.12, 
-                             9.92, 13.24, 15.03, 15.36, 15.36, 15.36, 15.37, 
+        array = np.ma.array([0, 0, 0, 0, 0, 0, 0.12, 0.37, 0.5, 0.49, 0.49,
+                             0.67, 0.98, 1.15, 1.28, 1.5, 1.71, 1.92, 2.12,
+                             2.32, 2.53, 2.75, 2.96, 3.18, 3.39, 3.6, 3.83,
+                             4.06, 4.3, 4.57, 4.82, 5.1, 5.41, 5.85, 7.12,
+                             9.92, 13.24, 15.03, 15.36, 15.36, 15.36, 15.37,
                              15.38, 15.39, 15.37, 15.37, 15.41, 15.44])
         array = np.ma.concatenate((array,array[::-1]))
         # incorrect step_at arguent
-        self.assertRaises(ValueError, step_values, array, (0, 1, 5, 15), 
+        self.assertRaises(ValueError, step_values, array, (0, 1, 5, 15),
                           step_at='move_end')
         stepped = step_values(array, (0, 1, 5, 15), step_at='move_stop')
         self.assertEqual(list(stepped),
@@ -6295,7 +6295,7 @@ class TestStepValues(unittest.TestCase):
     def test_step_trailing_edge_masked_data(self):
         '''
         tests first values being masked and remaining values have no cusp
-        
+
         CJ: Not sure what this test should be representing exactly.
         '''
         array = np.ma.array(
@@ -6311,21 +6311,21 @@ class TestStepValues(unittest.TestCase):
         expected = np.ma.array([5.0]*25+[0.0]*3)
         expected[:4] = np.ma.masked
         self.assertEqual(list(stepped), list(expected))
-        
+
     def test_flap_transition_real_data(self):
         flap = load(os.path.join(test_data_path,
                                  'flap_transition_test_data.nod'))
         # including transition
         res = step_values(flap.array, (0, 1, 5, 15, 20, 25, 30), step_at='including_transition')
         inc_edges = find_edges(res)
-        self.assertEqual(inc_edges, 
+        self.assertEqual(inc_edges,
             [364.5, 387.5, 410.5, 5727.5, 5816.5, 5926.5, 5939.5, 5989.5, 6017.5])
         # excluding transition
         res = step_values(flap.array, (0, 1, 5, 15, 20, 25, 30), step_at='excluding_transition')
         exc_edges = find_edges(res)
         self.assertEqual(exc_edges,
             [369.5, 407.5, 421.5, 5732.5, 5839.5, 5938.5, 5945.5, 5995.5, 6024.5])
-        
+
     def test_flap_transitions_in_masked_data_1(self):
         # Ensure flap angle is corrected when masked data hides transition
         flap_angle = np.ma.array([0.004763]*30 + [0.0]*100 + [0.99]*200 + list(np.arange(0.99, 0.001, -0.1)) + [0.0]*100)
@@ -6334,7 +6334,7 @@ class TestStepValues(unittest.TestCase):
         #flap_angle[3:13] = np.ma.masked
         res = step_values(flap_angle, (0, 1, 5, 15, 20, 25, 30), hz=1, step_at='move_start')
         self.assertEqual(find_edges(res, direction='all_edges'), [129.5, 330.5])
-    
+
     def test_flap_transitions_in_masked_data_2(self):
         # Ensure flap angle is corrected when masked data hides transition
         flap_angle = np.ma.concatenate([np.ma.arange(0, 30, 0.1),
@@ -6347,7 +6347,7 @@ class TestStepValues(unittest.TestCase):
         flap_angle[180:200] = np.ma.masked
         flap_angle[220:240] = np.ma.masked
         flap_angle[260:280] = np.ma.masked
-        
+
         flap_angle[320:340] = np.ma.masked
         flap_angle[360:380] = np.ma.masked
         flap_angle[400:420] = np.ma.masked
@@ -6355,13 +6355,13 @@ class TestStepValues(unittest.TestCase):
         flap_angle[480:500] = np.ma.masked
         flap_angle[520:540] = np.ma.masked
         flap_angle[560:580] = np.ma.masked
-        
+
         #flap_angle = np.ma.array([0.004763]*3 + [0.0]*10 + [0.99]*4)
         #flap_angle[3:13] = np.ma.masked
         res = step_values(flap_angle, (0, 1, 5, 15, 20, 25, 30), hz=1,
                           step_at='move_start')
         self.assertEqual(find_edges(res), [4.5, 38.5, 119.5, 173.5, 238.5, 278.5])
-    
+
     def test_step_values_masked_end(self):
         array = np.ma.load(os.path.join(test_data_path,
                                         'step_values_flap_masked_end.npy'))
@@ -6395,7 +6395,7 @@ class TestStraightenAltitudes(unittest.TestCase):
         coarse = data * 1.01
         result=straighten_altitudes(fine, coarse, 500.0, False)
         self.assertEqual(np.ma.max(result),546.0)
-        
+
     def test_alt_offset_from_coarse_just_first_sample(self):
         fine = np.ma.array([495.0,100.0,300.0,450.0,46.0,380.0,230.0,110.0,0.0])
         coarse = np.ma.array([5.0,100.0,300.0,450.0,46.0,380.0,230.0,110.0,0.0])
@@ -6409,19 +6409,19 @@ class TestStraightenLongitude(unittest.TestCase):
         expected = np.ma.array(
             [35.5,29.5,11.3,0.0,-11.6,-23.2,-1.1,2.5,8.1,14.4])
         np.testing.assert_array_almost_equal(straighten_longitude(data), data)
-    
+
     def test_straighten_longitude_single_overflow(self):
         data = np.ma.array([175.5,179.5,179.1,179.9,-179.9,-178.2,-176.5,-175.2,-174.1,-172.4])
         expected = np.ma.array(
             [175.5,179.5,179.1,179.9,180.1,181.8,183.5,184.8,185.9,187.6])
         np.testing.assert_array_almost_equal(straighten_longitude(data), expected)
-    
+
     def test_straighten_longitude_single_overflow_and_return(self):
         data = np.ma.array([175.5,179.5,179.1,179.9, -179.9,-178.2,176.5,175.2,174.1,172.4])
         expected = np.ma.array(
             [175.5, 179.5, 179.1, 179.9, 180.1, 181.8, 176.5, 175.2, 174.1, 172.4])
         np.testing.assert_array_almost_equal(straighten_longitude(data), expected)
-    
+
     def test_straighten_longitude_single_overflow_masked(self):
         mask = [True,False,False,True,True,False,False,False,False,True]
         data = np.ma.array([175.5,179.5,179.1,179.9, -179.9,-178.2,-176.5,-175.2,-174.1,-172.4],
@@ -6430,7 +6430,7 @@ class TestStraightenLongitude(unittest.TestCase):
             [175.5, 179.5, 179.1, 179.9, -179.9, 181.8, 183.5, 184.8, 185.9, -172.4],
             mask=mask)
         np.testing.assert_array_almost_equal(straighten_longitude(data), expected)
-    
+
     def test_straighten_longitude_single_overflow_and_return_masked(self):
         mask = [True,False,False,True,True,False,True,False,False,True]
         data = np.ma.array([175.5,179.5,179.1,179.9, -179.9,-178.2,176.5,175.2,174.1,172.4],
@@ -6439,21 +6439,21 @@ class TestStraightenLongitude(unittest.TestCase):
             [175.5, 179.5, 179.1, 179.9, 180.1, 181.8, 176.5, 175.2, 174.1, 172.4],
             mask=mask)
         np.testing.assert_array_almost_equal(straighten_longitude(data), expected)
-    
+
     def test_straighten_longitude_spike(self):
         '''
         Spike does not trigger overflow as with straighten().
         '''
         data = load_compressed(os.path.join(test_data_path, 'straighten_longitude_1.npz'))
         np.testing.assert_array_almost_equal(straighten_longitude(data), data)
-        
+
     def test_straighten_longitude_drop(self):
         '''
         Overflow is not triggered as drop is too small.
         '''
         data = load_compressed(os.path.join(test_data_path, 'straighten_longitude_2.npz'))
         np.testing.assert_array_almost_equal(straighten_longitude(data), data)
-    
+
     def test_straighten_longitude_4(self):
         data = load_compressed(os.path.join(test_data_path, 'straighten_longitude_4.npz'))
         np.testing.assert_array_almost_equal(straighten_longitude(data), data)
@@ -6475,7 +6475,7 @@ class TestStraightenHeadings(unittest.TestCase):
             mask=[True]*10+[False]*8+[True]*4+[False]*5+[True]*4)
         ma_test.assert_masked_array_approx_equal(straighten_headings(data),
                                                  expected)
-    
+
     def test_straighten_headings_masked_rollover(self):
         mask = [False, False, False, True, True, False, False, False, True,
                 True, False, False]
@@ -6683,37 +6683,37 @@ class TestUniqueValue(unittest.TestCase):
         self.assertEqual(res, {1: 4,
                                4: 2,
                                7: 1})
-        
+
     def test_unique_with_multistate(self):
         array = MappedArray(np.ma.array([0, 1, 0, 0, 0, 1, 1],
                                    mask=[1, 0, 0, 0, 0, 0, 1]),
                             values_mapping={0:'A', 1:'B'})
         res = unique_values(array)
         self.assertEqual(res, {'A': 3, 'B': 2})
-        
+
     def test_no_valid_data(self):
         # returns None when nothing is valid
         res = unique_values(np.ma.array([10, 20, 10], mask=True))
         self.assertEqual(res, {})
-        
+
 class TestMostCommonValue(unittest.TestCase):
     def test_most_common_value(self):
         res = most_common_value(np.ma.array([0,1,1,1,4,4,7,1,1],
                                    mask=[1,0,0,0,0,0,0,0,1]))
         self.assertEqual(res, 1)
-    
+
     def test_most_common_value_negative_values_excluded(self):
         res = most_common_value(np.ma.array([0,-1,-1,-1,4,4,7,1,1],
                                             mask=[1,0,0,0,0,0,0,0,1]))
         self.assertEqual(res, 4)
-    
+
     def test_unique_with_multistate(self):
         array = MappedArray(np.ma.array([0, 3, 0, 0, 0, 3, 3],
                                    mask=[1, 0, 0, 0, 0, 0, 1]),
                             values_mapping={0:'A', 3:'B'})
         res = most_common_value(array)
         self.assertEqual(res, 'A')
-        
+
     def test_no_valid_data(self):
         # returns None when nothing is valid
         res = most_common_value(np.ma.array([10, 20, 10], mask=True))
@@ -6858,17 +6858,17 @@ class TestVstackParamsWhereState(unittest.TestCase):
                     [0, 0, 0, 0, 0, 1, 1, 1, 1, 1]]))
         self.assertTrue(np.all(
             res.all(axis=0) == [0, 0, 0, 0, 0, 1, 1, 1, 0, 0]))
-        
+
         # only one array with data
         res = vstack_params_where_state((m1, 'two'),  # has data
                                         (m3, 'one'))  # has no data
         self.assertTrue(np.all(
             res == [1, 1, 1, 1, 1, 1, 1, 1, 0, 0]))
-        
+
         # no arrays
         self.assertRaises(ValueError, vstack_params_where_state,
                           (None, 'blah'), (None, 'blah'))
-        
+
 #-----------------------------------------------------------------------------
 #Tests for Atmospheric and air speed calculations derived from AeroCalc test
 #suite. Changes relate to simplification of units and translation to Numpy.
@@ -7092,33 +7092,33 @@ class TestLevelOffIndex(unittest.TestCase):
         self.assertEqual(
             level_off_index(np.ma.arange(60), 1, 10, 1, _slice=slice(2,11)),
             None)
-        
+
     def test_level_off_index_index_all_unstable(self):
         self.assertEqual(level_off_index(np.ma.arange(10), 1, 2, 1), None)
-    
+
     def test_level_off_index_index_all_stable(self):
         self.assertEqual(level_off_index(np.ma.arange(10), 1, 2, 5), 2)
         self.assertEqual(level_off_index(np.ma.arange(10), 1, 2, 5,
                                           _slice=slice(5,9)), 7)
-    
+
     def test_level_off_index_basic(self):
         array = np.ma.array([0,2,4,6,8,10,8,6,5,4.5,5,4.5,5])
         self.assertEqual(level_off_index(array, 1, 3, 2), 10)
         self.assertEqual(level_off_index(array, 1, 3, 2, include_window=False),
                          7)
-    
+
     def test_level_off_index_basic_masked(self):
         array = np.ma.array([0,0,0,0,8,10,8,6,5,4.5,5,4.5,5, 7, 9, 11, 13, 15],
                             mask=[True] * 4 + [False] * 9 + [True] * 5)
         self.assertEqual(level_off_index(np.ma.repeat(array, 2), 1, 6, 2), 20)
-    
+
     def test_level_off_index_eng_n3(self):
         array = np.ma.load(os.path.join(test_data_path, 'eng_n3.npy'))
         index = level_off_index(array, 1, 10, 1, _slice=slice(60, 750))
         self.assertEqual(index, 100)
         index = level_off_index(array, 1, 10, 1, _slice=slice(3625, None))
         self.assertEqual(index, 3674)
-    
+
     def test_level_off_masked(self):
         array = np.ma.load(os.path.join(test_data_path,
                                         'level_off_index_eng_n3.npy'))
@@ -7136,7 +7136,7 @@ class TestDpOverP2mach(unittest.TestCase):
 
         truth = np.ma.array(data=[0.8, 0.999, 1.0], mask=[False, False, True])
         ma_test.assert_masked_array_almost_equal (value, truth, decimal=3)
-        
+
     def test_dp_over_p2mach_masked_dp_over_p(self):
         # In cases of data corruption, large or negative dp/p values may arise.
         value = dp_over_p2mach(np.ma.array(data=[-0.52434, .89072, 51.1],
@@ -7144,7 +7144,7 @@ class TestDpOverP2mach(unittest.TestCase):
         truth = np.ma.array(data=[0.0, 0.999, 1.0], mask=[True, False, True])
         ma_test.assert_masked_array_almost_equal(value,truth, decimal=3)
 
-        
+
 class TestPress2Alt(unittest.TestCase):
     def test_press2alt(self):
         value = press2alt(np.ma.array([14.696, 10.108, 4.3727, 2.1490]))
@@ -7161,7 +7161,7 @@ class TestPress2Alt(unittest.TestCase):
         ##Value = press2alt_isothermal(np.ma.array([188.23, 148.17]))
         ##Truth = np.ma.array(data=[40000, 45000])
         ##ma_test.assert_masked_array_almost_equal (Value,Truth, decimal=-3)
-        
+
 class TestIsDay(unittest.TestCase):
     # Solstice times for 2012 at Stonehenge.
     # Sunset on Wednesday 20th June 2012 is at 2126 hrs (9.26pm BST)
@@ -7226,18 +7226,18 @@ class TestIsDay(unittest.TestCase):
 
 
 class TestSecondWindow(unittest.TestCase):
-    
+
     def test_second_window_too_large_for_array(self):
         ma_test.assert_masked_array_almost_equal(
             second_window(np.ma.arange(0, 20), 2, 45),
             np_ma_masked_zeros(20))
-    
+
     def test_three_second_window_incrementing(self):
         ma_test.assert_masked_array_almost_equal(
             second_window(np.ma.arange(0, 20, 1), 2, 3),
             np.ma.masked_array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] + [0] * 6,
                                mask=[False] * 14 + [True] * 6))
-    
+
     def test_three_second_window_incrementing_large(self):
         mask = [True] * 6 + [False] * 10 + [True] * 4 + [False] * 5 + [True] * 5
         array = np.ma.array(np.ma.arange(0, 30, 1), mask=mask)
@@ -7246,13 +7246,13 @@ class TestSecondWindow(unittest.TestCase):
             second_window(array, 2, 3),
             np.ma.masked_array([0] * 6 + [6, 7, 8, 9] + [0] * 20,
                                mask=expected_mask))
-    
+
     def test_three_second_window_decrementing(self):
         ma_test.assert_masked_array_almost_equal(
             second_window(np.ma.arange(20, 0, -1), 2, 3),
             np.ma.masked_array([20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7] + [0] * 6,
                                mask=[False] * 14 + [True] * 6))
-    
+
     def test_three_second_window_peak(self):
         data = np.ma.concatenate([np.ma.arange(0, 5, 0.5),
                                   np.ma.arange(5, 0, -0.5)])
@@ -7269,14 +7269,14 @@ class TestSecondWindow(unittest.TestCase):
         ma_test.assert_masked_array_almost_equal(
             second_window(data, 1, 5, extend_window=True),
             expected)
-    
+
     def test_second_window_invalid_args(self):
         self.assertRaises(ValueError, second_window, np.ma.arange(10), 0.25, 1)
         self.assertRaises(ValueError, second_window, np.ma.arange(10), 0.5, 3)
         self.assertRaises(ValueError, second_window, np.ma.arange(10), 1, 3)
         self.assertRaises(ValueError, second_window, np.ma.arange(10), 2, 3.5)
         self.assertRaises(ValueError, second_window, np.ma.arange(10), 10, 3.1292577)
-    
+
     def test_three_second_window_basic_trough(self):
         ma_test.assert_masked_array_almost_equal(
             second_window(np.ma.concatenate([np.ma.arange(10, 0, -0.5),
@@ -7285,13 +7285,13 @@ class TestSecondWindow(unittest.TestCase):
                                 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1.5, 1.5, 1.5,
                                 1.5, 1.5, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5] +
                                [0] * 6, mask=34 * [False] + 6 * [True]))
-    
+
     def test_three_second_window_trough(self):
         ma_test.assert_masked_array_almost_equal(
             second_window(np.ma.concatenate([np.ma.arange(5, 0, -0.5),
                                              np.ma.arange(0, 10, 1)]), 2, 3),
             np.ma.array([5, 4.5, 4, 3.5, 3, 2.5, 2, 2, 2, 2, 2, 2, 2, 3] + [0] * 6, mask=14 * [False] + 6 * [True]))
-    
+
     def test_three_second_window_masked(self):
         masked_data = np.ma.arange(10, 0, -0.5)
         masked_data[8:10] = np.ma.masked
@@ -7300,7 +7300,7 @@ class TestSecondWindow(unittest.TestCase):
             np.ma.array([10, 9.5] + [0] * 8 + [5, 4.5, 4, 3.5] + [0] * 6,
                         mask=[False] * 2 + [True] * 8 + [False] * 4 + [True] * 6),
         )
-    
+
     def test_five_second_window_basic_trough(self):
         ma_test.assert_masked_array_almost_equal(
             second_window(np.ma.concatenate([np.ma.arange(10, 0, -0.5),
@@ -7310,7 +7310,7 @@ class TestSecondWindow(unittest.TestCase):
                                 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 3.0,
                                 3.5, 4.0, 4.5] + [0] * 10,
                                mask=30 * [False] + 10 * [True]))
-    
+
     def test_five_second_window_trough(self):
         ma_test.assert_masked_array_almost_equal(
             second_window(np.ma.concatenate([np.ma.arange(10, 0, -0.5),
@@ -7319,7 +7319,7 @@ class TestSecondWindow(unittest.TestCase):
                          4.5, 4.0, 3.5, 3.5, 3.5, 3.5, 3.5, 3.5, 3.5, 3.5, 3.5,
                          3.5, 3.5, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0] + [0] * 10,
                         mask=30 * [False] + 10 * [True]))
-    
+
     @unittest.skip('Not Implemented')
     def test_three_second_window(self):
         self.assertTrue(False)
