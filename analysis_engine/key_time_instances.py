@@ -913,15 +913,13 @@ class GearUpSelection(KeyTimeInstanceNode):
                airborne=S('Airborne'),
                go_arounds=S('Go Around And Climbout')):
 
-        air_slices = airborne.get_slices()
-        ga_slices = go_arounds.get_slices()
-        if not air_slices:
+        if not airborne:
             return
         air_not_ga = slices_and(
-            air_slices, slices_not(
-                ga_slices,
-                begin_at=air_slices[0].start,
-                end_at=air_slices[-1].stop,
+            airborne.get_slices(edges=False), slices_not(
+                go_arounds.get_slices(edges=False),
+                begin_at=airborne.get_first().slice.start,
+                end_at=airborne.get_last().slice.stop,
             )
         )
         self.create_ktis_on_state_change('Up', gear_up_sel.array,
