@@ -5976,6 +5976,10 @@ class Speedbrake(DerivedParameterNode):
                 'Spoiler (2)' in available and
                 'Spoiler (7)' in available
             ) or
+            family_name == 'A330' and (
+                'Spoiler (2)' in available and
+                'Spoiler (8)' in available
+            ) or
             family_name == 'B787' and (
                 'Spoiler (1)' in available and
                 'Spoiler (14)' in available
@@ -6046,6 +6050,8 @@ class Speedbrake(DerivedParameterNode):
             self.merge_spoiler(spoiler_4, spoiler_8)
         elif family_name in ['B737 Classic', 'A319', 'A320', 'A321', 'Global']:
             self.merge_spoiler(spoiler_2, spoiler_7)
+        elif family_name == 'A330':
+            self.merge_spoiler(spoiler_2, spoiler_8)
 
         elif family_name == 'B787':
             self.merge_spoiler(spoiler_1, spoiler_14)
