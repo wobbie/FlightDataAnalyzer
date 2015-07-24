@@ -1851,7 +1851,7 @@ def find_toc_tod(alt_data, ccd_slice, frequency, mode=None):
     # Find the midpoint to separate tops and bottoms of climbs and descents.
     trough = min_value(alt_data, section_2)
     mid_alt = (peak.value + trough.value) / 2.0
-    mid_index = int(index_at_value(alt_data[section_2], mid_alt) + (section_2.start or 0))
+    mid_index = int(index_at_value(alt_data[section_2], mid_alt, endpoint='nearest') + (section_2.start or 0))
 
     if mode == 'tod':
         # The first part is where the point of interest lies
@@ -1985,11 +1985,8 @@ def find_edges_on_state_change(state, array, change='entering', phase=None, min_
 
     edge_list = []
     for period in phase:
-        if hasattr(period, 'slice'):
-            _slice = period.slice
-        else:
-            _slice = period
-        edges = state_changes(state, array, change, _slice=_slice,
+        period = getattr(period, 'slice', period)
+        edges = state_changes(state, array, change, _slice=period,
                               min_samples=min_samples)
         edge_list.extend(edges)
     return edge_list

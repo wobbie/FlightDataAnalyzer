@@ -5665,7 +5665,7 @@ class TestEngEPRAtTOGADuringTakeoffMax(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = EngEPRAtTOGADuringTakeoffMax
-        self.operational_combinations = [('Eng (*) EPR Max', 'Takeoff And Go Around', 'Takeoff')]
+        self.operational_combinations = [('Takeoff And Go Around', 'Eng (*) EPR Max', 'Takeoff')]
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
@@ -5676,7 +5676,7 @@ class TestEngTPRAtTOGADuringTakeoffMin(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = EngTPRAtTOGADuringTakeoffMin
-        self.operational_combinations = [('Eng (*) TPR Min', 'Takeoff And Go Around', 'Takeoff')]
+        self.operational_combinations = [('Takeoff And Go Around', 'Eng (*) TPR Min', 'Takeoff')]
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
@@ -6292,7 +6292,7 @@ class TestEngN1AtTOGADuringTakeoff(unittest.TestCase):
 
     def test_can_operate(self):
         opts = EngN1AtTOGADuringTakeoff.get_operational_combinations()
-        self.assertEqual([('Eng (*) N1 Min', 'Takeoff And Go Around', 'Takeoff')], opts)
+        self.assertEqual([('Takeoff And Go Around', 'Eng (*) N1 Min', 'Takeoff')], opts)
 
     def test_derive_eng_n1_cooldown(self):
         eng_n1_min = P(array=np.ma.arange(10, 20))
@@ -6300,9 +6300,9 @@ class TestEngN1AtTOGADuringTakeoff(unittest.TestCase):
         toga.array[3] = 1
         toff = buildsection('Takeoff', 2,6)
         n1_toga = EngN1AtTOGADuringTakeoff()
-        n1_toga.derive(eng_n1=eng_n1_min,
-                      toga=toga,
-                      takeoff=toff)
+        n1_toga.derive(toga=toga,
+                       eng_n1=eng_n1_min,
+                       takeoff=toff)
         self.assertEqual(n1_toga[0].value, 13)
         self.assertEqual(n1_toga[0].index, 3)
 
@@ -7923,8 +7923,8 @@ class TestHeadingDeviationFromRunwayAtTOGADuringTakeoff(unittest.TestCase, NodeT
     def setUp(self):
         self.node_class = HeadingDeviationFromRunwayAtTOGADuringTakeoff
         self.operational_combinations = [(
-            'Heading True Continuous',
             'Takeoff And Go Around',
+            'Heading True Continuous',
             'Takeoff',
             'FDR Takeoff Runway',
         )]
@@ -8701,7 +8701,7 @@ class TestGroundspeedAtTOGA(unittest.TestCase, NodeTest):
 
     def setUp(self):
         self.node_class = GroundspeedAtTOGA
-        self.operational_combinations = [('Groundspeed', 'Takeoff And Go Around', 'Takeoff')]
+        self.operational_combinations = [('Takeoff And Go Around', 'Groundspeed', 'Takeoff')]
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
