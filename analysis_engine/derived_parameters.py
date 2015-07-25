@@ -5319,6 +5319,10 @@ class Roll(DerivedParameterNode):
         return all_of((
             'Altitude AAL',
             'Heading Continuous',
+        ), available) or \
+               all_of((
+                   'Roll (1)',
+                   'Roll (2)',
         ), available)
 
     def derive(self,
