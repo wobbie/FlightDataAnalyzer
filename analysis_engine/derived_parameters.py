@@ -2385,6 +2385,32 @@ class Eng_N1Min(DerivedParameterNode):
         self.array = np.ma.min(engines, axis=0)
 
 
+class Eng_N1Split(DerivedParameterNode):
+    '''
+    Simple detection of largest engine speed mismatch.
+    '''
+
+    name = 'Eng (*) N1 Split'
+    align_frequency = 1
+    align_offset = 0
+    units = ut.PERCENT
+
+    @classmethod
+    def can_operate(cls, available):
+        return all_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               n1max=P('Eng (*) N1 Max'),
+               n1min=P('Eng (*) N1 Min')):
+
+        '''
+        Clinky way of making sure the masked arrays hold zeros, just to make debugging easier.
+        '''
+        zeros = np_ma_masked_zeros_like(n1max.array)
+        diff = n1max.array - n1min.array
+        self.array = np.ma.where(diff.mask==True, zeros, diff)
+
+
 class Eng_N1MinFor5Sec(DerivedParameterNode):
     '''
     Returns the lowest N1 for up to four engines over five seconds.
