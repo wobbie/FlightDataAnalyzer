@@ -3467,6 +3467,8 @@ class TOGASelectedDuringGoAroundDuration(KeyPointValueNode):
     FDS developed this KPV to support the UK CAA Significant Seven programme.
     "Loss of Control - TOGA power selection in flight (Go-arounds need to be
     kept as a separate case)."
+    
+    Align to Takeoff And Go Around for most accurate state change indices.
     '''
 
     name = 'TOGA Selected During Go Around Duration'
@@ -6659,14 +6661,15 @@ class EngEPRFor5Sec1000To500FtMin(KeyPointValueNode):
 
 class EngEPRAtTOGADuringTakeoffMax(KeyPointValueNode):
     '''
+    Align to Takeoff And Go Around for most accurate state change indices.
     '''
 
     name = 'Eng EPR At TOGA During Takeoff Max'
     units = None
 
     def derive(self,
-               eng_epr_max=P('Eng (*) EPR Max'),
                toga=M('Takeoff And Go Around'),
+               eng_epr_max=P('Eng (*) EPR Max'),
                takeoff=S('Takeoff')):
 
         indexes = find_edges_on_state_change('TOGA', toga.array,
@@ -6682,14 +6685,16 @@ class EngTPRAtTOGADuringTakeoffMin(KeyPointValueNode):
     '''
     Originally coded for 787, but the event has been disabled since it lacks a
     limit.
+    
+    Align to Takeoff And Go Around for most accurate state change indices.
     '''
 
     name = 'Eng TPR At TOGA During Takeoff Min'
     units = None
 
     def derive(self,
-               eng_tpr_max=P('Eng (*) TPR Min'),
                toga=M('Takeoff And Go Around'),
+               eng_tpr_max=P('Eng (*) TPR Min'),
                takeoff=S('Takeoff')):
 
         indexes = find_edges_on_state_change('TOGA', toga.array,
@@ -7444,14 +7449,15 @@ class EngN1Below60PercentAfterTouchdownDuration(KeyPointValueNode):
 
 class EngN1AtTOGADuringTakeoff(KeyPointValueNode):
     '''
+    Align to Takeoff And Go Around for most accurate state change indices.
     '''
 
     name = 'Eng N1 At TOGA During Takeoff'
     units = ut.PERCENT
 
     def derive(self,
-               eng_n1=P('Eng (*) N1 Min'),
                toga=M('Takeoff And Go Around'),
+               eng_n1=P('Eng (*) N1 Min'),
                takeoff=S('Takeoff')):
 
         indexes = find_edges_on_state_change('TOGA', toga.array, change='entering', phase=takeoff)
@@ -8621,14 +8627,16 @@ class HeadingDeviationFromRunwayAtTOGADuringTakeoff(KeyPointValueNode):
     '''
     FDS developed this KPV to support the UK CAA Significant Seven programme.
     "Excursions - Take off (Lateral). TOGA pressed before a/c aligned."
+    
+    Align to Takeoff And Go Around for most accurate state change indices.
     '''
 
     name = 'Heading Deviation From Runway At TOGA During Takeoff'
     units = ut.DEGREE
 
     def derive(self,
-               head=P('Heading True Continuous'),
                toga=M('Takeoff And Go Around'),
+               head=P('Heading True Continuous'),
                takeoff=S('Takeoff'),
                rwy=A('FDR Takeoff Runway')):
 
@@ -9299,7 +9307,9 @@ class GroundspeedAtTOGA(KeyPointValueNode):
 
     This KPV measures the groundspeed at the point of TOGA selection,
     irrespective of whether this is late (or early!).
-
+    
+    Align to Takeoff And Go Around for most accurate state change indices.
+    
     Note: Takeoff phase is used as this includes turning onto the runway
           whereas Takeoff Roll only starts after the aircraft is accelerating.
     '''
@@ -9308,8 +9318,8 @@ class GroundspeedAtTOGA(KeyPointValueNode):
     units = ut.KT
 
     def derive(self,
-               gnd_spd=P('Groundspeed'),
                toga=M('Takeoff And Go Around'),
+               gnd_spd=P('Groundspeed'),
                takeoffs=S('Takeoff')):
 
         indexes = find_edges_on_state_change('TOGA', toga.array, phase=takeoffs)

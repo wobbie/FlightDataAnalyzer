@@ -1235,14 +1235,19 @@ class SectionNode(Node, list):
         return self.__class__(name=self.name, frequency=self.frequency,
                               offset=self.offset, items=surrounded)
 
-    def get_slices(self):
+    def get_slices(self, edges=True):
         '''
-        :returns: A list of slices from sections.
+        :param edges: Return start and stop edge rather than slice start and stop, using edges results in section[0].slice.start != section.get_slices()[0].start
+        :type edges: bool
+        :returns: A list of slices from the SectionNode.
         :rtype: [slice]
         '''
-        ##return [section.slice for section in self]
-        return [slice(section.start_edge, section.stop_edge)
-                for section in self]
+        if edges:
+            slices = [slice(section.start_edge, section.stop_edge)
+                      for section in self]
+        else:
+            slices = [section.slice for section in self]
+        return slices
 
 
 class FlightPhaseNode(SectionNode):
@@ -1618,27 +1623,28 @@ class KeyTimeInstanceNode(FormattedNameNode):
         ..todo: instead of working on the strings in numpy, we need to find the
             numeric value by reversing the mapping.
         '''
-        # Low level function that finds start and stop indices of given state
-        # and creates KTIs
+        # Prepare kwargs to pass through to self.create_kti():
+        kwargs = dict(replace_values=replace_values)
+        
         def state_changes(state, array, change, _slice=None):
-            # Prepare kwargs to pass through to self.create_kti():
-            kwargs = dict(replace_values=replace_values)
+            '''
+            Low level function that finds start and stop indices of given state
+            and creates KTIs
+            '''
             if name:
                 # Annotate the transition with the post-change state.
                 kwargs.update(**{name: state})
             # TODO: to improve performance reverse the state into numeric value
             # and look it up in array.raw instead
             if _slice is None:
-                _slice = slice(0, len(array))
+                _slice = slice(0, None)
             if len(array[_slice]) == 0:
                 return
             valid_periods = np.ma.clump_unmasked(array[_slice])
             for valid_period in valid_periods:
                 valid_slice = slice(valid_period.start + _slice.start,
                                     valid_period.stop + _slice.start)
-                state_periods = np.ma.clump_unmasked(
-                    np.ma.masked_not_equal(array[valid_slice].raw,
-                                           array.get_state_value(state)))
+                state_periods = runs_of_ones(array[valid_slice] == state)
                 slice_len = len(array[valid_slice])
                 for period in state_periods:
                     # Calculate the location in the array
@@ -1657,7 +1663,7 @@ class KeyTimeInstanceNode(FormattedNameNode):
         repaired_array = repair_mask(
             array, frequency=self.hz, repair_duration=64,
             raise_entirely_masked=True, method='fill_start')
-        if np.ma.count(repaired_array)==0:
+        if not np.ma.count(repaired_array):
             return
         # High level function scans phase blocks or complete array and
         # presents appropriate arguments for analysis. We test for phase.name
@@ -1665,8 +1671,8 @@ class KeyTimeInstanceNode(FormattedNameNode):
         if phase is None:
             state_changes(state, repaired_array, change)
         else:
-            for each_period in phase:
-                state_changes(state, repaired_array, change, each_period.slice)
+            for p in phase:
+                state_changes(state, repaired_array, change, getattr(p, 'slice', p))
         return
 
     def get_aligned(self, param):

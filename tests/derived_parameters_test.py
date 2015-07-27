@@ -4548,6 +4548,7 @@ class TestRoll(unittest.TestCase):
     def test_can_operate(self):
         opts = Roll.get_operational_combinations()
         self.assertTrue(('Heading Continuous', 'Altitude AAL',) in opts)
+        self.assertTrue(('Roll (1)', 'Roll (2)',) in opts)
   
     def test_derive(self):
         time = np.arange(100)

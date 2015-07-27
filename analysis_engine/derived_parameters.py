@@ -2385,6 +2385,32 @@ class Eng_N1Min(DerivedParameterNode):
         self.array = np.ma.min(engines, axis=0)
 
 
+class Eng_N1Split(DerivedParameterNode):
+    '''
+    Simple detection of largest engine speed mismatch.
+    '''
+
+    name = 'Eng (*) N1 Split'
+    align_frequency = 1
+    align_offset = 0
+    units = ut.PERCENT
+
+    @classmethod
+    def can_operate(cls, available):
+        return all_of(cls.get_dependency_names(), available)
+
+    def derive(self,
+               n1max=P('Eng (*) N1 Max'),
+               n1min=P('Eng (*) N1 Min')):
+
+        '''
+        Clinky way of making sure the masked arrays hold zeros, just to make debugging easier.
+        '''
+        zeros = np_ma_masked_zeros_like(n1max.array)
+        diff = n1max.array - n1min.array
+        self.array = np.ma.where(diff.mask==True, zeros, diff)
+
+
 class Eng_N1MinFor5Sec(DerivedParameterNode):
     '''
     Returns the lowest N1 for up to four engines over five seconds.
@@ -5319,6 +5345,10 @@ class Roll(DerivedParameterNode):
         return all_of((
             'Altitude AAL',
             'Heading Continuous',
+        ), available) or \
+               all_of((
+                   'Roll (1)',
+                   'Roll (2)',
         ), available)
 
     def derive(self,
@@ -5996,9 +6026,13 @@ class Speedbrake(DerivedParameterNode):
                 'Spoiler (4)' in available and
                 'Spoiler (8)' in available
             ) or
-            family_name in ['B737 Classic', 'A319', 'A320', 'A321', 'A330', 'Global'] and (
+            family_name in ['B737 Classic', 'A319', 'A320', 'A321', 'Global'] and (
                 'Spoiler (2)' in available and
                 'Spoiler (7)' in available
+            ) or
+            family_name == 'A330' and (
+                'Spoiler (2)' in available and
+                'Spoiler (8)' in available
             ) or
             family_name == 'B787' and (
                 'Spoiler (1)' in available and
@@ -6068,8 +6102,10 @@ class Speedbrake(DerivedParameterNode):
             self.merge_spoiler(spoiler_4, spoiler_9)
         elif family_name == 'A318':
             self.merge_spoiler(spoiler_4, spoiler_8)
-        elif family_name in ['B737 Classic', 'A319', 'A320', 'A321', 'A330', 'Global']:
+        elif family_name in ['B737 Classic', 'A319', 'A320', 'A321', 'Global']:
             self.merge_spoiler(spoiler_2, spoiler_7)
+        elif family_name == 'A330':
+            self.merge_spoiler(spoiler_2, spoiler_8)
 
         elif family_name == 'B787':
             self.merge_spoiler(spoiler_1, spoiler_14)
