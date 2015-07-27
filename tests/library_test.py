@@ -6487,6 +6487,12 @@ class TestStraightenHeadings(unittest.TestCase):
             mask=mask)
         ma_test.assert_masked_array_approx_equal(straighten_headings(data),
                                                  expected)
+    
+    def test_straighten_headings(self):
+        array = load_compressed(os.path.join(test_data_path, 'straighten_headings_1.npz'))
+        result = straighten_headings(array)
+        # result does not jump between overflows
+        self.assertTrue(np.ma.max(np.ma.ediff1d(result)) < 10)
 
 
 class TestStraighten(unittest.TestCase):

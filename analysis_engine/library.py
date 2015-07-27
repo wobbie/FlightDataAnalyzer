@@ -6830,30 +6830,23 @@ def straighten(array, estimate, limit, copy):
         array = array.copy()
     last_value = None
     for clump in np.ma.clump_unmasked(array):
-        starting_value = array[clump.start]
+        start_value = array[clump.start]
         if estimate is not None and estimate[clump.start]:
-            # Make sure we are close to the estimate at the start of each block.
-            offset = estimate[clump.start] - starting_value
+            # make sure we are close to the estimate at the start of each block
+            offset = estimate[clump.start] - start_value
             if offset>0.0:
-                starting_value += floor(offset / limit + 0.5) * limit
+                start_value += floor(offset / limit + 0.5) * limit
             else:
-                starting_value += ceil(offset / limit - 0.5) * limit
+                start_value += ceil(offset / limit - 0.5) * limit
         else:
             if last_value is not None:
-                # Check that we start this section within +/- limit/2 of the
-                # previous section. This situation arises when data has been
-                # masked at a rollover point.
-                last_half = np.trunc(last_value / (limit / 2))
-                starting_half = np.trunc(starting_value / (limit / 2))
-                if last_half > starting_half:
-                    starting_value += limit
-                elif last_half < starting_half:
-                    starting_value -= limit
+                # shift array section to be consistent with previous
+                start_value += limit * np.round((last_value - start_value) / limit)
 
         diff = np.ediff1d(array[clump])
         diff -= limit * np.trunc(diff * 2.0 / limit)
-        array[clump][0] = starting_value
-        array[clump][1:] = np.cumsum(diff) + starting_value
+        array[clump][0] = start_value
+        array[clump][1:] = np.cumsum(diff) + start_value
         last_value = array[clump][-1]
     return array
 
