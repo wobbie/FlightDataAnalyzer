@@ -2760,8 +2760,11 @@ class MainGearOnGroundToNoseGearOnGroundDuration(KeyPointValueNode):
                                              landing.slice)
             gogn_index = index_of_first_start(gogn.array == 'Ground',
                                               landing.slice)
-            self.create_kpv(gog_index,
-                            (gogn_index - gog_index) / self.frequency)
+            if gogn_index is None or gog_index is None:
+                self.warning("Gears not detected touching ground during landing phase")
+            else:
+                self.create_kpv(gog_index,
+                                (gogn_index - gog_index) / self.frequency)
 
 
 ########################################
