@@ -3747,8 +3747,9 @@ class AltitudeOvershootAtSuspectedLevelBust(KeyPointValueNode):
                     self.info('Overshoot not detected: Exceeds 90% of height')
                     continue
 
-                level_off_slices = slices_remove_small_slices(slices_remove_small_gaps(runs_of_ones(alt_diff)), count=bust_samples)
-                # check hasn't been level for over bust_samples
+                max_level_off_samples = 60 * self.frequency  # 1 minuete
+                level_off_slices = slices_remove_small_slices(slices_remove_small_gaps(runs_of_ones(alt_diff)), count=max_level_off_samples)
+                # check hasn't been level for over max_level_off_samples
                 if is_index_within_slices(idx, level_off_slices):
                     self.info('Overshoot not detected: Index in period of level flight')
                     continue
