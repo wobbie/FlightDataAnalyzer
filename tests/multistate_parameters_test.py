@@ -81,6 +81,7 @@ from analysis_engine.multistate_parameters import (
     SlatInTransit,
     SlatPartExtended,
     SlatRetracted,
+    SmokeWarning,
     SpeedControl,
     SpeedbrakeDeployed,
     SpeedbrakeSelected,
@@ -2537,6 +2538,28 @@ class TestSlatRetracted(unittest.TestCase):
                     None,)
         np.testing.assert_equal(node.array.data, result_array)
         np.testing.assert_equal(node.array.mask, result_mask)
+
+
+class TestSmokeWarning(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = SmokeWarning
+
+    def test_can_operate(self):
+        opts = self.node_class.get_operational_combinations()
+        self.assertEqual(len(opts), 2**21-1)
+
+    def test_derive(self):
+        one = M('Smoke Avionics (1) Warning', np.ma.array([0, 1, 0, 0, 0, 0]),
+                offset=0.7, frequency=2.0,
+                values_mapping={0: '-', 1: 'Smoke'})
+        two = M('Smoke Avionics (2) Warning', np.ma.array([0, 0, 0, 0, 1, 0]),
+                offset=0.2, frequency=2.0,
+                values_mapping={0: '-', 1: 'Smoke'})
+        node = self.node_class()
+        node.derive(None, one, two, *[None]*18)
+        expected = np.ma.array([0, 1, 0, 0, 1, 0])
+        np.testing.assert_equal(node.array.raw, expected)
 
 
 class TestSpeedbrakeDeployed(unittest.TestCase):

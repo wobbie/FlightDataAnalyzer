@@ -447,6 +447,7 @@ from analysis_engine.key_point_values import (
     RudderReversalAbove50Ft,
     SingleEngineDuringTaxiInDuration,
     SingleEngineDuringTaxiOutDuration,
+    SmokeWarningDuration,
     SpeedbrakeDeployed1000To20FtDuration,
     SpeedbrakeDeployedDuringGoAroundDuration,
     SpeedbrakeDeployedWithConfDuration,
@@ -11157,6 +11158,33 @@ class TestTakeoffConfigurationStabilizerWarningDuration(unittest.TestCase,
         self.values_mapping = {0: '-', 1: 'Warning'}
 
         self.basic_setup()
+
+
+##############################################################################
+# Warnings: Smoke
+
+
+class TestSmokeWarningDuration(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = SmokeWarningDuration
+
+    def test_can_operate(self):
+        opts = self.node_class.get_operational_combinations()
+        self.assertEqual(opts, [
+            ('Smoke Warning',)])
+
+    def test_derive(self):
+        smoke = MultistateDerivedParameterNode(
+            name='Smoke Warning',
+            array=np.ma.array([0] * 5 + [1] * 10 + [0] * 15),
+            values_mapping={0: '-', 1: 'Smoke'}
+        )
+        node = self.node_class()
+        node.derive(smoke)
+
+        self.assertEqual(node[0].value, 10)
+        self.assertEqual(node[0].index, 5)
 
 
 ##############################################################################

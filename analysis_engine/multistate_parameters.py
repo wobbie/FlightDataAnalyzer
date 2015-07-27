@@ -2128,6 +2128,77 @@ class StallWarning(MultistateDerivedParameterNode):
             self.array = available[0].array
 
 
+class SmokeWarning(MultistateDerivedParameterNode):
+    '''
+    Merging all available smoke alert signals into a single parameter for
+    subsequent monitoring.
+    '''
+    values_mapping = {
+        0: '-',
+        1: 'Smoke'}
+
+    @classmethod
+    def can_operate(cls, available):
+        return any_of([
+            'Smoke Avionics Warning',
+            'Smoke Avionics (1) Warning',
+            'Smoke Avionics (2) Warning',
+            'Smoke Lavatory Warning',
+            'Smoke Lavatory (1) Warning',
+            'Smoke Lavatory (2) Warning',
+            'Smoke Cabin Warning',
+            'Smoke Cabin Rest (1) Warning',
+            'Smoke Cabin Rest (2) Warning',
+            'Smoke Cargo Warning',
+            'Smoke Cargo Fwd (1) Warning',
+            'Smoke Cargo Fwd (2) Warning',
+            'Smoke Cargo Aft (1) Warning',
+            'Smoke Cargo Aft (2) Warning',
+            'Smoke Cargo Rest (1) Warning',
+            'Smoke Cargo Rest (2) Warning',
+            'Smoke Lower Deck Stowage',
+            'Smoke Avionic Bulk',
+            'Smoke IFEC',
+            'Smoke BCRC',
+            'Smoke Autonomous VCC',
+        ], available)
+
+    def derive(self,
+               smoke_avionics=M('Smoke Avionics Warning'),
+               smoke_avionics_1=M('Smoke Avionics (1) Warning'),
+               smoke_avionics_2=M('Smoke Avionics (2) Warning'),
+               smoke_lav=M('Smoke Lavatory Warning'),
+               smoke_lav_1=M('Smoke Lavatory (1) Warning'),
+               smoke_lav_2=M('Smoke Lavatory (2) Warning'),
+               smoke_cabin=M('Smoke Cabin Warning'),
+               smoke_cabin_1=M('Smoke Cabin Rest (1) Warning'),
+               smoke_cabin_2=M('Smoke Cabin Rest (2) Warning'),
+               smoke_cargo=M('Smoke Cargo Warning'),
+               smoke_cargo_fwd_1=M('Smoke Cargo Fwd (1) Warning'),
+               smoke_cargo_fwd_2=M('Smoke Cargo Fwd (2) Warning'),
+               smoke_cargo_aft_1=M('Smoke Cargo Aft (1) Warning'),
+               smoke_cargo_aft_2=M('Smoke Cargo Aft (2) Warning'),
+               smoke_cargo_rest_1=M('Smoke Cargo Rest (1) Warning'),
+               smoke_cargo_rest_2=M('Smoke Cargo Rest (2) Warning'),
+               smoke_lower_dec=M('Smoke Lower Deck Stowage'),
+               smoke_avionic_bulk=M('Smoke Avionic Bulk'),
+               smoke_ifec=M('Smoke IFEC'),
+               smoke_bcrc=M('Smoke BCRC'),
+               smoke_vcc=M('Smoke Autonomous VCC')):
+
+        params = (smoke_avionics, smoke_avionics_1, smoke_avionics_2,
+                  smoke_lav, smoke_lav_1, smoke_lav_2, smoke_cabin, smoke_cabin_1,
+                  smoke_cabin_2, smoke_cargo, smoke_cargo_fwd_1, smoke_cargo_fwd_2,
+                  smoke_cargo_aft_1, smoke_cargo_aft_2, smoke_cargo_rest_1,
+                  smoke_cargo_rest_2, smoke_lower_dec, smoke_avionic_bulk, smoke_ifec,
+                  smoke_bcrc, smoke_vcc)
+
+        params_state = vstack_params_where_state(
+            *[(param, 'Smoke') for param in params if param]
+        )
+        self.array = params_state.any(axis=0)
+
+
 class SpeedbrakeDeployed(MultistateDerivedParameterNode):
     '''
     '''

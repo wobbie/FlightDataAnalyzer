@@ -11947,6 +11947,24 @@ class LandingConfigurationSpeedbrakeCautionDuration(KeyPointValueNode):
 
 
 ##############################################################################
+# Warnings: Smoke
+
+
+class SmokeWarningDuration(KeyPointValueNode):
+    '''
+    '''
+
+    units = ut.SECOND
+
+    @classmethod
+    def can_operate(cls, available):
+        return 'Smoke Warning' in available
+
+    def derive(self, smoke_warning=M('Smoke Warning')):
+        self.create_kpvs_where(smoke_warning.array == 'Smoke', self.hz)
+
+
+##############################################################################
 # Throttle
 
 
