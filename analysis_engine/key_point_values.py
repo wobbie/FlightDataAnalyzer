@@ -3251,6 +3251,26 @@ class ThrustReversersDeployedDuration(KeyPointValueNode):
             self.create_kpv(index, dur_deployed)
 
 
+class ThrustReversersDeployedDuringFlightDuration(KeyPointValueNode):
+    '''
+    Measure the duration (secs) which the thrust reverses were deployed for.
+    0 seconds represents no deployment during flight.
+    '''
+
+    units = ut.SECOND
+
+    def derive(self, tr=M('Thrust Reversers'), airs=S('Airborne')):
+        for air in airs:
+            tr_in_air = tr.array[air.slice]
+            dur_deployed = np.ma.sum(tr_in_air == 'Deployed') / tr.frequency
+            dep_start = find_edges_on_state_change('Deployed', tr_in_air)
+            if dur_deployed and dep_start:
+                index = dep_start[0] + air.slice.start
+            else:
+                index = air.slice.start
+            self.create_kpv(index, dur_deployed)
+
+
 class ThrustReversersCancelToEngStopDuration(KeyPointValueNode):
     '''
     Measure the duration (secs) between the thrust reversers being cancelled and

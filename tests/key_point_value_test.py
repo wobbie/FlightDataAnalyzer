@@ -513,6 +513,7 @@ from analysis_engine.key_point_values import (
     ThrustAsymmetryWithThrustReversersDeployedMax,
     ThrustReversersCancelToEngStopDuration,
     ThrustReversersDeployedDuration,
+    ThrustReversersDeployedDuringFlightDuration,
     TouchdownTo60KtsDuration,
     TouchdownToElevatorDownDuration,
     TouchdownToThrustReversersDeployedDuration,
@@ -3502,6 +3503,42 @@ class TestThrustReversersDeployedDuration(unittest.TestCase):
         rev.array[:] = 'Deployed'
         dur = ThrustReversersDeployedDuration()
         dur.derive(rev, ldg)
+        self.assertEqual(len(dur), 1)
+        self.assertEqual(dur[0].index, 5)
+        self.assertEqual(dur[0].value, 10)
+
+
+class TestThrustReversersDeployedDuringFlightDuration(unittest.TestCase):
+
+    def setUp(self):
+        self.node_class = ThrustReversersDeployedDuringFlightDuration
+
+    def test_can_operate(self):
+        ops = self.node_class.get_operational_combinations()
+        self.assertEqual(ops, [('Thrust Reversers', 'Airborne')])
+
+    def test_derive(self):
+        rev = M(array=np.ma.zeros(30), values_mapping={
+            0: 'Stowed', 1: 'In Transit', 2: 'Deployed',}, frequency=2)
+        airs = S(frequency=2)
+        airs.create_section(slice(5, 25))
+        # no deployment
+        dur = self.node_class()
+        dur.derive(rev, airs)
+        self.assertEqual(dur[0].index, 5)
+        self.assertEqual(dur[0].value, 0)
+
+        # deployed for a while
+        rev.array[6:13] = 'Deployed'
+        dur = self.node_class()
+        dur.derive(rev, airs)
+        self.assertEqual(dur[0].index, 5.5)
+        self.assertEqual(dur[0].value, 3.5)
+
+        # deployed the whole time
+        rev.array[:] = 'Deployed'
+        dur = self.node_class()
+        dur.derive(rev, airs)
         self.assertEqual(len(dur), 1)
         self.assertEqual(dur[0].index, 5)
         self.assertEqual(dur[0].value, 10)
