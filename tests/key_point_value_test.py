@@ -438,6 +438,7 @@ from analysis_engine.key_point_values import (
     RollAbove1000FtMax,
     RollAtLowAltitude,
     RollCyclesDuringFinalApproach,
+    RollCyclesDuringInitialClimb,
     RollCyclesNotDuringFinalApproach,
     RollLiftoffTo20FtMax,
     RudderCyclesAbove50Ft,
@@ -9954,6 +9955,17 @@ class TestRollCyclesDuringFinalApproach(unittest.TestCase, NodeTest):
     def setUp(self):
         self.node_class = RollCyclesDuringFinalApproach
         self.operational_combinations = [('Roll', 'Final Approach')]
+
+    @unittest.skip('Test Not Implemented')
+    def test_derive(self):
+        self.assertTrue(False, msg='Test not implemented.')
+
+
+class TestRollCyclesDuringInitialClimb(unittest.TestCase, NodeTest):
+
+    def setUp(self):
+        self.node_class = RollCyclesDuringInitialClimb
+        self.operational_combinations = [('Roll', 'Initial Climb')]
 
     @unittest.skip('Test Not Implemented')
     def test_derive(self):
