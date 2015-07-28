@@ -4583,8 +4583,6 @@ def blend_parameters_cubic(this_valid, frequency, min_ip_freq, offset, params, p
     weights = []
     resampled_masks = []
 
-    import matplotlib.pyplot as plt
-
     # Compute the individual splines
     for seq, param in enumerate(params):
         # The slice and timebase for this parameter...
