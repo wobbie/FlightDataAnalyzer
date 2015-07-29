@@ -8,6 +8,9 @@ You can view the differences in tagged versions as follows:
 
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
+v0.21.8
+-------
+ - Speedbrake Selected update for A330
 
 v0.21.7
 -------
