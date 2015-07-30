@@ -1581,6 +1581,20 @@ class TestGearUpSelection(unittest.TestCase, NodeTest):
         node = GearUpSelection()
         node.derive(self.gear_up_sel, self.airborne, go_arounds)
         self.assertEqual(node, [])
+    
+    def test_low_hz(self):
+        '''
+        Gear Up Selection was not being triggered due to using
+        the slice index 119 instead of the start_edge 118.0625.
+        '''
+        gear_up_sel = load(os.path.join(test_data_path,
+                                        'GearUpSelection_gear_up_sel.nod'))
+        airborne = buildsection('Airborne', 119, 1381, 118.0625, 1380.4375)
+        go_arounds = S('Go Around')
+        node = GearUpSelection()
+        node.derive(gear_up_sel, airborne, go_arounds)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 118.5)
 
 
 class TestGearUpSelectionDuringGoAround(unittest.TestCase, NodeTest):

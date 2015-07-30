@@ -5842,6 +5842,25 @@ class TestSliceMultiply(unittest.TestCase):
                          slice(-2,-4,-1))
 
 
+class TestSliceRound(unittest.TestCase):
+    def test_slice_round(self):
+        self.assertEqual(slice_round(slice(None)), slice(None))
+        self.assertEqual(slice_round(slice(5, None)), slice(5, None))
+        self.assertEqual(slice_round(slice(None, 5)), slice(None, 5))
+        self.assertEqual(slice_round(slice(1, 5)), slice(1, 5))
+        self.assertEqual(slice_round(slice(1.2, 5)), slice(1, 5))
+        self.assertEqual(slice_round(slice(1.7, 5)), slice(2, 5))
+        self.assertEqual(slice_round(slice(1.2, 5.2)), slice(1, 5))
+        self.assertEqual(slice_round(slice(1.2, 5.7)), slice(1, 6))
+
+
+class TestSlicesRound(unittest.TestCase):
+    def test_slices_round(self):
+        self.assertEqual(slices_round([]), [])
+        self.assertEqual(slices_round([slice(None)]), [slice(None)])
+        self.assertEqual(slices_round([slice(None), slice(1.2, 2.7)]), [slice(None), slice(1, 3)])
+
+
 class TestSlicesMultiply(unittest.TestCase):
     def test_slices_multiply(self):
         slices = [slice(1,2,3),slice(None,None,None),slice(1,2,None)]

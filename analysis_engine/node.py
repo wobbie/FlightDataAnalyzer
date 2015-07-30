@@ -25,6 +25,7 @@ from analysis_engine.library import (
     runs_of_ones,
     slice_duration,
     slice_multiply,
+    slice_round,
     slices_above,
     slices_below,
     slices_between,
@@ -1636,8 +1637,9 @@ class KeyTimeInstanceNode(FormattedNameNode):
                 kwargs.update(**{name: state})
             # TODO: to improve performance reverse the state into numeric value
             # and look it up in array.raw instead
-            if _slice is None:
-                _slice = slice(0, None)
+            # round slice start and stop to reduce numpy array float indexing
+            # floor inaccuracy, e.g. array[1.99999] retrieves index 1
+            _slice = slice(0, None) if _slice is None else slice_round(_slice)
             if len(array[_slice]) == 0:
                 return
             valid_periods = np.ma.clump_unmasked(array[_slice])

@@ -1548,12 +1548,13 @@ class TestAltitudeSTD(unittest.TestCase):
 
 class TestAltitudeTail(unittest.TestCase):
     def test_can_operate(self):
-        expected = [('Altitude Radio', 'Pitch',
-                     'Ground To Lowest Point Of Tail',
-                     'Main Gear To Lowest Point Of Tail')]
+        expected = [(
+            'Altitude Radio', 'Pitch', 'Takeoff', 'Go Around And Climbout', 'Landing',
+            'Ground To Lowest Point Of Tail', 'Main Gear To Lowest Point Of Tail',
+        )]
         opts = AltitudeTail.get_operational_combinations()
         self.assertEqual(opts, expected)
-        
+    
     def test_altitude_tail(self):
         talt = AltitudeTail()
         talt.derive(Parameter('Altitude Radio', np.ma.zeros(10), 1,0.0),
@@ -2152,7 +2153,7 @@ class TestEng_N1MinFor5Sec(unittest.TestCase, NodeTest):
         #this data incorrectly. The peak at sample 20 should set the level
         #for 5 seconds, and the trough that follows should not go lower than
         #the highest value seen for 5 seconds.
-        self.assertEqual(min5s.array[18:23], np.ma.array([40.1]*5))
+        self.assertTrue(np.all(min5s.array[18:23] == np.ma.array([40.1]*5)))
         self.assertAlmostEqual(min5s.array[24], 39.7)
 
 class TestEng_N2Avg(unittest.TestCase, NodeTest):
@@ -7125,7 +7126,7 @@ class TestAirspeedRelativeFor3Sec(unittest.TestCase, NodeTest):
 class TestAirspeedMinusAirspeedSelectedFor3Sec(unittest.TestCase):
     def test_can_operate(self):
         o = AirspeedMinusAirspeedSelectedFor3Sec.get_operational_combinations()
-        self.assertEqual([('Airspeed', 'Airspeed Selected')], o)
+        self.assertEqual([('Airspeed', 'Airspeed Selected For Approaches')], o)
          
     def test_derive(self):
         aspd = P('Airspeed', array=np.ma.array([256]*250))
