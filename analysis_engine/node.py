@@ -1639,25 +1639,40 @@ class KeyTimeInstanceNode(FormattedNameNode):
             # and look it up in array.raw instead
             # round slice start and stop to reduce numpy array float indexing
             # floor inaccuracy, e.g. array[1.99999] retrieves index 1
-            _slice = slice(0, None) if _slice is None else slice_round(_slice)
-            if len(array[_slice]) == 0:
+            rounded_slice = slice(0, None) if _slice is None else slice_round(_slice)
+            if len(array[rounded_slice]) == 0:
                 return
-            valid_periods = np.ma.clump_unmasked(array[_slice])
+            if rounded_slice.start and change in ('entering', 'entering_and_leaving'):
+                # check if the transition occurs on the slice start index.
+                rounded_slice = slice(rounded_slice.start - 1, rounded_slice.stop)
+            if rounded_slice.stop and change in ('leaving', 'entering_and_leaving'):
+                # check if the transition occurs on the slice stop index.
+                rounded_slice = slice(rounded_slice.start, rounded_slice.stop)
+            valid_periods = np.ma.clump_unmasked(array[rounded_slice])
             for valid_period in valid_periods:
-                valid_slice = slice(valid_period.start + _slice.start,
-                                    valid_period.stop + _slice.start)
+                valid_slice = slice(valid_period.start + rounded_slice.start,
+                                    valid_period.stop + rounded_slice.start)
                 state_periods = runs_of_ones(array[valid_slice] == state)
-                slice_len = len(array[valid_slice])
                 for period in state_periods:
                     # Calculate the location in the array
                     if change in ('entering', 'entering_and_leaving') \
                        and period.start > 0:
                         # We don't create the KTI at the beginning of the data, as
                         # it is not a "state change"
-                        start = period.start + valid_slice.start
-                        self.create_kti(start - 0.5, **kwargs)
+                        index = period.start + valid_slice.start - 0.5
+                        # As we are nudging the KTI index to be half a sample
+                        # earlier to account for the unknown state of the
+                        # parameter inbetween samples, it is possible for the
+                        # index to be nudged before the start of the section
+                        # slice. This causes a discrepancy where Gear Up
+                        # Selection can occur before Liftoff. In this case
+                        # the index will be nudged to the start index of the
+                        # section.
+                        if _slice:
+                            index = max(_slice.start, index)
+                        self.create_kti(index, **kwargs)
                     if change in ('leaving', 'entering_and_leaving') \
-                       and period.stop < slice_len:
+                       and period.stop < len(array[valid_slice]):
                         stop = period.stop + valid_slice.start
                         self.create_kti(stop - 0.5, **kwargs)
             return
