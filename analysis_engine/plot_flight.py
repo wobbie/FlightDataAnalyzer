@@ -4,7 +4,6 @@ import itertools
 import logging
 import numpy as np
 import os
-import platform
 import simplekml
 
 from copy import copy
@@ -21,13 +20,14 @@ from analysis_engine.library import (
 from analysis_engine.node import derived_param_from_hdf, Parameter
 from analysis_engine.settings import METRES_TO_FEET
 
-if platform.system() == 'Windows':
-    # For built versions and Dave's pythonxy.
-    ##import wx
-    # Must appear before the importing plt
-    import matplotlib
-    ###matplotlib.use('agg')
-    matplotlib.use('WX')
+import matplotlib
+
+try:
+    import wx
+except ImportError:
+    matplotlib.use('Agg')
+else:
+    matplotlib.use('WXAgg')
 
 import matplotlib.pyplot as plt
 
