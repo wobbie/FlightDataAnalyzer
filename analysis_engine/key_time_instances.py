@@ -916,10 +916,10 @@ class GearUpSelection(KeyTimeInstanceNode):
         if not airborne:
             return
         air_not_ga = slices_and(
-            airborne.get_slices(edges=False), slices_not(
-                go_arounds.get_slices(edges=False),
-                begin_at=airborne.get_first().slice.start,
-                end_at=airborne.get_last().slice.stop,
+            airborne.get_slices(), slices_not(
+                go_arounds.get_slices(),
+                begin_at=airborne.get_first().start_edge,
+                end_at=airborne.get_last().stop_edge,
             )
         )
         self.create_ktis_on_state_change('Up', gear_up_sel.array,

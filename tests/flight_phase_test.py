@@ -66,11 +66,11 @@ test_data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 '''
 Three little routines to make building Sections for testing easier.
 '''
-def builditem(name, begin, end):
+def builditem(name, begin, end, start_edge=None, stop_edge=None):
     '''
     This code more accurately represents the aligned section values, but is
     not suitable for test cases where the data does not get aligned.
-
+    
     if begin is None:
         ib = None
     else:
@@ -83,28 +83,27 @@ def builditem(name, begin, end):
         ie = int(end)
         if ie < end:
             ie += 1
-            '''
+    
+    :param begin: index at start of section
+    :param end: index at end of section
+    '''
     slice_end = end if end is None else end + 1
-    return Section(name, slice(begin, slice_end, None), begin, end)
+    return Section(name, slice(begin, slice_end, None), start_edge or begin, stop_edge or end)
 
 
-def buildsection(name, begin, end):
+def buildsection(name, *args):
     '''
     A little routine to make building Sections for testing easier.
 
     :param name: name for a test Section
-    :param begin: index at start of section
-    :param end: index at end of section
-
     :returns: a SectionNode populated correctly.
 
     Example: land = buildsection('Landing', 100, 120)
     '''
-    result = builditem(name, begin, end)
-    return SectionNode(name, items=[result])
+    return SectionNode(name, items=[builditem(name, *args)])
 
 
-def buildsections(*args):
+def buildsections(name, *args):
     '''
     Like buildsection, this is used to build SectionNodes for test purposes.
 
@@ -113,21 +112,11 @@ def buildsections(*args):
     Example of use:
     approach = buildsections('Approach', [80,90], [100,110])
     '''
-    built_list=[]
-    name = args[0]
-    for a in args[1:]:
-        new_section = builditem(name, a[0], a[1])
-        built_list.append(new_section)
-    return SectionNode(name, items=built_list)
+    return SectionNode(name, items=[builditem(name, *a) for a in args])
 
-def build_kti(*args):
-    built_list=[]
-    name = args[0]
-    for a in args[1:]:
-        if a:
-            new_kti = KeyTimeInstance(a, name)
-            built_list.append(new_kti)
-    return KTI(items=built_list)
+
+def build_kti(name, *args):
+    return KTI(items=[KeyTimeInstance(a, name) for a in args if a])
 
 
 ##############################################################################

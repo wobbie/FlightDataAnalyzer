@@ -3,6 +3,8 @@ import os
 import sys
 import unittest
 
+from flightdatautilities.array_operations import load_compressed
+
 from analysis_engine.node import (
     A, KeyTimeInstance, KTI, load, Parameter, P, Section, S, M)
 
@@ -1581,6 +1583,32 @@ class TestGearUpSelection(unittest.TestCase, NodeTest):
         node = GearUpSelection()
         node.derive(self.gear_up_sel, self.airborne, go_arounds)
         self.assertEqual(node, [])
+    
+    def test_low_hz(self):
+        '''
+        Gear Up Selection was not being triggered due to using
+        the slice index 119 instead of the start_edge 118.0625.
+        '''
+        gear_up_sel = load(os.path.join(test_data_path,
+                                        'GearUpSelection_gear_up_sel_1.nod'))
+        airborne = buildsection('Airborne', 119, 1381, 118.0625, 1380.4375)
+        go_arounds = S('Go Around')
+        node = GearUpSelection()
+        node.derive(gear_up_sel, airborne, go_arounds)
+        self.assertEqual(len(node), 1)
+        self.assertEqual(node[0].index, 118.5)
+
+    def test_airborne_start_index(self):
+        array = load_compressed(os.path.join(test_data_path, 'GearUpSelection_gear_up_sel_2.npz'))
+        gear_up_sel = M('Gear Up Selected', array)
+        airborne = buildsection('Airborne', 497, 6808, 496.6328125, 6807.6328125)
+        go_arounds = S('Go Around')
+        node = GearUpSelection()
+        node.derive(gear_up_sel, airborne, go_arounds)
+        self.assertEqual(len(node), 1)
+        # The calculated KTI index is shifted forward slightly to match the slice start index.
+        # This fixes a discrepancy whereby Gear Up Selection occurs just before Liftoff.
+        self.assertEqual(node[0].index, 496.6328125)
 
 
 class TestGearUpSelectionDuringGoAround(unittest.TestCase, NodeTest):

@@ -1,3 +1,4 @@
+import itertools
 import logging
 import pytz
 import numpy as np
@@ -308,6 +309,15 @@ def align(slave, master, interpolate=True):
 def align_args(slave_array, slave_frequency, slave_offset, master_frequency, master_offset=0, interpolate=True):
     '''
     align implementation abstracted from Parameter class interface.
+    
+    TODO: Upscaling MappedArrays should result in transitions at midpoints rather
+          than simply repeating the array as the exact time is unknown, e.g.
+          ['-', '-', 'Up'] * 4 == ['-', '-', '-', '-',
+                                   '-', '-' 'Up', 'Up', # currently '-', '-', '-', '-'
+                                   'Up', 'Up', 'Up', 'Up']
+          This is arguably more accurate, as the state could have changed
+          anywhere between the sample where the state changed and the previous
+          one.
 
     :type slave_array: np.ma.masked_array
     :type slave_frequency: int or float
@@ -1408,14 +1418,15 @@ def clump_multistate(array, state, _slices=[slice(None)], condition=True):
 
     :returns: list of slices.
     '''
+    if not _slices:
+        return []
+    
     if not state in array.state:
         return None
 
-    if not hasattr(_slices, '__iter__'):
-        if _slices:  # single slice provided
-            _slices = [_slices,]
-        else:  # None provided
-            return []
+    if isinstance(_slices, slice):
+        # single slice provided
+        _slices = [_slices]
 
     if condition == True:
         state_match = runs_of_ones(array == state)
@@ -5938,10 +5949,37 @@ def slices_multiply(_slices, f):
     :returns: List of slices rescaled by factor f
     :rtype: integer
     '''
-    result=[]
-    for s in _slices:
-        result.append(slice_multiply(s,f))
-    return result
+    return [slice_multiply(s,f) for s in _slices]
+
+
+def slice_round(_slice):
+    '''
+    Round the slice start and stop indices to the nearest integer boundary.
+    
+    As numpy arrays floor float indices, this can produce inaccurate results,
+    especially when the parameter frequency is low.
+    
+    :type _slice: slice
+    :rtype: slice
+    '''
+    start = _slice.start
+    stop = _slice.stop
+    if start is not None:
+        start = int(np.round(start))
+    if stop is not None:
+        stop = int(np.round(stop))
+    return slice(start, stop, _slice.step)
+
+
+def slices_round(slices):
+    '''
+    Round an iterable of slices.
+    
+    :type _slice: iterable of slices
+    :rtype: [slice]
+    '''
+    return [slice_round(s) for s in slices]
+
 
 def slice_samples(_slice):
     '''
@@ -6187,17 +6225,16 @@ def slices_from_ktis(kti_1, kti_2):
 
     # Unpack the KTIs to get the indexes, and mark which were
     # start (0) and end (1) values.
-    unpk = [[t.index,0] for t in kti_1]+\
-        [[t.index,1] for t in kti_2]
-    # Sort...
-    unpk.sort()
+    unpk = sorted(itertools.chain(
+        ((t.index, 0) for t in kti_1),
+        ((t.index, 1) for t in kti_2)))
     # Prepare the ground...
     previous = None
     slices = []
     # Now scan the list looking for an end immediately following a start.
     for item in unpk:
         if item[1]:
-            if previous==None or previous[1]:
+            if previous is None or previous[1]:
                 continue
             else:
                 # previous[1] was 0 and item[1] = 1

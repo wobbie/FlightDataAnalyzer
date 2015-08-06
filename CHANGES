@@ -8,6 +8,47 @@ You can view the differences in tagged versions as follows:
 
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
+
+v0.22.1
+-------
+
+ - New:
+   - Multistate: Smoke Warning
+   - KPV: Smoke Warning Duration
+   - KPV: Roll Cycles During Initial Climb
+   - KPV: Thrust Reversers Deployed During Flight Duration
+   - KPV: Groundspeed At Liftoff
+   - Phase: Stationary
+   - KTI: Movement Start
+   - KTI: Movement Stop
+   - KTI: APU Start
+   - KTI: APU Stop
+ - Improvements:
+   - Gear up selection improved accuracy
+   - Align to Takeoff and Go Around param for improved KPV accuracy
+   - Remove Gear recycling from Altitude at gear up/down selection
+   - Accel Norm Takeoff changed to liftoff to 35ft
+   - Overflow correction: use maximum change of value instead of ptp
+   - Altitude Radio: use dynamic overflow values
+   - Use Stationary phase to detect Movement Start / Stop
+   - calculate_timebase: Small speed increase
+   - Added node Cacheing
+   - SAT: derive from Sat (1/2/3)
+   - ThrustReversers: derive even if a single Thrust Reversers Deployed is available
+   - Mobile phase: use Groundspeed to expand the phase
+   - Reduced period of level flight allowed during level bust
+ - Fixes:
+   - find_toc_tod: handle masked data at mid point of descent/climb
+   
+
+v0.21.8
+-------
+ - Speedbrake Selected update for A330
+
+v0.21.7
+-------
+ - Speedbrake update for A330: use spoilers 2 and 8
+
 v0.21.6
 -------
  - Updated heading_diff to operate on arrays
