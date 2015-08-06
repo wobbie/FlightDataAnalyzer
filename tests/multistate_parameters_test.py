@@ -1173,7 +1173,7 @@ class TestFlap(unittest.TestCase, NodeTest):
         _af = A('Family', 'DC-9')
         attributes = (_am, _as, _af)
         array = np.ma.array(range(50) + range(-5, 0) + [13.1, 1.3, 10, 10])
-        flap = P(name='Flap Angle', array=array, frequency=2)
+        flap = P(name='Flap Angle', array=array, frequency=1)
         for index in (1, 57, 58):
             flap.array[index] = np.ma.masked
         node = self.node_class()
@@ -1183,14 +1183,19 @@ class TestFlap(unittest.TestCase, NodeTest):
         self.assertEqual(node.values_mapping, at.get_flap_map.return_value)
         self.assertEqual(node.units, ut.DEGREE)
         self.assertIsInstance(node.array, MappedArray)
-        self.assertEqual(node.array.size, 59)
-        self.assertEqual(node.array.raw.tolist(),[0.0, None] + 55 * [13] + [None, None])
-        self.assertEqual(node.array.mask.sum(), 3)
-        self.assertTrue(node.array.mask[1])
-        self.assertTrue(node.array.mask[57])
-        self.assertTrue(node.array.mask[58])
+        # Note multipliers introduced as output frequency now raised to 4Hz.
+        self.assertEqual(node.array.size, 59*4)
+        self.assertEqual(node.array.raw.tolist(),[0.0]+7*[None]+189*[40]+6*[0]+19*[13]+3*[0]+11*[None])
+        self.assertEqual(node.array.mask.sum(), 18)
+        self.assertTrue(node.array.mask[1*4])
+        self.assertTrue(node.array.mask[57*4])
+        self.assertTrue(node.array.mask[58*4])
 
     @patch('analysis_engine.library.at')
+    #
+    # Note: This test is somewhat academic as the Beechcraft does not record
+    # Flap Angle, rather has discrete switches for Flap position.
+    #
     def test_derive__beechcraft(self, at):
         at.get_flap_map.return_value = {f: str(f) for f in (0, 17.5, 35)}
         _am = A('Model', '1900D')
@@ -1198,7 +1203,7 @@ class TestFlap(unittest.TestCase, NodeTest):
         _af = A('Family', '1900')
         attributes = (_am, _as, _af)
         array = np.ma.array((0, 5, 7.2, 17, 17.4, 17.4, 17.4, 17.4, 17.4, 17.9, 20, 30, 30))
-        flap = P(name='Flap Angle', array=array, frequency=2)
+        flap = P(name='Flap Angle', array=array, frequency=1) # Frame sample rate is 1Hz.
         node = self.node_class()
         node.derive(flap, *attributes)
         attributes = (a.value for a in attributes)
@@ -1207,7 +1212,7 @@ class TestFlap(unittest.TestCase, NodeTest):
         self.assertEqual(node.units, ut.DEGREE)
         self.assertIsInstance(node.array, MappedArray)
         ma_test.assert_masked_array_equal(
-            node.array.raw,
+            node.array.raw[::4],
             np.ma.array([0.0, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 35.0, 35.0, 35.0, 35.0]),
         )
 

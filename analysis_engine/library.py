@@ -309,7 +309,7 @@ def align(slave, master, interpolate=True):
 def align_args(slave_array, slave_frequency, slave_offset, master_frequency, master_offset=0, interpolate=True):
     '''
     align implementation abstracted from Parameter class interface.
-    
+
     TODO: Upscaling MappedArrays should result in transitions at midpoints rather
           than simply repeating the array as the exact time is unknown, e.g.
           ['-', '-', 'Up'] * 4 == ['-', '-', '-', '-',
@@ -1421,7 +1421,7 @@ def clump_multistate(array, state, _slices=[slice(None)], condition=True):
     '''
     if not _slices:
         return []
-    
+
     if not state in array.state:
         return None
 
@@ -5956,10 +5956,10 @@ def slices_multiply(_slices, f):
 def slice_round(_slice):
     '''
     Round the slice start and stop indices to the nearest integer boundary.
-    
+
     As numpy arrays floor float indices, this can produce inaccurate results,
     especially when the parameter frequency is low.
-    
+
     :type _slice: slice
     :rtype: slice
     '''
@@ -5975,7 +5975,7 @@ def slice_round(_slice):
 def slices_round(slices):
     '''
     Round an iterable of slices.
-    
+
     :type _slice: iterable of slices
     :rtype: [slice]
     '''
