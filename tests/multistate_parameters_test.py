@@ -153,7 +153,7 @@ class NodeTest(object):
 
 
 class TestAPLateralMode(unittest.TestCase):
-    
+
     def test_can_operate(self):
         # Avoid exploding long list of combinations.
         self.assertTrue(APLateralMode.can_operate(['Lateral Mode Selected']))
@@ -167,7 +167,7 @@ class TestAPLateralMode(unittest.TestCase):
             'Roll Go Around Mode Active',
             'Land Track Active',
             'Heading Mode Active']))
-    
+
     def test_derive_lateral_mode_selected(self):
         lateral_mode_selected_values_mapping = {
             0: '-',
@@ -188,7 +188,7 @@ class TestAPLateralMode(unittest.TestCase):
         self.assertTrue(
             all(node.array ==
                 ['-', '-', 'RWY', 'RWY', 'NAV', 'NAV', 'LOC CAPT', 'LOC CAPT', '-', '-']))
-    
+
     def test_derive_all(self):
         activated_values_mapping = {0: '-', 1: 'Activated'}
         runway_mode_active = M(
@@ -244,7 +244,7 @@ class TestAPLateralMode(unittest.TestCase):
 
 
 class TestAPVerticalMode(unittest.TestCase):
-    
+
     def setUp(self):
         self._longitudinal_mode_selected_values_mapping = {
             0: '-',
@@ -255,7 +255,7 @@ class TestAPVerticalMode(unittest.TestCase):
             5: 'Vertical Speed Engaged',
             6: 'Unused Mode',
         }
-    
+
     def test_can_operate(self):
         # Avoid exploding long list of combinations.
         self.assertTrue(APVerticalMode.can_operate(['Climb Mode Active']))
@@ -273,7 +273,7 @@ class TestAPVerticalMode(unittest.TestCase):
             'Altitude Mode',
             'Expedite Climb Mode',
             'Expedite Descent Mode']))
-    
+
     def test_derive_longitudinal_mode_selected(self):
         longitudinal_mode_selected_array = np.ma.array(
             [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6])
@@ -284,8 +284,8 @@ class TestAPVerticalMode(unittest.TestCase):
         )
         node = APVerticalMode()
         node.derive(
-            None, longitudinal_mode_selected, None, None, None, None, None,
-            None, None, None, None, None)
+            None, None, longitudinal_mode_selected, None, None, None, None, None,
+            None, None, None, None)
         self.assertTrue(
             all(node.array ==
                 ['-', '-',
@@ -295,9 +295,14 @@ class TestAPVerticalMode(unittest.TestCase):
                  'LAND', 'LAND',
                  'V/S', 'V/S',
                  '-', '-']))
-    
+
     def test_derive_all(self):
         activated_values_mapping = {0: '-', 1: 'Activated'}
+        at_active = M(
+            'AT Active',
+            array=np.ma.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            values_mapping=activated_values_mapping,
+        )
         climb_active = M(
             'Climb Mode Active',
             array=np.ma.array([0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
@@ -317,11 +322,6 @@ class TestAPVerticalMode(unittest.TestCase):
             'Flare Mode',
             array=np.ma.array([0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
             values_mapping={0: '-', 1: 'Engaged'},
-        )
-        at_active = M(
-            'AT Active',
-            array=np.ma.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-            values_mapping=activated_values_mapping,
         )
         open_climb_mode = M(
             'Open Climb Mode',
@@ -346,12 +346,12 @@ class TestAPVerticalMode(unittest.TestCase):
         expedite_climb_mode = M(
             'Expedite Climb Mode',
             array=np.ma.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-            values_mapping={0: '-', 1: 'Expedite Climb Mode'},
+            values_mapping=activated_values_mapping,
         )
         expedite_descent_mode = M(
             'Expedite Descent Mode',
             array=np.ma.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-            values_mapping={0: '-', 1: 'Expedite Descent Mode'},
+            values_mapping=activated_values_mapping,
         )
         longitudinal_mode_selected = M(
             'Longitudinal Mode Selected',
@@ -359,9 +359,9 @@ class TestAPVerticalMode(unittest.TestCase):
             values_mapping=self._longitudinal_mode_selected_values_mapping,
         )
         node = APVerticalMode()
-        node.derive(climb_active, longitudinal_mode_selected,
+        node.derive(at_active, climb_active, longitudinal_mode_selected,
                     ils_glideslope_capture_active, ils_glideslope_active,
-                    flare_mode, at_active, open_climb_mode, open_descent_mode,
+                    flare_mode, open_climb_mode, open_descent_mode,
                     altitude_capture_mode, altitude_mode,
                     expedite_climb_mode, expedite_descent_mode)
         self.assertTrue(
@@ -499,7 +499,7 @@ class TestAPURunning(unittest.TestCase):
         run.derive(apu_n1, None, None)
         expected = ['-'] * 2 + ['Running'] * 3 + ['-'] * 2
         np.testing.assert_array_equal(run.array, expected)
-    
+
     def test_derive_apu_voltage(self):
         apu_voltage = P('APU Generator AC Voltage',
                         array=np.ma.array([0, 115, 115, 115, 114, 0, 0]))
@@ -507,7 +507,7 @@ class TestAPURunning(unittest.TestCase):
         run.derive(None, apu_voltage, None)
         expected = ['-'] + ['Running'] * 4 + ['-'] * 2
         np.testing.assert_array_equal(run.array, expected)
-    
+
     def test_derive_apu_bleed_valve_open(self):
         apu_bleed_valve_open = M('APU Bleed Valve Open',
                                  array=np.ma.array([0,1,1,0,1],
@@ -758,7 +758,7 @@ class TestDualInput(unittest.TestCase, NodeTest):
         capt_array = np.ma.array([10.0]*20)
         fo_array = np.ma.array([0.0]*20)
         # Dual input
-        
+
         # The resolution of the signals on some Airbus types is given by:
         resolution = 0.703129
         # So the sidesticks can sit with one bit offset in pitch and roll at
@@ -925,13 +925,13 @@ class TestEng_Fire(unittest.TestCase, NodeTest):
 
 
 class TestEngRunning(unittest.TestCase):
-    
+
     def test_class_name(self):
         self.assertEqual(Eng1Running.get_name(), 'Eng (1) Running')
         self.assertEqual(Eng2Running.get_name(), 'Eng (2) Running')
         self.assertEqual(Eng3Running.get_name(), 'Eng (3) Running')
         self.assertEqual(Eng4Running.get_name(), 'Eng (4) Running')
-    
+
     def test_can_operate(self):
         self.assertTrue(EngRunning.can_operate(['Eng (0) N1']))
         self.assertTrue(EngRunning.can_operate(['Eng (0) N2']))
@@ -943,11 +943,11 @@ class TestEngRunning(unittest.TestCase):
         self.assertTrue(Eng2Running.can_operate(['Eng (2) N1']))
         self.assertTrue(Eng3Running.can_operate(['Eng (3) N1']))
         self.assertTrue(Eng4Running.can_operate(['Eng (4) N1']))
-    
+
     def test_determine_running(self):
         # This is tested by the TestEng_AllRunning below.
         pass
-    
+
 
 class TestEng_AllRunning(unittest.TestCase, NodeTest):
     def setUp(self):
@@ -995,7 +995,7 @@ class TestEng_AllRunning(unittest.TestCase, NodeTest):
         self.assertEqual(node.array.raw.tolist(), expected)
 
     def test_derive_np_only(self):
-        # Propellors 
+        # Propellors
         np_array = np.ma.array([0, 5, 10, 15, 11, 5, 0])
         eng_np = P('Eng (*) Np Min', array=np_array)
         expected = [False, False, False, True, True, False, False]
@@ -1051,7 +1051,7 @@ class TestEng_AnyRunning(unittest.TestCase, NodeTest):
         self.assertEqual(node.array.raw.tolist(), expected)
 
     def test_derive_np_only(self):
-        # Propellors 
+        # Propellors
         np_array = np.ma.array([0, 5, 10, 15, 11, 5, 0])
         eng_np = P('Eng (*) Np Min', array=np_array)
         expected = [False, False, False, True, True, False, False]
@@ -1146,7 +1146,7 @@ class TestFlap(unittest.TestCase, NodeTest):
             ('Altitude AAL',),
             frame=A('Frame', 'L382-Hercules'),
         ))
-    
+
     @patch('analysis_engine.library.at')
     def test_derive(self, at):
         at.get_flap_map.return_value = {f: str(f) for f in (0, 1, 2, 5, 10, 15, 25, 30, 40)}
@@ -1291,7 +1291,7 @@ class TestFlapIncludingTransition(unittest.TestCase, NodeTest):
             series=A('Series', None),
             family=A('Family', None),
         ))
-    
+
     @patch('analysis_engine.library.at')
     def test_derive(self, at):
         at.get_flap_map.return_value = {f: str(f) for f in (0, 1, 2, 5, 10, 15, 25, 30, 40)}
@@ -1382,7 +1382,7 @@ class TestFlapLeverSynthetic(unittest.TestCase, NodeTest):
         # Prepare our generated flap and slat arrays:
         flap_array = [0.0, 0, 8, 8, 0, 0, 0, 8, 20, 30, 45, 8, 0, 0, 0]
         slat_array = [0.0, 0, 20, 20, 20, 0, 0, 20, 20, 25, 25, 20, 20, 0, 0]
-        flap_array = MappedArray(np.repeat(flap_array, 10), 
+        flap_array = MappedArray(np.repeat(flap_array, 10),
                 values_mapping={f: str(f) for f in (0, 8, 20, 30, 45)})
         slat_array = MappedArray(np.repeat(slat_array, 10),
                 values_mapping={s: str(s) for s in (0, 20, 25)})
@@ -1443,7 +1443,7 @@ class TestFlapLeverSynthetic(unittest.TestCase, NodeTest):
                     'Lever 1', 'Lever 2', 'Lever 2', 'Lever 3', 'Lever 3',
                     'Lever Full', 'Lever 0']
         repeat = 1
-        flap_array = MappedArray(np.repeat(flap_array, repeat), 
+        flap_array = MappedArray(np.repeat(flap_array, repeat),
                 values_mapping={f: str(f) for f in (0, 8, 14, 22, 32)})
         slat_array = MappedArray(np.repeat(slat_array, repeat),
                 values_mapping={s: str(s) for s in (0, 16, 20, 23)})
@@ -1511,7 +1511,7 @@ class TestFlapLeverSynthetic(unittest.TestCase, NodeTest):
             series=A('Series', None),
             family=A('Family', 'A330'),
         ))
-        
+
         with patch('analysis_engine.multistate_parameters.at') as at:
             at.get_conf_angles.side_effect = KeyError
             # Requires Slat.
@@ -1599,7 +1599,7 @@ class TestFlapLeverSynthetic(unittest.TestCase, NodeTest):
         # Prepare our generated flap and slat arrays:
         flap_array = [0.0, 0, 8, 8, 0, 0, 0, 8, 20, 30, 45, 8, 0, 0, 0]
         slat_array = [0.0, 0, 20, 20, 20, 0, 0, 20, 20, 25, 25, 20, 20, 0, 0]
-        flap_array = MappedArray(np.repeat(flap_array, 10), 
+        flap_array = MappedArray(np.repeat(flap_array, 10),
                 values_mapping={f: str(f) for f in (0, 8, 20, 30, 45)})
         slat_array = MappedArray(np.repeat(slat_array, 10),
                 values_mapping={s: str(s) for s in (0, 20, 25)})
@@ -1660,7 +1660,7 @@ class TestFlapLeverSynthetic(unittest.TestCase, NodeTest):
                     'Lever 1', 'Lever 2', 'Lever 2', 'Lever 3', 'Lever 3',
                     'Lever Full', 'Lever 0']
         repeat = 1
-        flap_array = MappedArray(np.repeat(flap_array, repeat), 
+        flap_array = MappedArray(np.repeat(flap_array, repeat),
                 values_mapping={f: str(f) for f in (0, 8, 14, 22, 32)})
         slat_array = MappedArray(np.repeat(slat_array, repeat),
                 values_mapping={s: str(s) for s in (0, 16, 20, 23)})
@@ -1688,7 +1688,7 @@ class TestFlaperon(unittest.TestCase):
             model=Attribute('Model', 'A330-222'),
             series=Attribute('Series', 'A330-200'),
             family=Attribute('Family', 'A330')))
-    
+
     def test_derive(self):
         al = load(os.path.join(test_data_path, 'aileron_left.nod'))
         ar = load(os.path.join(test_data_path, 'aileron_right.nod'))
@@ -1703,7 +1703,7 @@ class TestFlaperon(unittest.TestCase):
             flaperon.array.raw.tolist() ==
             [None] * 53 +
             [10] * 11 +
-            [5] * 244 + 
+            [5] * 244 +
             [10] * 130 +
             [0, 0, 0, 5, 0, 5, 5] +
             [10] * 32 +
@@ -1717,9 +1717,9 @@ class TestFlaperon(unittest.TestCase):
             [10] * 18 +
             [5, 5] +
             [10] * 290 +
-            [5, 5, 5] + 
+            [5, 5, 5] +
             [0] * 275 +
-            [5] + 
+            [5] +
             [10] * 260 +
             [None] * 4
         )
@@ -1944,7 +1944,7 @@ class TestGearDownSelected(unittest.TestCase):
         dn_sel = GearDownSelected()
         dn_sel.derive(gdn, None)
         np.testing.assert_array_equal(dn_sel.array, [1, 1, 1, 0, 0, 0])
-        
+
     def test_gear_dn_selected_with_mask(self):
         gdn = M(
             array=np.ma.array(data=[1, 1, 1, 0, 0, 0],
@@ -2097,7 +2097,7 @@ class TestMasterCaution(unittest.TestCase, NodeTest):
             values_mapping={0: '-', 1: 'Caution'},
             frequency=1,
             offset=0.1,
-        )        
+        )
         node = self.node_class()
         node.derive(warn_capt, warn_fo, warn_capt_2, warn_fo_2)
         np.testing.assert_array_equal(node.array, [0, 1, 1, 1, 1, 0])
@@ -2648,7 +2648,7 @@ class TestSpeedbrakeSelected(unittest.TestCase):
         array = spd_sel.derive_from_handle(handle_array, deployed=5)
         self.assertEqual(list(array), # MappedArray .tolist() does not output states.
                          ['Stowed']*20+['Deployed/Cmd Up']*10+['Stowed']*10)
-    
+
     def test_derive_from_handle_mask_below_armed(self):
         array = np.ma.arange(-5, 15)
         result = SpeedbrakeSelected.derive_from_handle(array, deployed=10,
@@ -2732,7 +2732,7 @@ class TestStableApproach(unittest.TestCase):
         apps = App()
         apps.create_approach('LANDING', slice(15, 20),
                              gs_est=True, loc_est=True,
-                             runway={'localizer':{'is_offset':False}})                
+                             runway={'localizer':{'is_offset':False}})
 
         # Arrays will be 20 seconds long, index 4, 13,14,15 are stable
         #0. first and last values are not in approach slice
@@ -2796,7 +2796,7 @@ class TestStableApproach(unittest.TestCase):
         self.assertEqual(list(stable.array.data),
         #index: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20
                [0, 1, 1, 4, 9, 2, 8, 8, 8, 8, 8, 3, 3, 9, 9, 9, 9, 9, 9, 9, 0])
-        
+
         #========== VERTICAL SPEED ==========
         # Test with a lot of vertical speed (rather than just gusts above)
         # Note: Glideslope still not established.
@@ -2830,7 +2830,7 @@ class TestStableApproach(unittest.TestCase):
         phases = S(items=[Section(name='Approach And Landing',
                                 slice=slice(2702, 2993, None),
                                 start_edge=2702.0, stop_edge=2993.0)])
-        
+
 
         def test_node(name):
             return load(os.path.join(test_data_path, 'Stable Approach - '+name+'.nod'))
