@@ -966,12 +966,6 @@ class TestAlign(unittest.TestCase):
         np.testing.assert_array_equal(result.mask, [0,0,0,0,0,0,0,0,1,1])
 
 
-class TestCasAlt2Mach(unittest.TestCase):
-    @unittest.skip('Not Implemented')
-    def test_cas_alt2mach(self):
-        self.assertTrue(False)
-
-
 class TestAmbiguousRunway(unittest.TestCase):
     def test_valid(self):
         landing_runway = LandingRunway()
@@ -6987,6 +6981,17 @@ class TestCas2Dp(unittest.TestCase):
         Value = cas2dp(120)
         Truth = 23.5351
         self.assertAlmostEqual(Value, Truth, delta = 1e-2)
+
+
+class TestCasAlt2Mach(unittest.TestCase):
+    def test_cas_alt2mach(self):
+        cas = np.ma.array(data=[300.0, 300, 300, 300], mask=[0,1,0,0])
+        alt_ft = np.ma.array(data=[0, 0, 0,30000.0], mask = [0,0,1,0])
+        result = cas_alt2mach(cas, alt_ft)
+        expected = np.ma.array(data=[0.4535, 99, 99, 0.79],mask=[0,1,1,0])
+        ma_test.assert_masked_array_approx_equal(result[:3], expected[:3], decimal=4)
+        # this test function requires an array, not a single value, to work. Hence the odd index.
+        ma_test.assert_masked_array_approx_equal(result[3:], expected[3:], decimal=3)
 
 
 class TestDelay(unittest.TestCase):
