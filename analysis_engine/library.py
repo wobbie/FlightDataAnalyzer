@@ -683,7 +683,8 @@ def calculate_surface_angle(mode, param, detents):
     angle = param.array
     mask = angle.mask.copy()
     # Repair the array to avoid extreme values affecting the algorithm.
-    angle = repair_mask(angle, repair_duration=None)
+    # Extrapolation included to avoid problems of corrupt data at end of flight and/or testing.
+    angle = repair_mask(angle, repair_duration=None, extrapolate=True)
     thresh_main_metrics = 4.0
     thresh_angle_range = 0.4
     filter_median_window = 5
