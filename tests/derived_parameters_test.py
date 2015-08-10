@@ -4797,7 +4797,7 @@ class TestThrustAsymmetry(unittest.TestCase):
         self.assertEqual(len(asym.array), len(n1_max.array))
         uniq = unique_values(asym.array.astype(int))
         # there should be all 20 values being 2 out
-        self.assertEqual(uniq, {2: 16})  # 3 values masked out
+        self.assertEqual(uniq, {2: 20})
 
     def test_derive_epr_and_n1(self):
         n1_max = P('Eng (*) N1 Max', np.arange(10, 30))
