@@ -2885,8 +2885,7 @@ class TestHeadingContinuous(unittest.TestCase, NodeTest):
         con_hdg = HeadingContinuous()
         herc = A('Frame', 'L382-Hercules')
         con_hdg.derive(hdg, None, None, herc)
-        # The smoothing algorithm will leave two samples masked at the beginning and end of the array.
-        self.assertEqual(np.ma.count(con_hdg.array), 56)
+        self.assertEqual(np.ma.count(con_hdg.array), 60)
 
     def test_heading_continuous_starting_north(self):
         hdg_ca = P('Heading (Capt)',np.ma.array([358,358,0.0,1.0]))
