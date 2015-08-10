@@ -6724,7 +6724,7 @@ class TestAirspeedMinusVref(unittest.TestCase, NodeTest):
         self.airspeed = P('Airspeed', np.ma.repeat(102, 2000))
         self.vref_record = P('Vref', np.ma.repeat((90, 120), 1000))
         self.vref_lookup = P('Vref Lookup', np.ma.repeat((95, 125), 1000))
-        self.approaches = buildsection('Approach And Landing', 500, 999)
+        self.approaches = buildsection('Approach And Landing', 500, 999.5)
 
     def test_derive__record_only(self):
         node = self.node_class()
