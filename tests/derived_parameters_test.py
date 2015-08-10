@@ -3025,7 +3025,8 @@ class TestTrackDeviationFromRunway(unittest.TestCase):
         deviation = TrackDeviationFromRunway()
         deviation.get_derived((heading_track, None, takeoff, to_runway, apps))
         # check average stays close to 0
-        self.assertAlmostEqual(np.ma.average(deviation.array[8775:8975]), 1.5, places = 1)
+        err = abs(np.ma.average(deviation.array[8775:8975]))
+        self.assertTrue(err < 1.5)
         self.assertAlmostEqual(np.ma.min(deviation.array[8775:8975]), -10.5, places = 1)
         self.assertAlmostEqual(np.ma.max(deviation.array[8775:8975]), 12.3, places = 1)
 
