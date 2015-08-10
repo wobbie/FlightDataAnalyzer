@@ -1541,35 +1541,43 @@ class TestAltitudeTail(unittest.TestCase):
 
     def test_altitude_tail(self):
         talt = AltitudeTail()
+        airborne = buildsections('Airborne', [5, 17])
+
         talt.derive(Parameter('Altitude Radio', np.ma.zeros(10), 1,0.0),
                     Parameter('Pitch', np.ma.array(range(10))*2, 1,0.0),
+                    buildsections('Takeoff', [0, 3]),
+                    buildsections('Go Around And Climbout', [5, 6]),
+                    buildsections('Landing', [8, 10]),
                     Attribute('Ground To Lowest Point Of Tail', 10.0/METRES_TO_FEET),
                     Attribute('Main Gear To Lowest Point Of Tail', 35.0/METRES_TO_FEET))
         result = talt.array
-        # At 35ft and 18deg nose up, the tail just scrapes the runway with 10ft
+        # At 35ft tail arm and 16deg nose up, the tail just scrapes the runway with 10ft
         # clearance at the mainwheels...
         answer = np.ma.array(data=[10.0,
-                                   8.77851761541,
-                                   7.55852341896,
-                                   6.34150378563,
-                                   5.1289414664,
-                                   3.92231378166,
-                                   2.72309082138,
-                                   1.53273365401,
-                                   0.352692546405,
-                                   -0.815594803123],
-                             dtype=np.float, mask=False)
-        np.testing.assert_array_almost_equal(result.data, answer.data)
+                                    8.7777730,
+                                    7.5525615,
+                                    6.3213517,
+                                    5.0810707,
+                                    3.8285556,
+                                    2.5605203,
+                                    1.2735199,
+                                    -0.0360885,
+                                    -1.372189],
+                             dtype=np.float, mask=[0]*4+[1]+[0]*2+[1]+[0]*2)
+        ma_test.assert_masked_array_almost_equal(result, answer)
 
     def test_altitude_tail_after_lift(self):
         talt = AltitudeTail()
-        talt.derive(Parameter('Altitude Radio', np.ma.array([0, 5])),
+        talt.derive(Parameter('Altitude Radio', np.ma.array([0, 1.372189])),
                     Parameter('Pitch', np.ma.array([0, 18])),
+                    buildsections('Takeoff', [0, 2]),
+                    buildsections('Go Around And Climbout', [2, 2]),
+                    buildsections('Landing', [2, 2]),
                     Attribute('Ground To Lowest Point Of Tail', 10.0/METRES_TO_FEET),
                     Attribute('Main Gear To Lowest Point Of Tail', 35.0/METRES_TO_FEET))
         result = talt.array
         # Lift 5ft
-        answer = np.ma.array(data=[10, 5 - 0.815594803123],
+        answer = np.ma.array(data=[10, 0.0],
                              dtype=np.float, mask=False)
         np.testing.assert_array_almost_equal(result.data, answer.data)
 
