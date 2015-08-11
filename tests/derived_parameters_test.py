@@ -4287,15 +4287,16 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
         fl = P('Flap Angle (L)', array=np.ma.arange(10, 20, 1), offset=0.0001, frequency=1)
         fr = P('Flap Angle (R)', array=np.ma.arange(10, 20, 1), offset=0, frequency=1)
         # 3rd flap is ignored
-        fc = P('Flap Angle (C)', array=np.ma.arange(11, 21, 2), offset=2.123, frequency=1)
+        fc = P('Flap Angle (C)', array=np.ma.arange(11, 21, 2), offset=0.123, frequency=1)
         fa = FlapAngle()
         fa.apply_median_filter = False
         fa.get_derived([fl, fr, fc, None, None, None])
-        self.assertEqual(fa.offset, 0)
+        self.assertAlmostEqual(fa.offset, 5e-05)
         self.assertEqual(fa.frequency, 2)
         # ignore last value as we have nothing to interpolate too
         assert_array_within_tolerance(fa.array[:-1], np.ma.arange(10, 19.5, 0.5), 0.001, 99.9)
-        self.assertEqual(fa.array[-1], 19)
+        self.assertEqual(fa.array[-2], 19)
+        self.assertEqual(fa.array.mask[-1], True)
 
     def test_late_offset(self):
         '''
@@ -4307,7 +4308,8 @@ class TestFlapAngle(unittest.TestCase, NodeTest):
         fa = FlapAngle()
         fa.get_derived([fl, fr, None, None, None, None])
         self.assertEqual(fa.frequency, 2)
-        self.assertEqual(fa.offset, 0.49999)
+        offset = (fl.offset + fr.offset)/2.0 -0.5
+        self.assertEqual(fa.offset, offset)
 
 
 class TestHeadingTrueContinuous(unittest.TestCase):
