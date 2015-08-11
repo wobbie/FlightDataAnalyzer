@@ -6619,7 +6619,7 @@ class TestAirspeedMinusV2(unittest.TestCase, NodeTest):
             KeyTimeInstance(name='Liftoff', index=500),
         ])
         self.climbs = KTI(name='Climb Start', items=[
-            KeyTimeInstance(name='Climb Start', index=1000),
+            KeyTimeInstance(name='Climb Start', index=999.5),
         ])
 
     def test_derive__recorded_only(self):
