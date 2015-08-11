@@ -20,7 +20,7 @@ from analysis_engine.api_handler_analysis_engine import (
 
 
 class APIHandlerHTTPTest(unittest.TestCase):
-    
+
     @patch('analysis_engine.api_handler.httplib2.Http.request')
     def test__request(self, http_request_patched):
         '''
@@ -51,7 +51,7 @@ class APIHandlerHTTPTest(unittest.TestCase):
         self.assertRaises(APIConnectionError, handler._request, url)
         http_request_patched.side_effect = httplib2.ServerNotFoundError()
         self.assertRaises(APIConnectionError, handler._request, url)
-    
+
     def test__attempt_request(self):
         handler = APIHandlerHTTP(attempts=3)
         handler._request = Mock()
@@ -75,7 +75,7 @@ class APIHandlerHTTPTest(unittest.TestCase):
         self.assertEqual(handler._attempt_request(4, y=5), {})
         self.assertEqual(handler._request.call_args_list,
                 [((1,), {'x': 2})] + [((3,), {})] * 3 + [((4,), {'y': 5})] * 3)
-    
+
     def test_get_nearest_airport(self):
         handler = AnalysisEngineAPIHandlerHTTP(attempts=3)
         handler._request = Mock()
@@ -101,7 +101,7 @@ class APIHandlerHTTPTest(unittest.TestCase):
         handler._request.return_value = request_return_value
         self.assertEqual(handler.get_nearest_airport(14.1, 0.52),
                          request_return_value['airport'])
-    
+
     @unittest.skip("Remove skip if a server is online to test against.")
     def test_get_nearest_airport_integration(self):
         '''
@@ -120,7 +120,7 @@ class APIHandlerHTTPTest(unittest.TestCase):
                           'longitude': -0.461389,
                           'magnetic_variation': 'W002241 0106',
                           'name': 'London Heathrow'})
-    
+
     def test_get_nearest_runway(self):
         handler = AnalysisEngineAPIHandlerHTTP(attempts=3)
         handler._request = Mock()
@@ -133,7 +133,7 @@ class APIHandlerHTTPTest(unittest.TestCase):
 class AnalysisEngineAPIHandlerLocalTest(unittest.TestCase):
     def setUp(self):
         self.handler = AnalysisEngineAPIHandlerLocal()
-    
+
     def test_get_airport(self):
         self.assertEqual(self.handler.get_airport(2456),
                          self.handler.airports[0])
@@ -147,7 +147,7 @@ class AnalysisEngineAPIHandlerLocalTest(unittest.TestCase):
                          self.handler.airports[1])
         self.assertEqual(self.handler.get_airport('ENGM'),
                          self.handler.airports[1])
-    
+
     def test_get_nearest_airport(self):
         airport = self.handler.get_nearest_airport(58, 8)
         self.assertEqual(airport['distance'], 23253.447237062534)
@@ -157,15 +157,15 @@ class AnalysisEngineAPIHandlerLocalTest(unittest.TestCase):
         self.assertEqual(airport['distance'], 22267.45203750386)
         del airport['distance']
         self.assertEqual(airport, self.handler.airports[1])
-    
+
     def test_get_nearest_runway(self):
         runway = self.handler.get_nearest_runway(None, None, latitude=58,
                                                  longitude=8)
-        self.assertEqual(runway['distance'], 22316.691624918927)
+        self.assertAlmostEqual(runway['distance'], 22316.691624918927)
         del runway['distance']
         self.assertEqual(runway, self.handler.runways[0])
         runway = self.handler.get_nearest_runway(None, None, latitude=60,
                                                  longitude=11)
-        self.assertEqual(runway['distance'], 20972.761983734454)
+        self.assertAlmostEqual(runway['distance'], 20972.761983734454)
         del runway['distance']
         self.assertEqual(runway, self.handler.runways[1])
