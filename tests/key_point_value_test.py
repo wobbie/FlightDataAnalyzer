@@ -1160,27 +1160,27 @@ class TestAccelerationNormalWithFlapUpWhileAirborneMax(unittest.TestCase, NodeTe
     def test_derive(self):
         acc_norm = P(
             name='Acceleration Offset Normal Removed',
-            array=np.ma.array((0.1, 0.3, -0.1, -0.2, 0.1, 0.2) * 5),
+            array=np.ma.array((0.1, 0.3, -0.1, -0.2, 0.1, 0.2) * 10),
         )
-        airborne = buildsection('Airborne', 2, 28)
+        airborne = buildsection('Airborne', 2, 48)
         name = self.node_class.get_name()
 
-        array = np.ma.repeat((0, 1, 5, 15, 25, 30), 5)
+        array = np.ma.repeat((0, 1, 5, 15, 25, 30), 10)
         mapping = {int(f): str(f) for f in np.ma.unique(array)}
         flap_lever = M(name='Flap Lever', array=array, values_mapping=mapping)
         node = self.node_class()
         node.derive(acc_norm, flap_lever, None, airborne)
         self.assertEqual(node, KPV(name=name, items=[
-            KeyPointValue(index=4, value=0.1, name=name),
+            KeyPointValue(index=7.0, value=0.3, name=name),
         ]))
 
-        array = np.ma.repeat((1, 2, 5, 15, 25, 30), 5)
+        array = np.ma.repeat((1, 2, 5, 15, 25, 30), 10)
         mapping = {int(f): 'Lever %s' % i for i, f in enumerate(np.ma.unique(array))}
         flap_synth = M(name='Flap Lever (Synthetic)', array=array, values_mapping=mapping)
         node = self.node_class()
         node.derive(acc_norm, None, flap_synth, airborne)
         self.assertEqual(node, KPV(name=name, items=[
-            KeyPointValue(index=4, value=0.1, name=name),
+            KeyPointValue(index=7.0, value=0.3, name=name),
         ]))
 
 
