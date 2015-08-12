@@ -770,7 +770,7 @@ def scan_ils(beam, ils_dots, height, scan_slice, frequency,
 
     first_valid_idx, first_valid_value = first_valid_sample(ils_abs[scan_slice.start:ils_lost_idx])
 
-    if scan_start_idx or first_valid_value > ILS_CAPTURE:
+    if scan_start_idx or (first_valid_value > ILS_CAPTURE):
         # Look for first instance of being established
         if not scan_start_idx:
             scan_start_idx = index_at_value(ils_abs, ILS_CAPTURE, slice(scan_slice.start, ils_lost_idx))
