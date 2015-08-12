@@ -9,6 +9,11 @@ You can view the differences in tagged versions as follows:
   git log --pretty=format:"%Cblue%h %Cgreen%cn %Cred(%cr) %Creset%s %n%b %N" --graph "v0.3.2..v0.4.1"
 
 
+V0.22.2
+-------
+
+- IAN fixes
+
 v0.22.1
 -------
 
